@@ -73,4 +73,54 @@ describe("GameRoom", () => {
 			expect(messages[0].target).toBe("all");
 		});
 	});
+
+	describe("start game", () => {
+		it("host starts game with both players present", () => {
+			const room = new GameRoom("room-1");
+			room.handleJoin("p1", "Alice");
+			room.handleJoin("p2", "Bob");
+			const messages = room.handleStartGame("p1", "medium");
+
+			expect(room.state.status).toBe("playing");
+			expect(room.state.puzzle).toMatch(/^[.1-9]{81}$/);
+			expect(room.solution).toMatch(/^[1-9]{81}$/);
+			expect(room.state.difficulty).toBe("medium");
+
+			// Should send game_start to all
+			const gameStart = messages.find(
+				(m) => m.message.type === "game_start",
+			);
+			expect(gameStart).toBeDefined();
+			expect(gameStart!.target).toBe("all");
+			expect(
+				gameStart!.message.type === "game_start" &&
+					gameStart!.message.puzzle,
+			).toBe(room.state.puzzle);
+		});
+
+		it("non-host cannot start game", () => {
+			const room = new GameRoom("room-1");
+			room.handleJoin("p1", "Alice");
+			room.handleJoin("p2", "Bob");
+			const messages = room.handleStartGame("p2", "medium");
+
+			expect(room.state.status).toBe("lobby");
+			expect(messages[0].message).toMatchObject({
+				type: "error",
+				message: "Only the host can start the game",
+			});
+		});
+
+		it("cannot start without two players", () => {
+			const room = new GameRoom("room-1");
+			room.handleJoin("p1", "Alice");
+			const messages = room.handleStartGame("p1", "medium");
+
+			expect(room.state.status).toBe("lobby");
+			expect(messages[0].message).toMatchObject({
+				type: "error",
+				message: "Need 2 players to start",
+			});
+		});
+	});
 });

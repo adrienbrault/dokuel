@@ -1,4 +1,10 @@
-import type { Player, RoomState, ServerMessage } from "../lib/types.ts";
+import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
+import type {
+	Difficulty,
+	Player,
+	RoomState,
+	ServerMessage,
+} from "../lib/types.ts";
 
 const PLAYER_COLORS = [
 	"#3B82F6", // blue
@@ -66,6 +72,49 @@ export class GameRoom {
 
 		return [
 			{ target: "all", message: { type: "room_state", state: this.state } },
+		];
+	}
+
+	handleStartGame(
+		playerId: string,
+		difficulty: Difficulty,
+	): OutgoingMessage[] {
+		if (playerId !== this.state.hostId) {
+			return [
+				{
+					target: "sender",
+					message: {
+						type: "error",
+						message: "Only the host can start the game",
+					},
+				},
+			];
+		}
+
+		if (this.state.players.length < 2) {
+			return [
+				{
+					target: "sender",
+					message: { type: "error", message: "Need 2 players to start" },
+				},
+			];
+		}
+
+		const puzzle = generatePuzzle(difficulty);
+		this.solution = solvePuzzle(puzzle);
+		this.state.puzzle = puzzle;
+		this.state.difficulty = difficulty;
+		this.state.status = "playing";
+
+		// Reset player progress
+		for (const player of this.state.players) {
+			const clueCount = puzzle.split("").filter((c) => c !== ".").length;
+			player.cellsRemaining = 81 - clueCount;
+			player.completionPercent = 0;
+		}
+
+		return [
+			{ target: "all", message: { type: "game_start", puzzle } },
 		];
 	}
 
