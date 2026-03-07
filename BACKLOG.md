@@ -29,16 +29,14 @@
 - [x] Dark mode toggle (currently system-preference only)
 - [x] Animated transitions: cell selection, number placement, numpad position switch
 - [x] Completion celebration animation
+- [x] Reconnect handling: sessionStorage identity, server state resync, overlay
+- [x] Opponent disconnect: status indicator, grace period, claim win
+- [x] Error states: network banner, room not found, room full, expired
+- [x] Keyboard support for desktop
 
 ## In Progress
 
 ## Backlog (prioritized)
-
-### P2 — Edge cases & resilience
-- [ ] Reconnect handling: sessionStorage identity, server state resync, overlay
-- [ ] Opponent disconnect: status indicator, grace period, claim win
-- [ ] Error states: network banner, room not found, room full, expired
-- [ ] Keyboard support for desktop
 
 ### P3 — Nice to have
 - [ ] Rematch flow in solo (new puzzle, same difficulty)
