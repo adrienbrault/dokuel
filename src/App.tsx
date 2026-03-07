@@ -57,7 +57,7 @@ function App() {
 	switch (screen.name) {
 		case "landing":
 			return (
-				<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 relative">
+				<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 relative animate-screen-enter">
 					<div className="absolute top-4 right-4 flex gap-1">
 						<SoundToggle
 							enabled={soundOn}
@@ -83,7 +83,7 @@ function App() {
 
 		case "difficulty":
 			return (
-				<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950">
+				<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
 					<DifficultyPicker
 						onSelect={(difficulty) => {
 							if (screen.mode === "solo") {
@@ -193,7 +193,7 @@ function JoinScreen({
 	const [code, setCode] = useState("");
 
 	return (
-		<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950">
+		<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
 			<div className="flex flex-col items-center gap-6 w-full max-w-sm px-6">
 				<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
 					Join Game

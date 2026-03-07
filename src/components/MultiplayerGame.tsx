@@ -29,7 +29,7 @@ export function MultiplayerGame({
 
 	if (mp.error) {
 		return (
-			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950">
+			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
 				<div className="flex flex-col items-center gap-4 px-6">
 					<p className="text-lg font-semibold text-red-500">{mp.error}</p>
 					<button
@@ -46,7 +46,7 @@ export function MultiplayerGame({
 
 	if (!mp.roomState) {
 		return (
-			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950">
+			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
 				<p className="text-gray-500 dark:text-gray-400">Connecting...</p>
 			</div>
 		);
@@ -54,7 +54,7 @@ export function MultiplayerGame({
 
 	if (mp.roomState.status === "lobby") {
 		return (
-			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950">
+			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
 				<Lobby
 					roomState={mp.roomState}
 					playerId={playerId}
@@ -172,7 +172,7 @@ function MultiplayerBoard({
 	);
 
 	return (
-		<div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4">
+		<div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
 			{/* Header */}
 			<div className="flex items-center justify-between w-full max-w-[min(100vw-2rem,28rem)] mb-4">
 				<button

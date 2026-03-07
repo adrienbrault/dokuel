@@ -76,7 +76,7 @@ export function SoloGame({
 	);
 
 	return (
-		<div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4">
+		<div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
 			{/* Header */}
 			<div className="flex items-center justify-between w-full max-w-[min(100vw-2rem,28rem)] mb-4">
 				<button
