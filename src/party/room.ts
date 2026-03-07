@@ -76,10 +76,7 @@ export class GameRoom {
 		];
 	}
 
-	handleStartGame(
-		playerId: string,
-		difficulty: Difficulty,
-	): OutgoingMessage[] {
+	handleStartGame(playerId: string, difficulty: Difficulty): OutgoingMessage[] {
 		if (playerId !== this.state.hostId) {
 			return [
 				{
@@ -114,9 +111,7 @@ export class GameRoom {
 			player.completionPercent = 0;
 		}
 
-		return [
-			{ target: "all", message: { type: "game_start", puzzle } },
-		];
+		return [{ target: "all", message: { type: "game_start", puzzle } }];
 	}
 
 	handleProgress(
@@ -181,15 +176,10 @@ export class GameRoom {
 			player.completionPercent = 0;
 		}
 
-		return [
-			{ target: "all", message: { type: "rematch_start", puzzle } },
-		];
+		return [{ target: "all", message: { type: "rematch_start", puzzle } }];
 	}
 
-	handleMessage(
-		senderId: string,
-		msg: ClientMessage,
-	): OutgoingMessage[] {
+	handleMessage(senderId: string, msg: ClientMessage): OutgoingMessage[] {
 		switch (msg.type) {
 			case "join":
 				return this.handleJoin(msg.playerId, msg.name);

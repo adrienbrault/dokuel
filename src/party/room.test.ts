@@ -36,9 +36,7 @@ describe("GameRoom", () => {
 				connected: true,
 			});
 			// Different colors
-			expect(room.state.players[0].color).not.toBe(
-				room.state.players[1].color,
-			);
+			expect(room.state.players[0].color).not.toBe(room.state.players[1].color);
 			// Host unchanged
 			expect(room.state.hostId).toBe("p1");
 			// Broadcasts updated room state
@@ -87,14 +85,11 @@ describe("GameRoom", () => {
 			expect(room.state.difficulty).toBe("medium");
 
 			// Should send game_start to all
-			const gameStart = messages.find(
-				(m) => m.message.type === "game_start",
-			);
+			const gameStart = messages.find((m) => m.message.type === "game_start");
 			expect(gameStart).toBeDefined();
 			expect(gameStart!.target).toBe("all");
 			expect(
-				gameStart!.message.type === "game_start" &&
-					gameStart!.message.puzzle,
+				gameStart!.message.type === "game_start" && gameStart!.message.puzzle,
 			).toBe(room.state.puzzle);
 		});
 
