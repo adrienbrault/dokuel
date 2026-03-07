@@ -37,10 +37,10 @@
 - [x] Daily challenge / seeded puzzles
 - [x] Stats history (localStorage)
 - [x] Sound effects toggle
+- [x] Spectator mode
 
 ## In Progress
 
 ## Backlog (prioritized)
 
-### P3 — Nice to have
-- [ ] Spectator mode
+(empty — all tasks complete)
