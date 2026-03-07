@@ -21,6 +21,35 @@ bun run ci           # Full CI: lint + typecheck + test
 
 See `spec.md` for full product specification.
 
+## Deployment
+
+Both the frontend and the PartyKit server deploy automatically on push to `main`.
+
+### Frontend (Cloudflare Pages)
+- **Project**: `sudoku` on Cloudflare Pages, connected to `adrienbrault/sudoku` on GitHub
+- **Build**: `bun install && bun run build` → `dist/`
+- **URL**: https://sudoku.brage.fr (custom domain), https://sudoku-4cc.pages.dev (default)
+- **Env var**: `VITE_PARTY_HOST=party-sudoku.brage.fr` (set in Cloudflare Pages dashboard)
+- Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
+
+### PartyKit Server (Cloudflare Workers / Durable Objects)
+- **Config**: `partykit.json` — entry point is `src/party/sudoku.ts`
+- **Domain**: `party-sudoku.brage.fr`
+- **CI**: `.github/workflows/deploy-partykit.yml` runs `bunx partykit deploy --domain $PARTYKIT_DOMAIN`
+- Deploys to the project's own Cloudflare account ("cloud-prem" mode)
+
+### GitHub Repository Settings Required
+Secrets (at `github.com/adrienbrault/sudoku/settings/secrets/actions`):
+- `CLOUDFLARE_ACCOUNT_ID` — Cloudflare account ID
+- `CLOUDFLARE_API_TOKEN` — API token with "Edit Cloudflare Workers" permissions
+
+Variables (at `github.com/adrienbrault/sudoku/settings/variables/actions`):
+- `PARTYKIT_DOMAIN` — `party-sudoku.brage.fr`
+
+### DNS (Cloudflare)
+- `sudoku.brage.fr` → CNAME to `sudoku-4cc.pages.dev` (Cloudflare Pages)
+- `party-sudoku.brage.fr` → CNAME to the PartyKit worker (created after first deploy)
+
 ## Git Workflow — MANDATORY
 
 ### What "Atomic" Means
