@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { formatTime } from "../lib/format.ts";
@@ -40,6 +41,16 @@ export function SoloGame({ difficulty, onBack }: SoloGameProps) {
 			game.placeNumber(n);
 		}
 	};
+
+	useKeyboard({
+		selectedCell: game.selectedCell,
+		onSelectCell: game.selectCell,
+		onPlaceNumber: handleNumber,
+		onErase: game.erase,
+		onUndo: game.undo,
+		onToggleNotes: game.toggleNotesMode,
+		enabled: game.status === "playing",
+	});
 
 	const numPad = (
 		<NumPad
