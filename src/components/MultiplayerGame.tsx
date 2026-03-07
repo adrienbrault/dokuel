@@ -27,10 +27,19 @@ export function MultiplayerGame({
 }: MultiplayerGameProps) {
 	const mp = useMultiplayer({ socket, playerId, playerName });
 
-	if (!mp.connected && !mp.roomState) {
+	if (mp.error) {
 		return (
 			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950">
-				<p className="text-gray-500 dark:text-gray-400">Connecting...</p>
+				<div className="flex flex-col items-center gap-4 px-6">
+					<p className="text-lg font-semibold text-red-500">{mp.error}</p>
+					<button
+						type="button"
+						className="px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-semibold touch-manipulation"
+						onClick={onBack}
+					>
+						Back to Home
+					</button>
+				</div>
 			</div>
 		);
 	}
