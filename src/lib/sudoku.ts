@@ -13,17 +13,33 @@ export function generatePuzzle(difficulty: Difficulty): string {
 	const targetClues = min + Math.floor(Math.random() * (max - min + 1));
 
 	const raw = sudokuLib.makepuzzle() as (number | null)[];
+	const solution = sudokuLib.solvepuzzle(raw) as number[];
 
 	const givenIndices: number[] = [];
+	const emptyIndices: number[] = [];
 	for (let i = 0; i < 81; i++) {
-		if (raw[i] !== null) givenIndices.push(i);
+		if (raw[i] !== null) {
+			givenIndices.push(i);
+		} else {
+			emptyIndices.push(i);
+		}
 	}
 
+	// Remove clues if we have too many
 	while (givenIndices.length > targetClues) {
 		const removeIdx = Math.floor(Math.random() * givenIndices.length);
 		const cellIdx = givenIndices[removeIdx];
 		raw[cellIdx] = null;
 		givenIndices.splice(removeIdx, 1);
+	}
+
+	// Add clues from solution if we have too few
+	while (givenIndices.length < targetClues && emptyIndices.length > 0) {
+		const addIdx = Math.floor(Math.random() * emptyIndices.length);
+		const cellIdx = emptyIndices[addIdx];
+		raw[cellIdx] = solution[cellIdx];
+		givenIndices.push(cellIdx);
+		emptyIndices.splice(addIdx, 1);
 	}
 
 	return raw.map((v) => (v === null ? "." : String(v + 1))).join("");
