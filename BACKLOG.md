@@ -20,17 +20,15 @@
 - [x] GameResult modal: completion with time and new game
 - [x] SoloGame screen: wires board + numpad + controls + timer
 - [x] useNumPadPosition hook: localStorage persistence
+- [x] PartyKit server: room management, game lifecycle, completion validation
+- [x] useMultiplayer hook: PartySocket connection, reconnect, room state sync
+- [x] Lobby screen: share link, player list, ready state, difficulty select, start
+- [x] Join-by-link: URL routing for `/{roomId}`, full/expired room handling
+- [x] Multiplayer game screen: opponent progress, board sharing, game result + rematch
 
 ## In Progress
 
 ## Backlog (prioritized)
-
-### P0 — Core multiplayer
-- [ ] PartyKit server: room management, game lifecycle, completion validation
-- [ ] useMultiplayer hook: PartySocket connection, reconnect, room state sync
-- [ ] Lobby screen: share link, player list, ready state, difficulty select, start
-- [ ] Join-by-link: URL routing for `/{roomId}`, full/expired room handling
-- [ ] Multiplayer game screen: opponent progress, board sharing, game result + rematch
 
 ### P1 — Mobile UX polish
 - [ ] Haptic feedback: number place, erase, note toggle, conflict, completion
