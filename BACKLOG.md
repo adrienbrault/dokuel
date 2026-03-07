@@ -25,16 +25,14 @@
 - [x] Lobby screen: share link, player list, ready state, difficulty select, start
 - [x] Join-by-link: URL routing for `/{roomId}`, full/expired room handling
 - [x] Multiplayer game screen: opponent progress, board sharing, game result + rematch
+- [x] Haptic feedback: number place, erase, note toggle, conflict, completion
+- [x] Dark mode toggle (currently system-preference only)
+- [x] Animated transitions: cell selection, number placement, numpad position switch
+- [x] Completion celebration animation
 
 ## In Progress
 
 ## Backlog (prioritized)
-
-### P1 — Mobile UX polish
-- [ ] Haptic feedback: number place, erase, note toggle, conflict, completion
-- [ ] Dark mode toggle (currently system-preference only)
-- [ ] Animated transitions: cell selection, number placement, numpad position switch
-- [ ] Completion celebration animation
 
 ### P2 — Edge cases & resilience
 - [ ] Reconnect handling: sessionStorage identity, server state resync, overlay
