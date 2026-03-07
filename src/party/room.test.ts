@@ -183,4 +183,71 @@ describe("GameRoom", () => {
 			});
 		});
 	});
+
+	describe("rematch", () => {
+		it("starts new game with same difficulty after rematch", () => {
+			const room = new GameRoom("room-1");
+			room.handleJoin("p1", "Alice");
+			room.handleJoin("p2", "Bob");
+			room.handleStartGame("p1", "hard");
+			room.handleComplete("p1", room.solution!);
+
+			const oldPuzzle = room.state.puzzle;
+			const messages = room.handleRematch();
+
+			expect(room.state.status).toBe("playing");
+			expect(room.state.winnerId).toBeNull();
+			expect(room.state.puzzle).not.toBe(oldPuzzle);
+			expect(room.state.difficulty).toBe("hard");
+			expect(room.solution).toMatch(/^[1-9]{81}$/);
+
+			const rematchMsg = messages.find(
+				(m) => m.message.type === "rematch_start",
+			);
+			expect(rematchMsg).toBeDefined();
+			expect(rematchMsg!.target).toBe("all");
+		});
+	});
+
+	describe("message dispatch", () => {
+		it("routes client messages to correct handlers", () => {
+			const room = new GameRoom("room-1");
+
+			const joinMsgs = room.handleMessage("p1", {
+				type: "join",
+				name: "Alice",
+				playerId: "p1",
+			});
+			expect(room.state.players).toHaveLength(1);
+			expect(joinMsgs.length).toBeGreaterThan(0);
+
+			room.handleMessage("p2", {
+				type: "join",
+				name: "Bob",
+				playerId: "p2",
+			});
+
+			const startMsgs = room.handleMessage("p1", {
+				type: "start_game",
+			});
+			expect(room.state.status).toBe("playing");
+			expect(startMsgs.length).toBeGreaterThan(0);
+
+			const progressMsgs = room.handleMessage("p1", {
+				type: "progress",
+				cellsRemaining: 20,
+				completionPercent: 75,
+			});
+			expect(progressMsgs[0].message).toMatchObject({
+				type: "opponent_progress",
+			});
+
+			const completeMsgs = room.handleMessage("p1", {
+				type: "complete",
+				board: room.solution!,
+			});
+			expect(room.state.status).toBe("finished");
+			expect(completeMsgs.length).toBeGreaterThan(0);
+		});
+	});
 });

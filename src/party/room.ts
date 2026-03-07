@@ -1,5 +1,6 @@
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type {
+	ClientMessage,
 	Difficulty,
 	Player,
 	RoomState,
@@ -165,6 +166,48 @@ export class GameRoom {
 				},
 			},
 		];
+	}
+
+	handleRematch(): OutgoingMessage[] {
+		const puzzle = generatePuzzle(this.state.difficulty);
+		this.solution = solvePuzzle(puzzle);
+		this.state.puzzle = puzzle;
+		this.state.status = "playing";
+		this.state.winnerId = null;
+
+		const clueCount = puzzle.split("").filter((c) => c !== ".").length;
+		for (const player of this.state.players) {
+			player.cellsRemaining = 81 - clueCount;
+			player.completionPercent = 0;
+		}
+
+		return [
+			{ target: "all", message: { type: "rematch_start", puzzle } },
+		];
+	}
+
+	handleMessage(
+		senderId: string,
+		msg: ClientMessage,
+	): OutgoingMessage[] {
+		switch (msg.type) {
+			case "join":
+				return this.handleJoin(msg.playerId, msg.name);
+			case "start_game":
+				return this.handleStartGame(senderId, this.state.difficulty);
+			case "progress":
+				return this.handleProgress(
+					senderId,
+					msg.cellsRemaining,
+					msg.completionPercent,
+				);
+			case "complete":
+				return this.handleComplete(senderId, msg.board);
+			case "rematch":
+				return this.handleRematch();
+			default:
+				return [];
+		}
 	}
 
 	handleDisconnect(playerId: string): OutgoingMessage[] {
