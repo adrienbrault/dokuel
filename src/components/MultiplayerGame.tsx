@@ -130,6 +130,12 @@ function MultiplayerBoard({
 	const timerSecondsRef = useRef(0);
 	const [showResult, setShowResult] = useState(false);
 	const prevCellsRef = useRef(game.cellsRemaining);
+	const [revealed, setRevealed] = useState(false);
+
+	useEffect(() => {
+		const id = setTimeout(() => setRevealed(true), 600);
+		return () => clearTimeout(id);
+	}, []);
 
 	// Send progress when cells change
 	useEffect(() => {
@@ -227,6 +233,7 @@ function MultiplayerBoard({
 					selectedCell={game.selectedCell}
 					conflicts={game.conflicts}
 					onSelectCell={game.selectCell}
+					animateReveal={!revealed}
 				/>
 			</div>
 

@@ -38,6 +38,7 @@
 - [x] Stats history (localStorage)
 - [x] Sound effects toggle
 - [x] Spectator mode
+- [x] 2.5D visual polish: board elevation, cell glow, spring press, modal/screen transitions, cell reveal
 
 ## In Progress
 

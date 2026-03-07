@@ -11,6 +11,7 @@ type CellProps = {
 	isSameNumber: boolean;
 	isConflict: boolean;
 	onSelect: (row: number, col: number) => void;
+	revealDelay?: number;
 };
 
 export const Cell = memo(function Cell({
@@ -22,6 +23,7 @@ export const Cell = memo(function Cell({
 	isSameNumber,
 	isConflict,
 	onSelect,
+	revealDelay,
 }: CellProps) {
 	const bgClass = isSelected
 		? "bg-cell-selected"
@@ -56,7 +58,13 @@ export const Cell = memo(function Cell({
 				select-none touch-manipulation
 				outline-none focus-visible:ring-2 focus-visible:ring-accent
 				${isSelected ? "cell-selected-glow" : ""}
+				${revealDelay !== undefined ? "animate-cell-reveal" : ""}
 			`}
+			style={
+				revealDelay !== undefined
+					? { animationDelay: `${revealDelay}ms` }
+					: undefined
+			}
 			onClick={() => onSelect(row, col)}
 			aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
 		>

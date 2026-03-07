@@ -41,6 +41,12 @@ export function SoloGame({
 	const { position, setPosition } = useNumPadPosition();
 	const timerSecondsRef = useRef(0);
 	const [showResult, setShowResult] = useState(false);
+	const [revealed, setRevealed] = useState(false);
+
+	useEffect(() => {
+		const id = setTimeout(() => setRevealed(true), 600);
+		return () => clearTimeout(id);
+	}, []);
 
 	useEffect(() => {
 		if (game.status !== "completed") return;
@@ -113,6 +119,7 @@ export function SoloGame({
 						selectedCell={game.selectedCell}
 						conflicts={game.conflicts}
 						onSelectCell={game.selectCell}
+						animateReveal={!revealed}
 					/>
 				</div>
 			</div>

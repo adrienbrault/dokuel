@@ -7,6 +7,7 @@ type BoardProps = {
 	selectedCell: Position | null;
 	conflicts: Set<number>;
 	onSelectCell: (row: number, col: number) => void;
+	animateReveal?: boolean;
 };
 
 export function Board({
@@ -14,6 +15,7 @@ export function Board({
 	selectedCell,
 	conflicts,
 	onSelectCell,
+	animateReveal,
 }: BoardProps) {
 	const selectedValue =
 		selectedCell !== null
@@ -54,6 +56,11 @@ export function Board({
 							isSameNumber={isSameNumber}
 							isConflict={isConflict}
 							onSelect={onSelectCell}
+							revealDelay={
+								animateReveal && cell.isGiven
+									? (rowIdx * 9 + colIdx) * 6
+									: undefined
+							}
 						/>
 					);
 				}),
