@@ -24,7 +24,7 @@ export function Board({
 
 	return (
 		<div
-			className="grid grid-cols-9 border-2 border-board-border rounded-md overflow-hidden w-full max-w-[min(100vw-2rem,28rem)] aspect-square shadow-lg shadow-black/8 dark:shadow-black/25"
+			className="grid grid-cols-9 border-2 border-board-border rounded-md overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25"
 			role="region"
 			aria-label="Sudoku board"
 		>

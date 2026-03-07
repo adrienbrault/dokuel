@@ -21,7 +21,7 @@ export function NumPad({
 			className={`
 				flex gap-1
 				${isVertical ? "flex-col" : "flex-row"}
-				${isVertical ? "w-12" : "w-full max-w-[min(100vw-2rem,28rem)]"}
+				${isVertical ? "w-12" : "w-full max-w-lg"}
 			`}
 			role="group"
 			aria-label="Number pad"

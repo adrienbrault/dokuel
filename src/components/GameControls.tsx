@@ -12,7 +12,7 @@ export function GameControls({
 	onUndo,
 }: GameControlsProps) {
 	return (
-		<div className="flex gap-3 w-full max-w-[min(100vw-2rem,28rem)]">
+		<div className="flex gap-3 w-full max-w-lg">
 			<ControlButton label="Undo" icon="↩" onClick={onUndo} active={false} />
 			<ControlButton label="Erase" icon="⌫" onClick={onErase} active={false} />
 			<ControlButton

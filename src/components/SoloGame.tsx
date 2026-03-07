@@ -84,7 +84,7 @@ export function SoloGame({
 	return (
 		<div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
 			{/* Header */}
-			<div className="flex items-center justify-between w-full max-w-[min(100vw-2rem,28rem)] mb-4">
+			<div className="flex items-center justify-between w-full max-w-lg mb-4">
 				<button
 					type="button"
 					className="text-sm text-gray-400 dark:text-gray-500 touch-manipulation"
@@ -104,15 +104,15 @@ export function SoloGame({
 			{/* Main game area */}
 			<div
 				className={`
-					flex items-start gap-3 w-full justify-center
-					${position === "left" ? "flex-row" : ""}
-					${position === "right" ? "flex-row-reverse" : ""}
+					flex gap-3 w-full justify-center flex-1
+					${position === "left" ? "flex-row items-center" : ""}
+					${position === "right" ? "flex-row-reverse items-center" : ""}
 					${position === "bottom" ? "flex-col items-center" : ""}
 				`}
 			>
 				{position !== "bottom" && numPad}
 				<div
-					className={game.status === "completed" ? "animate-celebration" : ""}
+					className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : ""} ${game.status === "completed" ? "animate-celebration" : ""}`}
 				>
 					<Board
 						board={game.board}
@@ -121,19 +121,32 @@ export function SoloGame({
 						onSelectCell={game.selectCell}
 						animateReveal={!revealed}
 					/>
+					{/* Controls + bottom numpad */}
+					{position === "bottom" && (
+						<div className="flex flex-col items-center gap-3 w-full">
+							<GameControls
+								notesMode={game.notesMode}
+								onToggleNotes={game.toggleNotesMode}
+								onErase={game.erase}
+								onUndo={game.undo}
+							/>
+							{numPad}
+						</div>
+					)}
 				</div>
 			</div>
 
-			{/* Controls + bottom numpad */}
-			<div className="flex flex-col items-center gap-3 mt-4 w-full">
-				<GameControls
-					notesMode={game.notesMode}
-					onToggleNotes={game.toggleNotesMode}
-					onErase={game.erase}
-					onUndo={game.undo}
-				/>
-				{position === "bottom" && numPad}
-			</div>
+			{/* Controls for side numpad positions */}
+			{position !== "bottom" && (
+				<div className="flex flex-col items-center gap-3 mt-4 w-full">
+					<GameControls
+						notesMode={game.notesMode}
+						onToggleNotes={game.toggleNotesMode}
+						onErase={game.erase}
+						onUndo={game.undo}
+					/>
+				</div>
+			)}
 
 			{/* Result modal */}
 			{showResult && (
