@@ -32,7 +32,7 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
 							w-full px-5 py-4 rounded-xl
 							bg-gray-50 dark:bg-gray-900
 							border border-gray-200 dark:border-gray-800
-							active:scale-[0.98] transition-transform duration-100
+							press-spring-soft
 							select-none touch-manipulation
 						"
 						onClick={() => onSelect(d.value)}

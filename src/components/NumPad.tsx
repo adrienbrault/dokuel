@@ -40,10 +40,9 @@ export function NumPad({
 							flex flex-col items-center justify-center
 							${isVertical ? "h-9 w-12" : "h-12 flex-1"}
 							rounded-lg
-							transition-all duration-100
 							select-none touch-manipulation
 							text-lg font-semibold
-							${isComplete ? "opacity-30 cursor-default" : "active:scale-95"}
+							${isComplete ? "opacity-30 cursor-default" : "press-spring"}
 							${
 								isActive
 									? "bg-accent text-white shadow-md"

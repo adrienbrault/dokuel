@@ -40,8 +40,7 @@ function ActionButton({
 			type="button"
 			className={`
 				w-full py-4 rounded-xl text-lg font-semibold
-				transition-all duration-100 select-none touch-manipulation
-				active:scale-[0.98]
+				press-spring-soft select-none touch-manipulation
 				${
 					primary
 						? "bg-accent text-white shadow-lg shadow-accent/20"

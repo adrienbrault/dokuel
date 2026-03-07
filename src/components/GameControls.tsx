@@ -42,9 +42,8 @@ function ControlButton({
 			className={`
 				flex-1 flex flex-col items-center justify-center
 				h-12 rounded-lg
-				transition-all duration-100
+				press-spring
 				select-none touch-manipulation
-				active:scale-95
 				${
 					active
 						? "bg-accent text-white shadow-md"

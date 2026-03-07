@@ -27,7 +27,7 @@ export function GameResult({
 					{onRematch && (
 						<button
 							type="button"
-							className="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white active:scale-[0.98] transition-transform select-none touch-manipulation"
+							className="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white press-spring-soft select-none touch-manipulation"
 							onClick={onRematch}
 						>
 							Rematch
@@ -35,7 +35,7 @@ export function GameResult({
 					)}
 					<button
 						type="button"
-						className="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 active:scale-[0.98] transition-transform select-none touch-manipulation"
+						className="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 press-spring-soft select-none touch-manipulation"
 						onClick={onNewGame}
 					>
 						New Game
