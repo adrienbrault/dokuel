@@ -12,7 +12,9 @@
 		"typecheck": "tsc --noEmit -p tsconfig.app.json",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"ci": "bun run lint && bun run typecheck && bun run test"
+		"ci": "bun run lint && bun run typecheck && bun run test",
+		"e2e": "bunx playwright test",
+		"screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
 	},
 	"dependencies": {
 		"partysocket": "^1.1.16",
@@ -22,6 +24,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.6",
+		"@playwright/test": "^1.58.2",
 		"@tailwindcss/vite": "^4.2.1",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",

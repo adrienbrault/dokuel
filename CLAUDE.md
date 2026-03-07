@@ -180,6 +180,34 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 - Use `type` over `interface`
 - Discriminated unions for message types
 
+## Visual Testing with Playwright Screenshots — MANDATORY
+
+**Always use screenshots to verify UI changes.** This is how you catch layout, spacing, and visual issues that code review alone cannot reveal.
+
+### Setup
+- Playwright config: `playwright.config.ts`
+- Screenshot tests: `e2e/screenshots.spec.ts`
+- Output directory: `e2e/screenshots/` (gitignored)
+- Devices tested: iPhone SE, iPhone 14, iPad Mini, Desktop (1280x800)
+
+### Commands
+```bash
+bun run screenshots   # Run screenshot tests, saves PNGs to e2e/screenshots/
+bun run e2e           # Run all Playwright tests
+```
+
+### Workflow for UI Changes
+1. **Before making changes**: run `bun run screenshots` and review the current state using the Read tool on the PNGs
+2. **After making changes**: run `bun run screenshots` again and review the new PNGs
+3. **Compare across viewports**: always check iPhone SE (smallest), iPhone 14, iPad Mini, and Desktop
+4. **Iterate**: if something looks wrong, fix it and re-screenshot until it looks right
+
+### Adding New Screenshot Tests
+When adding new screens or significant UI features, add a test case to `e2e/screenshots.spec.ts` that navigates to the new screen and captures it. Each test saves PNGs named `{screen}--{device}.png`.
+
+### Key Principle
+You cannot judge visual quality from code alone. **Always screenshot, always review the images.** This catches: misalignment, overflow, wrong spacing, broken responsive layouts, elements off-screen, text truncation, and more.
+
 ## Key Design Decisions
 
 - **Soft validation**: Conflicts shown visually, not blocked. Board complete only when all filled + valid.
