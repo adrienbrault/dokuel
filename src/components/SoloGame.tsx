@@ -80,12 +80,14 @@ export function SoloGame({ difficulty, onBack }: SoloGameProps) {
 				`}
 			>
 				{position !== "bottom" && numPad}
-				<Board
-					board={game.board}
-					selectedCell={game.selectedCell}
-					conflicts={game.conflicts}
-					onSelectCell={game.selectCell}
-				/>
+				<div className={game.status === "completed" ? "animate-celebration" : ""}>
+					<Board
+						board={game.board}
+						selectedCell={game.selectedCell}
+						conflicts={game.conflicts}
+						onSelectCell={game.selectCell}
+					/>
+				</div>
 			</div>
 
 			{/* Controls + bottom numpad */}

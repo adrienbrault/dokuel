@@ -30,3 +30,38 @@ body {
 	padding: env(safe-area-inset-top) env(safe-area-inset-right)
 		env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+
+@keyframes pop-in {
+	0% {
+		transform: scale(0.6);
+		opacity: 0;
+	}
+	60% {
+		transform: scale(1.1);
+	}
+	100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes celebration {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	25% {
+		transform: scale(1.05) rotate(-1deg);
+	}
+	75% {
+		transform: scale(1.05) rotate(1deg);
+	}
+}
+
+.animate-pop-in {
+	animation: pop-in 0.15s ease-out;
+}
+
+.animate-celebration {
+	animation: celebration 0.5s ease-in-out 2;
+}
