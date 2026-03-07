@@ -30,6 +30,25 @@ export class GameRoom {
 	}
 
 	handleJoin(playerId: string, name: string): OutgoingMessage[] {
+		// Reconnecting player
+		const existing = this.state.players.find((p) => p.id === playerId);
+		if (existing) {
+			existing.connected = true;
+			return [
+				{ target: "all", message: { type: "room_state", state: this.state } },
+			];
+		}
+
+		// Room full
+		if (this.state.players.length >= 2) {
+			return [
+				{
+					target: "sender",
+					message: { type: "error", message: "Room is full" },
+				},
+			];
+		}
+
 		const player: Player = {
 			id: playerId,
 			name,
@@ -45,6 +64,20 @@ export class GameRoom {
 			this.state.hostId = playerId;
 		}
 
-		return [{ target: "all", message: { type: "room_state", state: this.state } }];
+		return [
+			{ target: "all", message: { type: "room_state", state: this.state } },
+		];
+	}
+
+	handleDisconnect(playerId: string): OutgoingMessage[] {
+		const player = this.state.players.find((p) => p.id === playerId);
+		if (!player) return [];
+		player.connected = false;
+		return [
+			{
+				target: "opponent",
+				message: { type: "opponent_disconnected" },
+			},
+		];
 	}
 }
