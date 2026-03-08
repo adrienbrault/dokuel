@@ -39,7 +39,8 @@
       "nursery": {
         "useArraySortCompare": "error",
         "noFloatingPromises": "error",
-        "noMisusedPromises": "error"
+        "noMisusedPromises": "error",
+        "noUnnecessaryConditions": "error"
       },
       "style": {
         "useConsistentArrayType": {
