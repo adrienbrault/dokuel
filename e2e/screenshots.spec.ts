@@ -14,7 +14,6 @@ test("landing page", async ({ page }, testInfo) => {
 	await page.waitForLoadState("networkidle");
 	await page.waitForTimeout(500);
 	await page.screenshot({
-		fullPage: true,
 		path: screenshotPath("landing", testInfo.project.name),
 	});
 });
@@ -26,7 +25,6 @@ test("solo game", async ({ page }, testInfo) => {
 	await page.getByText("Easy").click();
 	await page.waitForTimeout(800);
 	await page.screenshot({
-		fullPage: true,
 		path: screenshotPath("solo-game", testInfo.project.name),
 	});
 });
@@ -42,7 +40,6 @@ test("solo game - numpad left", async ({ page }, testInfo) => {
 	await page.getByText("Easy").click();
 	await page.waitForTimeout(800);
 	await page.screenshot({
-		fullPage: true,
 		path: screenshotPath("solo-numpad-left", testInfo.project.name),
 	});
 });
@@ -58,7 +55,6 @@ test("solo game - numpad right", async ({ page }, testInfo) => {
 	await page.getByText("Easy").click();
 	await page.waitForTimeout(800);
 	await page.screenshot({
-		fullPage: true,
 		path: screenshotPath("solo-numpad-right", testInfo.project.name),
 	});
 });
@@ -69,7 +65,6 @@ test("difficulty picker", async ({ page }, testInfo) => {
 	await page.getByText("Start Solo").click();
 	await page.waitForTimeout(300);
 	await page.screenshot({
-		fullPage: true,
 		path: screenshotPath("difficulty", testInfo.project.name),
 	});
 });
