@@ -26,7 +26,7 @@ export function GameControls({
         icon="↩"
         onClick={onUndo}
         active={false}
-        badge={historyLength && historyLength > 0 ? historyLength : undefined}
+        disabled={!historyLength || historyLength === 0}
       />
       <ControlButton label="Erase" icon="⌫" onClick={onErase} active={false} />
       <ControlButton
@@ -37,7 +37,7 @@ export function GameControls({
       />
       {onToggleConflicts && (
         <ControlButton
-          label="Errors"
+          label={showConflicts ? "Errors: On" : "Errors: Off"}
           icon="👁"
           onClick={onToggleConflicts}
           active={showConflicts ?? false}
@@ -55,21 +55,24 @@ function ControlButton({
   icon,
   onClick,
   active,
-  badge,
+  disabled,
 }: {
   label: string;
   icon: string;
   onClick: () => void;
   active: boolean;
-  badge?: number | undefined;
+  disabled?: boolean | undefined;
 }) {
   return (
     <button
       type="button"
-      className={`flex-1 flex flex-col items-center justify-center h-12 rounded-lg relative press-spring select-none touch-manipulation ${
-        active
-          ? "bg-accent text-text-on-accent shadow-md"
-          : "bg-bg-raised text-text-secondary"
+      disabled={disabled}
+      className={`flex-1 flex flex-col items-center justify-center h-12 rounded-lg select-none touch-manipulation ${
+        disabled
+          ? "opacity-40 cursor-default"
+          : active
+            ? "bg-accent text-text-on-accent shadow-md press-spring"
+            : "bg-bg-raised text-text-secondary press-spring"
       }`}
       onClick={onClick}
       aria-label={label}
@@ -77,11 +80,6 @@ function ControlButton({
     >
       <span className="text-lg leading-none">{icon}</span>
       <span className="text-[0.625rem] mt-0.5 leading-none">{label}</span>
-      {badge !== undefined && (
-        <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] rounded-full bg-accent text-white text-[0.5625rem] font-bold flex items-center justify-center px-1">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
     </button>
   );
 }
