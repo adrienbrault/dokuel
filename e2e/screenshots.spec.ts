@@ -201,6 +201,66 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	});
 });
 
+// --- Sketch mode variants ---
+
+test("landing page - sketch mode", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.evaluate(() =>
+		localStorage.setItem("sudoku_sketch_mode", "true"),
+	);
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	await page.waitForTimeout(500);
+	await page.screenshot({
+		path: screenshotPath("landing-sketch", testInfo.project.name),
+	});
+});
+
+test("solo game - sketch mode", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.evaluate(() =>
+		localStorage.setItem("sudoku_sketch_mode", "true"),
+	);
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	await page.getByText("Start Solo").click();
+	await page.getByText("Easy").click();
+	await page.waitForTimeout(800);
+	await page.screenshot({
+		path: screenshotPath("solo-game-sketch", testInfo.project.name),
+	});
+});
+
+test("landing page - sketch + dark mode", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.evaluate(() => {
+		localStorage.setItem("sudoku_sketch_mode", "true");
+		localStorage.setItem("sudoku_theme", "dark");
+	});
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	await page.waitForTimeout(500);
+	await page.screenshot({
+		path: screenshotPath("landing-sketch-dark", testInfo.project.name),
+	});
+});
+
+test("solo game - sketch + dark mode", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.evaluate(() => {
+		localStorage.setItem("sudoku_sketch_mode", "true");
+		localStorage.setItem("sudoku_theme", "dark");
+	});
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	await page.getByText("Start Solo").click();
+	await page.getByText("Easy").click();
+	await page.waitForTimeout(800);
+	await page.screenshot({
+		path: screenshotPath("solo-game-sketch-dark", testInfo.project.name),
+	});
+});
+
 test("solo game - win modal", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.waitForLoadState("networkidle");
