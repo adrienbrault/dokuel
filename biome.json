@@ -27,7 +27,8 @@
       },
       "performance": {
         "noBarrelFile": "error",
-        "noReExportAll": "error"
+        "noReExportAll": "error",
+        "noNamespaceImport": "error"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": {
@@ -80,6 +81,21 @@
         "rules": {
           "security": {
             "noSecrets": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/lib/p2p-room.ts",
+        "src/lib/p2p-room.test.ts",
+        "src/hooks/useYjsMultiplayer.ts",
+        "src/lib/sudoku.ts"
+      ],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noNamespaceImport": "off"
           }
         }
       }
