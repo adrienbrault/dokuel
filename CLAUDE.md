@@ -10,6 +10,7 @@ bun run lint         # Check lint + format (biome check)
 bun run lint:fix     # Auto-fix lint + format (biome check --write)
 bun run typecheck    # TypeScript check (tsc --noEmit -p tsconfig.app.json)
 bun run ci           # Full CI: lint + typecheck + test
+bun run diff-coverage # Check test coverage on git-changed lines
 ```
 
 ## Hooks & Feedback Loops
@@ -18,7 +19,7 @@ Hooks in `.claude/settings.json` automate quality checks — **do not duplicate 
 
 - **PostToolUse (Edit/Write)**: Auto-formats with Biome, then runs the related test file via `vitest run`. No need to manually run tests after editing — just check the hook output.
 - **PreToolUse (Edit/Write)**: Blocks writes to `.env`, secrets, keys.
-- **Stop**: Runs `bun run ci` — blocks stopping if lint, typecheck, or tests fail.
+- **Stop**: Runs `bun run ci` — blocks stopping if lint, typecheck, or tests fail. Then runs `bun run diff-coverage` — reports which changed lines lack test coverage (advisory, does not block). Review the output and add tests for important code paths.
 
 **What this means for workflow**: Edit a file → hook formats it and runs its tests → you see pass/fail immediately. Only run `bun run ci` or `bun run test` manually when you need the full suite or coverage.
 
