@@ -228,11 +228,11 @@ function JoinScreen({
           disabled={!code.trim()}
           className={`
 						w-full py-4 rounded-xl text-lg font-semibold
-						press-spring-soft select-none touch-manipulation
+						select-none touch-manipulation transition-colors
 						${
               code.trim()
-                ? "bg-accent text-white shadow-lg shadow-accent/20"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                ? "bg-accent text-white shadow-lg shadow-accent/20 press-spring-soft"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed"
             }
 					`}
           onClick={() => onJoin(code.trim())}
@@ -241,10 +241,10 @@ function JoinScreen({
         </button>
         <button
           type="button"
-          className="text-sm text-gray-400 dark:text-gray-500 mt-2 touch-manipulation"
+          className="w-full py-3 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 touch-manipulation press-spring-soft"
           onClick={onBack}
         >
-          Back
+          ← Back
         </button>
       </div>
     </div>
