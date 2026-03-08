@@ -3,6 +3,12 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { formatTime } from "../lib/format.ts";
+import {
+  deleteGame,
+  loadGame,
+  type SavedGame,
+  saveGame,
+} from "../lib/game-storage.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { generatePuzzle } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
@@ -15,8 +21,21 @@ import { Timer } from "./Timer.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
 
+function boardToValues(board: { value: number | null }[][]): string {
+  return board
+    .flatMap((row) =>
+      row.map((c) => (c.value === null ? "." : String(c.value))),
+    )
+    .join("");
+}
+
+function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
+  return board.flatMap((row) => row.map((c) => Array.from(c.notes)));
+}
+
 type SoloGameProps = {
   difficulty: Difficulty;
+  gameKey?: string | undefined;
   showConflicts?: boolean | undefined;
   initialPuzzle?: string | undefined;
   title?: string | undefined;
@@ -26,24 +45,45 @@ type SoloGameProps = {
 
 export function SoloGame({
   difficulty,
+  gameKey,
   showConflicts = true,
   initialPuzzle,
   title,
   onBack,
   onRematch,
 }: SoloGameProps) {
-  const puzzle = useMemo(() => {
-    if (initialPuzzle) {
-      return initialPuzzle;
-    }
-    return generatePuzzle(difficulty);
-  }, [difficulty, initialPuzzle]);
+  const saved = useMemo(() => (gameKey ? loadGame(gameKey) : null), [gameKey]);
 
-  const game = useSudoku(puzzle);
+  const puzzle = useMemo(() => {
+    if (saved?.puzzle) return saved.puzzle;
+    if (initialPuzzle) return initialPuzzle;
+    return generatePuzzle(difficulty);
+  }, [difficulty, initialPuzzle, saved]);
+
+  const savedBoard = useMemo(
+    () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
+    [saved],
+  );
+
+  const game = useSudoku(puzzle, savedBoard);
   const { position, setPosition } = useNumPadPosition();
-  const timerSecondsRef = useRef(0);
+  const timerSecondsRef = useRef(saved?.timer ?? 0);
   const [showResult, setShowResult] = useState(false);
   const [revealed, setRevealed] = useState(false);
+
+  // Auto-save on every board change
+  useEffect(() => {
+    if (!gameKey || game.status === "completed") return;
+    const data: SavedGame = {
+      puzzle,
+      values: boardToValues(game.board),
+      notes: boardToNotes(game.board),
+      timer: timerSecondsRef.current,
+      difficulty,
+      showConflicts,
+    };
+    saveGame(gameKey, data);
+  }, [game.board, gameKey, puzzle, difficulty, showConflicts, game.status]);
 
   useEffect(() => {
     const id = setTimeout(() => setRevealed(true), 600);
@@ -52,10 +92,11 @@ export function SoloGame({
 
   useEffect(() => {
     if (game.status !== "completed") return;
+    if (gameKey) deleteGame(gameKey);
     saveGameResult(difficulty, timerSecondsRef.current, true);
     const id = setTimeout(() => setShowResult(true), 300);
     return () => clearTimeout(id);
-  }, [game.status, difficulty]);
+  }, [game.status, difficulty, gameKey]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell) {
@@ -84,6 +125,7 @@ export function SoloGame({
         <div className="flex flex-col items-center">
           <Timer
             running={game.status === "playing"}
+            initialSeconds={saved?.timer}
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
