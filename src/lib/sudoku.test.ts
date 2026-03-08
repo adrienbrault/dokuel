@@ -3,6 +3,7 @@ import {
   cellKey,
   generatePuzzle,
   getConflicts,
+  getErrors,
   isBoardComplete,
   parsePuzzle,
   solvePuzzle,
@@ -154,6 +155,50 @@ describe("getConflicts", () => {
     board[1]![0]!.value = 3;
     const conflicts = getConflicts(board);
     expect(conflicts.size).toBe(0);
+  });
+});
+
+describe("getErrors", () => {
+  it("returns empty set when all user values match the solution", () => {
+    const board = parsePuzzle(KNOWN_PUZZLE);
+    // Fill in all empty cells with the correct solution values
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (!board[row]![col]!.isGiven) {
+          board[row]![col]!.value = Number(KNOWN_SOLUTION[row * 9 + col]);
+        }
+      }
+    }
+    const errors = getErrors(board, KNOWN_SOLUTION);
+    expect(errors.size).toBe(0);
+  });
+
+  it("flags a cell whose value differs from the solution", () => {
+    const board = parsePuzzle(KNOWN_PUZZLE);
+    // KNOWN_SOLUTION[0] is '5', so cell (0,0) is given as 5 — find an empty cell
+    // Cell (0,0) is '.', so it's empty. Solution value is '5'.
+    board[0]![0]!.value = 9; // wrong value (solution is 5)
+    const errors = getErrors(board, KNOWN_SOLUTION);
+    expect(errors.has(cellKey(0, 0))).toBe(true);
+  });
+
+  it("does not flag given cells even if they appear in the check", () => {
+    const board = parsePuzzle(KNOWN_PUZZLE);
+    // Given cells should never be flagged
+    const errors = getErrors(board, KNOWN_SOLUTION);
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (board[row]![col]!.isGiven) {
+          expect(errors.has(cellKey(row, col))).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("does not flag empty cells", () => {
+    const board = parsePuzzle(KNOWN_PUZZLE);
+    const errors = getErrors(board, KNOWN_SOLUTION);
+    expect(errors.size).toBe(0);
   });
 });
 

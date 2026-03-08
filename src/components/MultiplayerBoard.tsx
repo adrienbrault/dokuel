@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { formatTime } from "../lib/format.ts";
+import { solvePuzzle } from "../lib/sudoku.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
@@ -41,7 +42,8 @@ export function MultiplayerBoard({
   onRematch,
   onBack,
 }: MultiplayerBoardProps) {
-  const game = useSudoku(puzzle);
+  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
+  const game = useSudoku(puzzle, solution);
   const { position, setPosition } = useNumPadPosition();
   const timerSecondsRef = useRef(0);
   const [showResult, setShowResult] = useState(false);
@@ -117,7 +119,7 @@ export function MultiplayerBoard({
         <Board
           board={game.board}
           selectedCell={game.selectedCell}
-          conflicts={showConflicts ? game.conflicts : EMPTY_CONFLICTS}
+          conflicts={showConflicts ? game.errors : EMPTY_CONFLICTS}
           onSelectCell={game.selectCell}
           animateReveal={!revealed}
         />

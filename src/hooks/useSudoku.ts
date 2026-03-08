@@ -4,6 +4,7 @@ import { sounds } from "../lib/sounds.ts";
 import {
   cellKey,
   getConflicts,
+  getErrors,
   isBoardComplete,
   parsePuzzle,
 } from "../lib/sudoku.ts";
@@ -340,6 +341,14 @@ export function useSudoku(
 
   const conflicts = useMemo(() => getConflicts(state.board), [state.board]);
 
+  const errors = useMemo(
+    () =>
+      state.solution
+        ? getErrors(state.board, state.solution)
+        : new Set<number>(),
+    [state.board, state.solution],
+  );
+
   const { remainingCounts, cellsRemaining } = useMemo(() => {
     const counts: Record<number, number> = {};
     for (let d = 1; d <= 9; d++) counts[d] = 9;
@@ -356,15 +365,16 @@ export function useSudoku(
     return { remainingCounts: counts, cellsRemaining: empty };
   }, [state.board]);
 
-  // Haptic + sound feedback for conflicts and completion
-  const prevConflictSize = useRef(conflicts.size);
+  // Haptic + sound feedback for errors and completion
+  const errorFeedback = state.solution ? errors : conflicts;
+  const prevErrorSize = useRef(errorFeedback.size);
   useEffect(() => {
-    if (conflicts.size > prevConflictSize.current) {
+    if (errorFeedback.size > prevErrorSize.current) {
       haptics.conflict();
       sounds.conflict();
     }
-    prevConflictSize.current = conflicts.size;
-  }, [conflicts]);
+    prevErrorSize.current = errorFeedback.size;
+  }, [errorFeedback]);
 
   useEffect(() => {
     if (state.status === "completed") {
@@ -415,6 +425,7 @@ export function useSudoku(
     selectedCell: state.selectedCell,
     notesMode: state.notesMode,
     conflicts,
+    errors,
     remainingCounts,
     cellsRemaining,
     historyLength: state.history.length,

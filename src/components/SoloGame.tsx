@@ -208,7 +208,7 @@ export function SoloGame({
           <Board
             board={game.board}
             selectedCell={paused ? null : game.selectedCell}
-            conflicts={showConflicts ? game.conflicts : EMPTY_CONFLICTS}
+            conflicts={showConflicts ? game.errors : EMPTY_CONFLICTS}
             onSelectCell={paused ? () => {} : game.selectCell}
             animateReveal={!revealed}
           />

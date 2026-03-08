@@ -119,6 +119,26 @@ export function getConflicts(board: Board): Set<number> {
 }
 
 /**
+ * Get all cells whose user-entered value differs from the solution.
+ * Only checks non-given cells that have a value. Returns a Set of
+ * numeric keys (row*9+col), same format as getConflicts.
+ */
+export function getErrors(board: Board, solution: string): Set<number> {
+  const errors = new Set<number>();
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      const cell = board[row]![col]!;
+      if (cell.isGiven || cell.value === null) continue;
+      const solutionValue = Number(solution[row * 9 + col]);
+      if (cell.value !== solutionValue) {
+        errors.add(cellKey(row, col));
+      }
+    }
+  }
+  return errors;
+}
+
+/**
  * Check if board is complete: all cells filled and no conflicts.
  * Accepts pre-computed conflicts to avoid redundant recomputation.
  */
