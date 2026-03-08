@@ -17,6 +17,7 @@ type MultiplayerGameProps = {
   playerName: string;
   roomId: string;
   difficulty: import("../lib/types.ts").Difficulty;
+  showConflicts?: boolean;
   onBack: () => void;
 };
 
@@ -25,6 +26,7 @@ export function MultiplayerGame({
   playerName,
   roomId,
   difficulty,
+  showConflicts = true,
   onBack,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
@@ -66,6 +68,7 @@ export function MultiplayerGame({
         <MultiplayerBoard
           puzzle={mp.puzzle}
           playerId={playerId}
+          showConflicts={showConflicts}
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
@@ -102,9 +105,12 @@ function Toast({ message }: { message: string }) {
   );
 }
 
+const EMPTY_CONFLICTS = new Set<number>();
+
 type MultiplayerBoardProps = {
   puzzle: string;
   playerId: string;
+  showConflicts?: boolean;
   opponentProgress: {
     cellsRemaining: number;
     completionPercent: number;
@@ -120,6 +126,7 @@ type MultiplayerBoardProps = {
 function MultiplayerBoard({
   puzzle,
   playerId,
+  showConflicts = true,
   opponentProgress,
   opponentDisconnected,
   gameOver,
@@ -236,7 +243,7 @@ function MultiplayerBoard({
           <Board
             board={game.board}
             selectedCell={game.selectedCell}
-            conflicts={game.conflicts}
+            conflicts={showConflicts ? game.conflicts : EMPTY_CONFLICTS}
             onSelectCell={game.selectCell}
             animateReveal={!revealed}
           />

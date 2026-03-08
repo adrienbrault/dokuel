@@ -34,9 +34,19 @@ function getPlayerName() {
 type Screen =
   | { name: "landing" }
   | { name: "difficulty"; mode: "solo" | "create" }
-  | { name: "solo"; difficulty: Difficulty; gameId: number }
+  | {
+      name: "solo";
+      difficulty: Difficulty;
+      gameId: number;
+      showConflicts: boolean;
+    }
   | { name: "daily" }
-  | { name: "multiplayer"; roomId: string; difficulty: Difficulty }
+  | {
+      name: "multiplayer";
+      roomId: string;
+      difficulty: Difficulty;
+      showConflicts: boolean;
+    }
   | { name: "join" };
 
 function App() {
@@ -47,6 +57,7 @@ function App() {
         name: "multiplayer",
         roomId: path,
         difficulty: "medium" as Difficulty,
+        showConflicts: true,
       };
     }
     return { name: "landing" };
@@ -86,18 +97,24 @@ function App() {
       return (
         <div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
           <DifficultyPicker
-            onSelect={(difficulty) => {
+            onSelect={(difficulty, showConflicts) => {
               if (screen.mode === "solo") {
                 gameIdRef.current++;
                 setScreen({
                   name: "solo",
                   difficulty,
                   gameId: gameIdRef.current,
+                  showConflicts,
                 });
               } else {
                 const roomId = generateId();
                 window.history.pushState(null, "", `/${roomId}`);
-                setScreen({ name: "multiplayer", roomId, difficulty });
+                setScreen({
+                  name: "multiplayer",
+                  roomId,
+                  difficulty,
+                  showConflicts,
+                });
               }
             }}
             onBack={() => setScreen({ name: "landing" })}
@@ -110,6 +127,7 @@ function App() {
         <SoloGame
           key={screen.gameId}
           difficulty={screen.difficulty}
+          showConflicts={screen.showConflicts}
           onBack={() => setScreen({ name: "landing" })}
           onRematch={() => {
             gameIdRef.current++;
@@ -117,6 +135,7 @@ function App() {
               name: "solo",
               difficulty: screen.difficulty,
               gameId: gameIdRef.current,
+              showConflicts: screen.showConflicts,
             });
           }}
         />
@@ -130,6 +149,7 @@ function App() {
         <MultiplayerScreen
           roomId={screen.roomId}
           difficulty={screen.difficulty}
+          showConflicts={screen.showConflicts}
           onBack={() => {
             window.history.pushState(null, "", "/");
             setScreen({ name: "landing" });
@@ -146,6 +166,7 @@ function App() {
               name: "multiplayer",
               roomId,
               difficulty: "medium",
+              showConflicts: true,
             });
           }}
           onBack={() => setScreen({ name: "landing" })}
@@ -157,10 +178,12 @@ function App() {
 function MultiplayerScreen({
   roomId,
   difficulty,
+  showConflicts,
   onBack,
 }: {
   roomId: string;
   difficulty: Difficulty;
+  showConflicts: boolean;
   onBack: () => void;
 }) {
   const playerId = useMemo(getPlayerId, []);
@@ -172,6 +195,7 @@ function MultiplayerScreen({
       playerId={playerId}
       playerName={playerName}
       difficulty={difficulty}
+      showConflicts={showConflicts}
       onBack={onBack}
     />
   );

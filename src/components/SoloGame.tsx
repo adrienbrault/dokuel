@@ -6,6 +6,9 @@ import { formatTime } from "../lib/format.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
+
+const EMPTY_CONFLICTS = new Set<number>();
+
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -15,6 +18,7 @@ import { Timer } from "./Timer.tsx";
 
 type SoloGameProps = {
   difficulty: Difficulty;
+  showConflicts?: boolean;
   initialPuzzle?: string;
   initialSolution?: string;
   onBack: () => void;
@@ -23,6 +27,7 @@ type SoloGameProps = {
 
 export function SoloGame({
   difficulty,
+  showConflicts = true,
   initialPuzzle,
   initialSolution,
   onBack,
@@ -115,7 +120,7 @@ export function SoloGame({
           <Board
             board={game.board}
             selectedCell={game.selectedCell}
-            conflicts={game.conflicts}
+            conflicts={showConflicts ? game.conflicts : EMPTY_CONFLICTS}
             onSelectCell={game.selectCell}
             animateReveal={!revealed}
           />
