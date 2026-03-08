@@ -120,7 +120,7 @@ function DailyChallengeButton({
         </span>
         {completed && (
           <svg
-            className="w-5 h-5 text-green-500"
+            className="w-5 h-5 text-emerald-500"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-label="Completed"

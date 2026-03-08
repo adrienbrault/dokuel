@@ -2,68 +2,68 @@
 
 @theme {
   /* Board & cell */
-  --color-board-bg: oklch(0.98 0 0);
-  --color-board-border: oklch(0.3 0 0);
-  --color-cell-bg: oklch(1 0 0);
-  --color-cell-selected: oklch(0.92 0.05 250);
-  --color-cell-highlight: oklch(0.95 0.02 250);
-  --color-cell-same-number: oklch(0.9 0.06 250);
-  --color-cell-given: oklch(0.25 0 0);
-  --color-cell-user: oklch(0.45 0.15 250);
-  --color-cell-conflict: oklch(0.65 0.25 25);
-  --color-cell-conflict-bg: oklch(0.95 0.05 25);
-  --color-success: oklch(0.65 0.2 150);
-  --color-accent: oklch(0.55 0.15 250);
-  --color-accent-light: oklch(0.92 0.05 250);
+  --color-board-bg: oklch(0.97 0.005 80);
+  --color-board-border: oklch(0.35 0.01 80);
+  --color-cell-bg: oklch(0.995 0.003 80);
+  --color-cell-selected: oklch(0.92 0.04 168);
+  --color-cell-highlight: oklch(0.95 0.015 168);
+  --color-cell-same-number: oklch(0.9 0.05 168);
+  --color-cell-given: oklch(0.25 0.01 80);
+  --color-cell-user: oklch(0.42 0.12 168);
+  --color-cell-conflict: oklch(0.6 0.2 25);
+  --color-cell-conflict-bg: oklch(0.95 0.04 25);
+  --color-success: oklch(0.65 0.18 155);
+  --color-accent: oklch(0.52 0.12 168);
+  --color-accent-light: oklch(0.92 0.04 168);
 
   /* Semantic surfaces */
-  --color-bg-primary: oklch(1 0 0);
-  --color-bg-inset: oklch(0.97 0 0);
-  --color-bg-raised: oklch(0.96 0 0);
-  --color-bg-overlay: oklch(1 0 0);
-  --color-border-default: oklch(0.9 0 0);
+  --color-bg-primary: oklch(0.99 0.004 80);
+  --color-bg-inset: oklch(0.96 0.006 80);
+  --color-bg-raised: oklch(0.95 0.008 80);
+  --color-bg-overlay: oklch(0.99 0.004 80);
+  --color-border-default: oklch(0.9 0.01 80);
 
   /* Semantic text */
-  --color-text-primary: oklch(0.15 0 0);
-  --color-text-secondary: oklch(0.45 0 0);
-  --color-text-muted: oklch(0.6 0 0);
-  --color-text-on-accent: oklch(1 0 0);
+  --color-text-primary: oklch(0.18 0.01 80);
+  --color-text-secondary: oklch(0.45 0.01 80);
+  --color-text-muted: oklch(0.58 0.01 80);
+  --color-text-on-accent: oklch(0.99 0 0);
 
   /* Semantic interactive */
-  --color-bg-disabled: oklch(0.88 0 0);
-  --color-text-disabled: oklch(0.55 0 0);
+  --color-bg-disabled: oklch(0.88 0.008 80);
+  --color-text-disabled: oklch(0.55 0.01 80);
 }
 
 /* Dark mode overrides */
 .dark {
   /* Board & cell */
-  --color-board-bg: oklch(0.2 0 0);
-  --color-board-border: oklch(0.7 0 0);
-  --color-cell-bg: oklch(0.18 0 0);
-  --color-cell-selected: oklch(0.28 0.06 250);
-  --color-cell-highlight: oklch(0.22 0.02 250);
-  --color-cell-same-number: oklch(0.26 0.06 250);
-  --color-cell-given: oklch(0.9 0 0);
-  --color-cell-user: oklch(0.7 0.15 250);
-  --color-cell-conflict: oklch(0.7 0.2 25);
-  --color-cell-conflict-bg: oklch(0.25 0.06 25);
-  --color-accent-light: oklch(0.28 0.06 250);
+  --color-board-bg: oklch(0.2 0.008 80);
+  --color-board-border: oklch(0.55 0.01 80);
+  --color-cell-bg: oklch(0.18 0.006 80);
+  --color-cell-selected: oklch(0.28 0.05 168);
+  --color-cell-highlight: oklch(0.22 0.02 168);
+  --color-cell-same-number: oklch(0.26 0.05 168);
+  --color-cell-given: oklch(0.92 0.005 80);
+  --color-cell-user: oklch(0.7 0.13 168);
+  --color-cell-conflict: oklch(0.7 0.18 25);
+  --color-cell-conflict-bg: oklch(0.25 0.05 25);
+  --color-accent-light: oklch(0.28 0.05 168);
 
   /* Semantic surfaces */
-  --color-bg-primary: oklch(0.13 0 0);
-  --color-bg-inset: oklch(0.15 0 0);
-  --color-bg-raised: oklch(0.2 0 0);
-  --color-bg-overlay: oklch(0.15 0 0);
-  --color-border-default: oklch(0.25 0 0);
+  --color-bg-primary: oklch(0.14 0.008 80);
+  --color-bg-inset: oklch(0.16 0.008 80);
+  --color-bg-raised: oklch(0.21 0.008 80);
+  --color-bg-overlay: oklch(0.16 0.008 80);
+  --color-border-default: oklch(0.26 0.008 80);
 
   /* Semantic text */
-  --color-text-primary: oklch(0.93 0 0);
-  --color-text-secondary: oklch(0.7 0 0);
-  --color-text-muted: oklch(0.5 0 0);
+  --color-text-primary: oklch(0.93 0.005 80);
+  --color-text-secondary: oklch(0.7 0.008 80);
+  --color-text-muted: oklch(0.5 0.008 80);
 
   /* Semantic interactive */
-  --color-bg-disabled: oklch(0.25 0 0);
-  --color-text-disabled: oklch(0.45 0 0);
+  --color-bg-disabled: oklch(0.25 0.008 80);
+  --color-text-disabled: oklch(0.45 0.008 80);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -75,7 +75,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -119,10 +119,10 @@ body {
 @keyframes cell-glow-pulse {
   0%,
   100% {
-    box-shadow: inset 0 0 0 2px oklch(0.55 0.15 250 / 0.4);
+    box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / 0.4);
   }
   50% {
-    box-shadow: inset 0 0 0 2px oklch(0.55 0.15 250 / 0.7);
+    box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / 0.7);
   }
 }
 .cell-selected-glow {
@@ -252,43 +252,43 @@ body {
 }
 .confetti-container span:nth-child(1) {
   left: 10%;
-  background: oklch(0.7 0.25 30);
+  background: oklch(0.7 0.15 168);
   animation-duration: 2.2s;
   animation-delay: 0s;
 }
 .confetti-container span:nth-child(2) {
   left: 25%;
-  background: oklch(0.7 0.2 250);
+  background: oklch(0.75 0.15 80);
   animation-duration: 2.5s;
   animation-delay: 0.1s;
 }
 .confetti-container span:nth-child(3) {
   left: 40%;
-  background: oklch(0.75 0.2 150);
+  background: oklch(0.7 0.18 155);
   animation-duration: 2s;
   animation-delay: 0.05s;
 }
 .confetti-container span:nth-child(4) {
   left: 55%;
-  background: oklch(0.7 0.25 60);
+  background: oklch(0.75 0.18 65);
   animation-duration: 2.8s;
   animation-delay: 0.15s;
 }
 .confetti-container span:nth-child(5) {
   left: 70%;
-  background: oklch(0.65 0.25 330);
+  background: oklch(0.65 0.15 25);
   animation-duration: 2.1s;
   animation-delay: 0.08s;
 }
 .confetti-container span:nth-child(6) {
   left: 85%;
-  background: oklch(0.7 0.2 250);
+  background: oklch(0.6 0.12 168);
   animation-duration: 2.4s;
   animation-delay: 0.2s;
 }
 .confetti-container span:nth-child(7) {
   left: 15%;
-  background: oklch(0.75 0.2 150);
+  background: oklch(0.72 0.16 155);
   animation-duration: 2.6s;
   animation-delay: 0.12s;
   width: 6px;
@@ -296,7 +296,7 @@ body {
 }
 .confetti-container span:nth-child(8) {
   left: 50%;
-  background: oklch(0.7 0.25 30);
+  background: oklch(0.78 0.16 80);
   animation-duration: 2.3s;
   animation-delay: 0.18s;
   width: 6px;
@@ -304,7 +304,7 @@ body {
 }
 .confetti-container span:nth-child(9) {
   left: 80%;
-  background: oklch(0.65 0.25 60);
+  background: oklch(0.68 0.18 65);
   animation-duration: 2.7s;
   animation-delay: 0.07s;
   width: 10px;
@@ -313,7 +313,7 @@ body {
 }
 .confetti-container span:nth-child(10) {
   left: 35%;
-  background: oklch(0.65 0.25 330);
+  background: oklch(0.62 0.14 25);
   animation-duration: 2s;
   animation-delay: 0.25s;
   width: 10px;

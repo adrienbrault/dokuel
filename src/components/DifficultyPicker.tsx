@@ -17,13 +17,13 @@ const DIFFICULTIES: {
     value: "easy",
     label: "Easy",
     description: "Great for warming up",
-    color: "bg-green-400",
+    color: "bg-emerald-400",
   },
   {
     value: "medium",
     label: "Medium",
     description: "A fair challenge",
-    color: "bg-yellow-400",
+    color: "bg-amber-400",
   },
   {
     value: "hard",
@@ -35,7 +35,7 @@ const DIFFICULTIES: {
     value: "expert",
     label: "Expert",
     description: "The ultimate test",
-    color: "bg-red-400",
+    color: "bg-rose-400",
   },
 ];
 

@@ -137,16 +137,14 @@ export function MultiplayerBoard({
               <span>
                 Opponent
                 {opponentDisconnected && (
-                  <span className="ml-1 text-yellow-500">
-                    (reconnecting...)
-                  </span>
+                  <span className="ml-1 text-amber-500">(reconnecting...)</span>
                 )}
               </span>
               <span>{opponentProgress.completionPercent}%</span>
             </div>
             <div className="w-full h-2 rounded-full bg-bg-raised overflow-hidden">
               <div
-                className="h-full rounded-full bg-red-400 transition-all duration-300"
+                className="h-full rounded-full bg-rose-400 transition-all duration-300"
                 style={{ width: `${opponentProgress.completionPercent}%` }}
               />
             </div>
