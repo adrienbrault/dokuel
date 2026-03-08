@@ -414,6 +414,9 @@ body {
     height: 100%;
     max-height: 100%;
     aspect-ratio: 1;
+    /* Explicit rows so the grid shrinks to fit the height constraint
+       instead of sizing from content */
+    grid-template-rows: repeat(9, minmax(0, 1fr));
   }
   /* Hide portrait controls + numpad under the board */
   .game-layout .game-controls-col {
