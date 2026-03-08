@@ -334,3 +334,71 @@ body {
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
 }
+
+/* ─── Design System: Component Classes ─── */
+
+/* Buttons */
+.btn {
+  @apply rounded-xl font-semibold select-none touch-manipulation;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn:active {
+  transform: scale(0.98);
+}
+@media (hover: hover) {
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+}
+.btn-lg {
+  @apply py-4 text-lg;
+}
+.btn-md {
+  @apply px-4 py-2 text-sm font-medium;
+}
+.btn-primary {
+  @apply bg-accent text-text-on-accent shadow-lg shadow-accent/20;
+}
+.btn-secondary {
+  @apply bg-bg-raised text-text-primary;
+}
+.btn-ghost {
+  @apply text-sm text-text-muted;
+}
+
+/* Surfaces */
+.card {
+  @apply rounded-xl bg-bg-inset border border-border-default;
+}
+.modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm;
+  animation: modal-backdrop-in 0.2s ease-out;
+}
+.modal-panel {
+  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-2xl p-8 shadow-2xl;
+  animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.screen {
+  @apply flex min-h-dvh items-center justify-center bg-bg-primary;
+  animation: screen-enter 0.2s ease-out;
+}
+.screen-content {
+  @apply flex flex-col items-center w-full max-w-sm px-6;
+}
+
+/* Typography */
+.heading-xl {
+  @apply text-5xl font-bold tracking-tight text-text-primary;
+}
+.heading {
+  @apply text-2xl font-bold text-text-primary;
+}
+.label {
+  @apply text-xs font-medium text-text-muted uppercase tracking-wider;
+}
+.caption {
+  @apply text-sm text-text-secondary;
+}
+.text-mono {
+  @apply font-mono text-sm text-text-secondary tabular-nums;
+}
