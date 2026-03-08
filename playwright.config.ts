@@ -52,5 +52,14 @@ export default defineConfig({
         viewport: { width: 844, height: 390 },
       },
     },
+    {
+      name: "iPhone SE Landscape",
+      use: {
+        ...devices["iPhone SE"],
+        defaultBrowserType: "chromium",
+        deviceScaleFactor: 1,
+        viewport: { width: 667, height: 375 },
+      },
+    },
   ],
 });

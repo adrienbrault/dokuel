@@ -113,6 +113,15 @@ body {
     env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+/* In landscape on phones, make the page taller than the viewport so
+   Safari/Chrome collapse the toolbar on scroll. The game layout is
+   position: fixed so it stays put. */
+@media (orientation: landscape) and (max-height: 500px) {
+  body {
+    min-height: calc(100dvh + 1px);
+  }
+}
+
 @keyframes pop-in {
   0% {
     transform: scale(0.6);
@@ -369,35 +378,46 @@ body {
 
 /* ─── Landscape layout for phones ─── */
 @media (orientation: landscape) and (max-height: 500px) {
+  /*
+   * Trick Safari into hiding the toolbar: make the page taller than
+   * the viewport so there's scrollable content, then fix-position
+   * the actual game UI so it stays put.
+   */
   .game-layout {
+    position: fixed;
+    inset: 0;
     padding: 0.25rem 0.75rem;
     min-height: auto;
     height: 100dvh;
     overflow: hidden;
+    z-index: 1;
   }
   .game-layout .game-header {
-    margin-bottom: 0.125rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
   }
   .game-layout .game-area {
     flex-direction: row !important;
-    align-items: stretch !important;
+    align-items: center !important;
     flex: 1 1 0;
     min-height: 0;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
-  /* Board column: let the board fill available height */
+  /* Board column: shrink to fit, don't stretch */
   .game-layout .game-board-col {
-    flex: 0 0 auto !important;
+    flex: 0 1 auto !important;
     width: auto !important;
     max-width: none !important;
-    height: 100%;
+    min-height: 0;
     gap: 0 !important;
+    overflow: hidden;
   }
-  /* Board itself: fill height, derive width from aspect ratio */
+  /* Board: height-constrained, width follows from aspect-ratio */
   .game-layout .game-board-col [role="region"] {
-    height: 100%;
-    max-height: 100%;
-    width: auto;
+    width: auto !important;
+    max-width: none !important;
+    height: calc(100dvh - 2.5rem);
+    max-height: calc(100dvh - 2.5rem);
     aspect-ratio: 1;
   }
   /* Hide portrait controls + numpad under the board */
@@ -412,7 +432,7 @@ body {
     gap: 0.5rem;
     flex: 1 1 0;
     min-width: 0;
-    max-width: 14rem;
+    max-width: 16rem;
   }
 }
 
