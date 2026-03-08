@@ -1,3 +1,4 @@
+import type React from "react";
 import { type PointerEvent, useCallback, useRef } from "react";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Position } from "../lib/types.ts";
@@ -34,6 +35,7 @@ export function Board({
     startPos: Position;
     cells: Set<number>;
     moved: boolean;
+    shiftClick: boolean;
   } | null>(null);
 
   const getCellFromPoint = useCallback(
@@ -56,15 +58,34 @@ export function Board({
       const pos = getCellFromPoint(e.clientX, e.clientY);
       if (!pos) return;
       const key = cellKey(pos.row, pos.col);
+
+      // Shift+click: add to existing selection
+      if (e.shiftKey && selectedCells && selectedCells.size > 0) {
+        const newCells = new Set(selectedCells);
+        newCells.add(key);
+        const primary = selectedCell ?? pos;
+        onSetSelectedCells(newCells, primary);
+        dragRef.current = {
+          startKey: key,
+          startPos: pos,
+          cells: newCells,
+          moved: false,
+          shiftClick: true,
+        };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        return;
+      }
+
       dragRef.current = {
         startKey: key,
         startPos: pos,
         cells: new Set([key]),
         moved: false,
+        shiftClick: false,
       };
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [onSetSelectedCells, getCellFromPoint],
+    [onSetSelectedCells, getCellFromPoint, selectedCells, selectedCell],
   );
 
   const handlePointerMove = useCallback(
@@ -86,15 +107,27 @@ export function Board({
     [onSetSelectedCells, getCellFromPoint],
   );
 
+  // Suppress Cell onClick after Shift+click to avoid resetting multi-selection
+  const suppressClickRef = useRef(false);
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (suppressClickRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+      suppressClickRef.current = false;
+    }
+  }, []);
+
   const handlePointerUp = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
       const drag = dragRef.current;
       if (!drag) return;
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      // Single tap (no movement) — let Cell's onClick handle selection normally.
-      // Only finalize multi-select if the user actually dragged across cells.
-      if (drag.moved && drag.cells.size > 1 && onSetSelectedCells) {
-        onSetSelectedCells(drag.cells, drag.startPos);
+      // Shift+click or drag: suppress the subsequent Cell onClick
+      if (drag.shiftClick || (drag.moved && drag.cells.size > 1)) {
+        suppressClickRef.current = true;
+        if (drag.moved && drag.cells.size > 1 && onSetSelectedCells) {
+          onSetSelectedCells(drag.cells, drag.startPos);
+        }
       }
       dragRef.current = null;
     },
@@ -109,6 +142,7 @@ export function Board({
       onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
       onPointerMove={onSetSelectedCells ? handlePointerMove : undefined}
       onPointerUp={onSetSelectedCells ? handlePointerUp : undefined}
+      onClickCapture={onSetSelectedCells ? handleClick : undefined}
     >
       {board.flatMap((row, rowIdx) =>
         row.map((cell, colIdx) => {
