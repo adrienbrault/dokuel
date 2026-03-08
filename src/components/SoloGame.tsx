@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { formatTime } from "../lib/format.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
-import type { Difficulty } from "../lib/types.ts";
+import type { Difficulty, NumPadPosition } from "../lib/types.ts";
 
 const EMPTY_CONFLICTS = new Set<number>();
 
@@ -15,6 +21,27 @@ import { GameResult } from "./GameResult.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 import { Timer } from "./Timer.tsx";
+
+const wideQuery =
+  typeof window !== "undefined"
+    ? window.matchMedia("(min-width: 540px)")
+    : null;
+
+function useIsWide(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      wideQuery?.addEventListener("change", cb);
+      return () => wideQuery?.removeEventListener("change", cb);
+    },
+    () => wideQuery?.matches ?? false,
+  );
+}
+
+function useEffectivePosition(position: NumPadPosition): NumPadPosition {
+  const isWide = useIsWide();
+  if (!isWide && position !== "bottom") return "bottom";
+  return position;
+}
 
 type SoloGameProps = {
   difficulty: Difficulty;
@@ -44,6 +71,7 @@ export function SoloGame({
 
   const game = useSudoku(puzzle, solution);
   const { position, setPosition } = useNumPadPosition();
+  const effectivePosition = useEffectivePosition(position);
   const timerSecondsRef = useRef(0);
   const [showResult, setShowResult] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -78,7 +106,7 @@ export function SoloGame({
 
   const numPad = (
     <NumPad
-      position={position}
+      position={effectivePosition}
       remainingCounts={game.remainingCounts}
       onNumber={handleNumber}
     />
@@ -108,14 +136,14 @@ export function SoloGame({
       <div
         className={`
 					flex gap-3 w-full justify-center flex-1
-					${position === "left" ? "flex-row items-center max-w-lg mx-auto" : ""}
-					${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto" : ""}
-					${position === "bottom" ? "flex-col items-center" : ""}
+					${effectivePosition === "left" ? "flex-row items-center max-w-lg mx-auto" : ""}
+					${effectivePosition === "right" ? "flex-row-reverse items-center max-w-lg mx-auto" : ""}
+					${effectivePosition === "bottom" ? "flex-col items-center" : ""}
 				`}
       >
-        {position !== "bottom" && numPad}
+        {effectivePosition !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${game.status === "completed" ? "animate-celebration" : ""}`}
+          className={`flex flex-col items-center gap-3 ${effectivePosition === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${game.status === "completed" ? "animate-celebration" : ""}`}
         >
           <Board
             board={game.board}
@@ -132,7 +160,7 @@ export function SoloGame({
               onErase={game.erase}
               onUndo={game.undo}
             />
-            {position === "bottom" && numPad}
+            {effectivePosition === "bottom" && numPad}
           </div>
         </div>
       </div>
