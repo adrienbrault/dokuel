@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "ci": "bun run lint && bun run typecheck && bun run test",
     "e2e": "bunx playwright test",
     "screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
@@ -34,6 +35,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "jsdom": "^28.1.0",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
