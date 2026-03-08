@@ -125,4 +125,161 @@ describe("useMultiplayer", () => {
 			JSON.stringify({ type: "complete", board: "123456789".repeat(9) }),
 		);
 	});
+
+	it("updates roomState status to playing on game_start", () => {
+		const socket = createMockSocket();
+		const { result } = renderHook(() =>
+			useMultiplayer({
+				socket: socket as unknown as WebSocket,
+				playerId: "p1",
+				playerName: "Alice",
+			}),
+		);
+
+		act(() => socket.emit("open"));
+		act(() =>
+			socket.emit(
+				"message",
+				serverMsg({ type: "room_state", state: LOBBY_STATE }),
+			),
+		);
+		expect(result.current.roomState?.status).toBe("lobby");
+
+		const puzzle = ".".repeat(81);
+		act(() =>
+			socket.emit("message", serverMsg({ type: "game_start", puzzle })),
+		);
+
+		expect(result.current.puzzle).toBe(puzzle);
+		expect(result.current.roomState?.status).toBe("playing");
+	});
+
+	it("updates roomState status to playing on rematch_start", () => {
+		const socket = createMockSocket();
+		const { result } = renderHook(() =>
+			useMultiplayer({
+				socket: socket as unknown as WebSocket,
+				playerId: "p1",
+				playerName: "Alice",
+			}),
+		);
+
+		act(() => socket.emit("open"));
+		act(() =>
+			socket.emit(
+				"message",
+				serverMsg({ type: "room_state", state: LOBBY_STATE }),
+			),
+		);
+
+		// First game
+		const puzzle1 = ".".repeat(81);
+		act(() =>
+			socket.emit(
+				"message",
+				serverMsg({ type: "game_start", puzzle: puzzle1 }),
+			),
+		);
+		act(() =>
+			socket.emit(
+				"message",
+				serverMsg({
+					type: "game_over",
+					winnerId: "p1",
+					winnerName: "Alice",
+				}),
+			),
+		);
+		expect(result.current.gameOver).toBeTruthy();
+
+		// Rematch
+		const puzzle2 = "1" + ".".repeat(80);
+		act(() =>
+			socket.emit(
+				"message",
+				serverMsg({ type: "rematch_start", puzzle: puzzle2 }),
+			),
+		);
+
+		expect(result.current.puzzle).toBe(puzzle2);
+		expect(result.current.roomState?.status).toBe("playing");
+		expect(result.current.roomState?.winnerId).toBeNull();
+		expect(result.current.gameOver).toBeNull();
+		expect(result.current.opponentProgress).toBeNull();
+	});
+
+	it("clears error when room_state is received", () => {
+		const socket = createMockSocket();
+		const { result } = renderHook(() =>
+			useMultiplayer({
+				socket: socket as unknown as WebSocket,
+				playerId: "p1",
+				playerName: "Alice",
+			}),
+		);
+
+		act(() => socket.emit("open"));
+
+		// Receive an error
+		act(() =>
+			socket.emit(
+				"message",
+				serverMsg({
+					type: "error",
+					message: "Only the host can start the game",
+				}),
+			),
+		);
+		expect(result.current.error).toBe("Only the host can start the game");
+
+		// Receive room_state -> error should clear
+		act(() =>
+			socket.emit(
+				"message",
+				serverMsg({ type: "room_state", state: LOBBY_STATE }),
+			),
+		);
+		expect(result.current.error).toBeNull();
+	});
+
+	it("tracks opponent disconnection and reconnection", () => {
+		const socket = createMockSocket();
+		const { result } = renderHook(() =>
+			useMultiplayer({
+				socket: socket as unknown as WebSocket,
+				playerId: "p1",
+				playerName: "Alice",
+			}),
+		);
+
+		act(() => socket.emit("open"));
+		expect(result.current.opponentDisconnected).toBe(false);
+
+		act(() =>
+			socket.emit("message", serverMsg({ type: "opponent_disconnected" })),
+		);
+		expect(result.current.opponentDisconnected).toBe(true);
+
+		act(() =>
+			socket.emit("message", serverMsg({ type: "opponent_reconnected" })),
+		);
+		expect(result.current.opponentDisconnected).toBe(false);
+	});
+
+	it("sets connected to false on close", () => {
+		const socket = createMockSocket();
+		const { result } = renderHook(() =>
+			useMultiplayer({
+				socket: socket as unknown as WebSocket,
+				playerId: "p1",
+				playerName: "Alice",
+			}),
+		);
+
+		act(() => socket.emit("open"));
+		expect(result.current.connected).toBe(true);
+
+		act(() => socket.emit("close"));
+		expect(result.current.connected).toBe(false);
+	});
 });
