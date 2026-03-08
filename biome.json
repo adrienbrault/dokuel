@@ -40,7 +40,8 @@
         "useArraySortCompare": "error",
         "noFloatingPromises": "error",
         "noMisusedPromises": "error",
-        "noUnnecessaryConditions": "error"
+        "noUnnecessaryConditions": "error",
+        "noExcessiveLinesPerFile": "error"
       },
       "style": {
         "useConsistentArrayType": {
@@ -90,11 +91,24 @@
   },
   "overrides": [
     {
+      "includes": ["src/**/*.css"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/**/*.test.ts", "src/**/*.test.tsx"],
       "linter": {
         "rules": {
           "security": {
             "noSecrets": "off"
+          },
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
           }
         }
       }

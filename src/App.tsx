@@ -1,16 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
+import { JoinScreen } from "./components/JoinScreen.tsx";
 import { Landing } from "./components/Landing.tsx";
-import { MultiplayerGame } from "./components/MultiplayerGame.tsx";
+import { MultiplayerScreen } from "./components/MultiplayerScreen.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
-import { getDailyPuzzle } from "./lib/daily.ts";
-import { recordDailyCompletion } from "./lib/daily-streak.ts";
-import { formatShortDate } from "./lib/format.ts";
-import { generatePlayerName } from "./lib/name-generator.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
@@ -18,36 +16,6 @@ import "./index.css";
 
 function generateId() {
   return Math.random().toString(36).slice(2, 10);
-}
-
-function getPlayerId() {
-  let id = localStorage.getItem("sudoku_player_id");
-  if (!id) {
-    // Migrate from sessionStorage if present
-    id = sessionStorage.getItem("sudoku_player_id");
-    if (!id) {
-      id = generateId();
-    }
-    localStorage.setItem("sudoku_player_id", id);
-  }
-  return id;
-}
-
-function getPlayerName() {
-  let name = localStorage.getItem("sudoku_player_name");
-  if (!name) {
-    // Migrate from sessionStorage if present
-    name = sessionStorage.getItem("sudoku_player_name");
-    if (!name) {
-      name = generatePlayerName();
-    }
-    localStorage.setItem("sudoku_player_name", name);
-  }
-  return name;
-}
-
-function setPlayerName(name: string) {
-  localStorage.setItem("sudoku_player_name", name);
 }
 
 type Screen =
@@ -280,125 +248,6 @@ function App() {
         />
       );
   }
-}
-
-function MultiplayerScreen({
-  roomId,
-  difficulty,
-  showConflicts,
-  onBack,
-}: {
-  roomId: string;
-  difficulty: Difficulty;
-  showConflicts: boolean;
-  onBack: () => void;
-}) {
-  const playerId = useMemo(getPlayerId, []);
-  const [playerName, setName] = useState(getPlayerName);
-
-  const handleRename = useCallback((name: string) => {
-    setName(name);
-    setPlayerName(name);
-  }, []);
-
-  return (
-    <MultiplayerGame
-      roomId={roomId}
-      playerId={playerId}
-      playerName={playerName}
-      onRename={handleRename}
-      difficulty={difficulty}
-      showConflicts={showConflicts}
-      onBack={onBack}
-    />
-  );
-}
-
-function JoinScreen({
-  onJoin,
-  onBack,
-}: {
-  onJoin: (roomId: string) => void;
-  onBack: () => void;
-}) {
-  const [code, setCode] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (code.trim()) onJoin(code.trim());
-  };
-
-  return (
-    <div className="screen">
-      <form className="screen-content gap-6" onSubmit={handleSubmit}>
-        <h2 className="heading">Join Game</h2>
-        <div className="flex flex-col items-center gap-2 w-full">
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="e.g. loud-duck-38"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            className="card w-full px-4 py-3 text-text-primary text-center text-lg font-mono"
-          />
-          <p className="text-xs text-text-muted">
-            Ask the host for their room code
-          </p>
-        </div>
-        <button
-          type="submit"
-          disabled={!code.trim()}
-          className={`btn btn-lg w-full transition-colors ${
-            code.trim()
-              ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled border border-border-default cursor-not-allowed"
-          }`}
-        >
-          Join
-        </button>
-        <button
-          type="button"
-          className="btn-ghost mt-2 touch-manipulation"
-          onClick={onBack}
-        >
-          ← Back
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function DailyGame({ onBack }: { onBack: () => void }) {
-  const date = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const { puzzle } = useMemo(() => getDailyPuzzle(date, "medium"), [date]);
-  const [streakInfo, setStreakInfo] = useState<{
-    currentStreak: number;
-    longestStreak: number;
-  }>();
-  const handleComplete = useCallback(() => {
-    const streak = recordDailyCompletion(date);
-    setStreakInfo({
-      currentStreak: streak.currentStreak,
-      longestStreak: streak.longestStreak,
-    });
-  }, [date]);
-
-  return (
-    <SoloGame
-      difficulty="medium"
-      gameKey={`daily-${date}-medium`}
-      initialPuzzle={puzzle}
-      title={`Daily Challenge — ${formatShortDate(date)}`}
-      onBack={onBack}
-      onComplete={handleComplete}
-      streakInfo={streakInfo}
-    />
-  );
 }
 
 export default App;
