@@ -34,10 +34,31 @@ export function Board({
   assistLevel = "standard",
 }: BoardProps) {
   const isPaper = assistLevel === "paper";
+  const isFull = assistLevel === "full";
   const selectedValue =
     selectedCell !== null
       ? board[selectedCell.row]![selectedCell.col]!.value
       : null;
+
+  // In full assist mode, collect rows/cols of all cells matching selected value
+  // (excluding the selected cell itself) for cross-highlight
+  const matchRowColSet = (() => {
+    if (!isFull || selectedValue === null) return null;
+    const rows = new Set<number>();
+    const cols = new Set<number>();
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (
+          board[r]![c]!.value === selectedValue &&
+          !(selectedCell!.row === r && selectedCell!.col === c)
+        ) {
+          rows.add(r);
+          cols.add(c);
+        }
+      }
+    }
+    return rows.size > 0 || cols.size > 0 ? { rows, cols } : null;
+  })();
 
   const dragRef = useRef<{
     startKey: number;
@@ -174,6 +195,12 @@ export function Board({
             (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
           const isHintRelated =
             !isSelected && (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+          const isSameNumberRowCol =
+            matchRowColSet !== null &&
+            !isSelected &&
+            !isSameNumber &&
+            (matchRowColSet.rows.has(rowIdx) ||
+              matchRowColSet.cols.has(colIdx));
 
           return (
             <Cell
@@ -187,6 +214,7 @@ export function Board({
               isSameNumber={isSameNumber}
               isConflict={isConflict}
               isHintRelated={isHintRelated}
+              isSameNumberRowCol={isSameNumberRowCol}
               assistLevel={assistLevel}
               onSelect={onSelectCell}
               revealDelay={

@@ -12,6 +12,7 @@ type CellProps = {
   isSameNumber: boolean;
   isConflict: boolean;
   isHintRelated?: boolean | undefined;
+  isSameNumberRowCol?: boolean | undefined;
   assistLevel?: AssistLevel | undefined;
   onSelect: (row: number, col: number) => void;
   revealDelay?: number | undefined;
@@ -27,6 +28,7 @@ export const Cell = memo(function Cell({
   isSameNumber,
   isConflict,
   isHintRelated,
+  isSameNumberRowCol,
   assistLevel = "standard",
   onSelect,
   revealDelay,
@@ -45,7 +47,9 @@ export const Cell = memo(function Cell({
             ? "bg-cell-same-number"
             : isHighlighted
               ? "bg-cell-highlight"
-              : "bg-cell-bg";
+              : isSameNumberRowCol
+                ? "bg-cell-match-row-col"
+                : "bg-cell-bg";
 
   const textClass = cell.isGiven
     ? "text-cell-given font-bold"
