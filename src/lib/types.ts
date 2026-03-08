@@ -23,6 +23,7 @@ export type MoveAction =
       value: number;
       previousValue: CellValue;
       previousNotes: Set<number>;
+      clearedPeerNotes: Position[];
     }
   | {
       type: "erase";

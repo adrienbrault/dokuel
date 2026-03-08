@@ -74,6 +74,35 @@ export function cellKey(row: number, col: number): number {
   return row * 9 + col;
 }
 
+/** Get all unique peer positions (same row, column, or box) for a given cell. */
+export function getPeers(
+  row: number,
+  col: number,
+): { row: number; col: number }[] {
+  const seen = new Set<number>();
+  const peers: { row: number; col: number }[] = [];
+
+  const add = (r: number, c: number) => {
+    if (r === row && c === col) return;
+    const key = r * 9 + c;
+    if (seen.has(key)) return;
+    seen.add(key);
+    peers.push({ row: r, col: c });
+  };
+
+  for (let c = 0; c < 9; c++) add(row, c);
+  for (let r = 0; r < 9; r++) add(r, col);
+  const boxRow = Math.floor(row / 3) * 3;
+  const boxCol = Math.floor(col / 3) * 3;
+  for (let r = boxRow; r < boxRow + 3; r++) {
+    for (let c = boxCol; c < boxCol + 3; c++) {
+      add(r, c);
+    }
+  }
+
+  return peers;
+}
+
 /**
  * Get all conflicting cell positions as a Set of numeric keys (row*9+col).
  * A conflict = same non-null value in the same row, column, or 3x3 box.

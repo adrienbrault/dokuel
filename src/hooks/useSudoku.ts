@@ -4,6 +4,7 @@ import { sounds } from "../lib/sounds.ts";
 import {
   cellKey,
   getConflicts,
+  getPeers,
   isBoardComplete,
   parsePuzzle,
 } from "../lib/sudoku.ts";
@@ -71,15 +72,27 @@ function reducer(state: State, action: Action): State {
       }
 
       const board = cloneBoard(state.board);
+      board[row]![col]!.value = action.value;
+      board[row]![col]!.notes = new Set();
+
+      // Clear the placed number from notes in all peer cells
+      const clearedPeerNotes: Position[] = [];
+      for (const peer of getPeers(row, col)) {
+        const peerCell = board[peer.row]![peer.col]!;
+        if (peerCell.notes.has(action.value)) {
+          peerCell.notes.delete(action.value);
+          clearedPeerNotes.push(peer);
+        }
+      }
+
       const moveAction: MoveAction = {
         type: "place",
         position: { row, col },
         value: action.value,
         previousValue: cell.value,
         previousNotes: new Set(cell.notes),
+        clearedPeerNotes,
       };
-      board[row]![col]!.value = action.value;
-      board[row]![col]!.notes = new Set();
       const conflicts = getConflicts(board);
       const complete = isBoardComplete(board, conflicts);
 
@@ -123,7 +136,15 @@ function reducer(state: State, action: Action): State {
       const { row, col } = lastAction.position;
 
       switch (lastAction.type) {
-        case "place":
+        case "place": {
+          board[row]![col]!.value = lastAction.previousValue;
+          board[row]![col]!.notes = new Set(lastAction.previousNotes);
+          // Restore notes cleared from peer cells
+          for (const peer of lastAction.clearedPeerNotes) {
+            board[peer.row]![peer.col]!.notes.add(lastAction.value);
+          }
+          break;
+        }
         case "erase": {
           board[row]![col]!.value = lastAction.previousValue;
           board[row]![col]!.notes = new Set(lastAction.previousNotes);
