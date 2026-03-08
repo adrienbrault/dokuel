@@ -77,11 +77,7 @@ export function useYjsMultiplayer({
   useEffect(() => {
     const doc = new Y.Doc();
     const provider = new WebrtcProvider(roomId, doc, {
-      signaling: [
-        "wss://signaling.yjs.dev",
-        "wss://y-webrtc-signaling-eu.herokuapp.com",
-        "wss://y-webrtc-signaling-us.herokuapp.com",
-      ],
+      signaling: ["wss://signal.dokuel.com"],
     });
 
     const room = createRoomFromDoc(doc, roomId);

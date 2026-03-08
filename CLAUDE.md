@@ -23,7 +23,7 @@ See `spec.md` for full product specification.
 
 ## Deployment
 
-The frontend deploys automatically on push to `main`. No server infrastructure needed — multiplayer uses WebRTC peer-to-peer.
+The frontend deploys automatically on push to `main`. Multiplayer uses WebRTC peer-to-peer — only a lightweight signaling server is needed for peer discovery.
 
 ### Frontend (Cloudflare Pages)
 - **Project**: `sudoku` on Cloudflare Pages, connected to `adrienbrault/dokuel` on GitHub
@@ -31,8 +31,16 @@ The frontend deploys automatically on push to `main`. No server infrastructure n
 - **URL**: https://dokuel.com (custom domain), https://sudoku-4cc.pages.dev (default)
 - Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
 
+### Signaling Server (Cloudflare Worker)
+- **Project**: `dokuel-signaling` Worker with Durable Objects
+- **URL**: https://signal.dokuel.com (custom domain)
+- **Deploy**: Auto-deploys via GitHub Actions on push to `main` when `signaling/` changes
+- **Secrets**: `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in GitHub repo secrets
+- See `signaling/README.md` for full setup instructions
+
 ### DNS (Cloudflare)
 - `dokuel.com` → CNAME to `sudoku-4cc.pages.dev` (Cloudflare Pages)
+- `signal.dokuel.com` → managed by Cloudflare Worker Custom Domain (automatic)
 
 ## Git Workflow — MANDATORY
 
