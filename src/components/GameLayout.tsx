@@ -109,8 +109,11 @@ export function GameLayout({
             </div>
           </div>
         </div>
-        {/* Landscape: numpad alongside board */}
-        <div className="game-numpad-landscape hidden">{numPad}</div>
+        {/* Landscape: controls + numpad alongside board */}
+        <div className="game-numpad-landscape hidden">
+          {controls}
+          {numPad}
+        </div>
         {/* Desktop: always show numpad on the right */}
         <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
           {numPad}
