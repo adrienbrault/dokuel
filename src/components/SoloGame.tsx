@@ -66,6 +66,7 @@ export function SoloGame({
   useKeyboard({
     selectedCell: game.selectedCell,
     onSelectCell: game.selectCell,
+    onDeselectCell: game.deselectCell,
     onPlaceNumber: handleNumber,
     onErase: game.erase,
     onUndo: game.undo,
@@ -79,6 +80,7 @@ export function SoloGame({
       title={title}
       position={position}
       onPositionChange={setPosition}
+      onDeselectCell={game.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       timer={
         <div className="flex flex-col items-center">

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { PointerEvent, ReactNode } from "react";
 import type { NumPadPosition } from "../lib/types.ts";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 
@@ -15,6 +15,7 @@ type GameLayoutProps = {
   footer?: ReactNode | undefined;
   boardClassName?: string | undefined;
   headerClassName?: string | undefined;
+  onDeselectCell?: (() => void) | undefined;
 };
 
 export function GameLayout({
@@ -30,9 +31,20 @@ export function GameLayout({
   footer,
   boardClassName = "",
   headerClassName = "max-w-lg",
+  onDeselectCell,
 }: GameLayoutProps) {
+  const handleBackgroundPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (!onDeselectCell) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button, [role='region']")) return;
+    onDeselectCell();
+  };
+
   return (
-    <div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
+    <div
+      className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter"
+      onPointerDown={handleBackgroundPointerDown}
+    >
       {title && (
         <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
           {title}

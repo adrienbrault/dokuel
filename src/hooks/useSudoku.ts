@@ -19,6 +19,7 @@ type State = {
 
 type Action =
   | { type: "SELECT_CELL"; row: number; col: number }
+  | { type: "DESELECT_CELL" }
   | { type: "PLACE_NUMBER"; value: number }
   | { type: "ERASE" }
   | { type: "UNDO" }
@@ -37,6 +38,10 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SELECT_CELL": {
       return { ...state, selectedCell: { row: action.row, col: action.col } };
+    }
+
+    case "DESELECT_CELL": {
+      return { ...state, selectedCell: null };
     }
 
     case "PLACE_NUMBER": {
@@ -201,6 +206,11 @@ export function useSudoku(puzzle: string) {
     [],
   );
 
+  const deselectCell = useCallback(
+    () => dispatch({ type: "DESELECT_CELL" }),
+    [],
+  );
+
   const placeNumber = useCallback((value: number) => {
     haptics.tap();
     sounds.place();
@@ -230,6 +240,7 @@ export function useSudoku(puzzle: string) {
     cellsRemaining,
     cellKey,
     selectCell,
+    deselectCell,
     placeNumber,
     erase,
     undo,

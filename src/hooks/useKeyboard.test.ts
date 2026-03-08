@@ -6,6 +6,7 @@ function setup(overrides: Partial<Parameters<typeof useKeyboard>[0]> = {}) {
   const options = {
     selectedCell: { row: 4, col: 4 } as { row: number; col: number } | null,
     onSelectCell: vi.fn(),
+    onDeselectCell: vi.fn(),
     onPlaceNumber: vi.fn(),
     onErase: vi.fn(),
     onUndo: vi.fn(),
@@ -122,6 +123,12 @@ describe("useKeyboard", () => {
     expect(opts.onUndo).toHaveBeenCalled();
   });
 
+  it("calls onDeselectCell for Escape key", () => {
+    const opts = setup();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(opts.onDeselectCell).toHaveBeenCalled();
+  });
+
   it("ignores all keys when disabled", () => {
     const opts = setup({ enabled: false });
     fireEvent.keyDown(window, { key: "5" });
@@ -129,8 +136,10 @@ describe("useKeyboard", () => {
     fireEvent.keyDown(window, { key: "Delete" });
     fireEvent.keyDown(window, { key: "n" });
     fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    fireEvent.keyDown(window, { key: "Escape" });
     expect(opts.onPlaceNumber).not.toHaveBeenCalled();
     expect(opts.onSelectCell).not.toHaveBeenCalled();
+    expect(opts.onDeselectCell).not.toHaveBeenCalled();
     expect(opts.onErase).not.toHaveBeenCalled();
     expect(opts.onToggleNotes).not.toHaveBeenCalled();
     expect(opts.onUndo).not.toHaveBeenCalled();

@@ -88,6 +88,7 @@ export function MultiplayerBoard({
       onBack={onBack}
       position={position}
       onPositionChange={setPosition}
+      onDeselectCell={game.deselectCell}
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
         <div className="flex flex-col items-center">

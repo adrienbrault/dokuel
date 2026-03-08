@@ -4,6 +4,7 @@ import type { Position } from "../lib/types.ts";
 type UseKeyboardOptions = {
   selectedCell: Position | null;
   onSelectCell: (row: number, col: number) => void;
+  onDeselectCell: () => void;
   onPlaceNumber: (value: number) => void;
   onErase: () => void;
   onUndo: () => void;
@@ -14,6 +15,7 @@ type UseKeyboardOptions = {
 export function useKeyboard({
   selectedCell,
   onSelectCell,
+  onDeselectCell,
   onPlaceNumber,
   onErase,
   onUndo,
@@ -24,6 +26,13 @@ export function useKeyboard({
     if (!enabled) return;
 
     const handler = (e: KeyboardEvent) => {
+      // Escape to deselect
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onDeselectCell();
+        return;
+      }
+
       // Number keys 1-9
       if (e.key >= "1" && e.key <= "9") {
         e.preventDefault();
@@ -86,6 +95,7 @@ export function useKeyboard({
   }, [
     selectedCell,
     onSelectCell,
+    onDeselectCell,
     onPlaceNumber,
     onErase,
     onUndo,
