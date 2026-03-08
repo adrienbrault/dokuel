@@ -48,23 +48,20 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
+import { DurableObject } from "cloudflare:workers";
+
 type ClientState = {
   topics: Set<string>;
 };
 
-export class SignalingRoom {
-  private state: DurableObjectState;
+export class SignalingRoom extends DurableObject {
   private clients: Map<WebSocket, ClientState> = new Map();
-
-  constructor(state: DurableObjectState) {
-    this.state = state;
-  }
 
   async fetch(request: Request): Promise<Response> {
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
 
-    this.state.acceptWebSocket(server);
+    this.ctx.acceptWebSocket(server);
     this.clients.set(server, { topics: new Set() });
 
     return new Response(null, { status: 101, webSocket: client });
