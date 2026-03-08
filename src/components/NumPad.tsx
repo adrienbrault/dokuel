@@ -6,6 +6,7 @@ type NumPadProps = {
   remainingCounts: Record<number, number>;
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
+  disableCompleted?: boolean | undefined;
   onNumber: (n: number) => void;
 };
 
@@ -14,6 +15,7 @@ export function NumPad({
   remainingCounts,
   selectedValue,
   showRemainingCounts = true,
+  disableCompleted = false,
   onNumber,
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
@@ -37,8 +39,8 @@ export function NumPad({
           <button
             key={n}
             type="button"
-            disabled={showRemainingCounts && isComplete}
-            className={`flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${showRemainingCounts && isComplete ? "opacity-30 cursor-default" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
+            disabled={(showRemainingCounts || disableCompleted) && isComplete}
+            className={`flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "opacity-30 cursor-default" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
             onClick={() => onNumber(n)}
             aria-label={
               showRemainingCounts

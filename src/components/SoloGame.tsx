@@ -222,6 +222,7 @@ export function SoloGame({
               : null
           }
           showRemainingCounts={assistLevel === "full"}
+          disableCompleted={assistLevel !== "paper"}
           onNumber={handleNumber}
         />
       }
