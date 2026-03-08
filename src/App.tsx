@@ -232,7 +232,7 @@ function JoinScreen({
 						${
               code.trim()
                 ? "bg-accent text-white shadow-lg shadow-accent/20 press-spring-soft"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
             }
 					`}
           onClick={() => onJoin(code.trim())}

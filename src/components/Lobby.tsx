@@ -97,7 +97,7 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
 							${
                 canStart
                   ? "bg-accent text-white shadow-lg shadow-accent/20"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               }
 						`}
             onClick={onStart}
