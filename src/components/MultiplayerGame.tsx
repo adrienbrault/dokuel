@@ -26,23 +26,15 @@ export function MultiplayerGame({
 	onBack,
 }: MultiplayerGameProps) {
 	const mp = useMultiplayer({ socket, playerId, playerName });
+	const [toast, setToast] = useState<string | null>(null);
 
-	if (mp.error) {
-		return (
-			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
-				<div className="flex flex-col items-center gap-4 px-6">
-					<p className="text-lg font-semibold text-red-500">{mp.error}</p>
-					<button
-						type="button"
-						className="px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-semibold touch-manipulation"
-						onClick={onBack}
-					>
-						Back to Home
-					</button>
-				</div>
-			</div>
-		);
-	}
+	// Show errors as transient toasts instead of replacing the UI
+	useEffect(() => {
+		if (!mp.error) return;
+		setToast(mp.error);
+		const id = setTimeout(() => setToast(null), 3000);
+		return () => clearTimeout(id);
+	}, [mp.error]);
 
 	if (!mp.roomState) {
 		return (
@@ -52,7 +44,7 @@ export function MultiplayerGame({
 		);
 	}
 
-	if (mp.roomState.status === "lobby") {
+	if (!mp.puzzle && mp.roomState.status === "lobby") {
 		return (
 			<div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
 				<Lobby
@@ -61,6 +53,7 @@ export function MultiplayerGame({
 					onStart={mp.sendStartGame}
 					onBack={onBack}
 				/>
+				{toast && <Toast message={toast} />}
 			</div>
 		);
 	}
@@ -91,11 +84,20 @@ export function MultiplayerGame({
 						</div>
 					</div>
 				)}
+				{toast && <Toast message={toast} />}
 			</>
 		);
 	}
 
 	return null;
+}
+
+function Toast({ message }: { message: string }) {
+	return (
+		<div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium shadow-lg animate-modal-content">
+			{message}
+		</div>
+	);
 }
 
 type MultiplayerBoardProps = {

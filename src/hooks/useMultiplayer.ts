@@ -46,9 +46,13 @@ export function useMultiplayer({
 			switch (msg.type) {
 				case "room_state":
 					setRoomState(msg.state);
+					setError(null);
 					break;
 				case "game_start":
 					setPuzzle(msg.puzzle);
+					setRoomState((prev) =>
+						prev ? { ...prev, status: "playing" } : prev,
+					);
 					break;
 				case "opponent_progress":
 					setOpponentProgress({
@@ -66,6 +70,9 @@ export function useMultiplayer({
 					setPuzzle(msg.puzzle);
 					setGameOver(null);
 					setOpponentProgress(null);
+					setRoomState((prev) =>
+						prev ? { ...prev, status: "playing", winnerId: null } : prev,
+					);
 					break;
 				case "opponent_disconnected":
 					setOpponentDisconnected(true);
