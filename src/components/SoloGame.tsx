@@ -48,6 +48,7 @@ type SoloGameProps = {
   showConflicts?: boolean;
   initialPuzzle?: string;
   initialSolution?: string;
+  title?: string;
   onBack: () => void;
   onRematch?: () => void;
 };
@@ -57,6 +58,7 @@ export function SoloGame({
   showConflicts = true,
   initialPuzzle,
   initialSolution,
+  title,
   onBack,
   onRematch,
 }: SoloGameProps) {
@@ -114,6 +116,10 @@ export function SoloGame({
 
   return (
     <div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
+      {/* Title (e.g. Daily Challenge) */}
+      {title && (
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{title}</p>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between w-full max-w-lg mb-4">
         <button

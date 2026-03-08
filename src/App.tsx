@@ -255,19 +255,13 @@ function DailyGame({ onBack }: { onBack: () => void }) {
   const { puzzle, solution, date } = useMemo(() => getDailyPuzzle(), []);
 
   return (
-    <div>
-      <div className="text-center pt-4 pb-0">
-        <p className="text-xs text-gray-400 dark:text-gray-500">
-          Daily Challenge — {date}
-        </p>
-      </div>
-      <SoloGame
-        difficulty="medium"
-        initialPuzzle={puzzle}
-        initialSolution={solution}
-        onBack={onBack}
-      />
-    </div>
+    <SoloGame
+      difficulty="medium"
+      initialPuzzle={puzzle}
+      initialSolution={solution}
+      title={`Daily Challenge — ${date}`}
+      onBack={onBack}
+    />
   );
 }
 
