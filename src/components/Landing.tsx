@@ -242,7 +242,6 @@ function DailyChallengeButton({
   );
 }
 
-
 function progressPercent(game: SavedGameSummary): number {
   const remaining = 81 - game.givenCells;
   if (remaining === 0) return 100;
