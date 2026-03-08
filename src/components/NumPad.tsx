@@ -24,11 +24,11 @@ export function NumPad({
   const isGrid = layout === "grid";
 
   const containerClass = isGrid
-    ? "grid grid-cols-3 gap-1 w-fit"
+    ? "grid grid-cols-3 gap-1.5 w-full max-w-lg"
     : `flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full max-w-lg lg:w-14"}`;
 
   const buttonClass = isGrid
-    ? "h-14 w-14"
+    ? "aspect-square"
     : `lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"}`;
 
   return (
@@ -53,7 +53,7 @@ export function NumPad({
           >
             <span
               className={
-                isGrid ? "text-xl leading-none" : "text-lg leading-none"
+                isGrid ? "text-2xl leading-none" : "text-lg leading-none"
               }
             >
               {n}

@@ -57,7 +57,7 @@ export function MultiplayerBoard({
   const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
   const game = useSudoku(puzzle, solution);
   const { position, setPosition } = useNumPadPosition();
-  const { layout, setLayout } = useNumPadLayout();
+  const { layout, effectiveLayout, setLayout } = useNumPadLayout();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
   const timerSecondsRef = useRef(0);
@@ -134,7 +134,7 @@ export function MultiplayerBoard({
       numPad={
         <NumPad
           position={position}
-          layout={layout}
+          layout={effectiveLayout}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell

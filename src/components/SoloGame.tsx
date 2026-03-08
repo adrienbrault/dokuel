@@ -76,7 +76,7 @@ export function SoloGame({
 
   const game = useSudoku(puzzle, solution, savedBoard);
   const { position, setPosition } = useNumPadPosition();
-  const { layout, setLayout } = useNumPadLayout();
+  const { layout, effectiveLayout, setLayout } = useNumPadLayout();
   const timerSecondsRef = useRef(saved?.timer ?? 0);
   const [showResult, setShowResult] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -219,7 +219,7 @@ export function SoloGame({
       numPad={
         <NumPad
           position={position}
-          layout={layout}
+          layout={effectiveLayout}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell
