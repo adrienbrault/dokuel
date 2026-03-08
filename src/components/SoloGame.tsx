@@ -210,6 +210,11 @@ export function SoloGame({
         <NumPad
           position={position}
           remainingCounts={game.remainingCounts}
+          selectedValue={
+            game.selectedCell
+              ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
+              : null
+          }
           onNumber={handleNumber}
         />
       }
@@ -276,7 +281,9 @@ export function SoloGame({
               game.hintsUsed === 0 &&
               (personalBest === null || timerSecondsRef.current < personalBest)
             }
+            hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
+            isDaily={!!streakInfo || !!title?.startsWith("Daily")}
             tip={
               !tipDismissed && position === "bottom"
                 ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."

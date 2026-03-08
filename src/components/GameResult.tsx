@@ -26,10 +26,41 @@ type GameResultProps = {
   onNewGame: () => void;
   stats?: { gamesPlayed: number; bestTime: number; averageTime: number } | null;
   isNewPB?: boolean | undefined;
+  hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
+  isDaily?: boolean | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
 };
+
+export function buildShareText({
+  difficulty,
+  time,
+  isNewPB,
+  hintsUsed,
+  streakInfo,
+  isDaily,
+}: {
+  difficulty?: Difficulty | undefined;
+  time: string;
+  isNewPB?: boolean | undefined;
+  hintsUsed?: number | undefined;
+  streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
+  isDaily?: boolean | undefined;
+}): string {
+  const title = isDaily ? "Dokuel Daily" : "Dokuel";
+  const diffLabel = difficulty ? ` ${DIFFICULTY_LABELS[difficulty]}` : "";
+  const hints = hintsUsed
+    ? ` · ${hintsUsed} hint${hintsUsed > 1 ? "s" : ""}`
+    : "";
+  const pb = isNewPB ? " ⚡" : "";
+  const streak =
+    isDaily && streakInfo && streakInfo.currentStreak > 0
+      ? `\n🔥 ${streakInfo.currentStreak}-day streak`
+      : "";
+
+  return `${title}${diffLabel}\n⏱ ${time}${hints}${pb}${streak}\nhttps://dokuel.com`;
+}
 
 export function GameResult({
   isWinner,
@@ -40,19 +71,24 @@ export function GameResult({
   onNewGame,
   stats,
   isNewPB,
+  hintsUsed,
   streakInfo,
+  isDaily,
   tip,
   onDismissTip,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = () => {
-    const lines = ["Sudoku"];
-    if (difficulty) lines[0] += ` ${DIFFICULTY_LABELS[difficulty]}`;
-    lines.push(`Time: ${time}`);
-    if (isNewPB) lines.push("New Personal Best!");
-    lines.push("https://dokuel.com");
-    navigator.clipboard.writeText(lines.join("\n"));
+    const text = buildShareText({
+      difficulty,
+      time,
+      isNewPB,
+      hintsUsed,
+      streakInfo,
+      isDaily,
+    });
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

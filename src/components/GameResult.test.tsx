@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { GameResult } from "./GameResult.tsx";
+import { buildShareText, GameResult } from "./GameResult.tsx";
 
 describe("GameResult", () => {
   it("renders win state with time and emoji", () => {
@@ -85,6 +85,40 @@ describe("GameResult", () => {
     );
 
     expect(screen.getByText("Rematch")).toBeInTheDocument();
+  });
+
+  it("share text includes difficulty, time, and URL", () => {
+    const text = buildShareText({ difficulty: "hard", time: "03:42" });
+    expect(text).toBe("Dokuel Hard\n⏱ 03:42\nhttps://dokuel.com");
+  });
+
+  it("share text includes PB indicator", () => {
+    const text = buildShareText({
+      difficulty: "easy",
+      time: "02:00",
+      isNewPB: true,
+    });
+    expect(text).toContain("⚡");
+  });
+
+  it("share text includes hints count", () => {
+    const text = buildShareText({
+      difficulty: "medium",
+      time: "04:00",
+      hintsUsed: 2,
+    });
+    expect(text).toContain("2 hints");
+  });
+
+  it("share text includes daily title and streak", () => {
+    const text = buildShareText({
+      difficulty: "medium",
+      time: "05:00",
+      isDaily: true,
+      streakInfo: { currentStreak: 5, longestStreak: 10 },
+    });
+    expect(text).toMatch(/^Dokuel Daily/);
+    expect(text).toContain("🔥 5-day streak");
   });
 
   it("calls onRematch and onNewGame when buttons clicked", async () => {

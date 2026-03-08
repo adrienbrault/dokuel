@@ -373,69 +373,9 @@ function JoinScreen({
   );
 }
 
-const DAILY_DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard", "expert"];
-const DAILY_DIFF_LABELS: Record<Difficulty, string> = {
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-  expert: "Expert",
-};
-
 function DailyGame({ onBack }: { onBack: () => void }) {
-  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const date = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
-  if (!difficulty) {
-    return (
-      <div className="screen">
-        <div className="screen-content gap-8">
-          <div className="flex flex-col items-center gap-1">
-            <h2 className="heading">Daily Challenge</h2>
-            <p className="text-sm text-text-muted">{formatShortDate(date)}</p>
-            <p className="text-xs text-text-muted">
-              Same puzzle for everyone, every day
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 w-full">
-            {DAILY_DIFFICULTIES.map((d) => (
-              <button
-                key={d}
-                type="button"
-                className="btn btn-lg btn-secondary w-full"
-                onClick={() => setDifficulty(d)}
-              >
-                {DAILY_DIFF_LABELS[d]}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="btn-ghost touch-manipulation"
-            onClick={onBack}
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return <DailyPuzzle difficulty={difficulty} date={date} onBack={onBack} />;
-}
-
-function DailyPuzzle({
-  difficulty,
-  date,
-  onBack,
-}: {
-  difficulty: Difficulty;
-  date: string;
-  onBack: () => void;
-}) {
-  const { puzzle } = useMemo(
-    () => getDailyPuzzle(date, difficulty),
-    [date, difficulty],
-  );
+  const { puzzle } = useMemo(() => getDailyPuzzle(date, "medium"), [date]);
   const [streakInfo, setStreakInfo] = useState<{
     currentStreak: number;
     longestStreak: number;
@@ -450,10 +390,10 @@ function DailyPuzzle({
 
   return (
     <SoloGame
-      difficulty={difficulty}
-      gameKey={`daily-${date}-${difficulty}`}
+      difficulty="medium"
+      gameKey={`daily-${date}-medium`}
       initialPuzzle={puzzle}
-      title={`Daily ${DAILY_DIFF_LABELS[difficulty]} — ${formatShortDate(date)}`}
+      title={`Daily Challenge — ${formatShortDate(date)}`}
       onBack={onBack}
       onComplete={handleComplete}
       streakInfo={streakInfo}

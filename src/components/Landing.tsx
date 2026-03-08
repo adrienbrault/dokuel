@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime } from "../lib/format.ts";
 import { listSavedGames, type SavedGameSummary } from "../lib/game-storage.ts";
+import { getStats } from "../lib/stats.ts";
 
 type LandingProps = {
   onSolo: () => void;
@@ -24,29 +25,37 @@ export function Landing({
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
   const savedGames = useMemo(() => listSavedGames(), []);
+  const isReturningUser = useMemo(
+    () => savedGames.length > 0 || getStats().length > 0,
+    [savedGames],
+  );
 
   return (
     <div className="screen-content gap-6 sm:gap-10">
       <div className="flex flex-col items-center gap-1 sm:gap-2">
         <h1 className="heading-xl">Dokuel</h1>
-        <p className="text-sm text-text-muted">
-          1v1 sudoku duel — no account needed.
-        </p>
+        {!isReturningUser && (
+          <p className="text-sm text-text-muted">
+            1v1 sudoku duel — no account needed.
+          </p>
+        )}
       </div>
-      <div className="flex flex-col gap-2 sm:gap-3 w-full">
-        <FeatureRow
-          icon={<ZapIcon />}
-          text="Real-time 1v1 — race a friend peer-to-peer"
-        />
-        <FeatureRow
-          icon={<CalendarIcon />}
-          text="Daily challenge — same puzzle for everyone"
-        />
-        <FeatureRow
-          icon={<GlobeIcon />}
-          text="Mobile & desktop — dark mode, haptics, sounds"
-        />
-      </div>
+      {!isReturningUser && (
+        <div className="flex flex-col gap-2 sm:gap-3 w-full">
+          <FeatureRow
+            icon={<ZapIcon />}
+            text="Real-time 1v1 — race a friend peer-to-peer"
+          />
+          <FeatureRow
+            icon={<CalendarIcon />}
+            text="Daily challenge — same puzzle for everyone"
+          />
+          <FeatureRow
+            icon={<GlobeIcon />}
+            text="Mobile & desktop — dark mode, haptics, sounds"
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:gap-6 w-full">
         {savedGames.length > 0 && (
           <div className="flex flex-col gap-3">

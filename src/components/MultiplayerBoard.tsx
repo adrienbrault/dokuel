@@ -122,6 +122,11 @@ export function MultiplayerBoard({
         <NumPad
           position={position}
           remainingCounts={game.remainingCounts}
+          selectedValue={
+            game.selectedCell
+              ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
+              : null
+          }
           onNumber={handleNumber}
         />
       }
