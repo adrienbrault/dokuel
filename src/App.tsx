@@ -3,9 +3,12 @@ import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
 import { Landing } from "./components/Landing.tsx";
 import { MultiplayerGame } from "./components/MultiplayerGame.tsx";
+import { SketchProvider } from "./components/SketchContext.tsx";
+import { SketchModeToggle } from "./components/SketchModeToggle.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
+import { useSketchMode } from "./hooks/useSketchMode.ts";
 import { getDailyPuzzle } from "./lib/daily.ts";
 import { recordDailyCompletion } from "./lib/daily-streak.ts";
 import { formatShortDate } from "./lib/format.ts";
@@ -150,116 +153,129 @@ function App() {
 
   const gameIdRef = useRef(screen.name === "solo" ? screen.gameId : 0);
   const darkMode = useDarkMode();
+  const sketchMode = useSketchMode();
   const [soundOn, setSoundOn] = useState(getSoundEnabled);
 
-  switch (screen.name) {
-    case "landing":
-      return (
-        <div className="screen relative">
-          <div className="absolute top-4 right-4 flex gap-1">
-            <SoundToggle
-              enabled={soundOn}
-              onToggle={() => {
-                const next = !soundOn;
-                setSoundOn(next);
-                setSoundEnabled(next);
-              }}
-            />
-            <DarkModeToggle
-              isDark={darkMode.isDark}
-              onToggle={darkMode.toggle}
+  const renderScreen = () => {
+    switch (screen.name) {
+      case "landing":
+        return (
+          <div className="screen relative">
+            <div className="absolute top-4 right-4 flex gap-1">
+              <SketchModeToggle
+                enabled={sketchMode.enabled}
+                onToggle={sketchMode.toggle}
+              />
+              <SoundToggle
+                enabled={soundOn}
+                onToggle={() => {
+                  const next = !soundOn;
+                  setSoundOn(next);
+                  setSoundEnabled(next);
+                }}
+              />
+              <DarkModeToggle
+                isDark={darkMode.isDark}
+                onToggle={darkMode.toggle}
+              />
+            </div>
+            <Landing
+              onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
+              onDaily={() => navigate({ name: "daily" })}
+              onCreate={() => navigate({ name: "difficulty", mode: "create" })}
+              onJoin={() => navigate({ name: "join" })}
             />
           </div>
-          <Landing
-            onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
-            onDaily={() => navigate({ name: "daily" })}
-            onCreate={() => navigate({ name: "difficulty", mode: "create" })}
-            onJoin={() => navigate({ name: "join" })}
-          />
-        </div>
-      );
+        );
 
-    case "difficulty":
-      return (
-        <div className="screen">
-          <DifficultyPicker
-            onSelect={(difficulty, showConflicts) => {
-              if (screen.mode === "solo") {
-                gameIdRef.current++;
-                navigate({
+      case "difficulty":
+        return (
+          <div className="screen">
+            <DifficultyPicker
+              onSelect={(difficulty, showConflicts) => {
+                if (screen.mode === "solo") {
+                  gameIdRef.current++;
+                  navigate({
+                    name: "solo",
+                    difficulty,
+                    gameId: gameIdRef.current,
+                    gameKey: generateId(),
+                    showConflicts,
+                  });
+                } else {
+                  const roomId = generateId();
+                  navigate({
+                    name: "multiplayer",
+                    roomId,
+                    difficulty,
+                    showConflicts,
+                  });
+                }
+              }}
+              onBack={() => navigate({ name: "landing" })}
+            />
+          </div>
+        );
+
+      case "solo":
+        return (
+          <SoloGame
+            key={screen.gameKey}
+            difficulty={screen.difficulty}
+            gameKey={screen.gameKey}
+            showConflicts={screen.showConflicts}
+            onBack={() => navigate({ name: "landing" })}
+            onRematch={() => {
+              gameIdRef.current++;
+              navigate(
+                {
                   name: "solo",
-                  difficulty,
+                  difficulty: screen.difficulty,
                   gameId: gameIdRef.current,
                   gameKey: generateId(),
-                  showConflicts,
-                });
-              } else {
-                const roomId = generateId();
-                navigate({
-                  name: "multiplayer",
-                  roomId,
-                  difficulty,
-                  showConflicts,
-                });
-              }
+                  showConflicts: screen.showConflicts,
+                },
+                { replace: true },
+              );
+            }}
+          />
+        );
+
+      case "daily":
+        return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+
+      case "multiplayer":
+        return (
+          <MultiplayerScreen
+            roomId={screen.roomId}
+            difficulty={screen.difficulty}
+            showConflicts={screen.showConflicts}
+            onBack={() => navigate({ name: "landing" })}
+          />
+        );
+
+      case "join":
+        return (
+          <JoinScreen
+            onJoin={(roomId) => {
+              navigate({
+                name: "multiplayer",
+                roomId,
+                difficulty: "medium",
+                showConflicts: true,
+              });
             }}
             onBack={() => navigate({ name: "landing" })}
           />
-        </div>
-      );
+        );
+    }
+  };
 
-    case "solo":
-      return (
-        <SoloGame
-          key={screen.gameKey}
-          difficulty={screen.difficulty}
-          gameKey={screen.gameKey}
-          showConflicts={screen.showConflicts}
-          onBack={() => navigate({ name: "landing" })}
-          onRematch={() => {
-            gameIdRef.current++;
-            navigate(
-              {
-                name: "solo",
-                difficulty: screen.difficulty,
-                gameId: gameIdRef.current,
-                gameKey: generateId(),
-                showConflicts: screen.showConflicts,
-              },
-              { replace: true },
-            );
-          }}
-        />
-      );
-
-    case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
-
-    case "multiplayer":
-      return (
-        <MultiplayerScreen
-          roomId={screen.roomId}
-          difficulty={screen.difficulty}
-          showConflicts={screen.showConflicts}
-          onBack={() => navigate({ name: "landing" })}
-        />
-      );
-
-    case "join":
-      return (
-        <JoinScreen
-          onJoin={(roomId) => {
-            navigate({
-              name: "multiplayer",
-              roomId,
-              difficulty: "medium",
-              showConflicts: true,
-            });
-          }}
-          onBack={() => navigate({ name: "landing" })}
-        />
-      );
-  }
+  return (
+    <SketchProvider enabled={sketchMode.enabled}>
+      {renderScreen()}
+    </SketchProvider>
+  );
 }
 
 function MultiplayerScreen({

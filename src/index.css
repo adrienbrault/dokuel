@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Caveat";
+  src: url("./assets/fonts/Caveat-Variable.ttf") format("truetype");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
 @theme {
   /* Board & cell */
   --color-board-bg: oklch(0.98 0 0);
@@ -401,4 +408,123 @@ body {
 }
 .text-mono {
   @apply font-mono text-sm text-text-secondary tabular-nums;
+}
+
+/* ─── Sketch Mode (Excalidraw-like) ─── */
+
+.sketch {
+  --sketch-font: "Caveat", cursive;
+
+  /* Paper-like background */
+  --color-bg-primary: oklch(0.98 0.01 85);
+  --color-bg-inset: oklch(0.96 0.01 85);
+  --color-bg-raised: oklch(0.95 0.01 85);
+  --color-bg-overlay: oklch(0.98 0.01 85);
+  --color-cell-bg: oklch(0.98 0.01 85);
+  --color-board-bg: oklch(0.96 0.01 85);
+}
+
+.sketch.dark {
+  --color-bg-primary: oklch(0.16 0.01 250);
+  --color-bg-inset: oklch(0.18 0.01 250);
+  --color-bg-raised: oklch(0.22 0.01 250);
+  --color-bg-overlay: oklch(0.18 0.01 250);
+  --color-cell-bg: oklch(0.18 0.01 250);
+  --color-board-bg: oklch(0.2 0.01 250);
+}
+
+.sketch body,
+.sketch button,
+.sketch input,
+.sketch select,
+.sketch textarea {
+  font-family: var(--sketch-font);
+}
+
+.sketch .heading-xl {
+  font-family: var(--sketch-font);
+  font-size: 4.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sketch .heading {
+  font-family: var(--sketch-font);
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.sketch .btn {
+  border-radius: 4px;
+  border: none;
+  box-shadow: none;
+  font-family: var(--sketch-font);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.sketch .btn-primary {
+  box-shadow: none;
+}
+
+.sketch .btn-lg {
+  font-size: 1.5rem;
+}
+
+.sketch .card {
+  border-radius: 4px;
+  border: none;
+}
+
+.sketch .modal-panel {
+  border-radius: 8px;
+  font-family: var(--sketch-font);
+}
+
+/* In sketch mode, cells hide their CSS borders — rough.js overlay draws them */
+.sketch [aria-label="Sudoku board"] button {
+  border-color: transparent;
+}
+
+/* Slightly rotate elements for hand-drawn feel */
+.sketch .btn:nth-child(odd) {
+  transform: rotate(-0.5deg);
+}
+.sketch .btn:nth-child(even) {
+  transform: rotate(0.5deg);
+}
+
+/* Sketch cell text uses handwriting font */
+.sketch [aria-label="Sudoku board"] span {
+  font-family: var(--sketch-font);
+  font-weight: 700;
+  font-size: clamp(1.1rem, 5vw, 1.8rem);
+}
+
+/* Sketch numpad */
+.sketch [aria-label="Number pad"] button {
+  font-family: var(--sketch-font);
+  font-size: 1.5rem;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+/* Sketch mode typography */
+.sketch .label {
+  font-family: var(--sketch-font);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.sketch .caption,
+.sketch p,
+.sketch span,
+.sketch a {
+  font-family: var(--sketch-font);
+}
+
+.sketch .text-mono {
+  font-family: var(--sketch-font);
 }

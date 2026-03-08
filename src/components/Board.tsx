@@ -1,6 +1,8 @@
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Position } from "../lib/types.ts";
 import { Cell } from "./Cell.tsx";
+import { useSketch } from "./SketchContext.tsx";
+import { SketchOverlay } from "./SketchOverlay.tsx";
 
 type BoardProps = {
   board: BoardType;
@@ -17,6 +19,7 @@ export function Board({
   onSelectCell,
   animateReveal,
 }: BoardProps) {
+  const sketch = useSketch();
   const selectedValue =
     selectedCell !== null
       ? board[selectedCell.row]![selectedCell.col]!.value
@@ -24,10 +27,15 @@ export function Board({
 
   return (
     <div
-      className="grid grid-cols-9 border-2 border-board-border rounded-md overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25"
+      className={`relative grid grid-cols-9 w-full max-w-lg aspect-square ${
+        sketch
+          ? ""
+          : "border-2 border-board-border rounded-md overflow-hidden shadow-lg shadow-black/8 dark:shadow-black/25"
+      }`}
       role="region"
       aria-label="Sudoku board"
     >
+      {sketch && <SketchOverlay />}
       {board.flatMap((row, rowIdx) =>
         row.map((cell, colIdx) => {
           const isSelected =
