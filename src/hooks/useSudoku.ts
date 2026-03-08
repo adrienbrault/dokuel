@@ -158,10 +158,10 @@ function reducer(state: State, action: Action): State {
       const history = state.history.slice(0, -1);
       const lastAction = state.history[state.history.length - 1]!;
       const board = cloneBoard(state.board);
-      const { row, col } = lastAction.position;
 
       switch (lastAction.type) {
         case "place": {
+          const { row, col } = lastAction.position;
           board[row]![col]!.value = lastAction.previousValue;
           board[row]![col]!.notes = new Set(lastAction.previousNotes);
           // Restore auto-cleared notes from peers
@@ -171,11 +171,13 @@ function reducer(state: State, action: Action): State {
           break;
         }
         case "erase": {
+          const { row, col } = lastAction.position;
           board[row]![col]!.value = lastAction.previousValue;
           board[row]![col]!.notes = new Set(lastAction.previousNotes);
           break;
         }
         case "toggleNote": {
+          const { row, col } = lastAction.position;
           const notes = board[row]![col]!.notes;
           if (notes.has(lastAction.note)) {
             notes.delete(lastAction.note);
@@ -184,7 +186,25 @@ function reducer(state: State, action: Action): State {
           }
           break;
         }
+        case "batchToggleNote": {
+          for (const pos of lastAction.added) {
+            board[pos.row]![pos.col]!.notes.delete(lastAction.note);
+          }
+          for (const pos of lastAction.removed) {
+            board[pos.row]![pos.col]!.notes.add(lastAction.note);
+          }
+          break;
+        }
+        case "batchErase": {
+          for (const entry of lastAction.cells) {
+            const { row, col } = entry.position;
+            board[row]![col]!.value = entry.previousValue;
+            board[row]![col]!.notes = new Set(entry.previousNotes);
+          }
+          break;
+        }
         case "hint": {
+          const { row, col } = lastAction.position;
           board[row]![col]!.value = null;
           board[row]![col]!.notes = new Set(lastAction.previousNotes);
           for (const cleared of lastAction.clearedNotes) {

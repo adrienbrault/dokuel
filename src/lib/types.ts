@@ -35,6 +35,20 @@ export type MoveAction =
     }
   | { type: "toggleNote"; position: Position; note: number }
   | {
+      type: "batchToggleNote";
+      note: number;
+      added: Position[];
+      removed: Position[];
+    }
+  | {
+      type: "batchErase";
+      cells: {
+        position: Position;
+        previousValue: CellValue;
+        previousNotes: Set<number>;
+      }[];
+    }
+  | {
       type: "hint";
       position: Position;
       value: number;
