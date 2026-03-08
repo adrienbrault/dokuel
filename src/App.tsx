@@ -8,6 +8,7 @@ import { SoundToggle } from "./components/SoundToggle.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { getDailyPuzzle } from "./lib/daily.ts";
 import { formatShortDate } from "./lib/format.ts";
+import { generatePlayerName } from "./lib/name-generator.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
 import "./index.css";
@@ -17,19 +18,33 @@ function generateId() {
 }
 
 function getPlayerId() {
-  let id = sessionStorage.getItem("sudoku_player_id");
+  let id = localStorage.getItem("sudoku_player_id");
   if (!id) {
-    id = generateId();
-    sessionStorage.setItem("sudoku_player_id", id);
+    // Migrate from sessionStorage if present
+    id = sessionStorage.getItem("sudoku_player_id");
+    if (!id) {
+      id = generateId();
+    }
+    localStorage.setItem("sudoku_player_id", id);
   }
   return id;
 }
 
 function getPlayerName() {
-  return (
-    sessionStorage.getItem("sudoku_player_name") ||
-    `Player ${generateId().slice(0, 4)}`
-  );
+  let name = localStorage.getItem("sudoku_player_name");
+  if (!name) {
+    // Migrate from sessionStorage if present
+    name = sessionStorage.getItem("sudoku_player_name");
+    if (!name) {
+      name = generatePlayerName();
+    }
+    localStorage.setItem("sudoku_player_name", name);
+  }
+  return name;
+}
+
+function setPlayerName(name: string) {
+  localStorage.setItem("sudoku_player_name", name);
 }
 
 type Screen =
@@ -258,13 +273,19 @@ function MultiplayerScreen({
   onBack: () => void;
 }) {
   const playerId = useMemo(getPlayerId, []);
-  const playerName = useMemo(getPlayerName, []);
+  const [playerName, setName] = useState(getPlayerName);
+
+  const handleRename = useCallback((name: string) => {
+    setName(name);
+    setPlayerName(name);
+  }, []);
 
   return (
     <MultiplayerGame
       roomId={roomId}
       playerId={playerId}
       playerName={playerName}
+      onRename={handleRename}
       difficulty={difficulty}
       showConflicts={showConflicts}
       onBack={onBack}
