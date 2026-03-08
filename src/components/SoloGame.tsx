@@ -6,6 +6,8 @@ import { useSudoku } from "../hooks/useSudoku.ts";
 import { EMPTY_CONFLICTS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import {
+  boardToNotes,
+  boardToValues,
   deleteGame,
   loadGame,
   type SavedGame,
@@ -21,19 +23,9 @@ import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad } from "./NumPad.tsx";
+import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
+import { AssistLevelIcon, NumPadPositionIcon } from "./SettingIcons.tsx";
 import { Timer } from "./Timer.tsx";
-
-function boardToValues(board: { value: number | null }[][]): string {
-  return board
-    .flatMap((row) =>
-      row.map((c) => (c.value === null ? "." : String(c.value))),
-    )
-    .join("");
-}
-
-function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
-  return board.flatMap((row) => row.map((c) => Array.from(c.notes)));
-}
 
 type SoloGameProps = {
   difficulty: Difficulty;
@@ -176,12 +168,26 @@ export function SoloGame({
       onBack={handleBack}
       title={title}
       position={position}
-      onPositionChange={setPosition}
       onDeselectCell={game.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
-      settingsExtra={
-        <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
-      }
+      settings={[
+        {
+          key: "position",
+          label: "Numpad position",
+          icon: <NumPadPositionIcon position={position} />,
+          content: (
+            <NumPadPositionToggle position={position} onChange={setPosition} />
+          ),
+        },
+        {
+          key: "assist",
+          label: "Assist level",
+          icon: <AssistLevelIcon level={assistLevel} />,
+          content: (
+            <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+          ),
+        },
+      ]}
       timer={
         <button
           type="button"
@@ -295,7 +301,7 @@ export function SoloGame({
             isDaily={!!streakInfo || !!title?.startsWith("Daily")}
             tip={
               !tipDismissed && position === "bottom"
-                ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."
+                ? "Tip: Move the numpad to the side for faster two-finger play! Tap the pad icon to try it."
                 : undefined
             }
             onDismissTip={() => {

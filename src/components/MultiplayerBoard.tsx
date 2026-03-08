@@ -9,9 +9,11 @@ import { countFilledCells, solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
-import { GameLayout } from "./GameLayout.tsx";
+import { GameLayout, type SettingItem } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { NumPad } from "./NumPad.tsx";
+import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
+import { NumPadPositionIcon, OpponentBarIcon } from "./SettingIcons.tsx";
 import { Timer } from "./Timer.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
@@ -105,13 +107,36 @@ export function MultiplayerBoard({
     }
   };
 
+  const settings: SettingItem[] = [
+    {
+      key: "position",
+      label: "Numpad position",
+      icon: <NumPadPositionIcon position={position} />,
+      content: (
+        <NumPadPositionToggle position={position} onChange={setPosition} />
+      ),
+    },
+    {
+      key: "opponent",
+      label: "Opponent bar",
+      icon: <OpponentBarIcon visible={showOpponentProgress} />,
+      content: (
+        <ToggleSwitch
+          checked={showOpponentProgress}
+          onChange={toggleOpponentProgress}
+          label="Opponent bar"
+        />
+      ),
+    },
+  ];
+
   return (
     <GameLayout
       onBack={onBack}
       position={position}
-      onPositionChange={setPosition}
       onDeselectCell={game.deselectCell}
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
+      settings={settings}
       timer={
         <div className="flex flex-col items-center">
           <Timer
@@ -161,13 +186,6 @@ export function MultiplayerBoard({
           onToggleNotes={game.toggleNotesMode}
           onErase={game.erase}
           onUndo={game.undo}
-        />
-      }
-      settingsExtra={
-        <ToggleSwitch
-          checked={showOpponentProgress}
-          onChange={toggleOpponentProgress}
-          label="Opponent bar"
         />
       }
       headerExtra={
