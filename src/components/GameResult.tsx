@@ -45,9 +45,25 @@ export function GameResult({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-modal-backdrop">
-      <div className="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full animate-modal-content">
+      {isWinner && (
+        <div className="confetti-container">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      )}
+      <div className="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full animate-modal-content relative">
         <div className="flex flex-col items-center gap-2">
-          <span className="text-4xl">{isWinner ? "🎉" : "👏"}</span>
+          <span className="text-5xl animate-emoji-bounce">
+            {isWinner ? "🎉" : "👏"}
+          </span>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
