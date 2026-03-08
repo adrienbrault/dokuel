@@ -99,6 +99,36 @@ describe("Lobby", () => {
     expect(startBtn).toBeNull();
   });
 
+  it("copies game link to clipboard when share button clicked", async () => {
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    // Ensure Web Share API is not available so clipboard fallback is used
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      writable: true,
+    });
+    Object.defineProperty(window, "location", {
+      value: { origin: "https://sudoku.brage.fr", pathname: "/abc123" },
+      writable: true,
+    });
+
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        playerId="p1"
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    const shareBtn = screen.getByRole("button", { name: /share|copy|invite/i });
+    await userEvent.click(shareBtn);
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      "https://sudoku.brage.fr/abc123",
+    );
+  });
+
   it("calls onStart when start button clicked", async () => {
     const state: RoomState = {
       ...BASE_STATE,

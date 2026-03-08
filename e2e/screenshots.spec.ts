@@ -69,6 +69,18 @@ test("difficulty picker", async ({ page }, testInfo) => {
 	});
 });
 
+test("multiplayer lobby", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	await page.getByText("Create Game").click();
+	await page.waitForTimeout(300);
+	await page.getByText("Easy").click();
+	await page.waitForTimeout(1000);
+	await page.screenshot({
+		path: screenshotPath("multiplayer-lobby", testInfo.project.name),
+	});
+});
+
 // --- Dark mode variants ---
 
 test("landing page - dark mode", async ({ page }, testInfo) => {

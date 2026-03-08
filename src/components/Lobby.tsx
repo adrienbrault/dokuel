@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { RoomState } from "../lib/types.ts";
 
 type LobbyProps = {
@@ -11,6 +12,23 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
   const isHost = playerId === roomState.hostId;
   const canStart = isHost && roomState.players.length === 2;
   const waiting = roomState.players.length < 2;
+  const [copied, setCopied] = useState(false);
+
+  const gameUrl = `${window.location.origin}/${roomState.roomId}`;
+
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ url: gameUrl });
+        return;
+      } catch {
+        // User cancelled or share failed, fall through to clipboard
+      }
+    }
+    await navigator.clipboard.writeText(gameUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-sm px-6">
@@ -26,6 +44,13 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
             {roomState.roomId}
           </span>
         </div>
+        <button
+          type="button"
+          className="mt-1 px-4 py-2 rounded-lg text-sm font-medium bg-accent text-white shadow-sm shadow-accent/20 press-spring-soft select-none touch-manipulation"
+          onClick={handleShare}
+        >
+          {copied ? "Link Copied!" : "Share Invite Link"}
+        </button>
       </div>
 
       <div className="flex flex-col gap-3 w-full">
