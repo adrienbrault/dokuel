@@ -42,12 +42,7 @@ export function NumPad({ position, remainingCounts, onNumber }: NumPadProps) {
             onClick={() => onNumber(n)}
             aria-label={`${n}, ${remaining} remaining`}
           >
-            <span className="leading-none">{n}</span>
-            {remaining > 0 && (
-              <span className="text-[0.5rem] opacity-60 leading-none mt-0.5">
-                {remaining}
-              </span>
-            )}
+            {n}
           </button>
         );
       })}
