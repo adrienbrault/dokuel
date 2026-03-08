@@ -15,15 +15,15 @@ export default defineConfig({
   projects: [
     {
       name: "iPhone SE",
-      use: { ...devices["iPhone SE"] },
+      use: { ...devices["iPhone SE"], deviceScaleFactor: 1 },
     },
     {
       name: "iPhone 14",
-      use: { ...devices["iPhone 14"] },
+      use: { ...devices["iPhone 14"], deviceScaleFactor: 1 },
     },
     {
       name: "iPad Mini",
-      use: { ...devices["iPad Mini"] },
+      use: { ...devices["iPad Mini"], deviceScaleFactor: 1 },
     },
     {
       name: "Desktop",
