@@ -143,13 +143,6 @@ Fixup commits are ONLY for changes that logically belong to a previous commit �
 - Each commit must leave the project in a **passing state**: lint + typecheck + tests green
 - Stage specific files, never `git add -A` or `git add .`
 - Never commit `.env`, secrets, or `node_modules`
-- Use `BACKLOG.md` transitions as part of the relevant feature commit (not separate commits)
-
-## Task Tracking — BACKLOG.md
-
-All tasks are tracked in `BACKLOG.md` at the project root. This file is git-tracked and serves as the single source of truth for project status.
-
-Update `BACKLOG.md` as part of the commit that completes or starts work on a task — not as a separate commit.
 
 ## TDD Workflow — MANDATORY
 
@@ -166,9 +159,9 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ## Project Conventions
 
 ### File Structure
-- Components: `src/components/` — React functional components (Board, Cell, NumPad, SoloGame, MultiplayerGame, Lobby, GameControls, GameResult, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, NumPadPositionToggle, Landing)
+- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing, GameLayout, GameControls, GameResult, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast)
 - Hooks: `src/hooks/` — custom React hooks (useSudoku, useYjsMultiplayer, useKeyboard, useNumPadPosition, useDarkMode)
-- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, daily challenge, stats, haptics, sounds, format, constants)
+- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, daily challenge, daily-streak, stats, game-storage, name-generator, haptics, sounds, format, constants)
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)
@@ -223,13 +216,15 @@ You cannot judge visual quality from code alone. **Always screenshot, always rev
 
 ## Key Design Decisions
 
-- **Soft validation**: Conflicts shown visually, not blocked. Optional `showConflicts` toggle at difficulty selection. Board complete only when all filled + valid.
+- **Soft validation**: Conflicts shown visually, not blocked. Toggleable at difficulty selection and during gameplay. Board complete only when all filled + valid.
 - **Peer-to-peer**: No server needed. Game state syncs via Yjs CRDTs over WebRTC. Public signaling servers used only for peer discovery.
 - **Board sharing**: Sharer's cells become locked/given on both boards. Notes not shared.
-- **Numpad positions**: Bottom (default), Left, Right. Persisted in localStorage.
-- **No accounts**: Nickname + random color. sessionStorage for reconnect identity.
-- **Daily challenge**: Deterministic puzzle via seeded RNG — same date, same board, any device.
-- **Stats tracking**: Per-difficulty game history (best time, average, games played) in localStorage.
+- **Numpad positions**: Bottom (default), Left, Right. Persisted in localStorage. Configured via settings popover.
+- **No accounts**: Auto-generated fun names (adjective + animal). Name persisted in localStorage, editable in lobby. sessionStorage for reconnect identity.
+- **Daily challenge**: Deterministic puzzle via seeded RNG — same date, same board, any device. Streak tracking (current + longest).
+- **Stats tracking**: Per-difficulty game history (best time, average, games played) in localStorage. Personal best shown during gameplay.
+- **Game persistence**: Auto-save in-progress games to localStorage. Resume on return.
+- **Hints**: Reveal one cell's correct value (solo only). Hint-assisted games excluded from PB tracking.
 - **Sound effects**: Synthesized via Web Audio API, toggleable.
 
 <!-- rtk-instructions v2 -->
