@@ -56,7 +56,7 @@
 .dark {
   /* Board & cell */
   --color-board-bg: oklch(0.2 0.008 80);
-  --color-board-border: oklch(0.55 0.01 80);
+  --color-board-border: oklch(0.6 0.01 80);
   --color-cell-bg: oklch(0.18 0.006 80);
   --color-cell-selected: oklch(0.28 0.05 168);
   --color-cell-highlight: oklch(0.22 0.02 168);
@@ -72,7 +72,7 @@
   --color-bg-inset: oklch(0.16 0.008 80);
   --color-bg-raised: oklch(0.21 0.008 80);
   --color-bg-overlay: oklch(0.16 0.008 80);
-  --color-border-default: oklch(0.26 0.008 80);
+  --color-border-default: oklch(0.32 0.008 80);
 
   /* Semantic text */
   --color-text-primary: oklch(0.93 0.005 80);
