@@ -43,35 +43,24 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
   const [showConflicts, setShowConflicts] = useState(true);
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-sm px-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-        Choose Difficulty
-      </h2>
+    <div className="screen-content gap-6">
+      <h2 className="heading">Choose Difficulty</h2>
       <div className="flex flex-col gap-3 w-full">
         {DIFFICULTIES.map((d) => (
           <button
             key={d.value}
             type="button"
-            className="
-							flex flex-col items-start gap-0.5
-							w-full px-5 py-4 rounded-xl
-							bg-gray-50 dark:bg-gray-900
-							border border-gray-200 dark:border-gray-800
-							press-spring-soft
-							select-none touch-manipulation
-						"
+            className="card flex flex-col items-start gap-0.5 w-full px-5 py-4 press-spring-soft select-none touch-manipulation"
             onClick={() => onSelect(d.value, showConflicts)}
           >
-            <span className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <span className="flex items-center gap-2 text-lg font-semibold text-text-primary">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${d.color}`}
                 aria-hidden="true"
               />
               {d.label}
             </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {d.description}
-            </span>
+            <span className="caption">{d.description}</span>
           </button>
         ))}
       </div>
@@ -82,7 +71,7 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
       />
       <button
         type="button"
-        className="text-sm text-gray-400 dark:text-gray-500 mt-2 touch-manipulation"
+        className="btn-ghost mt-2 touch-manipulation"
         onClick={onBack}
       >
         ← Back

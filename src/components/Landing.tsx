@@ -14,12 +14,10 @@ export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
   const streak = useMemo(() => getDailyStreak(), []);
 
   return (
-    <div className="flex flex-col items-center gap-8 w-full max-w-sm px-6">
+    <div className="screen-content gap-10">
       <div className="flex flex-col items-center gap-2">
-        <h1 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-          Sudoku
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="heading-xl">Sudoku</h1>
+        <p className="text-sm text-text-muted">
           Free multiplayer sudoku — no account needed.
         </p>
       </div>
@@ -39,9 +37,7 @@ export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
       </div>
       <div className="flex flex-col gap-6 w-full">
         <div className="flex flex-col gap-3">
-          <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            Solo
-          </span>
+          <span className="label">Solo</span>
           <ActionButton label="Start Solo" onClick={onSolo} primary />
           <DailyChallengeButton
             onClick={onDaily}
@@ -50,9 +46,7 @@ export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
           />
         </div>
         <div className="flex flex-col gap-3">
-          <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            Multiplayer
-          </span>
+          <span className="label">Multiplayer</span>
           <ActionButton label="Create Game" onClick={onCreate} />
           <ActionButton label="Join Game" onClick={onJoin} />
         </div>
@@ -61,7 +55,7 @@ export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
         href="https://github.com/adrienbrault/sudoku"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-accent dark:hover:text-accent transition-colors"
+        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors"
       >
         <GitHubIcon />
         <span>Open source</span>
@@ -74,7 +68,7 @@ function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-3">
       <span className="text-accent shrink-0">{icon}</span>
-      <span className="text-sm text-gray-500 dark:text-gray-400">{text}</span>
+      <span className="text-sm text-text-muted">{text}</span>
     </div>
   );
 }
@@ -91,7 +85,7 @@ function DailyChallengeButton({
   return (
     <button
       type="button"
-      className="w-full py-4 rounded-xl text-lg font-semibold press-spring-soft select-none touch-manipulation bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 relative"
+      className="btn btn-lg btn-secondary w-full relative"
       onClick={onClick}
     >
       <span className="flex items-center justify-center gap-2">
@@ -132,15 +126,7 @@ function ActionButton({
   return (
     <button
       type="button"
-      className={`
-				w-full py-4 rounded-xl text-lg font-semibold
-				press-spring-soft select-none touch-manipulation
-				${
-          primary
-            ? "bg-accent text-white shadow-lg shadow-accent/20"
-            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-        }
-			`}
+      className={`btn btn-lg w-full ${primary ? "btn-primary" : "btn-secondary"}`}
       onClick={onClick}
     >
       {label}
