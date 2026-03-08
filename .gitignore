@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Coverage
+coverage
+
 # Playwright
 e2e/screenshots
 e2e/results
