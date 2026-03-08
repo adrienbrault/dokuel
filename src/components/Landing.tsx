@@ -1,7 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime } from "../lib/format.ts";
-import { listSavedGames, type SavedGameSummary } from "../lib/game-storage.ts";
+import {
+  deleteGame,
+  listSavedGames,
+  type SavedGameSummary,
+} from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
 
 type LandingProps = {
@@ -24,7 +28,12 @@ export function Landing({
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
-  const savedGames = useMemo(() => listSavedGames(), []);
+  const [savedGames, setSavedGames] = useState(() => listSavedGames());
+
+  const handleDelete = useCallback((key: string) => {
+    deleteGame(key);
+    setSavedGames((prev) => prev.filter((g) => g.key !== key));
+  }, []);
   const isReturningUser = useMemo(
     () => savedGames.length > 0 || getStats().length > 0,
     [savedGames],
@@ -65,6 +74,7 @@ export function Landing({
                 key={game.key}
                 game={game}
                 onClick={() => onContinue(game.key, game.difficulty)}
+                onDelete={() => handleDelete(game.key)}
               />
             ))}
           </div>
@@ -166,27 +176,59 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   expert: "Expert",
 };
 
+function progressPercent(game: SavedGameSummary): number {
+  const remaining = 81 - game.givenCells;
+  if (remaining === 0) return 100;
+  const filled = game.filledCells - game.givenCells;
+  return Math.round((filled / remaining) * 100);
+}
+
 function ContinueButton({
   game,
   onClick,
+  onDelete,
 }: {
   game: SavedGameSummary;
   onClick: () => void;
+  onDelete: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className="btn btn-lg btn-primary w-full"
-      onClick={onClick}
-    >
-      <span className="flex items-center justify-center gap-2">
-        Continue
-        <span className="text-sm font-normal opacity-80">
-          {DIFFICULTY_LABELS[game.difficulty] ?? game.difficulty} ·{" "}
-          {game.filledCells}/81 · {formatTime(game.timer)}
+    <div className="flex gap-2 w-full">
+      <button
+        type="button"
+        className="btn btn-lg btn-primary flex-1 min-w-0"
+        onClick={onClick}
+      >
+        <span className="flex items-center justify-center gap-2">
+          Continue
+          <span className="text-sm font-normal opacity-80">
+            {DIFFICULTY_LABELS[game.difficulty] ?? game.difficulty} ·{" "}
+            {progressPercent(game)}% · {formatTime(game.timer)}
+          </span>
         </span>
-      </span>
-    </button>
+      </button>
+      <button
+        type="button"
+        className="btn btn-lg btn-secondary px-3 shrink-0"
+        onClick={onDelete}
+        aria-label="Delete saved game"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 6L6 18" />
+          <path d="M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
   );
 }
 
