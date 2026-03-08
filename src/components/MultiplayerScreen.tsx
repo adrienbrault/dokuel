@@ -38,12 +38,10 @@ function persistPlayerName(name: string) {
 export function MultiplayerScreen({
   roomId,
   difficulty,
-  showConflicts,
   onBack,
 }: {
   roomId: string;
   difficulty: Difficulty;
-  showConflicts: boolean;
   onBack: () => void;
 }) {
   const playerId = useMemo(getPlayerId, []);
@@ -61,7 +59,6 @@ export function MultiplayerScreen({
       playerName={playerName}
       onRename={handleRename}
       difficulty={difficulty}
-      showConflicts={showConflicts}
       onBack={onBack}
     />
   );

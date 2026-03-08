@@ -11,7 +11,7 @@ import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
-import type { Difficulty } from "./lib/types.ts";
+import type { AssistLevel, Difficulty } from "./lib/types.ts";
 import "./index.css";
 
 function generateId() {
@@ -26,14 +26,13 @@ type Screen =
       difficulty: Difficulty;
       gameId: number;
       gameKey: string;
-      showConflicts: boolean;
+      assistLevel: AssistLevel;
     }
   | { name: "daily" }
   | {
       name: "multiplayer";
       roomId: string;
       difficulty: Difficulty;
-      showConflicts: boolean;
     }
   | { name: "join" }
   | { name: "stats" };
@@ -81,7 +80,7 @@ function pathToScreen(pathname: string): Screen {
         difficulty: difficulty as Difficulty,
         gameId: 1,
         gameKey,
-        showConflicts: true,
+        assistLevel: "standard",
       };
     }
     return { name: "landing" };
@@ -92,7 +91,6 @@ function pathToScreen(pathname: string): Screen {
     name: "multiplayer",
     roomId: path,
     difficulty: "medium" as Difficulty,
-    showConflicts: true,
   };
 }
 
@@ -157,7 +155,7 @@ function App() {
                 difficulty: difficulty as Difficulty,
                 gameId: gameIdRef.current,
                 gameKey,
-                showConflicts: true,
+                assistLevel: "standard",
               });
             }}
           />
@@ -168,7 +166,7 @@ function App() {
       return (
         <div className="screen">
           <DifficultyPicker
-            onSelect={(difficulty, showConflicts) => {
+            onSelect={(difficulty, assistLevel) => {
               if (screen.mode === "solo") {
                 gameIdRef.current++;
                 navigate({
@@ -176,7 +174,7 @@ function App() {
                   difficulty,
                   gameId: gameIdRef.current,
                   gameKey: generateId(),
-                  showConflicts,
+                  assistLevel,
                 });
               } else {
                 const roomId = generateRoomCode();
@@ -184,7 +182,6 @@ function App() {
                   name: "multiplayer",
                   roomId,
                   difficulty,
-                  showConflicts,
                 });
               }
             }}
@@ -199,7 +196,7 @@ function App() {
           key={screen.gameKey}
           difficulty={screen.difficulty}
           gameKey={screen.gameKey}
-          showConflicts={screen.showConflicts}
+          assistLevel={screen.assistLevel}
           onBack={() => navigate({ name: "landing" })}
           onRematch={() => {
             gameIdRef.current++;
@@ -209,7 +206,7 @@ function App() {
                 difficulty: screen.difficulty,
                 gameId: gameIdRef.current,
                 gameKey: generateId(),
-                showConflicts: screen.showConflicts,
+                assistLevel: screen.assistLevel,
               },
               { replace: true },
             );
@@ -225,7 +222,6 @@ function App() {
         <MultiplayerScreen
           roomId={screen.roomId}
           difficulty={screen.difficulty}
-          showConflicts={screen.showConflicts}
           onBack={() => navigate({ name: "landing" })}
         />
       );
@@ -241,7 +237,6 @@ function App() {
               name: "multiplayer",
               roomId,
               difficulty: "medium",
-              showConflicts: true,
             });
           }}
           onBack={() => navigate({ name: "landing" })}
