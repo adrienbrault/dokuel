@@ -11,6 +11,9 @@ type MultiplayerGameProps = {
   difficulty: import("../lib/types.ts").Difficulty;
   onRename?: (name: string) => void;
   onBack: () => void;
+  onAddFriend?:
+    | ((opponentId: string, opponentName: string) => void)
+    | undefined;
 };
 
 export function MultiplayerGame({
@@ -20,6 +23,7 @@ export function MultiplayerGame({
   difficulty,
   onRename,
   onBack,
+  onAddFriend,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const [toast, setToast] = useState<string | null>(null);
@@ -60,6 +64,7 @@ export function MultiplayerGame({
   }
 
   if (mp.puzzle) {
+    const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
     return (
       <>
         <MultiplayerBoard
@@ -75,6 +80,9 @@ export function MultiplayerGame({
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
           onBack={onBack}
+          onAddFriend={onAddFriend}
+          opponentId={opponent?.id}
+          opponentName={opponent?.name}
         />
         {!mp.connected && (
           <DisconnectOverlay

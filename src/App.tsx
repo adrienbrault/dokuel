@@ -280,6 +280,9 @@ function App() {
           roomId={screen.roomId}
           difficulty={screen.difficulty}
           onBack={() => navigate({ name: "landing" })}
+          onAddFriend={(opponentId, opponentName) => {
+            setFriends(addFriend(opponentId, opponentName));
+          }}
         />
       );
 

@@ -11,10 +11,14 @@ export function MultiplayerScreen({
   roomId,
   difficulty,
   onBack,
+  onAddFriend,
 }: {
   roomId: string;
   difficulty: Difficulty;
   onBack: () => void;
+  onAddFriend?:
+    | ((opponentId: string, opponentName: string) => void)
+    | undefined;
 }) {
   const playerId = useMemo(getPlayerId, []);
   const [playerName, setName] = useState(getPlayerName);
@@ -32,6 +36,7 @@ export function MultiplayerScreen({
       onRename={handleRename}
       difficulty={difficulty}
       onBack={onBack}
+      onAddFriend={onAddFriend}
     />
   );
 }
