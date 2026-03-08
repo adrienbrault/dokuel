@@ -10,7 +10,7 @@ import {
   saveGame,
 } from "../lib/game-storage.ts";
 import { getStatsForDifficulty, saveGameResult } from "../lib/stats.ts";
-import { generatePuzzle } from "../lib/sudoku.ts";
+import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -62,12 +62,14 @@ export function SoloGame({
     return generatePuzzle(difficulty);
   }, [difficulty, initialPuzzle, saved]);
 
+  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
+
   const savedBoard = useMemo(
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
     [saved],
   );
 
-  const game = useSudoku(puzzle, savedBoard);
+  const game = useSudoku(puzzle, solution, savedBoard);
   const { position, setPosition } = useNumPadPosition();
   const timerSecondsRef = useRef(saved?.timer ?? 0);
   const [showResult, setShowResult] = useState(false);
@@ -104,11 +106,11 @@ export function SoloGame({
   useEffect(() => {
     if (game.status !== "completed") return;
     if (gameKey) deleteGame(gameKey);
-    saveGameResult(difficulty, timerSecondsRef.current, true);
+    saveGameResult(difficulty, timerSecondsRef.current, true, game.hintsUsed);
     onComplete?.(timerSecondsRef.current);
     const id = setTimeout(() => setShowResult(true), 300);
     return () => clearTimeout(id);
-  }, [game.status, difficulty, gameKey, onComplete]);
+  }, [game.status, difficulty, gameKey, onComplete, game.hintsUsed]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell) {
@@ -208,6 +210,7 @@ export function SoloGame({
           showConflicts={showConflicts}
           onToggleConflicts={() => setShowConflicts((v) => !v)}
           historyLength={game.historyLength}
+          onHint={game.hint}
         />
       }
       footer={
@@ -221,7 +224,8 @@ export function SoloGame({
             onRematch={onRematch}
             stats={priorStats}
             isNewPB={
-              personalBest === null || timerSecondsRef.current < personalBest
+              game.hintsUsed === 0 &&
+              (personalBest === null || timerSecondsRef.current < personalBest)
             }
           />
         ) : undefined

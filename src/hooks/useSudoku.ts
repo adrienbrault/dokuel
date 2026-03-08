@@ -17,10 +17,12 @@ import type {
 
 type State = {
   board: Board;
+  solution: string | null;
   status: GameStatus;
   selectedCell: Position | null;
   notesMode: boolean;
   history: MoveAction[];
+  hintsUsed: number;
 };
 
 type Action =
@@ -29,6 +31,7 @@ type Action =
   | { type: "PLACE_NUMBER"; value: number }
   | { type: "ERASE" }
   | { type: "UNDO" }
+  | { type: "HINT" }
   | { type: "TOGGLE_NOTES" };
 
 function cloneBoard(board: Board): Board {
@@ -180,13 +183,108 @@ function reducer(state: State, action: Action): State {
           }
           break;
         }
+        case "hint": {
+          board[row]![col]!.value = null;
+          board[row]![col]!.notes = new Set(lastAction.previousNotes);
+          for (const cleared of lastAction.clearedNotes) {
+            board[cleared.row]![cleared.col]!.notes.add(cleared.note);
+          }
+          break;
+        }
       }
 
-      return { ...state, board, history };
+      return {
+        ...state,
+        board,
+        history,
+        hintsUsed:
+          lastAction.type === "hint"
+            ? Math.max(0, state.hintsUsed - 1)
+            : state.hintsUsed,
+      };
     }
 
     case "TOGGLE_NOTES": {
       return { ...state, notesMode: !state.notesMode };
+    }
+
+    case "HINT": {
+      if (!state.solution || state.status === "completed") return state;
+
+      // Find the target cell: selected empty cell, or first empty cell
+      let targetRow = -1;
+      let targetCol = -1;
+      if (
+        state.selectedCell &&
+        state.board[state.selectedCell.row]![state.selectedCell.col]!.value ===
+          null
+      ) {
+        targetRow = state.selectedCell.row;
+        targetCol = state.selectedCell.col;
+      } else {
+        for (let r = 0; r < 9 && targetRow === -1; r++) {
+          for (let c = 0; c < 9; c++) {
+            if (state.board[r]![c]!.value === null) {
+              targetRow = r;
+              targetCol = c;
+              break;
+            }
+          }
+        }
+      }
+      if (targetRow === -1) return state;
+
+      const hintValue = Number(state.solution[targetRow * 9 + targetCol]);
+      const cell = state.board[targetRow]![targetCol]!;
+      const board = cloneBoard(state.board);
+      board[targetRow]![targetCol]!.value = hintValue;
+      board[targetRow]![targetCol]!.notes = new Set();
+
+      // Auto-clear notes from peers (same as PLACE_NUMBER)
+      const clearedNotes: ClearedNote[] = [];
+      const boxRow = Math.floor(targetRow / 3) * 3;
+      const boxCol = Math.floor(targetCol / 3) * 3;
+      for (let i = 0; i < 9; i++) {
+        if (i !== targetCol && board[targetRow]![i]!.notes.has(hintValue)) {
+          board[targetRow]![i]!.notes.delete(hintValue);
+          clearedNotes.push({ row: targetRow, col: i, note: hintValue });
+        }
+        if (i !== targetRow && board[i]![targetCol]!.notes.has(hintValue)) {
+          board[i]![targetCol]!.notes.delete(hintValue);
+          clearedNotes.push({ row: i, col: targetCol, note: hintValue });
+        }
+      }
+      for (let r = boxRow; r < boxRow + 3; r++) {
+        for (let c = boxCol; c < boxCol + 3; c++) {
+          if (
+            r !== targetRow &&
+            c !== targetCol &&
+            board[r]![c]!.notes.has(hintValue)
+          ) {
+            board[r]![c]!.notes.delete(hintValue);
+            clearedNotes.push({ row: r, col: c, note: hintValue });
+          }
+        }
+      }
+
+      const moveAction: MoveAction = {
+        type: "hint",
+        position: { row: targetRow, col: targetCol },
+        value: hintValue,
+        previousNotes: new Set(cell.notes),
+        clearedNotes,
+      };
+      const conflicts = getConflicts(board);
+      const complete = isBoardComplete(board, conflicts);
+
+      return {
+        ...state,
+        board,
+        status: complete ? "completed" : state.status,
+        selectedCell: { row: targetRow, col: targetCol },
+        history: [...state.history, moveAction],
+        hintsUsed: state.hintsUsed + 1,
+      };
     }
 
     default:
@@ -201,6 +299,7 @@ export type SavedBoard = {
 
 function initState(args: {
   puzzle: string;
+  solution?: string;
   savedBoard?: SavedBoard | undefined;
 }): State {
   const board = parsePuzzle(args.puzzle);
@@ -219,17 +318,23 @@ function initState(args: {
   }
   return {
     board,
+    solution: args.solution ?? null,
     status: "playing",
     selectedCell: null,
     notesMode: false,
     history: [],
+    hintsUsed: 0,
   };
 }
 
-export function useSudoku(puzzle: string, savedBoard?: SavedBoard) {
+export function useSudoku(
+  puzzle: string,
+  solution?: string,
+  savedBoard?: SavedBoard,
+) {
   const [state, dispatch] = useReducer(
     reducer,
-    { puzzle, savedBoard },
+    { puzzle, solution, savedBoard },
     initState,
   );
 
@@ -297,6 +402,12 @@ export function useSudoku(puzzle: string, savedBoard?: SavedBoard) {
     dispatch({ type: "TOGGLE_NOTES" });
   }, []);
 
+  const hint = useCallback(() => {
+    haptics.tap();
+    sounds.place();
+    dispatch({ type: "HINT" });
+  }, []);
+
   return {
     board: state.board,
     puzzle,
@@ -307,6 +418,7 @@ export function useSudoku(puzzle: string, savedBoard?: SavedBoard) {
     remainingCounts,
     cellsRemaining,
     historyLength: state.history.length,
+    hintsUsed: state.hintsUsed,
     cellKey,
     selectCell,
     deselectCell,
@@ -314,5 +426,6 @@ export function useSudoku(puzzle: string, savedBoard?: SavedBoard) {
     erase,
     undo,
     toggleNotesMode,
+    hint,
   };
 }

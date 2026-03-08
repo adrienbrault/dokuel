@@ -6,6 +6,7 @@ type GameControlsProps = {
   showConflicts?: boolean | undefined;
   onToggleConflicts?: (() => void) | undefined;
   historyLength?: number | undefined;
+  onHint?: (() => void) | undefined;
 };
 
 export function GameControls({
@@ -16,6 +17,7 @@ export function GameControls({
   showConflicts,
   onToggleConflicts,
   historyLength,
+  onHint,
 }: GameControlsProps) {
   return (
     <div className="flex gap-3 w-full max-w-lg">
@@ -40,6 +42,9 @@ export function GameControls({
           onClick={onToggleConflicts}
           active={showConflicts ?? false}
         />
+      )}
+      {onHint && (
+        <ControlButton label="Hint" icon="💡" onClick={onHint} active={false} />
       )}
     </div>
   );
