@@ -78,11 +78,14 @@ export function useSudoku(
     [],
   );
 
-  const placeNumber = useCallback((value: number) => {
-    haptics.tap();
-    sounds.place();
-    dispatch({ type: "PLACE_NUMBER", value });
-  }, []);
+  const placeNumber = useCallback(
+    (value: number, autoEliminateNotes = true) => {
+      haptics.tap();
+      sounds.place();
+      dispatch({ type: "PLACE_NUMBER", value, autoEliminateNotes });
+    },
+    [],
+  );
 
   const erase = useCallback(() => {
     haptics.tap();

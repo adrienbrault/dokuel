@@ -25,7 +25,7 @@ export type Action =
   | { type: "SELECT_CELL"; row: number; col: number }
   | { type: "DESELECT_CELL" }
   | { type: "SET_SELECTED_CELLS"; cells: Set<number>; primary: Position }
-  | { type: "PLACE_NUMBER"; value: number }
+  | { type: "PLACE_NUMBER"; value: number; autoEliminateNotes: boolean }
   | { type: "ERASE" }
   | { type: "UNDO" }
   | { type: "HINT" }
@@ -138,7 +138,7 @@ export function reducer(state: State, action: Action): State {
       };
 
     case "PLACE_NUMBER":
-      return handlePlaceNumber(state, action.value);
+      return handlePlaceNumber(state, action.value, action.autoEliminateNotes);
 
     case "ERASE":
       return handleErase(state);

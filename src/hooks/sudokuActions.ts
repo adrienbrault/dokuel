@@ -41,7 +41,11 @@ function clearPeerNotes(
   return clearedNotes;
 }
 
-export function handlePlaceNumber(state: State, value: number): State {
+export function handlePlaceNumber(
+  state: State,
+  value: number,
+  autoEliminateNotes = true,
+): State {
   if (!state.selectedCell || state.status === "completed") return state;
   const { row, col } = state.selectedCell;
   const cell = state.board[row]![col]!;
@@ -117,7 +121,9 @@ export function handlePlaceNumber(state: State, value: number): State {
   const board = cloneBoard(state.board);
   board[row]![col]!.value = value;
   board[row]![col]!.notes = new Set();
-  const clearedNotes = clearPeerNotes(board, row, col, value);
+  const clearedNotes = autoEliminateNotes
+    ? clearPeerNotes(board, row, col, value)
+    : [];
   const moveAction: MoveAction = {
     type: "place",
     position: { row, col },
