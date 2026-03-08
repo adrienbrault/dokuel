@@ -29,11 +29,16 @@ export function NumPad({ position, remainingCounts, onNumber }: NumPadProps) {
             key={n}
             type="button"
             disabled={isComplete}
-            className={`flex flex-col items-center justify-center rounded-lg select-none touch-manipulation text-lg font-semibold bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md lg:h-10 lg:w-14 ${isVertical ? "h-9 w-12" : "h-12 flex-1 max-w-14"} ${isComplete ? "opacity-30 cursor-default" : "press-spring"}`}
+            className={`flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md lg:h-10 lg:w-14 ${isVertical ? "h-9 w-12" : "h-14 flex-1 max-w-14"} ${isComplete ? "opacity-30 cursor-default" : "press-spring"}`}
             onClick={() => onNumber(n)}
             aria-label={`${n}, ${remaining} remaining`}
           >
-            {n}
+            <span className="text-lg leading-none">{n}</span>
+            <span
+              className={`text-[0.5625rem] leading-none mt-0.5 ${isComplete ? "invisible" : "text-text-muted"}`}
+            >
+              {remaining}
+            </span>
           </button>
         );
       })}
