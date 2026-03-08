@@ -20,4 +20,10 @@ describe("getDailyPuzzle", () => {
     expect(puzzle).toMatch(/^[.1-9]{81}$/);
     expect(solution).toMatch(/^[1-9]{81}$/);
   });
+
+  it("restores Math.random after generation", () => {
+    const originalRandom = Math.random;
+    getDailyPuzzle("2026-03-07", "easy");
+    expect(Math.random).toBe(originalRandom);
+  });
 });

@@ -158,7 +158,7 @@ function initState(puzzle: string): State {
   };
 }
 
-export function useSudoku(puzzle: string, _solution: string) {
+export function useSudoku(puzzle: string) {
   const [state, dispatch] = useReducer(reducer, puzzle, initState);
 
   const conflicts = useMemo(() => getConflicts(state.board), [state.board]);

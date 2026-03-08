@@ -14,7 +14,7 @@ const BASE_STATE: RoomState = {
       id: "p1",
       name: "Alice",
       color: "#3B82F6",
-      connected: true,
+
       cellsRemaining: 81,
       completionPercent: 0,
     },
@@ -49,7 +49,7 @@ describe("Lobby", () => {
           id: "p2",
           name: "Bob",
           color: "#EF4444",
-          connected: true,
+
           cellsRemaining: 81,
           completionPercent: 0,
         },
@@ -79,7 +79,7 @@ describe("Lobby", () => {
           id: "p2",
           name: "Bob",
           color: "#EF4444",
-          connected: true,
+
           cellsRemaining: 81,
           completionPercent: 0,
         },
@@ -138,7 +138,7 @@ describe("Lobby", () => {
           id: "p2",
           name: "Bob",
           color: "#EF4444",
-          connected: true,
+
           cellsRemaining: 81,
           completionPercent: 0,
         },

@@ -252,13 +252,12 @@ function JoinScreen({
 }
 
 function DailyGame({ onBack }: { onBack: () => void }) {
-  const { puzzle, solution, date } = useMemo(() => getDailyPuzzle(), []);
+  const { puzzle, date } = useMemo(() => getDailyPuzzle(), []);
 
   return (
     <SoloGame
       difficulty="medium"
       initialPuzzle={puzzle}
-      initialSolution={solution}
       title={`Daily Challenge — ${date}`}
       onBack={onBack}
     />

@@ -58,7 +58,6 @@ export type Player = {
   id: string;
   name: string;
   color: string;
-  connected: boolean;
   cellsRemaining: number;
   completionPercent: number;
 };

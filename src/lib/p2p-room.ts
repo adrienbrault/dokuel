@@ -148,7 +148,6 @@ export function getPlayers(room: P2PRoom): Player[] {
       id,
       name: p.get("name") as string,
       color: p.get("color") as string,
-      connected: true,
       cellsRemaining: p.get("cellsRemaining") as number,
       completionPercent: p.get("completionPercent") as number,
     });

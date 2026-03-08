@@ -158,6 +158,7 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 - **Vertical slices only**: ONE test → ONE implementation → repeat. Never batch tests.
 - **Plan first**: Confirm interface and behaviors with the user before coding.
 - **Test behavior, not implementation**: Tests use public interfaces, survive refactors.
+- **Don't test what the type system catches**: If TypeScript already enforces a constraint (e.g. argument types, return types, exhaustive switches), don't write a test for it. Tests should cover runtime behavior that types cannot guarantee.
 - **Mock only at system boundaries**: See `.claude/skills/tdd/mocking.md`.
 - Never write implementation code without a corresponding test.
 - Tests go next to the file they test (`*.test.ts` / `*.test.tsx`).
