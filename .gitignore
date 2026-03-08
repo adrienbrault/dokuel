@@ -14,6 +14,7 @@ dist-ssr
 
 # Coverage
 coverage
+coverage-diff
 
 # Playwright
 e2e/screenshots

@@ -37,6 +37,10 @@
 					{
 						"type": "command",
 						"command": "cd \"$CLAUDE_PROJECT_DIR\" && RESULT=$(bun run ci 2>&1) || { echo \"$RESULT\" | tail -30; echo '{\"decision\": \"block\", \"reason\": \"CI checks failed. Fix lint, typecheck, or test errors before stopping.\"}'; }"
+					},
+					{
+						"type": "command",
+						"command": "cd \"$CLAUDE_PROJECT_DIR\" && RESULT=$(bun run diff-coverage 2>&1) || { echo \"$RESULT\"; echo '{\"decision\": \"block\", \"reason\": \"Diff coverage check found untested changed lines. Add tests for uncovered code paths.\"}'; }"
 					}
 				]
 			}
