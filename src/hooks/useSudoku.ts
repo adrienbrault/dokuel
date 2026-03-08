@@ -21,6 +21,7 @@ type State = {
   solution: string | null;
   status: GameStatus;
   selectedCell: Position | null;
+  selectedCells: Set<number>;
   notesMode: boolean;
   history: MoveAction[];
   hintsUsed: number;
@@ -29,6 +30,7 @@ type State = {
 type Action =
   | { type: "SELECT_CELL"; row: number; col: number }
   | { type: "DESELECT_CELL" }
+  | { type: "SET_SELECTED_CELLS"; cells: Set<number>; primary: Position }
   | { type: "PLACE_NUMBER"; value: number }
   | { type: "ERASE" }
   | { type: "UNDO" }
@@ -47,17 +49,75 @@ function cloneBoard(board: Board): Board {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SELECT_CELL": {
-      return { ...state, selectedCell: { row: action.row, col: action.col } };
+      const key = cellKey(action.row, action.col);
+      return {
+        ...state,
+        selectedCell: { row: action.row, col: action.col },
+        selectedCells: new Set([key]),
+      };
     }
 
     case "DESELECT_CELL": {
-      return { ...state, selectedCell: null };
+      return { ...state, selectedCell: null, selectedCells: new Set() };
+    }
+
+    case "SET_SELECTED_CELLS": {
+      return {
+        ...state,
+        selectedCell: action.primary,
+        selectedCells: action.cells,
+      };
     }
 
     case "PLACE_NUMBER": {
       if (!state.selectedCell || state.status === "completed") return state;
       const { row, col } = state.selectedCell;
       const cell = state.board[row]![col]!;
+
+      // Multi-cell batch note toggle
+      if (state.notesMode && state.selectedCells.size > 1) {
+        const board = cloneBoard(state.board);
+        const targets: Position[] = [];
+        for (const key of state.selectedCells) {
+          const r = Math.floor(key / 9);
+          const c = key % 9;
+          const target = board[r]![c]!;
+          if (!target.isGiven && target.value === null) {
+            targets.push({ row: r, col: c });
+          }
+        }
+        if (targets.length === 0) return state;
+
+        // If all targets have the note, remove it; otherwise add it
+        const allHave = targets.every((p) =>
+          board[p.row]![p.col]!.notes.has(action.value),
+        );
+        const added: Position[] = [];
+        const removed: Position[] = [];
+        for (const pos of targets) {
+          const notes = board[pos.row]![pos.col]!.notes;
+          if (allHave) {
+            notes.delete(action.value);
+            removed.push(pos);
+          } else if (!notes.has(action.value)) {
+            notes.add(action.value);
+            added.push(pos);
+          }
+        }
+        if (added.length === 0 && removed.length === 0) return state;
+        const moveAction: MoveAction = {
+          type: "batchToggleNote",
+          note: action.value,
+          added,
+          removed,
+        };
+        return {
+          ...state,
+          board,
+          history: [...state.history, moveAction],
+        };
+      }
+
       if (cell.isGiven) return state;
 
       if (state.notesMode) {
@@ -131,6 +191,44 @@ function reducer(state: State, action: Action): State {
 
     case "ERASE": {
       if (!state.selectedCell || state.status === "completed") return state;
+
+      // Multi-cell batch erase
+      if (state.selectedCells.size > 1) {
+        const board = cloneBoard(state.board);
+        const erased: {
+          position: Position;
+          previousValue: import("../lib/types.ts").CellValue;
+          previousNotes: Set<number>;
+        }[] = [];
+        for (const key of state.selectedCells) {
+          const r = Math.floor(key / 9);
+          const c = key % 9;
+          const target = board[r]![c]!;
+          if (
+            !target.isGiven &&
+            (target.value !== null || target.notes.size > 0)
+          ) {
+            erased.push({
+              position: { row: r, col: c },
+              previousValue: target.value,
+              previousNotes: new Set(target.notes),
+            });
+            target.value = null;
+            target.notes = new Set();
+          }
+        }
+        if (erased.length === 0) return state;
+        const moveAction: MoveAction = {
+          type: "batchErase",
+          cells: erased,
+        };
+        return {
+          ...state,
+          board,
+          history: [...state.history, moveAction],
+        };
+      }
+
       const { row, col } = state.selectedCell;
       const cell = state.board[row]![col]!;
       if (cell.isGiven) return state;
@@ -303,6 +401,7 @@ function reducer(state: State, action: Action): State {
         board,
         status: complete ? "completed" : state.status,
         selectedCell: { row: targetRow, col: targetCol },
+        selectedCells: new Set([cellKey(targetRow, targetCol)]),
         history: [...state.history, moveAction],
         hintsUsed: state.hintsUsed + 1,
       };
@@ -342,6 +441,7 @@ function initState(args: {
     solution: args.solution ?? null,
     status: "playing",
     selectedCell: null,
+    selectedCells: new Set(),
     notesMode: false,
     history: [],
     hintsUsed: 0,
@@ -413,6 +513,12 @@ export function useSudoku(
     [],
   );
 
+  const setSelectedCells = useCallback(
+    (cells: Set<number>, primary: Position) =>
+      dispatch({ type: "SET_SELECTED_CELLS", cells, primary }),
+    [],
+  );
+
   const placeNumber = useCallback((value: number) => {
     haptics.tap();
     sounds.place();
@@ -443,6 +549,7 @@ export function useSudoku(
     puzzle,
     status: state.status,
     selectedCell: state.selectedCell,
+    selectedCells: state.selectedCells,
     notesMode: state.notesMode,
     conflicts,
     errors,
@@ -453,6 +560,7 @@ export function useSudoku(
     cellKey,
     selectCell,
     deselectCell,
+    setSelectedCells,
     placeNumber,
     erase,
     undo,
