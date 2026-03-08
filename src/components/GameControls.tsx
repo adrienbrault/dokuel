@@ -66,17 +66,11 @@ function ControlButton({
   return (
     <button
       type="button"
-      className={`
-				flex-1 flex flex-col items-center justify-center
-				h-12 rounded-lg relative
-				press-spring
-				select-none touch-manipulation
-				${
-          active
-            ? "bg-accent text-white shadow-md"
-            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
-        }
-			`}
+      className={`flex-1 flex flex-col items-center justify-center h-12 rounded-lg relative press-spring select-none touch-manipulation ${
+        active
+          ? "bg-accent text-text-on-accent shadow-md"
+          : "bg-bg-raised text-text-secondary"
+      }`}
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
