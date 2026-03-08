@@ -52,6 +52,7 @@ export type SavedGameSummary = {
   key: string;
   difficulty: Difficulty;
   filledCells: number;
+  givenCells: number;
   timer: number;
 };
 
@@ -67,10 +68,12 @@ export function listSavedGames(): SavedGameSummary[] {
       const game = loadGame(key);
       if (!game) continue;
       const filledCells = game.values.split("").filter((c) => c !== ".").length;
+      const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
         key,
         difficulty: game.difficulty,
         filledCells,
+        givenCells,
         timer: game.timer,
       });
     }
