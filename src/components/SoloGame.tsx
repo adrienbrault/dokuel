@@ -161,7 +161,7 @@ export function SoloGame({
           aria-label={paused ? "Resume" : "Pause"}
         >
           <Timer
-            running={game.status === "playing" && !paused}
+            running={game.status === "playing" && !paused && revealed}
             initialSeconds={saved?.timer}
             onTick={(s) => {
               timerSecondsRef.current = s;
