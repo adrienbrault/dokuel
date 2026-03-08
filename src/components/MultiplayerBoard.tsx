@@ -129,6 +129,7 @@ export function MultiplayerBoard({
               : null
           }
           showRemainingCounts={assistLevel === "full"}
+          disableCompleted={assistLevel !== "paper"}
           onNumber={handleNumber}
         />
       }
