@@ -81,6 +81,15 @@ export function SoloGame({
     />
   );
 
+  const controls = (
+    <GameControls
+      notesMode={game.notesMode}
+      onToggleNotes={game.toggleNotesMode}
+      onErase={game.erase}
+      onUndo={game.undo}
+    />
+  );
+
   return (
     <div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
       {/* Header */}
@@ -102,49 +111,40 @@ export function SoloGame({
       </div>
 
       {/* Main game area */}
-      <div
-        className={`
-					flex gap-3 w-full justify-center flex-1
-					${position === "left" ? "flex-row items-center" : ""}
-					${position === "right" ? "flex-row-reverse items-center" : ""}
-					${position === "bottom" ? "flex-col items-center" : ""}
-				`}
-      >
-        {position !== "bottom" && numPad}
-        <div
-          className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : ""} ${game.status === "completed" ? "animate-celebration" : ""}`}
-        >
-          <Board
-            board={game.board}
-            selectedCell={game.selectedCell}
-            conflicts={game.conflicts}
-            onSelectCell={game.selectCell}
-            animateReveal={!revealed}
-          />
-          {/* Controls + bottom numpad */}
-          {position === "bottom" && (
-            <div className="flex flex-col items-center gap-3 w-full">
-              <GameControls
-                notesMode={game.notesMode}
-                onToggleNotes={game.toggleNotesMode}
-                onErase={game.erase}
-                onUndo={game.undo}
-              />
-              {numPad}
-            </div>
-          )}
+      {position === "bottom" ? (
+        <div className="flex flex-col items-center gap-3 flex-1 justify-center w-full">
+          <div
+            className={`flex flex-col items-center gap-3 w-full max-w-lg ${game.status === "completed" ? "animate-celebration" : ""}`}
+          >
+            <Board
+              board={game.board}
+              selectedCell={game.selectedCell}
+              conflicts={game.conflicts}
+              onSelectCell={game.selectCell}
+              animateReveal={!revealed}
+            />
+            {controls}
+            {numPad}
+          </div>
         </div>
-      </div>
-
-      {/* Controls for side numpad positions */}
-      {position !== "bottom" && (
-        <div className="flex flex-col items-center gap-3 mt-4 w-full">
-          <GameControls
-            notesMode={game.notesMode}
-            onToggleNotes={game.toggleNotesMode}
-            onErase={game.erase}
-            onUndo={game.undo}
-          />
+      ) : (
+        <div className="flex flex-col items-center gap-3 flex-1 justify-center w-full">
+          <div className="flex gap-3 w-full max-w-lg items-center justify-center">
+            {position === "left" && numPad}
+            <div
+              className={`flex-1 min-w-0 ${game.status === "completed" ? "animate-celebration" : ""}`}
+            >
+              <Board
+                board={game.board}
+                selectedCell={game.selectedCell}
+                conflicts={game.conflicts}
+                onSelectCell={game.selectCell}
+                animateReveal={!revealed}
+              />
+            </div>
+            {position === "right" && numPad}
+          </div>
+          <div className="w-full max-w-lg">{controls}</div>
         </div>
       )}
 
