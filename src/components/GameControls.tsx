@@ -3,8 +3,6 @@ type GameControlsProps = {
   onToggleNotes: () => void;
   onErase: () => void;
   onUndo: () => void;
-  showConflicts?: boolean | undefined;
-  onToggleConflicts?: (() => void) | undefined;
   historyLength?: number | undefined;
   onHint?: (() => void) | undefined;
 };
@@ -14,8 +12,6 @@ export function GameControls({
   onToggleNotes,
   onErase,
   onUndo,
-  showConflicts,
-  onToggleConflicts,
   historyLength,
   onHint,
 }: GameControlsProps) {
@@ -35,14 +31,6 @@ export function GameControls({
         onClick={onToggleNotes}
         active={notesMode}
       />
-      {onToggleConflicts && (
-        <ControlButton
-          label="Errors"
-          icon="👁"
-          onClick={onToggleConflicts}
-          active={showConflicts ?? false}
-        />
-      )}
       {onHint && (
         <ControlButton label="Hint" icon="💡" onClick={onHint} active={false} />
       )}
