@@ -166,6 +166,7 @@ export function SoloGame({
           <GameResult
             isWinner={true}
             time={formatTime(timerSecondsRef.current)}
+            timeSeconds={timerSecondsRef.current}
             difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}
