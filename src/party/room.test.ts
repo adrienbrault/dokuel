@@ -85,9 +85,9 @@ describe("GameRoom", () => {
       // Should send game_start to all
       const gameStart = messages.find((m) => m.message.type === "game_start");
       expect(gameStart).toBeDefined();
-      expect(gameStart!.target).toBe("all");
+      expect(gameStart?.target).toBe("all");
       expect(
-        gameStart!.message.type === "game_start" && gameStart!.message.puzzle,
+        gameStart?.message.type === "game_start" && gameStart?.message.puzzle,
       ).toBe(room.state.puzzle);
     });
 
@@ -151,8 +151,8 @@ describe("GameRoom", () => {
       expect(room.state.winnerId).toBe("p1");
       const gameOver = messages.find((m) => m.message.type === "game_over");
       expect(gameOver).toBeDefined();
-      expect(gameOver!.target).toBe("all");
-      expect(gameOver!.message).toMatchObject({
+      expect(gameOver?.target).toBe("all");
+      expect(gameOver?.message).toMatchObject({
         type: "game_over",
         winnerId: "p1",
         winnerName: "Alice",
@@ -198,7 +198,7 @@ describe("GameRoom", () => {
         (m) => m.message.type === "rematch_start",
       );
       expect(rematchMsg).toBeDefined();
-      expect(rematchMsg!.target).toBe("all");
+      expect(rematchMsg?.target).toBe("all");
     });
   });
 
@@ -271,7 +271,7 @@ describe("GameRoom", () => {
       const messages = room.handleComplete("p1", room.solution!);
       const gameOver = messages.find((m) => m.message.type === "game_over");
       expect(gameOver).toBeDefined();
-      expect(gameOver!.target).toBe("all");
+      expect(gameOver?.target).toBe("all");
     });
   });
 });

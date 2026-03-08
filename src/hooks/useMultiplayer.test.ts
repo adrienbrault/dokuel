@@ -193,7 +193,7 @@ describe("useMultiplayer", () => {
     expect(result.current.gameOver).toBeTruthy();
 
     // Rematch
-    const puzzle2 = "1" + ".".repeat(80);
+    const puzzle2 = `1${".".repeat(80)}`;
     act(() =>
       socket.emit(
         "message",
