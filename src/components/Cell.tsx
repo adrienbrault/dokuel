@@ -52,7 +52,7 @@ export const Cell = memo(function Cell({
       className={`
 				relative flex items-center justify-center
 				aspect-square w-full
-				border border-gray-200 dark:border-gray-600/50
+				border border-gray-200 dark:border-gray-600
 				${bgClass} ${borderRight} ${borderBottom}
 				transition-colors duration-100
 				select-none touch-manipulation
