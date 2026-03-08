@@ -22,16 +22,11 @@ Premium, mobile-first Sudoku with real-time 1v1 multiplayer. No accounts require
 
 ### 1v1 Multiplayer
 
+- Peer-to-peer via WebRTC — no server needed, game state syncs directly between players
 - Create a room, share the link, race to solve the same puzzle
 - Live opponent progress bar (cells remaining, completion %)
-- Server-authoritative validation — the client never sees the solution
-- Disconnect resilience with 60-second reconnect grace period
+- Disconnect resilience with reconnect grace period
 - Rematch without leaving the room
-- Spectator mode for additional players
-
-### Board Sharing
-
-Either player can offer to share their filled cells as hints. Accepted cells become locked on both boards. Notes are never shared.
 
 ### Mobile-First UX
 
@@ -53,7 +48,7 @@ Either player can offer to share their filled cells as hints. Accepted cells bec
 |-------|-----------|
 | UI | React 19, Tailwind CSS 4 |
 | Build | Vite, TypeScript, Bun |
-| Server | Cloudflare Workers + Durable Objects (Agents SDK) |
+| Multiplayer | Yjs CRDTs + y-webrtc (peer-to-peer, no server) |
 | Testing | Vitest, React Testing Library, Playwright |
 | Lint & Format | Biome |
 
@@ -104,27 +99,25 @@ Output is written to `dist/`.
 ```
 src/
 ├── components/     # React UI components (Board, NumPad, Lobby, etc.)
-├── hooks/          # State management (useSudoku, useMultiplayer, useKeyboard, etc.)
-├── lib/            # Pure logic — puzzle generation, validation, types, sounds, haptics
-└── party/          # Cloudflare Workers server — Durable Object game rooms
+├── hooks/          # State management (useSudoku, useYjsMultiplayer, useKeyboard, etc.)
+├── lib/            # Pure logic — puzzle generation, validation, P2P room, types
 ```
 
 ### Key Design Decisions
 
+- **Peer-to-peer multiplayer** — game state syncs via Yjs CRDTs over WebRTC. Public signaling servers handle peer discovery only; no custom backend needed
 - **React hooks only** — `useReducer` for game state, no external state library
-- **Server-authoritative multiplayer** — the server holds the solution and validates completion, preventing cheating
 - **Soft validation** — conflicts are visual feedback, not hard constraints. The board is complete only when fully filled with no violations
 - **No accounts** — nickname + random color, stored in sessionStorage for reconnect identity
 - **Colocated tests** — `*.test.ts` / `*.test.tsx` files sit next to the code they test
 
 ## Deployment
 
-Both frontend and server deploy automatically on push to `main`.
+The frontend deploys automatically on push to `main` via Cloudflare Pages. No server infrastructure needed — multiplayer is fully peer-to-peer.
 
 | Service | Platform | URL |
 |---------|----------|-----|
 | Frontend | Cloudflare Pages | [sudoku.brage.fr](https://sudoku.brage.fr) |
-| Server | Cloudflare Workers | party-sudoku.brage.fr |
 
 ## License
 
