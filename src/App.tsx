@@ -7,6 +7,7 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { getDailyPuzzle } from "./lib/daily.ts";
+import { formatShortDate } from "./lib/format.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
 import "./index.css";
@@ -329,7 +330,7 @@ function DailyGame({ onBack }: { onBack: () => void }) {
       difficulty="medium"
       gameKey={`daily-${date}`}
       initialPuzzle={puzzle}
-      title={`Daily Challenge — ${date}`}
+      title={`Daily — ${formatShortDate(date)}`}
       onBack={onBack}
     />
   );
