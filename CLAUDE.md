@@ -26,7 +26,7 @@ See `spec.md` for full product specification.
 The frontend deploys automatically on push to `main`. No server infrastructure needed — multiplayer uses WebRTC peer-to-peer.
 
 ### Frontend (Cloudflare Pages)
-- **Project**: `sudoku` on Cloudflare Pages, connected to `adrienbrault/sudoku` on GitHub
+- **Project**: `sudoku` on Cloudflare Pages, connected to `adrienbrault/dokuel` on GitHub
 - **Build**: `bun install && bun run build` → `dist/`
 - **URL**: https://dokuel.com (custom domain), https://sudoku-4cc.pages.dev (default)
 - Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
@@ -159,9 +159,9 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ## Project Conventions
 
 ### File Structure
-- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing, GameLayout, GameControls, GameResult, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast)
+- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing, GameLayout, GameControls, GameResult, Stats, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast)
 - Hooks: `src/hooks/` — custom React hooks (useSudoku, useYjsMultiplayer, useKeyboard, useNumPadPosition, useDarkMode)
-- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, daily challenge, daily-streak, stats, game-storage, name-generator, haptics, sounds, format, constants)
+- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, daily challenge, daily-streak, stats, game-storage, name-generator, haptics, sounds, format, constants)
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)

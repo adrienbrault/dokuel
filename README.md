@@ -107,14 +107,14 @@ src/
 ├── components/     # React UI components
 │   ├── Board, Cell, NumPad, NumPadPositionToggle
 │   ├── SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing
-│   ├── GameLayout, GameControls, GameResult, DifficultyPicker, Timer
+│   ├── GameLayout, GameControls, GameResult, Stats, DifficultyPicker, Timer
 │   ├── DarkModeToggle, SoundToggle, ToggleSwitch, Toast
 │   └── App (router)
 ├── hooks/          # State management
 │   ├── useSudoku, useYjsMultiplayer, useKeyboard
 │   └── useNumPadPosition, useDarkMode
 ├── lib/            # Pure logic — no React dependency
-│   ├── sudoku (engine), types, p2p-room (Yjs CRDT)
+│   ├── sudoku (engine), types, p2p-room (Yjs CRDT), room-code
 │   ├── daily (seeded RNG), daily-streak, stats, game-storage
 │   └── name-generator, haptics, sounds, format, constants
 ```
