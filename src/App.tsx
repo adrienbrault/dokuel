@@ -10,6 +10,7 @@ import { getDailyPuzzle } from "./lib/daily.ts";
 import { recordDailyCompletion } from "./lib/daily-streak.ts";
 import { formatShortDate } from "./lib/format.ts";
 import { generatePlayerName } from "./lib/name-generator.ts";
+import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
 import "./index.css";
@@ -204,7 +205,7 @@ function App() {
                   showConflicts,
                 });
               } else {
-                const roomId = generateId();
+                const roomId = generateRoomCode();
                 navigate({
                   name: "multiplayer",
                   roomId,
