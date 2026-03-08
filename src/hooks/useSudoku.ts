@@ -147,8 +147,29 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-function initState(puzzle: string): State {
-  const board = parsePuzzle(puzzle);
+export type SavedBoard = {
+  values: string;
+  notes: number[][];
+};
+
+function initState(args: {
+  puzzle: string;
+  savedBoard?: SavedBoard | undefined;
+}): State {
+  const board = parsePuzzle(args.puzzle);
+  if (args.savedBoard) {
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        const cell = board[row]![col]!;
+        if (!cell.isGiven) {
+          const i = row * 9 + col;
+          const ch = args.savedBoard.values[i];
+          cell.value = ch === "." ? null : Number(ch);
+          cell.notes = new Set(args.savedBoard.notes[i] ?? []);
+        }
+      }
+    }
+  }
   return {
     board,
     status: "playing",
@@ -158,8 +179,12 @@ function initState(puzzle: string): State {
   };
 }
 
-export function useSudoku(puzzle: string) {
-  const [state, dispatch] = useReducer(reducer, puzzle, initState);
+export function useSudoku(puzzle: string, savedBoard?: SavedBoard) {
+  const [state, dispatch] = useReducer(
+    reducer,
+    { puzzle, savedBoard },
+    initState,
+  );
 
   const conflicts = useMemo(() => getConflicts(state.board), [state.board]);
 
@@ -222,6 +247,7 @@ export function useSudoku(puzzle: string) {
 
   return {
     board: state.board,
+    puzzle,
     status: state.status,
     selectedCell: state.selectedCell,
     notesMode: state.notesMode,
