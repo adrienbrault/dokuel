@@ -17,6 +17,11 @@ The API token needs these permissions:
 - **Account / Workers Scripts / Edit**
 - **Account / Workers Routes / Edit**
 - **Account / Durable Objects / Edit** (included in Workers Scripts)
+- **Zone / Zone / Read** (needed for custom domain routing)
+- **Zone / DNS / Edit** (needed for custom domain DNS records)
+- **Zone / Workers Routes / Edit** (needed for custom domain routing)
+
+Easiest approach: start from the "Edit Cloudflare Workers" template, then add the three Zone permissions above (scope to `dokuel.com` zone or all zones).
 
 ### 2. DNS
 
