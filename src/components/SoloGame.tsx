@@ -11,7 +11,8 @@ import {
 } from "../lib/game-storage.ts";
 import { getStatsForDifficulty, saveGameResult } from "../lib/stats.ts";
 import { cellKey, generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
-import type { Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
+import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
@@ -37,7 +38,7 @@ function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
 type SoloGameProps = {
   difficulty: Difficulty;
   gameKey?: string | undefined;
-  showConflicts?: boolean | undefined;
+  assistLevel?: AssistLevel | undefined;
   initialPuzzle?: string | undefined;
   title?: string | undefined;
   onBack: () => void;
@@ -49,7 +50,7 @@ type SoloGameProps = {
 export function SoloGame({
   difficulty,
   gameKey,
-  showConflicts: initialShowConflicts = true,
+  assistLevel: initialAssistLevel = "standard",
   initialPuzzle,
   title,
   onBack,
@@ -77,7 +78,9 @@ export function SoloGame({
   const timerSecondsRef = useRef(saved?.timer ?? 0);
   const [showResult, setShowResult] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const [showConflicts, setShowConflicts] = useState(initialShowConflicts);
+  const [assistLevel, setAssistLevel] = useState<AssistLevel>(
+    saved?.assistLevel ?? initialAssistLevel,
+  );
   const [paused, setPaused] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
@@ -99,10 +102,10 @@ export function SoloGame({
       notes: boardToNotes(game.board),
       timer: timerSecondsRef.current,
       difficulty,
-      showConflicts,
+      assistLevel,
     };
     saveGame(gameKey, data);
-  }, [game.board, gameKey, puzzle, difficulty, showConflicts, game.status]);
+  }, [game.board, gameKey, puzzle, difficulty, assistLevel, game.status]);
 
   useEffect(() => {
     const id = setTimeout(() => setRevealed(true), 600);
@@ -120,7 +123,7 @@ export function SoloGame({
 
   const handleNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n);
+      game.placeNumber(n, assistLevel === "full");
     }
   };
 
@@ -175,6 +178,9 @@ export function SoloGame({
       onPositionChange={setPosition}
       onDeselectCell={game.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
+      settingsExtra={
+        <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+      }
       timer={
         <button
           type="button"
@@ -215,6 +221,7 @@ export function SoloGame({
               ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
               : null
           }
+          showRemainingCounts={assistLevel === "full"}
           onNumber={handleNumber}
         />
       }
@@ -224,7 +231,8 @@ export function SoloGame({
             board={game.board}
             selectedCell={paused ? null : game.selectedCell}
             selectedCells={paused ? undefined : game.selectedCells}
-            conflicts={showConflicts ? game.errors : EMPTY_CONFLICTS}
+            assistLevel={assistLevel}
+            conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
             hintCells={hintCells}
             onSelectCell={paused ? () => {} : game.selectCell}
             onSetSelectedCells={paused ? undefined : game.setSelectedCells}
@@ -254,8 +262,6 @@ export function SoloGame({
             onToggleNotes={game.toggleNotesMode}
             onErase={game.erase}
             onUndo={game.undo}
-            showConflicts={showConflicts}
-            onToggleConflicts={() => setShowConflicts((v) => !v)}
             historyLength={game.historyLength}
             onHint={game.hint}
           />
