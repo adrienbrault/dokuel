@@ -10,11 +10,32 @@ const DIFFICULTIES: {
   value: Difficulty;
   label: string;
   description: string;
+  color: string;
 }[] = [
-  { value: "easy", label: "Easy", description: "Great for warming up" },
-  { value: "medium", label: "Medium", description: "A fair challenge" },
-  { value: "hard", label: "Hard", description: "For experienced players" },
-  { value: "expert", label: "Expert", description: "The ultimate test" },
+  {
+    value: "easy",
+    label: "Easy",
+    description: "Great for warming up",
+    color: "bg-green-400",
+  },
+  {
+    value: "medium",
+    label: "Medium",
+    description: "A fair challenge",
+    color: "bg-yellow-400",
+  },
+  {
+    value: "hard",
+    label: "Hard",
+    description: "For experienced players",
+    color: "bg-orange-400",
+  },
+  {
+    value: "expert",
+    label: "Expert",
+    description: "The ultimate test",
+    color: "bg-red-400",
+  },
 ];
 
 export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
@@ -40,7 +61,11 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
 						"
             onClick={() => onSelect(d.value, showConflicts)}
           >
-            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <span className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${d.color}`}
+                aria-hidden="true"
+              />
               {d.label}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -63,7 +88,7 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
       </label>
       <button
         type="button"
-        className="w-full py-3 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 touch-manipulation press-spring-soft"
+        className="text-sm text-gray-400 dark:text-gray-500 mt-2 touch-manipulation"
         onClick={onBack}
       >
         ← Back

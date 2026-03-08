@@ -60,6 +60,7 @@ export function MultiplayerGame({
         <MultiplayerBoard
           puzzle={mp.puzzle}
           playerId={playerId}
+          difficulty={difficulty}
           showConflicts={showConflicts}
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}

@@ -14,6 +14,7 @@ const EMPTY_CONFLICTS = new Set<number>();
 export type MultiplayerBoardProps = {
   puzzle: string;
   playerId: string;
+  difficulty: import("../lib/types.ts").Difficulty;
   showConflicts?: boolean;
   opponentProgress: {
     cellsRemaining: number;
@@ -30,6 +31,7 @@ export type MultiplayerBoardProps = {
 export function MultiplayerBoard({
   puzzle,
   playerId,
+  difficulty,
   showConflicts = true,
   opponentProgress,
   opponentDisconnected,
@@ -88,12 +90,17 @@ export function MultiplayerBoard({
       onPositionChange={setPosition}
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
-        <Timer
-          running={!gameOver}
-          onTick={(s) => {
-            timerSecondsRef.current = s;
-          }}
-        />
+        <div className="flex flex-col items-center">
+          <Timer
+            running={!gameOver}
+            onTick={(s) => {
+              timerSecondsRef.current = s;
+            }}
+          />
+          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono tabular-nums">
+            {81 - game.cellsRemaining}/81
+          </span>
+        </div>
       }
       numPad={
         <NumPad
@@ -147,6 +154,8 @@ export function MultiplayerBoard({
           <GameResult
             isWinner={gameOver.winnerId === playerId}
             time={formatTime(timerSecondsRef.current)}
+            difficulty={difficulty}
+            isMultiplayer
             onNewGame={onBack}
             onRematch={onRematch}
           />

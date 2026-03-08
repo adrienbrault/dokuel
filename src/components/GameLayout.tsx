@@ -34,7 +34,9 @@ export function GameLayout({
   return (
     <div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
       {title && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{title}</p>
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+          {title}
+        </p>
       )}
 
       {/* Header */}

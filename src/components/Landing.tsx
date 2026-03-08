@@ -16,11 +16,21 @@ export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
           Solo or 1v1 with a friend
         </p>
       </div>
-      <div className="flex flex-col gap-3 w-full">
-        <ActionButton label="Start Solo" onClick={onSolo} primary />
-        <ActionButton label="Daily Challenge" onClick={onDaily} />
-        <ActionButton label="Create Game" onClick={onCreate} />
-        <ActionButton label="Join Game" onClick={onJoin} />
+      <div className="flex flex-col gap-6 w-full">
+        <div className="flex flex-col gap-3">
+          <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            Solo
+          </span>
+          <ActionButton label="Start Solo" onClick={onSolo} primary />
+          <ActionButton label="Daily Challenge" onClick={onDaily} />
+        </div>
+        <div className="flex flex-col gap-3">
+          <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            Multiplayer
+          </span>
+          <ActionButton label="Create Game" onClick={onCreate} />
+          <ActionButton label="Join Game" onClick={onJoin} />
+        </div>
       </div>
     </div>
   );

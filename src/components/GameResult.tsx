@@ -1,6 +1,17 @@
+import type { Difficulty } from "../lib/types.ts";
+
+const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+  expert: "Expert",
+};
+
 type GameResultProps = {
   isWinner: boolean;
   time: string;
+  difficulty?: Difficulty | undefined;
+  isMultiplayer?: boolean | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
 };
@@ -8,6 +19,8 @@ type GameResultProps = {
 export function GameResult({
   isWinner,
   time,
+  difficulty,
+  isMultiplayer,
   onRematch,
   onNewGame,
 }: GameResultProps) {
@@ -20,7 +33,8 @@ export function GameResult({
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Time: {time}
+            {difficulty ? `${DIFFICULTY_LABELS[difficulty]} · ` : ""}
+            {time}
           </p>
         </div>
         <div className="flex flex-col gap-3 w-full">
@@ -30,7 +44,7 @@ export function GameResult({
               className="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white press-spring-soft select-none touch-manipulation"
               onClick={onRematch}
             >
-              Rematch
+              {isMultiplayer ? "Rematch" : "Play Again"}
             </button>
           )}
           <button

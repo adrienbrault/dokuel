@@ -81,12 +81,17 @@ export function SoloGame({
       onPositionChange={setPosition}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       timer={
-        <Timer
-          running={game.status === "playing"}
-          onTick={(s) => {
-            timerSecondsRef.current = s;
-          }}
-        />
+        <div className="flex flex-col items-center">
+          <Timer
+            running={game.status === "playing"}
+            onTick={(s) => {
+              timerSecondsRef.current = s;
+            }}
+          />
+          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono tabular-nums">
+            {81 - game.cellsRemaining}/81
+          </span>
+        </div>
       }
       numPad={
         <NumPad
@@ -117,6 +122,7 @@ export function SoloGame({
           <GameResult
             isWinner={true}
             time={formatTime(timerSecondsRef.current)}
+            difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}
           />

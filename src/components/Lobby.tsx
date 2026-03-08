@@ -13,6 +13,7 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
   const canStart = isHost && roomState.players.length === 2;
   const waiting = roomState.players.length < 2;
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const gameUrl = `${window.location.origin}/${roomState.roomId}`;
 
@@ -36,14 +37,23 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Game Lobby
         </h2>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800">
+        <button
+          type="button"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 cursor-pointer touch-manipulation press-spring-soft"
+          onClick={async () => {
+            await navigator.clipboard.writeText(roomState.roomId);
+            setCodeCopied(true);
+            setTimeout(() => setCodeCopied(false), 2000);
+          }}
+          title="Copy room code"
+        >
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            Room:
+            {codeCopied ? "Copied!" : "Room:"}
           </span>
           <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">
             {roomState.roomId}
           </span>
-        </div>
+        </button>
         <button
           type="button"
           className="mt-1 px-4 py-2 rounded-lg text-sm font-medium bg-accent text-white shadow-sm shadow-accent/20 press-spring-soft select-none touch-manipulation"
@@ -77,9 +87,23 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
           </div>
         ))}
         {waiting && (
-          <div className="flex items-center justify-center py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 animate-pulse">
             <span className="text-sm text-gray-400 dark:text-gray-500">
-              Waiting for opponent...
+              Waiting for opponent
+            </span>
+            <span className="flex gap-0.5" aria-hidden="true">
+              <span
+                className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              />
+              <span
+                className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              />
+              <span
+                className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              />
             </span>
           </div>
         )}
@@ -97,7 +121,7 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
 							${
                 canStart
                   ? "bg-accent text-white shadow-lg shadow-accent/20"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               }
 						`}
             onClick={onStart}
@@ -110,7 +134,7 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
           className="text-sm text-gray-400 dark:text-gray-500 mt-2 touch-manipulation"
           onClick={onBack}
         >
-          Back
+          ← Back
         </button>
       </div>
     </div>
