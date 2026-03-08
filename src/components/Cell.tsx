@@ -50,9 +50,9 @@ export const Cell = memo(function Cell({
     <button
       type="button"
       className={`
-				flex items-center justify-center
+				relative flex items-center justify-center
 				aspect-square w-full
-				border border-gray-200 dark:border-gray-700
+				border border-gray-200 dark:border-gray-600/50
 				${bgClass} ${borderRight} ${borderBottom}
 				transition-colors duration-100
 				select-none touch-manipulation
@@ -76,11 +76,11 @@ export const Cell = memo(function Cell({
           {cell.value}
         </span>
       ) : cell.notes.size > 0 ? (
-        <div className="grid grid-cols-3 grid-rows-3 w-full h-full p-[1px]">
+        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]">
           {DIGITS.map((n) => (
             <span
               key={n}
-              className="flex items-center justify-center text-[clamp(0.4rem,1.5vw,0.625rem)] text-gray-400 dark:text-gray-500 leading-none"
+              className="flex items-center justify-center text-[clamp(0.5625rem,2vw,0.75rem)] text-gray-500 dark:text-gray-400 leading-none"
             >
               {cell.notes.has(n) ? n : ""}
             </span>

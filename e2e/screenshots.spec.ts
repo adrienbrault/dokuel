@@ -174,16 +174,20 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	// Add notes to several empty cells
 	const remainingEmpty = page.locator('button[aria-label*=", empty"]');
 	const remainingCount = await remainingEmpty.count();
+	const enabledNumpad = page.locator(
+		'[role="group"][aria-label="Number pad"] button:not([disabled])',
+	);
 	for (let i = 0; i < Math.min(6, remainingCount); i++) {
 		await remainingEmpty.nth(i).click();
-		// Add 2-3 note candidates per cell
-		const numpad = page.locator('[role="group"][aria-label="Number pad"] button');
-		await numpad.nth((i * 2) % 9).click();
+		// Add 2-3 note candidates per cell from enabled buttons
+		const enabledCount = await enabledNumpad.count();
+		if (enabledCount < 2) break;
+		await enabledNumpad.nth(i % enabledCount).click();
 		await page.waitForTimeout(30);
-		await numpad.nth((i * 2 + 1) % 9).click();
+		await enabledNumpad.nth((i + 1) % enabledCount).click();
 		await page.waitForTimeout(30);
-		if (i % 2 === 0) {
-			await numpad.nth((i * 2 + 3) % 9).click();
+		if (i % 2 === 0 && enabledCount > 2) {
+			await enabledNumpad.nth((i + 2) % enabledCount).click();
 			await page.waitForTimeout(30);
 		}
 	}

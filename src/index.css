@@ -16,6 +16,21 @@
   --color-accent-light: oklch(0.92 0.05 250);
 }
 
+/* Dark mode overrides for board colors */
+.dark {
+  --color-board-bg: oklch(0.2 0 0);
+  --color-board-border: oklch(0.6 0 0);
+  --color-cell-bg: oklch(0.18 0 0);
+  --color-cell-selected: oklch(0.28 0.06 250);
+  --color-cell-highlight: oklch(0.22 0.02 250);
+  --color-cell-same-number: oklch(0.26 0.06 250);
+  --color-cell-given: oklch(0.9 0 0);
+  --color-cell-user: oklch(0.7 0.15 250);
+  --color-cell-conflict: oklch(0.7 0.2 25);
+  --color-cell-conflict-bg: oklch(0.25 0.06 25);
+  --color-accent-light: oklch(0.28 0.06 250);
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 html {

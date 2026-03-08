@@ -6,9 +6,6 @@ import { formatTime } from "../lib/format.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
-
-const EMPTY_CONFLICTS = new Set<number>();
-
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -16,11 +13,14 @@ import { NumPad } from "./NumPad.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 import { Timer } from "./Timer.tsx";
 
+const EMPTY_CONFLICTS = new Set<number>();
+
 type SoloGameProps = {
   difficulty: Difficulty;
   showConflicts?: boolean;
   initialPuzzle?: string;
   initialSolution?: string;
+  title?: string;
   onBack: () => void;
   onRematch?: () => void;
 };
@@ -30,6 +30,7 @@ export function SoloGame({
   showConflicts = true,
   initialPuzzle,
   initialSolution,
+  title,
   onBack,
   onRematch,
 }: SoloGameProps) {
@@ -86,6 +87,10 @@ export function SoloGame({
 
   return (
     <div className="flex flex-col items-center min-h-dvh bg-white dark:bg-gray-950 py-4 px-4 animate-screen-enter">
+      {/* Title (e.g. Daily Challenge) */}
+      {title && (
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{title}</p>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between w-full max-w-lg mb-4">
         <button
