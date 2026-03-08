@@ -186,7 +186,7 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)
-- Tabs for indentation
+- 2-space indentation
 - Double quotes for strings
 - Semicolons always
 - Organize imports automatically

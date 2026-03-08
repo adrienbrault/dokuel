@@ -2,30 +2,30 @@ import { useEffect, useRef, useState } from "react";
 import { formatTime } from "../lib/format.ts";
 
 type TimerProps = {
-	running: boolean;
-	onTick?: (seconds: number) => void;
+  running: boolean;
+  onTick?: (seconds: number) => void;
 };
 
 export function Timer({ running, onTick }: TimerProps) {
-	const [seconds, setSeconds] = useState(0);
-	const onTickRef = useRef(onTick);
-	onTickRef.current = onTick;
+  const [seconds, setSeconds] = useState(0);
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
 
-	useEffect(() => {
-		if (!running) return;
-		const interval = setInterval(() => {
-			setSeconds((s) => {
-				const next = s + 1;
-				onTickRef.current?.(next);
-				return next;
-			});
-		}, 1000);
-		return () => clearInterval(interval);
-	}, [running]);
+  useEffect(() => {
+    if (!running) return;
+    const interval = setInterval(() => {
+      setSeconds((s) => {
+        const next = s + 1;
+        onTickRef.current?.(next);
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [running]);
 
-	return (
-		<span className="font-mono text-sm text-gray-500 dark:text-gray-400 tabular-nums">
-			{formatTime(seconds)}
-		</span>
-	);
+  return (
+    <span className="font-mono text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+      {formatTime(seconds)}
+    </span>
+  );
 }

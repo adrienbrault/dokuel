@@ -1,225 +1,225 @@
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type {
-	ClientMessage,
-	Difficulty,
-	Player,
-	RoomState,
-	ServerMessage,
+  ClientMessage,
+  Difficulty,
+  Player,
+  RoomState,
+  ServerMessage,
 } from "../lib/types.ts";
 
 const PLAYER_COLORS = [
-	"#3B82F6", // blue
-	"#EF4444", // red
-	"#10B981", // emerald
-	"#F59E0B", // amber
+  "#3B82F6", // blue
+  "#EF4444", // red
+  "#10B981", // emerald
+  "#F59E0B", // amber
 ];
 
 export type OutgoingMessage = {
-	target: "sender" | "opponent" | "all";
-	message: ServerMessage;
+  target: "sender" | "opponent" | "all";
+  message: ServerMessage;
 };
 
 type Spectator = {
-	id: string;
-	name: string;
+  id: string;
+  name: string;
 };
 
 export class GameRoom {
-	state: RoomState;
-	solution: string | null = null;
-	spectators: Spectator[] = [];
+  state: RoomState;
+  solution: string | null = null;
+  spectators: Spectator[] = [];
 
-	constructor(roomId: string) {
-		this.state = {
-			roomId,
-			status: "lobby",
-			difficulty: "medium",
-			hostId: "",
-			players: [],
-			puzzle: null,
-			winnerId: null,
-			events: [],
-		};
-	}
+  constructor(roomId: string) {
+    this.state = {
+      roomId,
+      status: "lobby",
+      difficulty: "medium",
+      hostId: "",
+      players: [],
+      puzzle: null,
+      winnerId: null,
+      events: [],
+    };
+  }
 
-	handleJoin(playerId: string, name: string): OutgoingMessage[] {
-		// Reconnecting player
-		const existing = this.state.players.find((p) => p.id === playerId);
-		if (existing) {
-			existing.connected = true;
-			return [
-				{ target: "all", message: { type: "room_state", state: this.state } },
-			];
-		}
+  handleJoin(playerId: string, name: string): OutgoingMessage[] {
+    // Reconnecting player
+    const existing = this.state.players.find((p) => p.id === playerId);
+    if (existing) {
+      existing.connected = true;
+      return [
+        { target: "all", message: { type: "room_state", state: this.state } },
+      ];
+    }
 
-		// Room full — join as spectator
-		if (this.state.players.length >= 2) {
-			return this.handleSpectate(playerId, name);
-		}
+    // Room full — join as spectator
+    if (this.state.players.length >= 2) {
+      return this.handleSpectate(playerId, name);
+    }
 
-		const player: Player = {
-			id: playerId,
-			name,
-			color: PLAYER_COLORS[this.state.players.length % PLAYER_COLORS.length],
-			connected: true,
-			cellsRemaining: 81,
-			completionPercent: 0,
-		};
+    const player: Player = {
+      id: playerId,
+      name,
+      color: PLAYER_COLORS[this.state.players.length % PLAYER_COLORS.length],
+      connected: true,
+      cellsRemaining: 81,
+      completionPercent: 0,
+    };
 
-		this.state.players.push(player);
+    this.state.players.push(player);
 
-		if (this.state.players.length === 1) {
-			this.state.hostId = playerId;
-		}
+    if (this.state.players.length === 1) {
+      this.state.hostId = playerId;
+    }
 
-		return [
-			{ target: "all", message: { type: "room_state", state: this.state } },
-		];
-	}
+    return [
+      { target: "all", message: { type: "room_state", state: this.state } },
+    ];
+  }
 
-	handleStartGame(playerId: string, difficulty: Difficulty): OutgoingMessage[] {
-		if (playerId !== this.state.hostId) {
-			return [
-				{
-					target: "sender",
-					message: {
-						type: "error",
-						message: "Only the host can start the game",
-					},
-				},
-			];
-		}
+  handleStartGame(playerId: string, difficulty: Difficulty): OutgoingMessage[] {
+    if (playerId !== this.state.hostId) {
+      return [
+        {
+          target: "sender",
+          message: {
+            type: "error",
+            message: "Only the host can start the game",
+          },
+        },
+      ];
+    }
 
-		if (this.state.players.length < 2) {
-			return [
-				{
-					target: "sender",
-					message: { type: "error", message: "Need 2 players to start" },
-				},
-			];
-		}
+    if (this.state.players.length < 2) {
+      return [
+        {
+          target: "sender",
+          message: { type: "error", message: "Need 2 players to start" },
+        },
+      ];
+    }
 
-		const puzzle = generatePuzzle(difficulty);
-		this.solution = solvePuzzle(puzzle);
-		this.state.puzzle = puzzle;
-		this.state.difficulty = difficulty;
-		this.state.status = "playing";
+    const puzzle = generatePuzzle(difficulty);
+    this.solution = solvePuzzle(puzzle);
+    this.state.puzzle = puzzle;
+    this.state.difficulty = difficulty;
+    this.state.status = "playing";
 
-		// Reset player progress
-		for (const player of this.state.players) {
-			const clueCount = puzzle.split("").filter((c) => c !== ".").length;
-			player.cellsRemaining = 81 - clueCount;
-			player.completionPercent = 0;
-		}
+    // Reset player progress
+    for (const player of this.state.players) {
+      const clueCount = puzzle.split("").filter((c) => c !== ".").length;
+      player.cellsRemaining = 81 - clueCount;
+      player.completionPercent = 0;
+    }
 
-		return [{ target: "all", message: { type: "game_start", puzzle } }];
-	}
+    return [{ target: "all", message: { type: "game_start", puzzle } }];
+  }
 
-	handleProgress(
-		playerId: string,
-		cellsRemaining: number,
-		completionPercent: number,
-	): OutgoingMessage[] {
-		const player = this.state.players.find((p) => p.id === playerId);
-		if (!player) return [];
-		player.cellsRemaining = cellsRemaining;
-		player.completionPercent = completionPercent;
-		return [
-			{
-				target: "opponent",
-				message: {
-					type: "opponent_progress",
-					cellsRemaining,
-					completionPercent,
-				},
-			},
-		];
-	}
+  handleProgress(
+    playerId: string,
+    cellsRemaining: number,
+    completionPercent: number,
+  ): OutgoingMessage[] {
+    const player = this.state.players.find((p) => p.id === playerId);
+    if (!player) return [];
+    player.cellsRemaining = cellsRemaining;
+    player.completionPercent = completionPercent;
+    return [
+      {
+        target: "opponent",
+        message: {
+          type: "opponent_progress",
+          cellsRemaining,
+          completionPercent,
+        },
+      },
+    ];
+  }
 
-	handleComplete(playerId: string, board: string): OutgoingMessage[] {
-		if (board !== this.solution) {
-			return [
-				{
-					target: "sender",
-					message: { type: "error", message: "Solution is incorrect" },
-				},
-			];
-		}
+  handleComplete(playerId: string, board: string): OutgoingMessage[] {
+    if (board !== this.solution) {
+      return [
+        {
+          target: "sender",
+          message: { type: "error", message: "Solution is incorrect" },
+        },
+      ];
+    }
 
-		const player = this.state.players.find((p) => p.id === playerId);
-		if (!player) return [];
+    const player = this.state.players.find((p) => p.id === playerId);
+    if (!player) return [];
 
-		this.state.status = "finished";
-		this.state.winnerId = playerId;
+    this.state.status = "finished";
+    this.state.winnerId = playerId;
 
-		return [
-			{
-				target: "all",
-				message: {
-					type: "game_over",
-					winnerId: playerId,
-					winnerName: player.name,
-				},
-			},
-		];
-	}
+    return [
+      {
+        target: "all",
+        message: {
+          type: "game_over",
+          winnerId: playerId,
+          winnerName: player.name,
+        },
+      },
+    ];
+  }
 
-	handleRematch(): OutgoingMessage[] {
-		const puzzle = generatePuzzle(this.state.difficulty);
-		this.solution = solvePuzzle(puzzle);
-		this.state.puzzle = puzzle;
-		this.state.status = "playing";
-		this.state.winnerId = null;
+  handleRematch(): OutgoingMessage[] {
+    const puzzle = generatePuzzle(this.state.difficulty);
+    this.solution = solvePuzzle(puzzle);
+    this.state.puzzle = puzzle;
+    this.state.status = "playing";
+    this.state.winnerId = null;
 
-		const clueCount = puzzle.split("").filter((c) => c !== ".").length;
-		for (const player of this.state.players) {
-			player.cellsRemaining = 81 - clueCount;
-			player.completionPercent = 0;
-		}
+    const clueCount = puzzle.split("").filter((c) => c !== ".").length;
+    for (const player of this.state.players) {
+      player.cellsRemaining = 81 - clueCount;
+      player.completionPercent = 0;
+    }
 
-		return [{ target: "all", message: { type: "rematch_start", puzzle } }];
-	}
+    return [{ target: "all", message: { type: "rematch_start", puzzle } }];
+  }
 
-	handleMessage(senderId: string, msg: ClientMessage): OutgoingMessage[] {
-		switch (msg.type) {
-			case "join":
-				return this.handleJoin(msg.playerId, msg.name);
-			case "start_game":
-				return this.handleStartGame(senderId, this.state.difficulty);
-			case "progress":
-				return this.handleProgress(
-					senderId,
-					msg.cellsRemaining,
-					msg.completionPercent,
-				);
-			case "complete":
-				return this.handleComplete(senderId, msg.board);
-			case "rematch":
-				return this.handleRematch();
-			default:
-				return [];
-		}
-	}
+  handleMessage(senderId: string, msg: ClientMessage): OutgoingMessage[] {
+    switch (msg.type) {
+      case "join":
+        return this.handleJoin(msg.playerId, msg.name);
+      case "start_game":
+        return this.handleStartGame(senderId, this.state.difficulty);
+      case "progress":
+        return this.handleProgress(
+          senderId,
+          msg.cellsRemaining,
+          msg.completionPercent,
+        );
+      case "complete":
+        return this.handleComplete(senderId, msg.board);
+      case "rematch":
+        return this.handleRematch();
+      default:
+        return [];
+    }
+  }
 
-	handleSpectate(spectatorId: string, name: string): OutgoingMessage[] {
-		this.spectators.push({ id: spectatorId, name });
-		return [
-			{
-				target: "sender",
-				message: { type: "room_state", state: this.state },
-			},
-		];
-	}
+  handleSpectate(spectatorId: string, name: string): OutgoingMessage[] {
+    this.spectators.push({ id: spectatorId, name });
+    return [
+      {
+        target: "sender",
+        message: { type: "room_state", state: this.state },
+      },
+    ];
+  }
 
-	handleDisconnect(playerId: string): OutgoingMessage[] {
-		const player = this.state.players.find((p) => p.id === playerId);
-		if (!player) return [];
-		player.connected = false;
-		return [
-			{
-				target: "opponent",
-				message: { type: "opponent_disconnected" },
-			},
-		];
-	}
+  handleDisconnect(playerId: string): OutgoingMessage[] {
+    const player = this.state.players.find((p) => p.id === playerId);
+    if (!player) return [];
+    player.connected = false;
+    return [
+      {
+        target: "opponent",
+        message: { type: "opponent_disconnected" },
+      },
+    ];
+  }
 }

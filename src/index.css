@@ -1,156 +1,156 @@
 @import "tailwindcss";
 
 @theme {
-	--color-board-bg: oklch(0.98 0 0);
-	--color-board-border: oklch(0.3 0 0);
-	--color-cell-bg: oklch(1 0 0);
-	--color-cell-selected: oklch(0.92 0.05 250);
-	--color-cell-highlight: oklch(0.95 0.02 250);
-	--color-cell-same-number: oklch(0.9 0.06 250);
-	--color-cell-given: oklch(0.25 0 0);
-	--color-cell-user: oklch(0.45 0.15 250);
-	--color-cell-conflict: oklch(0.65 0.25 25);
-	--color-cell-conflict-bg: oklch(0.95 0.05 25);
-	--color-success: oklch(0.65 0.2 150);
-	--color-accent: oklch(0.55 0.15 250);
-	--color-accent-light: oklch(0.92 0.05 250);
+  --color-board-bg: oklch(0.98 0 0);
+  --color-board-border: oklch(0.3 0 0);
+  --color-cell-bg: oklch(1 0 0);
+  --color-cell-selected: oklch(0.92 0.05 250);
+  --color-cell-highlight: oklch(0.95 0.02 250);
+  --color-cell-same-number: oklch(0.9 0.06 250);
+  --color-cell-given: oklch(0.25 0 0);
+  --color-cell-user: oklch(0.45 0.15 250);
+  --color-cell-conflict: oklch(0.65 0.25 25);
+  --color-cell-conflict-bg: oklch(0.95 0.05 25);
+  --color-success: oklch(0.65 0.2 150);
+  --color-accent: oklch(0.55 0.15 250);
+  --color-accent-light: oklch(0.92 0.05 250);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 html {
-	touch-action: manipulation;
+  touch-action: manipulation;
 }
 
 body {
-	margin: 0;
-	min-height: 100dvh;
-	font-family: system-ui, -apple-system, sans-serif;
-	-webkit-font-smoothing: antialiased;
-	padding: env(safe-area-inset-top) env(safe-area-inset-right)
-		env(safe-area-inset-bottom) env(safe-area-inset-left);
+  margin: 0;
+  min-height: 100dvh;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 @keyframes pop-in {
-	0% {
-		transform: scale(0.6);
-		opacity: 0;
-	}
-	60% {
-		transform: scale(1.1);
-	}
-	100% {
-		transform: scale(1);
-		opacity: 1;
-	}
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes celebration {
-	0%,
-	100% {
-		transform: scale(1);
-	}
-	25% {
-		transform: scale(1.05) rotate(-1deg);
-	}
-	75% {
-		transform: scale(1.05) rotate(1deg);
-	}
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.05) rotate(-1deg);
+  }
+  75% {
+    transform: scale(1.05) rotate(1deg);
+  }
 }
 
 .animate-pop-in {
-	animation: pop-in 0.15s ease-out;
+  animation: pop-in 0.15s ease-out;
 }
 
 .animate-celebration {
-	animation: celebration 0.5s ease-in-out 2;
+  animation: celebration 0.5s ease-in-out 2;
 }
 
 @keyframes cell-glow-pulse {
-	0%,
-	100% {
-		box-shadow: inset 0 0 0 2px oklch(0.55 0.15 250 / 0.4);
-	}
-	50% {
-		box-shadow: inset 0 0 0 2px oklch(0.55 0.15 250 / 0.7);
-	}
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 2px oklch(0.55 0.15 250 / 0.4);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px oklch(0.55 0.15 250 / 0.7);
+  }
 }
 .cell-selected-glow {
-	animation: cell-glow-pulse 2s ease-in-out infinite;
+  animation: cell-glow-pulse 2s ease-in-out infinite;
 }
 
 .press-spring {
-	transition:
-		transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-		box-shadow 0.15s ease;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.15s ease;
 }
 .press-spring:active {
-	transform: scale(0.95);
+  transform: scale(0.95);
 }
 
 .press-spring-soft {
-	transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .press-spring-soft:active {
-	transform: scale(0.98);
+  transform: scale(0.98);
 }
 
 @media (hover: hover) {
-	.press-spring:hover,
-	.press-spring-soft:hover {
-		transform: translateY(-1px);
-	}
+  .press-spring:hover,
+  .press-spring-soft:hover {
+    transform: translateY(-1px);
+  }
 }
 
 @keyframes modal-backdrop-in {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes modal-content-in {
-	from {
-		opacity: 0;
-		transform: scale(0.95) translateY(10px);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1) translateY(0);
-	}
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 .animate-modal-backdrop {
-	animation: modal-backdrop-in 0.2s ease-out;
+  animation: modal-backdrop-in 0.2s ease-out;
 }
 .animate-modal-content {
-	animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes screen-enter {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .animate-screen-enter {
-	animation: screen-enter 0.2s ease-out;
+  animation: screen-enter 0.2s ease-out;
 }
 
 @keyframes cell-reveal {
-	from {
-		opacity: 0;
-		transform: scale(0.8);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1);
-	}
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .animate-cell-reveal {
-	animation: cell-reveal 0.15s ease-out both;
+  animation: cell-reveal 0.15s ease-out both;
 }
