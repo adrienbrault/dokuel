@@ -252,6 +252,134 @@ describe("useSudoku", () => {
     );
   });
 
+  it("multi-select: batch note toggle adds note to all selected empty cells", () => {
+    const { result } = setupHook();
+
+    // Find three empty cells
+    const cells = findMultipleEmptyCells(result.current.board, 3);
+
+    // Select all three cells via setSelectedCells
+    const keys = new Set(cells.map((c) => cellKey(c.row, c.col)));
+    act(() => result.current.setSelectedCells(keys, cells[0]!));
+
+    // Enable notes mode and place a note
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.placeNumber(5));
+
+    // All three cells should have note 5
+    for (const pos of cells) {
+      expect(result.current.board[pos.row]![pos.col]!.notes.has(5)).toBe(true);
+    }
+  });
+
+  it("multi-select: batch note toggle removes note when all selected cells have it", () => {
+    const { result } = setupHook();
+
+    const cells = findMultipleEmptyCells(result.current.board, 2);
+    const keys = new Set(cells.map((c) => cellKey(c.row, c.col)));
+
+    // Add note 3 to both cells individually
+    act(() => result.current.toggleNotesMode());
+    for (const pos of cells) {
+      act(() => result.current.selectCell(pos.row, pos.col));
+      act(() => result.current.placeNumber(3));
+    }
+
+    // Now multi-select and toggle note 3 — should remove from all
+    act(() => result.current.setSelectedCells(keys, cells[0]!));
+    act(() => result.current.placeNumber(3));
+
+    for (const pos of cells) {
+      expect(result.current.board[pos.row]![pos.col]!.notes.has(3)).toBe(false);
+    }
+  });
+
+  it("multi-select: undo reverts batch note toggle", () => {
+    const { result } = setupHook();
+
+    const cells = findMultipleEmptyCells(result.current.board, 2);
+    const keys = new Set(cells.map((c) => cellKey(c.row, c.col)));
+
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.setSelectedCells(keys, cells[0]!));
+    act(() => result.current.placeNumber(8));
+
+    // Both should have note 8
+    for (const pos of cells) {
+      expect(result.current.board[pos.row]![pos.col]!.notes.has(8)).toBe(true);
+    }
+
+    // Undo should revert
+    act(() => result.current.undo());
+    for (const pos of cells) {
+      expect(result.current.board[pos.row]![pos.col]!.notes.has(8)).toBe(false);
+    }
+  });
+
+  it("multi-select: batch erase clears all selected non-given cells", () => {
+    const { result } = setupHook();
+
+    const cells = findMultipleEmptyCells(result.current.board, 2);
+
+    // Place values in both cells
+    for (const pos of cells) {
+      act(() => result.current.selectCell(pos.row, pos.col));
+      act(() => result.current.placeNumber(4));
+    }
+
+    // Multi-select and erase
+    const keys = new Set(cells.map((c) => cellKey(c.row, c.col)));
+    act(() => result.current.setSelectedCells(keys, cells[0]!));
+    act(() => result.current.erase());
+
+    for (const pos of cells) {
+      expect(result.current.board[pos.row]![pos.col]!.value).toBeNull();
+    }
+  });
+
+  it("multi-select: undo reverts batch erase", () => {
+    const { result } = setupHook();
+
+    const cells = findMultipleEmptyCells(result.current.board, 2);
+
+    // Place values
+    act(() => result.current.selectCell(cells[0]!.row, cells[0]!.col));
+    act(() => result.current.placeNumber(6));
+    act(() => result.current.selectCell(cells[1]!.row, cells[1]!.col));
+    act(() => result.current.placeNumber(7));
+
+    // Multi-select and erase
+    const keys = new Set(cells.map((c) => cellKey(c.row, c.col)));
+    act(() => result.current.setSelectedCells(keys, cells[0]!));
+    act(() => result.current.erase());
+
+    // Undo should restore values
+    act(() => result.current.undo());
+    expect(result.current.board[cells[0]!.row]![cells[0]!.col]!.value).toBe(6);
+    expect(result.current.board[cells[1]!.row]![cells[1]!.col]!.value).toBe(7);
+  });
+
+  it("multi-select: batch note toggle skips given and filled cells", () => {
+    const { result } = setupHook();
+
+    const emptyCell = findEmptyCell(result.current.board);
+    const givenCell = findGivenCell(result.current.board);
+    if (!emptyCell || !givenCell) throw new Error("Need both empty and given");
+
+    const keys = new Set([
+      cellKey(emptyCell.row, emptyCell.col),
+      cellKey(givenCell.row, givenCell.col),
+    ]);
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.setSelectedCells(keys, emptyCell));
+    act(() => result.current.placeNumber(2));
+
+    // Only empty cell gets the note
+    expect(
+      result.current.board[emptyCell.row]![emptyCell.col]!.notes.has(2),
+    ).toBe(true);
+  });
+
   it("undo restores auto-cleared notes from peers", () => {
     const { result } = setupHook();
 
@@ -338,4 +466,20 @@ function findGivenCell(board: { value: number | null; isGiven: boolean }[][]) {
     }
   }
   return null;
+}
+
+function findMultipleEmptyCells(
+  board: { value: number | null; isGiven: boolean }[][],
+  count: number,
+) {
+  const cells: { row: number; col: number }[] = [];
+  for (let row = 0; row < 9 && cells.length < count; row++) {
+    for (let col = 0; col < 9 && cells.length < count; col++) {
+      if (!board[row]![col]!.isGiven && board[row]![col]!.value === null) {
+        cells.push({ row, col });
+      }
+    }
+  }
+  if (cells.length < count) throw new Error(`Need ${count} empty cells`);
+  return cells;
 }
