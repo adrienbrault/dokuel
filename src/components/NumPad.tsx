@@ -49,13 +49,6 @@ export function NumPad({
             }
           >
             <span className="text-lg leading-none">{n}</span>
-            {showRemainingCounts && (
-              <span
-                className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isSelected ? "text-text-on-accent/70" : "text-text-secondary"}`}
-              >
-                {remaining}
-              </span>
-            )}
           </button>
         );
       })}
