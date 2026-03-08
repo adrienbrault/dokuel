@@ -3,11 +3,12 @@ import { formatTime } from "../lib/format.ts";
 
 type TimerProps = {
   running: boolean;
+  initialSeconds?: number | undefined;
   onTick?: (seconds: number) => void;
 };
 
-export function Timer({ running, onTick }: TimerProps) {
-  const [seconds, setSeconds] = useState(0);
+export function Timer({ running, initialSeconds = 0, onTick }: TimerProps) {
+  const [seconds, setSeconds] = useState(initialSeconds);
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
 
