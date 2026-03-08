@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
+import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { formatTime } from "../lib/format.ts";
 import { Board } from "./Board.tsx";
@@ -8,6 +9,7 @@ import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
+import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
 
@@ -43,10 +45,18 @@ export function MultiplayerBoard({
 }: MultiplayerBoardProps) {
   const game = useSudoku(puzzle);
   const { position, setPosition } = useNumPadPosition();
+  const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
+    useOpponentProgressVisible();
   const timerSecondsRef = useRef(0);
   const [showResult, setShowResult] = useState(false);
   const prevCellsRef = useRef(game.cellsRemaining);
   const [revealed, setRevealed] = useState(false);
+
+  const myPercent = useMemo(() => {
+    const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
+    const filled = total - game.cellsRemaining;
+    return total > 0 ? Math.round((filled / total) * 100) : 0;
+  }, [game.cellsRemaining, puzzle]);
 
   useEffect(() => {
     const id = setTimeout(() => setRevealed(true), 600);
@@ -130,24 +140,24 @@ export function MultiplayerBoard({
           onUndo={game.undo}
         />
       }
+      settingsExtra={
+        <ToggleSwitch
+          checked={showOpponentProgress}
+          onChange={toggleOpponentProgress}
+          label="Opponent bar"
+        />
+      }
       headerExtra={
-        opponentProgress ? (
-          <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3">
-            <div className="flex items-center justify-between text-xs text-text-secondary mb-1">
-              <span>
-                Opponent
-                {opponentDisconnected && (
-                  <span className="ml-1 text-amber-500">(reconnecting...)</span>
-                )}
-              </span>
-              <span>{opponentProgress.completionPercent}%</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-bg-raised overflow-hidden">
-              <div
-                className="h-full rounded-full bg-rose-400 transition-all duration-300"
-                style={{ width: `${opponentProgress.completionPercent}%` }}
-              />
-            </div>
+        showOpponentProgress && opponentProgress ? (
+          <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
+            <ProgressBar label="You" percent={myPercent} color="bg-accent" />
+            <ProgressBar
+              label={
+                opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
+              }
+              percent={opponentProgress.completionPercent}
+              color="bg-rose-400"
+            />
           </div>
         ) : undefined
       }
@@ -164,5 +174,30 @@ export function MultiplayerBoard({
         ) : undefined
       }
     />
+  );
+}
+
+function ProgressBar({
+  label,
+  percent,
+  color,
+}: {
+  label: string;
+  percent: number;
+  color: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-text-secondary w-24 truncate">{label}</span>
+      <div className="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
+        <div
+          className={`h-full rounded-full ${color} transition-all duration-300`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <span className="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">
+        {percent}%
+      </span>
+    </div>
   );
 }
