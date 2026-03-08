@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { GameResult, buildShareText } from "./GameResult.tsx";
+import { buildShareText, GameResult } from "./GameResult.tsx";
 
 describe("GameResult", () => {
   it("renders win state with time and emoji", () => {

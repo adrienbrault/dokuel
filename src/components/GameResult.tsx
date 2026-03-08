@@ -41,16 +41,18 @@ export function buildShareText({
   streakInfo,
   isDaily,
 }: {
-  difficulty?: Difficulty;
+  difficulty?: Difficulty | undefined;
   time: string;
-  isNewPB?: boolean;
-  hintsUsed?: number;
-  streakInfo?: { currentStreak: number; longestStreak: number };
-  isDaily?: boolean;
+  isNewPB?: boolean | undefined;
+  hintsUsed?: number | undefined;
+  streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
+  isDaily?: boolean | undefined;
 }): string {
   const title = isDaily ? "Dokuel Daily" : "Dokuel";
   const diffLabel = difficulty ? ` ${DIFFICULTY_LABELS[difficulty]}` : "";
-  const hints = hintsUsed ? ` · ${hintsUsed} hint${hintsUsed > 1 ? "s" : ""}` : "";
+  const hints = hintsUsed
+    ? ` · ${hintsUsed} hint${hintsUsed > 1 ? "s" : ""}`
+    : "";
   const pb = isNewPB ? " ⚡" : "";
   const streak =
     isDaily && streakInfo && streakInfo.currentStreak > 0
