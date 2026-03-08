@@ -166,7 +166,7 @@ export function SoloGame({
       onDeselectCell={game.deselectCell}
       boardClassName={[
         game.status === "completed" ? "animate-celebration" : "",
-        game.notesMode ? "ring-2 ring-accent/30 rounded-lg" : "",
+        game.notesMode ? "ring-2 ring-accent/50 rounded-lg" : "",
       ].join(" ")}
       timer={
         <button

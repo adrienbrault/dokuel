@@ -26,14 +26,14 @@ export function Landing({
   const savedGames = useMemo(() => listSavedGames(), []);
 
   return (
-    <div className="screen-content gap-10">
-      <div className="flex flex-col items-center gap-2">
+    <div className="screen-content gap-6 sm:gap-10">
+      <div className="flex flex-col items-center gap-1 sm:gap-2">
         <h1 className="heading-xl">Dokuel</h1>
         <p className="text-sm text-text-muted">
           1v1 sudoku duel — no account needed.
         </p>
       </div>
-      <div className="flex flex-col gap-3 w-full">
+      <div className="flex flex-col gap-2 sm:gap-3 w-full">
         <FeatureRow
           icon={<ZapIcon />}
           text="Real-time 1v1 — race a friend peer-to-peer"
@@ -47,7 +47,7 @@ export function Landing({
           text="Mobile & desktop — dark mode, haptics, sounds"
         />
       </div>
-      <div className="flex flex-col gap-6 w-full">
+      <div className="flex flex-col gap-4 sm:gap-6 w-full">
         {savedGames.length > 0 && (
           <div className="flex flex-col gap-3">
             <span className="label">Continue</span>

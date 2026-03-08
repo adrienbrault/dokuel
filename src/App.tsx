@@ -341,7 +341,7 @@ function JoinScreen({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Enter room code"
+            placeholder="e.g. loud-duck-38"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             className="card w-full px-4 py-3 text-text-primary text-center text-lg font-mono"
@@ -356,7 +356,7 @@ function JoinScreen({
           className={`btn btn-lg w-full transition-colors ${
             code.trim()
               ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled cursor-not-allowed"
+              : "bg-bg-disabled text-text-disabled border border-border-default cursor-not-allowed"
           }`}
         >
           Join

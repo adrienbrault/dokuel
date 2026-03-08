@@ -88,7 +88,7 @@ export function GameLayout({
         {/* Mobile: show numpad in position (left/right) */}
         <div className="lg:hidden">{position !== "bottom" && numPad}</div>
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           {board}
           <div className="flex flex-col items-center gap-3 w-full">
@@ -135,7 +135,7 @@ function SettingsButton({
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
+        className="w-10 h-10 flex items-center justify-center rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
         onClick={() => setOpen((v) => !v)}
         aria-label="Settings"
         aria-expanded={open}

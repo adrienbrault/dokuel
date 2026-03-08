@@ -69,7 +69,7 @@ function ControlButton({
       disabled={disabled}
       className={`flex-1 flex flex-col items-center justify-center h-12 rounded-lg select-none touch-manipulation ${
         disabled
-          ? "opacity-40 cursor-default"
+          ? "bg-bg-disabled text-text-disabled cursor-default"
           : active
             ? "bg-accent text-text-on-accent shadow-md press-spring"
             : "bg-bg-raised text-text-secondary press-spring"

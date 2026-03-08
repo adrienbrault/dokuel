@@ -32,6 +32,24 @@
   /* Semantic interactive */
   --color-bg-disabled: oklch(0.88 0.008 80);
   --color-text-disabled: oklch(0.55 0.01 80);
+
+  /* Difficulty colors — dot indicators */
+  --color-difficulty-easy: oklch(0.7 0.18 155);
+  --color-difficulty-medium: oklch(0.75 0.17 80);
+  --color-difficulty-hard: oklch(0.7 0.17 50);
+  --color-difficulty-expert: oklch(0.65 0.2 15);
+
+  /* Difficulty colors — badge backgrounds */
+  --color-difficulty-easy-bg: oklch(0.93 0.06 155);
+  --color-difficulty-medium-bg: oklch(0.93 0.06 80);
+  --color-difficulty-hard-bg: oklch(0.93 0.06 50);
+  --color-difficulty-expert-bg: oklch(0.93 0.06 15);
+
+  /* Difficulty colors — badge text */
+  --color-difficulty-easy-text: oklch(0.4 0.12 155);
+  --color-difficulty-medium-text: oklch(0.4 0.12 80);
+  --color-difficulty-hard-text: oklch(0.4 0.12 50);
+  --color-difficulty-expert-text: oklch(0.4 0.12 15);
 }
 
 /* Dark mode overrides */
@@ -64,6 +82,18 @@
   /* Semantic interactive */
   --color-bg-disabled: oklch(0.25 0.008 80);
   --color-text-disabled: oklch(0.45 0.008 80);
+
+  /* Difficulty colors — badge backgrounds */
+  --color-difficulty-easy-bg: oklch(0.25 0.06 155);
+  --color-difficulty-medium-bg: oklch(0.25 0.06 80);
+  --color-difficulty-hard-bg: oklch(0.25 0.06 50);
+  --color-difficulty-expert-bg: oklch(0.25 0.06 15);
+
+  /* Difficulty colors — badge text */
+  --color-difficulty-easy-text: oklch(0.75 0.15 155);
+  --color-difficulty-medium-text: oklch(0.75 0.15 80);
+  --color-difficulty-hard-text: oklch(0.75 0.15 50);
+  --color-difficulty-expert-text: oklch(0.75 0.15 15);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));

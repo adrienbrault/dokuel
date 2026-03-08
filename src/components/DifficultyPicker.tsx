@@ -17,25 +17,25 @@ const DIFFICULTIES: {
     value: "easy",
     label: "Easy",
     description: "Great for warming up",
-    color: "bg-emerald-400",
+    color: "bg-difficulty-easy",
   },
   {
     value: "medium",
     label: "Medium",
     description: "A fair challenge",
-    color: "bg-amber-400",
+    color: "bg-difficulty-medium",
   },
   {
     value: "hard",
     label: "Hard",
     description: "For experienced players",
-    color: "bg-orange-400",
+    color: "bg-difficulty-hard",
   },
   {
     value: "expert",
     label: "Expert",
     description: "The ultimate test",
-    color: "bg-rose-400",
+    color: "bg-difficulty-expert",
   },
 ];
 
