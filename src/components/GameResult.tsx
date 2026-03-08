@@ -1,7 +1,7 @@
 type GameResultProps = {
   isWinner: boolean;
   time: string;
-  onRematch?: () => void;
+  onRematch?: (() => void) | undefined;
   onNewGame: () => void;
 };
 

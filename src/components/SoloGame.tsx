@@ -17,11 +17,11 @@ const EMPTY_CONFLICTS = new Set<number>();
 
 type SoloGameProps = {
   difficulty: Difficulty;
-  showConflicts?: boolean;
-  initialPuzzle?: string;
-  title?: string;
+  showConflicts?: boolean | undefined;
+  initialPuzzle?: string | undefined;
+  title?: string | undefined;
   onBack: () => void;
-  onRematch?: () => void;
+  onRematch?: (() => void) | undefined;
 };
 
 export function SoloGame({

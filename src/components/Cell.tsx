@@ -11,7 +11,7 @@ type CellProps = {
   isSameNumber: boolean;
   isConflict: boolean;
   onSelect: (row: number, col: number) => void;
-  revealDelay?: number;
+  revealDelay?: number | undefined;
 };
 
 export const Cell = memo(function Cell({

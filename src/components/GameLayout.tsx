@@ -10,11 +10,11 @@ type GameLayoutProps = {
   controls: ReactNode;
   position: NumPadPosition;
   onPositionChange: (position: NumPadPosition) => void;
-  title?: string;
-  headerExtra?: ReactNode;
-  footer?: ReactNode;
-  boardClassName?: string;
-  headerClassName?: string;
+  title?: string | undefined;
+  headerExtra?: ReactNode | undefined;
+  footer?: ReactNode | undefined;
+  boardClassName?: string | undefined;
+  headerClassName?: string | undefined;
 };
 
 export function GameLayout({
