@@ -2,8 +2,6 @@
 
 1v1 sudoku duel — real-time, peer-to-peer, no account needed.
 
-**[Play now at dokuel.com](https://dokuel.com)**
-
 ## Features
 
 ### Solo Play
@@ -291,15 +289,6 @@ src/
 - **Friends without accounts** — shareable friend codes, online presence via Yjs awareness, game invites from the landing page
 - **No accounts** — auto-generated fun names (adjective + animal), persisted in localStorage; session identity in sessionStorage for reconnect
 - **Colocated tests** — `*.test.ts` / `*.test.tsx` files sit next to the code they test
-
-## Deployment
-
-Both the frontend and signaling server deploy automatically on push to `main`.
-
-| Service | Platform | URL |
-|---------|----------|-----|
-| Frontend | Cloudflare Pages | [dokuel.com](https://dokuel.com) |
-| Signaling | Cloudflare Worker | [signal.dokuel.com](https://signal.dokuel.com) |
 
 ## License
 
