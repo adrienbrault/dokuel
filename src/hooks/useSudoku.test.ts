@@ -152,6 +152,69 @@ describe("useSudoku", () => {
     expect(result.current.board[pos.row]![pos.col]!.notes.size).toBe(0);
   });
 
+  it("placing a value clears that number from notes in peer cells", () => {
+    const { result } = setupHook();
+
+    // Find an empty cell and two peers: one in same row, one in same box
+    const pos = findEmptyCell(result.current.board);
+    if (!pos) throw new Error("No empty cell found");
+
+    // Find another empty cell in the same row
+    let rowPeer: { row: number; col: number } | null = null;
+    for (let c = 0; c < 9; c++) {
+      if (
+        c !== pos.col &&
+        !result.current.board[pos.row]![c]!.isGiven &&
+        result.current.board[pos.row]![c]!.value === null
+      ) {
+        rowPeer = { row: pos.row, col: c };
+        break;
+      }
+    }
+    if (!rowPeer) throw new Error("No empty peer in same row");
+
+    // Find another empty cell in the same column
+    let colPeer: { row: number; col: number } | null = null;
+    for (let r = 0; r < 9; r++) {
+      if (
+        r !== pos.row &&
+        !result.current.board[r]![pos.col]!.isGiven &&
+        result.current.board[r]![pos.col]!.value === null
+      ) {
+        colPeer = { row: r, col: pos.col };
+        break;
+      }
+    }
+    if (!colPeer) throw new Error("No empty peer in same col");
+
+    // Add note "3" to both peer cells
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.selectCell(rowPeer.row, rowPeer.col));
+    act(() => result.current.placeNumber(3));
+    expect(result.current.board[rowPeer.row]![rowPeer.col]!.notes.has(3)).toBe(
+      true,
+    );
+
+    act(() => result.current.selectCell(colPeer.row, colPeer.col));
+    act(() => result.current.placeNumber(3));
+    expect(result.current.board[colPeer.row]![colPeer.col]!.notes.has(3)).toBe(
+      true,
+    );
+
+    // Place value 3 in the target cell
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.selectCell(pos.row, pos.col));
+    act(() => result.current.placeNumber(3));
+
+    // Notes for "3" should be cleared from both peers
+    expect(result.current.board[rowPeer.row]![rowPeer.col]!.notes.has(3)).toBe(
+      false,
+    );
+    expect(result.current.board[colPeer.row]![colPeer.col]!.notes.has(3)).toBe(
+      false,
+    );
+  });
+
   it("detects conflicts on each move", () => {
     const { result } = setupHook();
 
