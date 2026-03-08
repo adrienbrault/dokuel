@@ -123,7 +123,7 @@ export function SoloGame({
 
   const handleNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel === "full");
+      game.placeNumber(n, assistLevel !== "paper");
     }
   };
 

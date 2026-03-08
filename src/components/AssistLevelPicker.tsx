@@ -2,8 +2,8 @@ import type { AssistLevel } from "../lib/types.ts";
 
 const OPTIONS: { value: AssistLevel; label: string; description: string }[] = [
   { value: "paper", label: "Paper", description: "No hints" },
-  { value: "standard", label: "Standard", description: "Highlights" },
-  { value: "full", label: "Full", description: "Auto-notes" },
+  { value: "standard", label: "Standard", description: "Auto-clear notes" },
+  { value: "full", label: "Full", description: "Counts + more" },
 ];
 
 type AssistLevelPickerProps = {
