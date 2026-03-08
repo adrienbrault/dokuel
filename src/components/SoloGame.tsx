@@ -118,6 +118,17 @@ export function SoloGame({
     }
   };
 
+  const handleBack = () => {
+    if (
+      game.status === "playing" &&
+      game.historyLength > 0 &&
+      !window.confirm("Leave game? Your progress is saved.")
+    ) {
+      return;
+    }
+    onBack();
+  };
+
   useKeyboard({
     selectedCell: game.selectedCell,
     onSelectCell: game.selectCell,
@@ -131,7 +142,7 @@ export function SoloGame({
 
   return (
     <GameLayout
-      onBack={onBack}
+      onBack={handleBack}
       title={title}
       position={position}
       onPositionChange={setPosition}
