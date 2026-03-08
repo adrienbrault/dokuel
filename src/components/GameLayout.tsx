@@ -88,7 +88,7 @@ export function GameLayout({
         {/* Mobile: show numpad in position (left/right) */}
         <div className="lg:hidden">{position !== "bottom" && numPad}</div>
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           {board}
           <div className="flex flex-col items-center gap-3 w-full">
