@@ -37,7 +37,9 @@
         }
       },
       "nursery": {
-        "useArraySortCompare": "error"
+        "useArraySortCompare": "error",
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error"
       },
       "style": {
         "useConsistentArrayType": {
