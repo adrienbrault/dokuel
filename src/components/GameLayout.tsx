@@ -36,7 +36,7 @@ export function GameLayout({
   headerExtra,
   footer,
   boardClassName = "",
-  headerClassName = "max-w-lg",
+  headerClassName = "max-w-lg lg:max-w-4xl",
   onDeselectCell,
 }: GameLayoutProps) {
   const handleBackgroundPointerDown = (e: PointerEvent<HTMLDivElement>) => {
@@ -77,24 +77,33 @@ export function GameLayout({
 
       {headerExtra}
 
-      {/* Main game area */}
+      {/* Main game area — mobile: respects position; desktop: always side-by-side */}
       <div
         className={`
           flex gap-3 w-full justify-center flex-1
-          ${position === "left" ? "flex-row items-center max-w-lg mx-auto" : ""}
-          ${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto" : ""}
-          ${position === "bottom" ? "flex-col items-center" : ""}
+          lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
+          ${position === "left" ? "flex-row items-center max-w-lg mx-auto lg:max-w-4xl" : ""}
+          ${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto lg:max-w-4xl lg:flex-row" : ""}
+          ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-start" : ""}
         `}
       >
-        {position !== "bottom" && numPad}
+        {/* Mobile: show numpad in position (left/right) */}
+        <div className="lg:hidden">{position !== "bottom" && numPad}</div>
         <div
-          className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           {board}
           <div className="flex flex-col items-center gap-3 w-full">
             {controls}
-            {position === "bottom" && numPad}
+            {/* Mobile: show numpad at bottom if position=bottom */}
+            <div className="lg:hidden w-full">
+              {position === "bottom" && numPad}
+            </div>
           </div>
+        </div>
+        {/* Desktop: always show numpad on the right */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
+          {numPad}
         </div>
       </div>
 
