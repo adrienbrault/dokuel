@@ -1,0 +1,73 @@
+const ADJECTIVES = [
+  "Swift",
+  "Clever",
+  "Bold",
+  "Lucky",
+  "Mighty",
+  "Sneaky",
+  "Cosmic",
+  "Turbo",
+  "Zippy",
+  "Witty",
+  "Daring",
+  "Fierce",
+  "Jolly",
+  "Noble",
+  "Plucky",
+  "Sly",
+  "Chill",
+  "Zesty",
+  "Funky",
+  "Spicy",
+  "Dizzy",
+  "Fuzzy",
+  "Goofy",
+  "Peppy",
+  "Wacky",
+  "Snappy",
+  "Bouncy",
+  "Crafty",
+  "Groovy",
+  "Quirky",
+];
+
+const NOUNS = [
+  "Panda",
+  "Fox",
+  "Otter",
+  "Falcon",
+  "Tiger",
+  "Raven",
+  "Dolphin",
+  "Wolf",
+  "Badger",
+  "Koala",
+  "Lynx",
+  "Moose",
+  "Parrot",
+  "Sloth",
+  "Yak",
+  "Ferret",
+  "Gecko",
+  "Penguin",
+  "Walrus",
+  "Toucan",
+  "Puffin",
+  "Meerkat",
+  "Lemur",
+  "Alpaca",
+  "Capybara",
+  "Narwhal",
+  "Quokka",
+  "Axolotl",
+  "Wombat",
+  "Ocelot",
+];
+
+function pick<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
+
+export function generatePlayerName(): string {
+  return `${pick(ADJECTIVES)} ${pick(NOUNS)}`;
+}
