@@ -7,7 +7,7 @@ Premium, mobile-first web app for solo and real-time 1v1 sudoku. No accounts req
 ## Core Principles
 
 - Mobile/touch first — portrait, one-handed play
-- No account required — nickname + random color
+- No account required — auto-generated fun name (adjective + animal) + random color
 - Minimal friction — instant start, join by link
 - Beautiful visual hierarchy — "Apple Notes meets NYT Games"
 - Very fast input latency
@@ -33,22 +33,29 @@ Optional **show conflicts** toggle — when off, conflict highlighting is disabl
 
 ### Solo Game
 - Standard sudoku with timer
-- Notes mode, erase, undo
-- Soft validation: conflicts shown, not blocked (can be toggled off)
+- Notes mode (with subtle board ring indicator when active), erase, undo (with move count badge)
+- Hint system — lightbulb button reveals one cell's correct value
+- Pause functionality — overlay hides the board while paused
+- Soft validation: conflicts shown, not blocked (can be toggled during gameplay)
+- Auto-save — game progress persists across browser sessions via localStorage
+- Personal best time shown near timer during gameplay; PB indicator on win
 - Completion when all cells filled and valid
 - Per-difficulty stats tracking (best time, average, games played) in localStorage
+- Win modal with stats summary, personal best indicator, and share button
+- Confetti celebration animation on completion
 
 ### Daily Challenge
 - Same puzzle for everyone, every day
 - Deterministic generation via seeded RNG — same date produces same board on any device
 - Medium difficulty
+- Streak tracking — current streak and longest streak shown on landing page
 
 ### Create Game Flow
 1. User taps "Create Game"
 2. Selects difficulty
-3. Lobby opens with shareable link
+3. Lobby opens with shareable link and room code (tap to copy)
 4. User shares link (Web Share API or copy)
-5. When opponent joins and both ready, host starts
+5. When opponent joins, either player can start the game
 
 ### Join Game Flow
 1. Recipient opens invite link (`/{roomId}`)
@@ -75,9 +82,11 @@ Optional **show conflicts** toggle — when off, conflict highlighting is disabl
 - Notes rendered as small 3x3 grid within cell
 
 ### Controls
-- **Notes toggle**: Switch between place mode and notes mode
+- **Notes toggle**: Switch between place mode and notes mode (board ring indicator when active)
 - **Erase**: Clear selected non-given cell (value + notes)
-- **Undo**: Revert last action (multi-level)
+- **Undo**: Revert last action (multi-level), with move count badge
+- **Hint**: Reveal the correct value for the selected cell (solo only)
+- **Errors toggle**: Show/hide conflict highlighting during gameplay
 
 ### Number Pad
 Core UX differentiator. Three layout positions:
@@ -87,9 +96,7 @@ Core UX differentiator. Three layout positions:
 
 Purpose of side layouts: enable two-finger mobile play — one finger holds numpad number, other taps cells.
 
-Each number shows remaining count (how many of that number are left to place).
-
-Setting persists in localStorage across sessions.
+Setting persists in localStorage across sessions. Position is configurable via a settings popover accessed from the game header.
 
 **Fill mode**: Tap a number on the pad, then tap multiple cells to place that number. Tap the number again or another number to change.
 
@@ -111,6 +118,11 @@ One-sentence explanation: "Share your filled cells as hints for both players."
 - Public WebRTC signaling servers used only for peer discovery
 - Game state syncs directly between players via CRDTs
 
+### Player Identity
+- Auto-generated fun names (adjective + animal, e.g. "Swift Panda")
+- Inline name editing in lobby — players can rename themselves
+- Player names persisted in localStorage across sessions
+
 ### Opponent Visibility
 - Nickname + assigned color
 - Cells remaining count
@@ -129,8 +141,9 @@ One-sentence explanation: "Share your filled cells as hints for both players."
 - After grace period: option to claim win
 
 ### Post-Game
-- Winner announcement
-- Stats: time, cells filled
+- Winner announcement with confetti celebration
+- Stats: time, cells filled, personal best indicator
+- Share result button
 - "Rematch" button (same players, new puzzle, same difficulty)
 - "New Game" button (back to landing)
 
@@ -146,12 +159,14 @@ One-sentence explanation: "Share your filled cells as hints for both players."
 
 - Minimalist, clean, modern game UI
 - Soft surfaces, clear typography, high contrast
-- Subtle animations with restraint
+- Subtle animations with restraint (cell reveal, spring press, glow, confetti)
 - Dark mode from day one (system preference + manual toggle)
+- Responsive desktop layout — side-by-side board and numpad on wide screens
 - Large touch targets (minimum 44px)
 - Safe area support (iPhone notch/home indicator)
 - Haptic feedback where supported (number place, erase, note toggle, conflict, completion)
 - Synthesized sound effects via Web Audio API (toggleable)
+- URL reflects current screen state (solo, daily, join) for bookmarking and refresh
 
 ### Color Palette
 - Neutral backgrounds
