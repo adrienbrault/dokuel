@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTime } from "./format.ts";
+import { formatShortDate, formatTime } from "./format.ts";
 
 describe("formatTime", () => {
   it("formats zero seconds", () => {
@@ -20,5 +20,19 @@ describe("formatTime", () => {
 
   it("handles exact minutes", () => {
     expect(formatTime(120)).toBe("02:00");
+  });
+});
+
+describe("formatShortDate", () => {
+  it("formats ISO date to short format", () => {
+    expect(formatShortDate("2026-03-08")).toBe("Mar 8");
+  });
+
+  it("handles single-digit months", () => {
+    expect(formatShortDate("2026-01-15")).toBe("Jan 15");
+  });
+
+  it("strips leading zeros from day", () => {
+    expect(formatShortDate("2026-12-01")).toBe("Dec 1");
   });
 });

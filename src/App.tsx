@@ -7,6 +7,7 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { getDailyPuzzle } from "./lib/daily.ts";
+import { formatShortDate } from "./lib/format.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
 import "./index.css";
@@ -279,22 +280,41 @@ function JoinScreen({
   onBack: () => void;
 }) {
   const [code, setCode] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim()) onJoin(code.trim());
+  };
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
-      <div className="flex flex-col items-center gap-6 w-full max-w-sm px-6">
+      <form
+        className="flex flex-col items-center gap-6 w-full max-w-sm px-6"
+        onSubmit={handleSubmit}
+      >
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Join Game
         </h2>
-        <input
-          type="text"
-          placeholder="Enter room code"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 text-center text-lg font-mono"
-        />
+        <div className="flex flex-col items-center gap-2 w-full">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Enter room code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 text-center text-lg font-mono"
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Ask the host for their room code
+          </p>
+        </div>
         <button
-          type="button"
+          type="submit"
           disabled={!code.trim()}
           className={`
 						w-full py-4 rounded-xl text-lg font-semibold
@@ -305,7 +325,6 @@ function JoinScreen({
                 : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
             }
 					`}
-          onClick={() => onJoin(code.trim())}
         >
           Join
         </button>
@@ -316,7 +335,7 @@ function JoinScreen({
         >
           ← Back
         </button>
-      </div>
+      </form>
     </div>
   );
 }
@@ -329,7 +348,7 @@ function DailyGame({ onBack }: { onBack: () => void }) {
       difficulty="medium"
       gameKey={`daily-${date}`}
       initialPuzzle={puzzle}
-      title={`Daily Challenge — ${date}`}
+      title={`Daily — ${formatShortDate(date)}`}
       onBack={onBack}
     />
   );

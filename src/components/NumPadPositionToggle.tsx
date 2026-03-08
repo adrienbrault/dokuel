@@ -16,18 +16,22 @@ export function NumPadPositionToggle({
   onChange,
 }: NumPadPositionToggleProps) {
   return (
-    <div
-      className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1"
-      role="radiogroup"
-      aria-label="Number pad position"
-    >
-      {OPTIONS.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          role="radio"
-          aria-checked={position === opt.value}
-          className={`
+    <div className="flex items-center gap-1.5" title="Number pad position">
+      <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+        Pad
+      </span>
+      <div
+        className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1"
+        role="radiogroup"
+        aria-label="Number pad position"
+      >
+        {OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            role="radio"
+            aria-checked={position === opt.value}
+            className={`
 						w-8 h-8 rounded-md flex items-center justify-center
 						text-sm transition-all duration-150 select-none
 						${
@@ -36,12 +40,13 @@ export function NumPadPositionToggle({
                 : "text-gray-400 dark:text-gray-500"
             }
 					`}
-          onClick={() => onChange(opt.value)}
-          aria-label={`Pad ${opt.value}`}
-        >
-          {opt.label}
-        </button>
-      ))}
+            onClick={() => onChange(opt.value)}
+            aria-label={`Pad ${opt.value}`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

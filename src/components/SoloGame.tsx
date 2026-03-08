@@ -132,8 +132,11 @@ export function SoloGame({
               timerSecondsRef.current = s;
             }}
           />
-          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono tabular-nums">
-            {81 - game.cellsRemaining}/81
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono tabular-nums">
+            <span className="text-accent font-medium">
+              {81 - game.cellsRemaining}
+            </span>
+            /81
           </span>
         </div>
       }
@@ -166,6 +169,7 @@ export function SoloGame({
           <GameResult
             isWinner={true}
             time={formatTime(timerSecondsRef.current)}
+            timeSeconds={timerSecondsRef.current}
             difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}

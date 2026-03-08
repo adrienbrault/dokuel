@@ -19,7 +19,7 @@
 /* Dark mode overrides for board colors */
 .dark {
   --color-board-bg: oklch(0.2 0 0);
-  --color-board-border: oklch(0.6 0 0);
+  --color-board-border: oklch(0.7 0 0);
   --color-cell-bg: oklch(0.18 0 0);
   --color-cell-selected: oklch(0.28 0.06 250);
   --color-cell-highlight: oklch(0.22 0.02 250);
@@ -168,4 +168,120 @@ body {
 }
 .animate-cell-reveal {
   animation: cell-reveal 0.15s ease-out both;
+}
+
+@keyframes emoji-bounce {
+  0% {
+    transform: scale(0.3) rotate(-15deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3) rotate(5deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.9) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.animate-emoji-bounce {
+  animation: emoji-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+@keyframes confetti-piece {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(100vh)) rotate(720deg);
+    opacity: 0;
+  }
+}
+.confetti-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.confetti-container span {
+  position: absolute;
+  top: -10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confetti-piece linear forwards;
+}
+.confetti-container span:nth-child(1) {
+  left: 10%;
+  background: oklch(0.7 0.25 30);
+  animation-duration: 2.2s;
+  animation-delay: 0s;
+}
+.confetti-container span:nth-child(2) {
+  left: 25%;
+  background: oklch(0.7 0.2 250);
+  animation-duration: 2.5s;
+  animation-delay: 0.1s;
+}
+.confetti-container span:nth-child(3) {
+  left: 40%;
+  background: oklch(0.75 0.2 150);
+  animation-duration: 2s;
+  animation-delay: 0.05s;
+}
+.confetti-container span:nth-child(4) {
+  left: 55%;
+  background: oklch(0.7 0.25 60);
+  animation-duration: 2.8s;
+  animation-delay: 0.15s;
+}
+.confetti-container span:nth-child(5) {
+  left: 70%;
+  background: oklch(0.65 0.25 330);
+  animation-duration: 2.1s;
+  animation-delay: 0.08s;
+}
+.confetti-container span:nth-child(6) {
+  left: 85%;
+  background: oklch(0.7 0.2 250);
+  animation-duration: 2.4s;
+  animation-delay: 0.2s;
+}
+.confetti-container span:nth-child(7) {
+  left: 15%;
+  background: oklch(0.75 0.2 150);
+  animation-duration: 2.6s;
+  animation-delay: 0.12s;
+  width: 6px;
+  height: 6px;
+}
+.confetti-container span:nth-child(8) {
+  left: 50%;
+  background: oklch(0.7 0.25 30);
+  animation-duration: 2.3s;
+  animation-delay: 0.18s;
+  width: 6px;
+  height: 6px;
+}
+.confetti-container span:nth-child(9) {
+  left: 80%;
+  background: oklch(0.65 0.25 60);
+  animation-duration: 2.7s;
+  animation-delay: 0.07s;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.confetti-container span:nth-child(10) {
+  left: 35%;
+  background: oklch(0.65 0.25 330);
+  animation-duration: 2s;
+  animation-delay: 0.25s;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }

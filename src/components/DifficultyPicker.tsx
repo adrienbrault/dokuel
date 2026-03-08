@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Difficulty } from "../lib/types.ts";
+import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
 type DifficultyPickerProps = {
   onSelect: (difficulty: Difficulty, showConflicts: boolean) => void;
@@ -74,18 +75,11 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
           </button>
         ))}
       </div>
-      <label className="flex items-center gap-3 cursor-pointer select-none touch-manipulation">
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          Show placement errors
-        </span>
-        <input
-          type="checkbox"
-          checked={showConflicts}
-          onChange={() => setShowConflicts(!showConflicts)}
-          aria-label="Show placement errors"
-          className="w-5 h-5 rounded accent-accent"
-        />
-      </label>
+      <ToggleSwitch
+        checked={showConflicts}
+        onChange={() => setShowConflicts(!showConflicts)}
+        label="Show placement errors"
+      />
       <button
         type="button"
         className="text-sm text-gray-400 dark:text-gray-500 mt-2 touch-manipulation"
