@@ -182,7 +182,7 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 - Components: `src/components/ComponentName.tsx` — React functional components
 - Hooks: `src/hooks/useHookName.ts` — custom React hooks
 - Library: `src/lib/` — pure logic, no React dependency
-- Server: `src/party/` — PartyKit server code
+- Server: `src/party/` — Cloudflare Workers + Agents SDK server code
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)
@@ -200,7 +200,7 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ### State Management
 - React hooks (useState, useReducer) — no external state library
 - `useSudoku` hook owns all game state for a single board
-- `useMultiplayer` hook manages PartyKit connection and room state
+- `useMultiplayer` hook manages WebSocket connection and room state
 
 ### Types
 - All shared types in `src/lib/types.ts`
