@@ -12,10 +12,44 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noConsole": {
+          "level": "error",
+          "options": { "allow": ["error", "warn", "info"] }
+        },
+        "noImplicitAnyLet": "error"
       },
       "a11y": {
         "useSemanticElements": "off"
+      },
+      "security": {
+        "noSecrets": "error"
+      },
+      "performance": {
+        "noBarrelFile": "error",
+        "noReExportAll": "error"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "warn",
+          "options": { "maxAllowedComplexity": 15 }
+        }
+      },
+      "nursery": {
+        "useArraySortCompare": "error"
+      },
+      "style": {
+        "useConsistentArrayType": {
+          "level": "error",
+          "options": { "syntax": "shorthand" }
+        },
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "requireAscii": true,
+            "filenameCases": ["PascalCase", "camelCase", "kebab-case"]
+          }
+        }
       }
     }
   },
@@ -38,5 +72,17 @@
   },
   "files": {
     "includes": ["src/**", "*.ts", "*.json"]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noSecrets": "off"
+          }
+        }
+      }
+    }
+  ]
 }
