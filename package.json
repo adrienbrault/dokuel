@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "diff-coverage": "bun scripts/diff-coverage.ts",
-    "ci": "bun run lint && bun run typecheck && bun run test",
+    "ci": "bash -c 'bun run lint & p1=$!; bun run typecheck & p2=$!; bun run test & p3=$!; wait $p1 && wait $p2 && wait $p3'",
     "e2e": "bunx playwright test",
     "screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
   },
