@@ -1,43 +1,43 @@
 {
-	"name": "sudoku",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
-	"scripts": {
-		"dev": "vite",
-		"build": "tsc -b && vite build",
-		"preview": "vite preview",
-		"lint": "biome check .",
-		"lint:fix": "biome check --write .",
-		"typecheck": "tsc --noEmit -p tsconfig.app.json",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"ci": "bun run lint && bun run typecheck && bun run test",
-		"e2e": "bunx playwright test",
-		"screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
-	},
-	"dependencies": {
-		"agents": "^0.7.5",
-		"react": "^19.2.0",
-		"react-dom": "^19.2.0",
-		"sudoku": "^0.0.3"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.4.6",
-		"@playwright/test": "^1.58.2",
-		"@tailwindcss/vite": "^4.2.1",
-		"@testing-library/jest-dom": "^6.9.1",
-		"@testing-library/react": "^16.3.2",
-		"@testing-library/user-event": "^14.6.1",
-		"@types/node": "^24.10.1",
-		"@types/react": "^19.2.7",
-		"@types/react-dom": "^19.2.3",
-		"@vitejs/plugin-react": "^5.1.1",
-		"jsdom": "^28.1.0",
-		"tailwindcss": "^4.2.1",
-		"typescript": "~5.9.3",
-		"vite": "^7.3.1",
-		"vitest": "^4.0.18",
-		"wrangler": "^4.71.0"
-	}
+  "name": "sudoku",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "ci": "bun run lint && bun run typecheck && bun run test",
+    "e2e": "bunx playwright test",
+    "screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "sudoku": "^0.0.3",
+    "y-webrtc": "^10.3.0",
+    "yjs": "^13.6.29"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/vite": "^4.2.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "jsdom": "^28.1.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
+  }
 }

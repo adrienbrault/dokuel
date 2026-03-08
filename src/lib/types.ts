@@ -86,37 +86,3 @@ export type GameEvent = {
   timestamp: number;
   message: string;
 };
-
-// --- WebSocket Messages ---
-
-export type ClientMessage =
-  | { type: "join"; name: string; playerId: string }
-  | { type: "ready" }
-  | { type: "start_game" }
-  | { type: "move"; position: Position; value: CellValue }
-  | { type: "progress"; cellsRemaining: number; completionPercent: number }
-  | { type: "complete"; board: string }
-  | { type: "share_progress_request" }
-  | { type: "share_progress_accept" }
-  | { type: "share_progress_decline" }
-  | { type: "rematch" };
-
-export type ServerMessage =
-  | { type: "room_state"; state: RoomState }
-  | { type: "game_start"; puzzle: string }
-  | {
-      type: "opponent_progress";
-      cellsRemaining: number;
-      completionPercent: number;
-    }
-  | { type: "opponent_disconnected" }
-  | { type: "opponent_reconnected" }
-  | {
-      type: "share_progress_requested";
-      fromPlayerId: string;
-      fromPlayerName: string;
-    }
-  | { type: "share_progress_result"; accepted: boolean; cells: string | null }
-  | { type: "game_over"; winnerId: string; winnerName: string }
-  | { type: "rematch_start"; puzzle: string }
-  | { type: "error"; message: string };
