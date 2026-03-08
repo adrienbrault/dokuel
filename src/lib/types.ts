@@ -16,6 +16,8 @@ export type Position = { row: number; col: number };
 
 // --- Game State ---
 
+export type ClearedNote = { row: number; col: number; note: number };
+
 export type MoveAction =
   | {
       type: "place";
@@ -23,6 +25,7 @@ export type MoveAction =
       value: number;
       previousValue: CellValue;
       previousNotes: Set<number>;
+      clearedNotes: ClearedNote[];
     }
   | {
       type: "erase";
@@ -30,7 +33,14 @@ export type MoveAction =
       previousValue: CellValue;
       previousNotes: Set<number>;
     }
-  | { type: "toggleNote"; position: Position; note: number };
+  | { type: "toggleNote"; position: Position; note: number }
+  | {
+      type: "hint";
+      position: Position;
+      value: number;
+      previousNotes: Set<number>;
+      clearedNotes: ClearedNote[];
+    };
 
 export type GameStatus = "idle" | "playing" | "completed";
 

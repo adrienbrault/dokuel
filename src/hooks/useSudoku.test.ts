@@ -218,7 +218,105 @@ describe("useSudoku", () => {
       expect(counts[d]!).toBeLessThanOrEqual(9);
     }
   });
+
+  it("placing a number auto-clears that note from peers in same row/col/box", () => {
+    const { result } = setupHook();
+
+    // Find an empty cell that has at least one empty peer in same row and same col
+    const { pos, rowPeer, colPeer } = findCellWithPeers(result.current.board);
+
+    // Add note 7 to both peers
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.selectCell(rowPeer.row, rowPeer.col));
+    act(() => result.current.placeNumber(7));
+    act(() => result.current.selectCell(colPeer.row, colPeer.col));
+    act(() => result.current.placeNumber(7));
+    expect(result.current.board[rowPeer.row]![rowPeer.col]!.notes.has(7)).toBe(
+      true,
+    );
+    expect(result.current.board[colPeer.row]![colPeer.col]!.notes.has(7)).toBe(
+      true,
+    );
+
+    // Place 7 in the target cell (switch back to place mode)
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.selectCell(pos.row, pos.col));
+    act(() => result.current.placeNumber(7));
+
+    // Notes should be cleared from peers
+    expect(result.current.board[rowPeer.row]![rowPeer.col]!.notes.has(7)).toBe(
+      false,
+    );
+    expect(result.current.board[colPeer.row]![colPeer.col]!.notes.has(7)).toBe(
+      false,
+    );
+  });
+
+  it("undo restores auto-cleared notes from peers", () => {
+    const { result } = setupHook();
+
+    const { pos, rowPeer } = findCellWithPeers(result.current.board);
+
+    // Add note 3 to peer
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.selectCell(rowPeer.row, rowPeer.col));
+    act(() => result.current.placeNumber(3));
+    expect(result.current.board[rowPeer.row]![rowPeer.col]!.notes.has(3)).toBe(
+      true,
+    );
+
+    // Place 3 in target cell
+    act(() => result.current.toggleNotesMode());
+    act(() => result.current.selectCell(pos.row, pos.col));
+    act(() => result.current.placeNumber(3));
+    expect(result.current.board[rowPeer.row]![rowPeer.col]!.notes.has(3)).toBe(
+      false,
+    );
+
+    // Undo should restore the note
+    act(() => result.current.undo());
+    expect(result.current.board[rowPeer.row]![rowPeer.col]!.notes.has(3)).toBe(
+      true,
+    );
+  });
 });
+
+function findCellWithPeers(
+  board: { value: number | null; isGiven: boolean }[][],
+) {
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      if (board[row]![col]!.isGiven || board[row]![col]!.value !== null)
+        continue;
+      let rowPeer: { row: number; col: number } | null = null;
+      for (let c = 0; c < 9; c++) {
+        if (
+          c !== col &&
+          !board[row]![c]!.isGiven &&
+          board[row]![c]!.value === null
+        ) {
+          rowPeer = { row, col: c };
+          break;
+        }
+      }
+      let colPeer: { row: number; col: number } | null = null;
+      for (let r = 0; r < 9; r++) {
+        if (
+          r !== row &&
+          !board[r]![col]!.isGiven &&
+          board[r]![col]!.value === null
+        ) {
+          colPeer = { row: r, col };
+          break;
+        }
+      }
+      if (rowPeer && colPeer) {
+        return { pos: { row, col }, rowPeer, colPeer };
+      }
+    }
+  }
+  throw new Error("No empty cell with row and col peers found");
+}
 
 function findEmptyCell(board: { value: number | null; isGiven: boolean }[][]) {
   for (let row = 0; row < 9; row++) {

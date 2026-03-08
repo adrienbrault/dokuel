@@ -13,9 +13,9 @@ export function NumPad({ position, remainingCounts, onNumber }: NumPadProps) {
   return (
     <div
       className={`
-				flex gap-1
+				flex gap-1 lg:flex-col lg:w-14
 				${isVertical ? "flex-col" : "flex-row justify-center"}
-				${isVertical ? "w-12" : "w-full max-w-lg"}
+				${isVertical ? "w-12" : "w-full max-w-lg lg:w-14"}
 			`}
       role="group"
       aria-label="Number pad"
@@ -32,6 +32,7 @@ export function NumPad({ position, remainingCounts, onNumber }: NumPadProps) {
             className={`
 							flex flex-col items-center justify-center
 							${isVertical ? "h-9 w-12" : "h-12 flex-1 max-w-14"}
+							lg:h-10 lg:w-14
 							rounded-lg
 							select-none touch-manipulation
 							text-lg font-semibold

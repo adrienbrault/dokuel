@@ -32,50 +32,34 @@ describe("GameResult", () => {
     expect(screen.getByText("Hard")).toBeInTheDocument();
   });
 
-  it("shows personal best when timeSeconds and difficulty provided", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockReturnValue(
-      JSON.stringify([
-        { difficulty: "medium", time: 300, date: "2026-01-01", won: true },
-        { difficulty: "medium", time: 250, date: "2026-01-02", won: true },
-      ]),
-    );
-
+  it("shows stats grid when stats prop provided", () => {
     render(
       <GameResult
         isWinner={true}
         time="04:00"
-        timeSeconds={240}
         difficulty="medium"
         onNewGame={vi.fn()}
+        stats={{ gamesPlayed: 2, bestTime: 250, averageTime: 275 }}
       />,
     );
 
-    // Should show best time from stats (250s = 04:10)
-    expect(screen.getByText(/best/i)).toBeInTheDocument();
-
-    vi.restoreAllMocks();
+    expect(screen.getByText("Played")).toBeInTheDocument();
+    expect(screen.getByText("Best")).toBeInTheDocument();
+    expect(screen.getByText("Average")).toBeInTheDocument();
   });
 
-  it("shows New Best indicator when current time beats record", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockReturnValue(
-      JSON.stringify([
-        { difficulty: "easy", time: 300, date: "2026-01-01", won: true },
-      ]),
-    );
-
+  it("shows New Personal Best indicator when isNewPB is true", () => {
     render(
       <GameResult
         isWinner={true}
         time="02:00"
-        timeSeconds={120}
         difficulty="easy"
         onNewGame={vi.fn()}
+        isNewPB={true}
       />,
     );
 
-    expect(screen.getByText(/new best/i)).toBeInTheDocument();
-
-    vi.restoreAllMocks();
+    expect(screen.getByText(/new personal best/i)).toBeInTheDocument();
   });
 
   it("shows Play Again in solo mode and Rematch in multiplayer", () => {

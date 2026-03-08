@@ -7,6 +7,7 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { getDailyPuzzle } from "./lib/daily.ts";
+import { recordDailyCompletion } from "./lib/daily-streak.ts";
 import { formatShortDate } from "./lib/format.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
@@ -342,6 +343,9 @@ function JoinScreen({
 
 function DailyGame({ onBack }: { onBack: () => void }) {
   const { puzzle, date } = useMemo(() => getDailyPuzzle(), []);
+  const handleComplete = useCallback(() => {
+    recordDailyCompletion(date);
+  }, [date]);
 
   return (
     <SoloGame
@@ -350,6 +354,7 @@ function DailyGame({ onBack }: { onBack: () => void }) {
       initialPuzzle={puzzle}
       title={`Daily — ${formatShortDate(date)}`}
       onBack={onBack}
+      onComplete={handleComplete}
     />
   );
 }

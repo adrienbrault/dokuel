@@ -9,8 +9,8 @@ import {
   type SavedGame,
   saveGame,
 } from "../lib/game-storage.ts";
-import { saveGameResult } from "../lib/stats.ts";
-import { generatePuzzle } from "../lib/sudoku.ts";
+import { getStatsForDifficulty, saveGameResult } from "../lib/stats.ts";
+import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -41,16 +41,18 @@ type SoloGameProps = {
   title?: string | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
+  onComplete?: ((time: number) => void) | undefined;
 };
 
 export function SoloGame({
   difficulty,
   gameKey,
-  showConflicts = true,
+  showConflicts: initialShowConflicts = true,
   initialPuzzle,
   title,
   onBack,
   onRematch,
+  onComplete,
 }: SoloGameProps) {
   const saved = useMemo(() => (gameKey ? loadGame(gameKey) : null), [gameKey]);
 
@@ -60,16 +62,27 @@ export function SoloGame({
     return generatePuzzle(difficulty);
   }, [difficulty, initialPuzzle, saved]);
 
+  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
+
   const savedBoard = useMemo(
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
     [saved],
   );
 
-  const game = useSudoku(puzzle, savedBoard);
+  const game = useSudoku(puzzle, solution, savedBoard);
   const { position, setPosition } = useNumPadPosition();
   const timerSecondsRef = useRef(saved?.timer ?? 0);
   const [showResult, setShowResult] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [showConflicts, setShowConflicts] = useState(initialShowConflicts);
+  const [paused, setPaused] = useState(false);
+
+  // Capture PB before this game's result is saved
+  const priorStats = useMemo(
+    () => getStatsForDifficulty(difficulty),
+    [difficulty],
+  );
+  const personalBest = priorStats?.bestTime ?? null;
 
   // Auto-save on every board change
   useEffect(() => {
@@ -93,10 +106,11 @@ export function SoloGame({
   useEffect(() => {
     if (game.status !== "completed") return;
     if (gameKey) deleteGame(gameKey);
-    saveGameResult(difficulty, timerSecondsRef.current, true);
+    saveGameResult(difficulty, timerSecondsRef.current, true, game.hintsUsed);
+    onComplete?.(timerSecondsRef.current);
     const id = setTimeout(() => setShowResult(true), 300);
     return () => clearTimeout(id);
-  }, [game.status, difficulty, gameKey]);
+  }, [game.status, difficulty, gameKey, onComplete, game.hintsUsed]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell) {
@@ -112,7 +126,7 @@ export function SoloGame({
     onErase: game.erase,
     onUndo: game.undo,
     onToggleNotes: game.toggleNotesMode,
-    enabled: game.status === "playing",
+    enabled: game.status === "playing" && !paused,
   });
 
   return (
@@ -122,23 +136,40 @@ export function SoloGame({
       position={position}
       onPositionChange={setPosition}
       onDeselectCell={game.deselectCell}
-      boardClassName={game.status === "completed" ? "animate-celebration" : ""}
+      boardClassName={[
+        game.status === "completed" ? "animate-celebration" : "",
+        game.notesMode ? "ring-2 ring-accent/30 rounded-lg" : "",
+      ].join(" ")}
       timer={
-        <div className="flex flex-col items-center">
+        <button
+          type="button"
+          className="flex flex-col items-center touch-manipulation"
+          onClick={() => {
+            if (game.status === "playing") setPaused((p) => !p);
+          }}
+          aria-label={paused ? "Resume" : "Pause"}
+        >
           <Timer
-            running={game.status === "playing"}
+            running={game.status === "playing" && !paused}
             initialSeconds={saved?.timer}
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
           />
           <span className="text-xs text-gray-500 dark:text-gray-400 font-mono tabular-nums">
-            <span className="text-accent font-medium">
-              {81 - game.cellsRemaining}
-            </span>
-            /81
+            {paused ? (
+              "Paused"
+            ) : (
+              <>
+                <span className="text-accent font-medium">
+                  {81 - game.cellsRemaining}
+                </span>
+                /81
+                {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
+              </>
+            )}
           </span>
-        </div>
+        </button>
       }
       numPad={
         <NumPad
@@ -148,13 +179,27 @@ export function SoloGame({
         />
       }
       board={
-        <Board
-          board={game.board}
-          selectedCell={game.selectedCell}
-          conflicts={showConflicts ? game.conflicts : EMPTY_CONFLICTS}
-          onSelectCell={game.selectCell}
-          animateReveal={!revealed}
-        />
+        <div className="relative w-full">
+          <Board
+            board={game.board}
+            selectedCell={paused ? null : game.selectedCell}
+            conflicts={showConflicts ? game.conflicts : EMPTY_CONFLICTS}
+            onSelectCell={paused ? () => {} : game.selectCell}
+            animateReveal={!revealed}
+          />
+          {paused && (
+            <button
+              type="button"
+              className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-950/80 backdrop-blur-md rounded-lg"
+              onClick={() => setPaused(false)}
+              aria-label="Resume game"
+            >
+              <span className="text-xl font-semibold text-gray-500 dark:text-gray-400">
+                Paused — tap to resume
+              </span>
+            </button>
+          )}
+        </div>
       }
       controls={
         <GameControls
@@ -162,6 +207,10 @@ export function SoloGame({
           onToggleNotes={game.toggleNotesMode}
           onErase={game.erase}
           onUndo={game.undo}
+          showConflicts={showConflicts}
+          onToggleConflicts={() => setShowConflicts((v) => !v)}
+          historyLength={game.historyLength}
+          onHint={game.hint}
         />
       }
       footer={
@@ -173,6 +222,11 @@ export function SoloGame({
             difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}
+            stats={priorStats}
+            isNewPB={
+              game.hintsUsed === 0 &&
+              (personalBest === null || timerSecondsRef.current < personalBest)
+            }
           />
         ) : undefined
       }

@@ -70,16 +70,11 @@ export function MultiplayerGame({
           onBack={onBack}
         />
         {!mp.connected && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-modal-backdrop">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl px-8 py-6 shadow-2xl text-center animate-modal-content">
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Reconnecting...
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Please wait
-              </p>
-            </div>
-          </div>
+          <DisconnectOverlay
+            onClaimWin={() => {
+              mp.sendComplete("");
+            }}
+          />
         )}
         {toast && <Toast message={toast} />}
       </>
@@ -87,4 +82,47 @@ export function MultiplayerGame({
   }
 
   return null;
+}
+
+const DISCONNECT_TIMEOUT = 60;
+
+function DisconnectOverlay({ onClaimWin }: { onClaimWin: () => void }) {
+  const [seconds, setSeconds] = useState(DISCONNECT_TIMEOUT);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSeconds((s) => {
+        if (s <= 1) {
+          clearInterval(id);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-modal-backdrop">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl px-8 py-6 shadow-2xl text-center animate-modal-content">
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Opponent disconnected
+        </p>
+        {seconds > 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Reconnecting...{" "}
+            <span className="font-mono tabular-nums">{seconds}s</span>
+          </p>
+        ) : (
+          <button
+            type="button"
+            className="mt-3 px-6 py-2 rounded-xl text-sm font-semibold bg-accent text-white press-spring-soft select-none touch-manipulation"
+            onClick={onClaimWin}
+          >
+            Claim Win
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
