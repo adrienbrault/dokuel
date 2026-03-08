@@ -183,6 +183,14 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 - Tailwind classes for styling — no CSS modules, no styled-components
 - Use `className` composition, not conditional class libraries (keep deps minimal)
 
+### Design System
+- **Semantic tokens** defined in `src/index.css` `@theme` block — use `text-text-primary`, `bg-bg-raised`, `border-border-default`, etc. instead of raw gray scales + `dark:` variants
+- **Component classes** defined in `src/index.css` — use `btn btn-lg btn-primary`, `card`, `heading`, `screen`, `modal-overlay`, etc.
+- **Never hardcode `dark:` for common text/bg colors** — use semantic tokens so dark mode is handled in one place
+- **Override with Tailwind** when needed — e.g., `btn btn-primary w-full` adds width on top of the base class
+- **Token reference**: surfaces (`bg-primary`, `bg-inset`, `bg-raised`, `bg-overlay`), text (`text-primary`, `text-secondary`, `text-muted`, `text-on-accent`), borders (`border-default`), interactive (`bg-disabled`, `text-disabled`)
+- **Class reference**: buttons (`btn`, `btn-lg`, `btn-md`, `btn-primary`, `btn-secondary`, `btn-ghost`), surfaces (`card`, `modal-overlay`, `modal-panel`, `screen`, `screen-content`), typography (`heading-xl`, `heading`, `label`, `caption`, `text-mono`)
+
 ### State Management
 - React hooks (useState, useReducer) — no external state library
 - `useSudoku` hook owns all game state for a single board
