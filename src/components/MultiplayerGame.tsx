@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { formatTime } from "../lib/format.ts";
-import { solvePuzzle } from "../lib/sudoku.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -135,8 +134,7 @@ function MultiplayerBoard({
   onRematch,
   onBack,
 }: MultiplayerBoardProps) {
-  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
-  const game = useSudoku(puzzle, solution);
+  const game = useSudoku(puzzle);
   const { position, setPosition } = useNumPadPosition();
   const timerSecondsRef = useRef(0);
   const [showResult, setShowResult] = useState(false);
@@ -162,8 +160,8 @@ function MultiplayerBoard({
   // Check completion
   useEffect(() => {
     if (game.status !== "completed") return;
-    onComplete(solution);
-  }, [game.status, onComplete, solution]);
+    onComplete(puzzle);
+  }, [game.status, onComplete, puzzle]);
 
   // Show result on game over
   useEffect(() => {

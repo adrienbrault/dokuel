@@ -5,8 +5,7 @@ import { useSudoku } from "./useSudoku.ts";
 
 function setupHook(difficulty: "easy" | "medium" = "easy") {
   const puzzle = generatePuzzle(difficulty);
-  const solution = solvePuzzle(puzzle);
-  return renderHook(() => useSudoku(puzzle, solution));
+  return renderHook(() => useSudoku(puzzle));
 }
 
 describe("useSudoku", () => {
@@ -189,7 +188,7 @@ describe("useSudoku", () => {
   it("detects completion when board is fully and correctly solved", () => {
     const puzzle = generatePuzzle("easy");
     const solution = solvePuzzle(puzzle);
-    const { result } = renderHook(() => useSudoku(puzzle, solution));
+    const { result } = renderHook(() => useSudoku(puzzle));
 
     // Fill all empty cells with correct values from solution
     for (let row = 0; row < 9; row++) {

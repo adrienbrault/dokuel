@@ -4,7 +4,7 @@ import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { formatTime } from "../lib/format.ts";
 import { saveGameResult } from "../lib/stats.ts";
-import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
+import { generatePuzzle } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -19,7 +19,6 @@ type SoloGameProps = {
   difficulty: Difficulty;
   showConflicts?: boolean;
   initialPuzzle?: string;
-  initialSolution?: string;
   title?: string;
   onBack: () => void;
   onRematch?: () => void;
@@ -29,21 +28,18 @@ export function SoloGame({
   difficulty,
   showConflicts = true,
   initialPuzzle,
-  initialSolution,
   title,
   onBack,
   onRematch,
 }: SoloGameProps) {
-  const { puzzle, solution } = useMemo(() => {
-    if (initialPuzzle && initialSolution) {
-      return { puzzle: initialPuzzle, solution: initialSolution };
+  const puzzle = useMemo(() => {
+    if (initialPuzzle) {
+      return initialPuzzle;
     }
-    const p = generatePuzzle(difficulty);
-    const s = solvePuzzle(p);
-    return { puzzle: p, solution: s };
-  }, [difficulty, initialPuzzle, initialSolution]);
+    return generatePuzzle(difficulty);
+  }, [difficulty, initialPuzzle]);
 
-  const game = useSudoku(puzzle, solution);
+  const game = useSudoku(puzzle);
   const { position, setPosition } = useNumPadPosition();
   const timerSecondsRef = useRef(0);
   const [showResult, setShowResult] = useState(false);
