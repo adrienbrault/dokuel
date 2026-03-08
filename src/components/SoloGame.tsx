@@ -207,6 +207,7 @@ export function SoloGame({
           onUndo={game.undo}
           showConflicts={showConflicts}
           onToggleConflicts={() => setShowConflicts((v) => !v)}
+          historyLength={game.historyLength}
         />
       }
       footer={

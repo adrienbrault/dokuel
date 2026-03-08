@@ -306,6 +306,7 @@ export function useSudoku(puzzle: string, savedBoard?: SavedBoard) {
     conflicts,
     remainingCounts,
     cellsRemaining,
+    historyLength: state.history.length,
     cellKey,
     selectCell,
     deselectCell,

@@ -5,6 +5,7 @@ type GameControlsProps = {
   onUndo: () => void;
   showConflicts?: boolean | undefined;
   onToggleConflicts?: (() => void) | undefined;
+  historyLength?: number | undefined;
 };
 
 export function GameControls({
@@ -14,10 +15,17 @@ export function GameControls({
   onUndo,
   showConflicts,
   onToggleConflicts,
+  historyLength,
 }: GameControlsProps) {
   return (
     <div className="flex gap-3 w-full max-w-lg">
-      <ControlButton label="Undo" icon="↩" onClick={onUndo} active={false} />
+      <ControlButton
+        label="Undo"
+        icon="↩"
+        onClick={onUndo}
+        active={false}
+        badge={historyLength && historyLength > 0 ? historyLength : undefined}
+      />
       <ControlButton label="Erase" icon="⌫" onClick={onErase} active={false} />
       <ControlButton
         label="Notes"
@@ -42,18 +50,20 @@ function ControlButton({
   icon,
   onClick,
   active,
+  badge,
 }: {
   label: string;
   icon: string;
   onClick: () => void;
   active: boolean;
+  badge?: number | undefined;
 }) {
   return (
     <button
       type="button"
       className={`
 				flex-1 flex flex-col items-center justify-center
-				h-12 rounded-lg
+				h-12 rounded-lg relative
 				press-spring
 				select-none touch-manipulation
 				${
@@ -68,6 +78,11 @@ function ControlButton({
     >
       <span className="text-lg leading-none">{icon}</span>
       <span className="text-[0.625rem] mt-0.5 leading-none">{label}</span>
+      {badge !== undefined && (
+        <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] rounded-full bg-accent text-white text-[0.5625rem] font-bold flex items-center justify-center px-1">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </button>
   );
 }
