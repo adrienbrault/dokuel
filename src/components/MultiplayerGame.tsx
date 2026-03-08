@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffectivePosition } from "../hooks/useEffectivePosition.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
@@ -138,6 +139,7 @@ function MultiplayerBoard({
   const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
   const game = useSudoku(puzzle, solution);
   const { position, setPosition } = useNumPadPosition();
+  const effectivePosition = useEffectivePosition(position);
   const timerSecondsRef = useRef(0);
   const [showResult, setShowResult] = useState(false);
   const prevCellsRef = useRef(game.cellsRemaining);
@@ -180,7 +182,7 @@ function MultiplayerBoard({
 
   const numPad = (
     <NumPad
-      position={position}
+      position={effectivePosition}
       remainingCounts={game.remainingCounts}
       onNumber={handleNumber}
     />
@@ -231,14 +233,14 @@ function MultiplayerBoard({
       <div
         className={`
 					flex gap-3 w-full justify-center flex-1
-					${position === "left" ? "flex-row items-center max-w-lg mx-auto" : ""}
-					${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto" : ""}
-					${position === "bottom" ? "flex-col items-center" : ""}
+					${effectivePosition === "left" ? "flex-row items-center max-w-lg mx-auto" : ""}
+					${effectivePosition === "right" ? "flex-row-reverse items-center max-w-lg mx-auto" : ""}
+					${effectivePosition === "bottom" ? "flex-col items-center" : ""}
 				`}
       >
-        {position !== "bottom" && numPad}
+        {effectivePosition !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"}`}
+          className={`flex flex-col items-center gap-3 ${effectivePosition === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"}`}
         >
           <Board
             board={game.board}
@@ -255,7 +257,7 @@ function MultiplayerBoard({
               onErase={game.erase}
               onUndo={game.undo}
             />
-            {position === "bottom" && numPad}
+            {effectivePosition === "bottom" && numPad}
           </div>
         </div>
       </div>
