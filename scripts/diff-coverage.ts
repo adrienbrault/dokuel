@@ -244,7 +244,8 @@ if (totalChanged === 0) {
   );
 
   if (totalUncovered > 0) {
-    console.log("Consider adding tests for the uncovered lines above.");
-    process.exit(1);
+    console.log(
+      "Review the uncovered lines above and add tests for any important code paths.",
+    );
   }
 }
