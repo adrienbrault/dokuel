@@ -1,3 +1,4 @@
+import { findHiddenSingle } from "./hint-hidden-single.ts";
 import type { Board, Position } from "./types.ts";
 
 export type HintExplanation = {
@@ -71,21 +72,15 @@ function getEliminatingCells(
   for (let r = 0; r < 9; r++) {
     if (r !== row) addIfNew(r, col);
   }
-  const boxRow = Math.floor(row / 3) * 3;
-  const boxCol = Math.floor(col / 3) * 3;
-  for (let r = boxRow; r < boxRow + 3; r++) {
-    for (let c = boxCol; c < boxCol + 3; c++) {
+  const bRow = Math.floor(row / 3) * 3;
+  const bCol = Math.floor(col / 3) * 3;
+  for (let r = bRow; r < bRow + 3; r++) {
+    for (let c = bCol; c < bCol + 3; c++) {
       if (r !== row || c !== col) addIfNew(r, c);
     }
   }
 
   return related;
-}
-
-function groupName(type: "row" | "col" | "box", index: number): string {
-  if (type === "row") return `row ${index + 1}`;
-  if (type === "col") return `column ${index + 1}`;
-  return `box ${index + 1}`;
 }
 
 /**
@@ -110,193 +105,6 @@ function findNakedSingle(board: Board): HintExplanation | null {
     }
   }
   return null;
-}
-
-/**
- * Try to find a hidden single: a value that can only go in one cell
- * within a row, column, or box.
- */
-function findHiddenSingle(board: Board): HintExplanation | null {
-  // Check rows
-  for (let row = 0; row < 9; row++) {
-    const result = findHiddenSingleInGroup(board, "row", row);
-    if (result) return result;
-  }
-  // Check columns
-  for (let col = 0; col < 9; col++) {
-    const result = findHiddenSingleInGroup(board, "col", col);
-    if (result) return result;
-  }
-  // Check boxes
-  for (let box = 0; box < 9; box++) {
-    const result = findHiddenSingleInGroup(board, "box", box);
-    if (result) return result;
-  }
-  return null;
-}
-
-function findHiddenSingleInGroup(
-  board: Board,
-  type: "row" | "col" | "box",
-  index: number,
-): HintExplanation | null {
-  // Collect all empty cells in this group and their candidates
-  const emptyCells: { row: number; col: number; candidates: Set<number> }[] =
-    [];
-
-  if (type === "row") {
-    for (let c = 0; c < 9; c++) {
-      if (board[index]![c]!.value === null) {
-        emptyCells.push({
-          row: index,
-          col: c,
-          candidates: getCandidates(board, index, c),
-        });
-      }
-    }
-  } else if (type === "col") {
-    for (let r = 0; r < 9; r++) {
-      if (board[r]![index]!.value === null) {
-        emptyCells.push({
-          row: r,
-          col: index,
-          candidates: getCandidates(board, r, index),
-        });
-      }
-    }
-  } else {
-    const boxRow = Math.floor(index / 3) * 3;
-    const boxCol = (index % 3) * 3;
-    for (let r = boxRow; r < boxRow + 3; r++) {
-      for (let c = boxCol; c < boxCol + 3; c++) {
-        if (board[r]![c]!.value === null) {
-          emptyCells.push({
-            row: r,
-            col: c,
-            candidates: getCandidates(board, r, c),
-          });
-        }
-      }
-    }
-  }
-
-  // For each digit 1-9, check if it can only go in one cell in this group
-  for (let d = 1; d <= 9; d++) {
-    const possibleCells = emptyCells.filter((c) => c.candidates.has(d));
-    if (possibleCells.length === 1) {
-      const cell = possibleCells[0]!;
-      // Skip if this is also a naked single (prefer naked single explanation)
-      if (cell.candidates.size === 1) continue;
-
-      const name = groupName(type, index);
-      // Related cells: other cells in the group that block this digit
-      const related: Position[] = [];
-      if (type === "row") {
-        for (let c = 0; c < 9; c++) {
-          if (c !== cell.col && board[index]![c]!.value !== null) {
-            related.push({ row: index, col: c });
-          }
-        }
-      } else if (type === "col") {
-        for (let r = 0; r < 9; r++) {
-          if (r !== cell.row && board[r]![index]!.value !== null) {
-            related.push({ row: r, col: index });
-          }
-        }
-      } else {
-        const boxRow = Math.floor(index / 3) * 3;
-        const boxCol = (index % 3) * 3;
-        for (let r = boxRow; r < boxRow + 3; r++) {
-          for (let c = boxCol; c < boxCol + 3; c++) {
-            if (
-              (r !== cell.row || c !== cell.col) &&
-              board[r]![c]!.value !== null
-            ) {
-              related.push({ row: r, col: c });
-            }
-          }
-        }
-      }
-
-      // Also add cells outside the group that eliminate this digit
-      // from the other empty cells in the group
-      for (const other of emptyCells) {
-        if (other === cell) continue;
-        if (!other.candidates.has(d)) {
-          // This cell can't have d — find what eliminates it
-          // (cells outside this group that have value d and see this cell)
-          const eliminators = findEliminatorsForDigit(
-            board,
-            other.row,
-            other.col,
-            d,
-            type,
-            index,
-          );
-          for (const e of eliminators) {
-            related.push(e);
-          }
-        }
-      }
-
-      return {
-        position: { row: cell.row, col: cell.col },
-        value: d,
-        technique: "hidden-single",
-        explanation: `In ${name}, ${d} can only go here. The other empty cells in this ${type === "box" ? "box" : type} can't contain ${d} because of conflicts in their rows, columns, or boxes.`,
-        relatedCells: related,
-      };
-    }
-  }
-  return null;
-}
-
-/**
- * Find cells outside a group that eliminate a digit from a specific cell.
- */
-function findEliminatorsForDigit(
-  board: Board,
-  row: number,
-  col: number,
-  digit: number,
-  excludeGroupType: "row" | "col" | "box",
-  excludeGroupIndex: number,
-): Position[] {
-  const eliminators: Position[] = [];
-
-  // Check row (skip if the group we're analyzing is this row)
-  if (excludeGroupType !== "row" || excludeGroupIndex !== row) {
-    for (let c = 0; c < 9; c++) {
-      if (c !== col && board[row]![c]!.value === digit) {
-        eliminators.push({ row, col: c });
-      }
-    }
-  }
-
-  // Check column
-  if (excludeGroupType !== "col" || excludeGroupIndex !== col) {
-    for (let r = 0; r < 9; r++) {
-      if (r !== row && board[r]![col]!.value === digit) {
-        eliminators.push({ row: r, col });
-      }
-    }
-  }
-
-  // Check box
-  const boxIndex = Math.floor(row / 3) * 3 + Math.floor(col / 3);
-  if (excludeGroupType !== "box" || excludeGroupIndex !== boxIndex) {
-    const boxRow = Math.floor(row / 3) * 3;
-    const boxCol = Math.floor(col / 3) * 3;
-    for (let r = boxRow; r < boxRow + 3; r++) {
-      for (let c = boxCol; c < boxCol + 3; c++) {
-        if ((r !== row || c !== col) && board[r]![c]!.value === digit) {
-          eliminators.push({ row: r, col: c });
-        }
-      }
-    }
-  }
-
-  return eliminators;
 }
 
 /**
