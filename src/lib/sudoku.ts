@@ -2,10 +2,10 @@ import * as sudokuLib from "sudoku";
 import type { Board, Cell, Difficulty } from "./types.ts";
 
 const DIFFICULTY_CLUES: Record<Difficulty, { min: number; max: number }> = {
-  easy: { min: 40, max: 50 },
-  medium: { min: 32, max: 39 },
-  hard: { min: 26, max: 31 },
-  expert: { min: 20, max: 25 },
+  easy: { min: 36, max: 45 },
+  medium: { min: 28, max: 35 },
+  hard: { min: 22, max: 27 },
+  expert: { min: 17, max: 21 },
 };
 
 export function generatePuzzle(difficulty: Difficulty): string {
