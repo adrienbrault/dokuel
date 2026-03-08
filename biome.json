@@ -47,6 +47,17 @@
           "level": "error",
           "options": { "syntax": "shorthand" }
         },
+        "noRestrictedImports": {
+          "level": "warn",
+          "options": {
+            "paths": {
+              "react": {
+                "importNames": ["useEffect"],
+                "message": "Consider if you really need useEffect. See https://react.dev/learn/you-might-not-need-an-effect"
+              }
+            }
+          }
+        },
         "useFilenamingConvention": {
           "level": "error",
           "options": {
