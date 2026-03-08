@@ -15,7 +15,7 @@ bun run ci           # Full CI: lint + typecheck + test
 ## Architecture
 
 - **Frontend**: Vite + React 19 + Tailwind CSS 4
-- **Real-time server**: Cloudflare Workers + Durable Objects (Agents SDK)
+- **Multiplayer**: Peer-to-peer via Yjs + y-webrtc (no server needed)
 - **Testing**: Vitest + React Testing Library
 - **Lint/Format**: Biome (tabs, double quotes, semicolons)
 
@@ -23,30 +23,16 @@ See `spec.md` for full product specification.
 
 ## Deployment
 
-Both the frontend and the server deploy automatically on push to `main`.
+The frontend deploys automatically on push to `main`. No server infrastructure needed — multiplayer uses WebRTC peer-to-peer.
 
 ### Frontend (Cloudflare Pages)
 - **Project**: `sudoku` on Cloudflare Pages, connected to `adrienbrault/sudoku` on GitHub
 - **Build**: `bun install && bun run build` → `dist/`
 - **URL**: https://sudoku.brage.fr (custom domain), https://sudoku-4cc.pages.dev (default)
-- **Env var**: `VITE_PARTY_HOST=party-sudoku.brage.fr` (set in Cloudflare Pages dashboard)
 - Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
-
-### Server (Cloudflare Workers + Durable Objects)
-- **Config**: `wrangler.jsonc` — entry point is `src/party/sudoku.ts`
-- **Framework**: Cloudflare Agents SDK (`agents` package) — provides WebSocket lifecycle hooks on Durable Objects
-- **Worker name**: `sudoku-server`
-- **CI**: `.github/workflows/deploy-server.yml` runs `bunx wrangler deploy`
-- Custom domain configured via Cloudflare dashboard on the worker
-
-### GitHub Repository Settings Required
-Secrets (at `github.com/adrienbrault/sudoku/settings/secrets/actions`):
-- `CLOUDFLARE_ACCOUNT_ID` — Cloudflare account ID
-- `CLOUDFLARE_API_TOKEN` — API token with "Edit Cloudflare Workers" permissions
 
 ### DNS (Cloudflare)
 - `sudoku.brage.fr` → CNAME to `sudoku-4cc.pages.dev` (Cloudflare Pages)
-- `party-sudoku.brage.fr` → custom domain on the `sudoku-server` worker (configure in Cloudflare dashboard)
 
 ## Git Workflow — MANDATORY
 
@@ -79,7 +65,7 @@ Every commit MUST have a body. The body explains the reasoning, not a restatemen
 
 Types: `feat`, `fix`, `test`, `refactor`, `perf`, `chore`, `docs`, `style`, `ci`
 
-Scopes: `engine`, `board`, `numpad`, `controls`, `solo`, `multiplayer`, `lobby`, `ui`, `hooks`, `server`, `types`
+Scopes: `engine`, `board`, `numpad`, `controls`, `solo`, `multiplayer`, `lobby`, `ui`, `hooks`, `p2p`, `types`
 
 ### Anti-Patterns — NEVER Do These
 
@@ -182,7 +168,7 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 - Components: `src/components/ComponentName.tsx` — React functional components
 - Hooks: `src/hooks/useHookName.ts` — custom React hooks
 - Library: `src/lib/` — pure logic, no React dependency
-- Server: `src/party/` — Cloudflare Workers + Agents SDK server code
+- P2P: `src/lib/p2p-room.ts` — Yjs-based peer-to-peer room logic
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)
@@ -200,7 +186,7 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ### State Management
 - React hooks (useState, useReducer) — no external state library
 - `useSudoku` hook owns all game state for a single board
-- `useMultiplayer` hook manages WebSocket connection and room state
+- `useYjsMultiplayer` hook manages P2P WebRTC connection and room state via Yjs
 
 ### Types
 - All shared types in `src/lib/types.ts`
@@ -238,7 +224,7 @@ You cannot judge visual quality from code alone. **Always screenshot, always rev
 ## Key Design Decisions
 
 - **Soft validation**: Conflicts shown visually, not blocked. Board complete only when all filled + valid.
-- **Server-authoritative**: Server holds puzzle solution, validates completion. Client never sees solution.
+- **Peer-to-peer**: No server needed. Game state syncs via Yjs CRDTs over WebRTC. Public signaling servers used only for peer discovery.
 - **Board sharing**: Sharer's cells become locked/given on both boards. Notes not shared.
 - **Numpad positions**: Bottom (default), Left, Right. Persisted in localStorage.
 - **No accounts**: Nickname + random color. sessionStorage for reconnect identity.

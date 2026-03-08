@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMultiplayer } from "../hooks/useMultiplayer.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
+import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { formatTime } from "../lib/format.ts";
 import { solvePuzzle } from "../lib/sudoku.ts";
 import { Board } from "./Board.tsx";
@@ -15,17 +15,19 @@ import { Timer } from "./Timer.tsx";
 type MultiplayerGameProps = {
   playerId: string;
   playerName: string;
-  socket: WebSocket;
+  roomId: string;
+  difficulty: import("../lib/types.ts").Difficulty;
   onBack: () => void;
 };
 
 export function MultiplayerGame({
   playerId,
   playerName,
-  socket,
+  roomId,
+  difficulty,
   onBack,
 }: MultiplayerGameProps) {
-  const mp = useMultiplayer({ socket, playerId, playerName });
+  const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const [toast, setToast] = useState<string | null>(null);
 
   // Show errors as transient toasts instead of replacing the UI

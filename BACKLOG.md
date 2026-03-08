@@ -20,8 +20,8 @@
 - [x] GameResult modal: completion with time and new game
 - [x] SoloGame screen: wires board + numpad + controls + timer
 - [x] useNumPadPosition hook: localStorage persistence
-- [x] PartyKit server: room management, game lifecycle, completion validation
-- [x] useMultiplayer hook: PartySocket connection, reconnect, room state sync
+- [x] ~~PartyKit server: room management, game lifecycle, completion validation~~ (replaced by P2P)
+- [x] ~~useMultiplayer hook: PartySocket connection, reconnect, room state sync~~ (replaced by P2P)
 - [x] Lobby screen: share link, player list, ready state, difficulty select, start
 - [x] Join-by-link: URL routing for `/{roomId}`, full/expired room handling
 - [x] Multiplayer game screen: opponent progress, board sharing, game result + rematch
@@ -39,6 +39,7 @@
 - [x] Sound effects toggle
 - [x] Spectator mode
 - [x] 2.5D visual polish: board elevation, cell glow, spring press, modal/screen transitions, cell reveal
+- [x] WebRTC P2P: replace Cloudflare server with Yjs + y-webrtc peer-to-peer sync
 
 ## In Progress
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
 import { Landing } from "./components/Landing.tsx";
@@ -10,8 +10,6 @@ import { getDailyPuzzle } from "./lib/daily.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
 import "./index.css";
-
-const PARTY_HOST = import.meta.env.VITE_PARTY_HOST || "localhost:8787";
 
 function generateId() {
   return Math.random().toString(36).slice(2, 10);
@@ -38,14 +36,18 @@ type Screen =
   | { name: "difficulty"; mode: "solo" | "create" }
   | { name: "solo"; difficulty: Difficulty; gameId: number }
   | { name: "daily" }
-  | { name: "multiplayer"; roomId: string }
+  | { name: "multiplayer"; roomId: string; difficulty: Difficulty }
   | { name: "join" };
 
 function App() {
   const [screen, setScreen] = useState<Screen>(() => {
     const path = window.location.pathname.slice(1);
     if (path && path !== "") {
-      return { name: "multiplayer", roomId: path };
+      return {
+        name: "multiplayer",
+        roomId: path,
+        difficulty: "medium" as Difficulty,
+      };
     }
     return { name: "landing" };
   });
@@ -95,7 +97,7 @@ function App() {
               } else {
                 const roomId = generateId();
                 window.history.pushState(null, "", `/${roomId}`);
-                setScreen({ name: "multiplayer", roomId });
+                setScreen({ name: "multiplayer", roomId, difficulty });
               }
             }}
             onBack={() => setScreen({ name: "landing" })}
@@ -127,6 +129,7 @@ function App() {
       return (
         <MultiplayerScreen
           roomId={screen.roomId}
+          difficulty={screen.difficulty}
           onBack={() => {
             window.history.pushState(null, "", "/");
             setScreen({ name: "landing" });
@@ -139,7 +142,11 @@ function App() {
         <JoinScreen
           onJoin={(roomId) => {
             window.history.pushState(null, "", `/${roomId}`);
-            setScreen({ name: "multiplayer", roomId });
+            setScreen({
+              name: "multiplayer",
+              roomId,
+              difficulty: "medium",
+            });
           }}
           onBack={() => setScreen({ name: "landing" })}
         />
@@ -149,32 +156,22 @@ function App() {
 
 function MultiplayerScreen({
   roomId,
+  difficulty,
   onBack,
 }: {
   roomId: string;
+  difficulty: Difficulty;
   onBack: () => void;
 }) {
   const playerId = useMemo(getPlayerId, []);
   const playerName = useMemo(getPlayerName, []);
 
-  const socket = useMemo(() => {
-    const protocol = PARTY_HOST.startsWith("localhost") ? "ws" : "wss";
-    return new WebSocket(
-      `${protocol}://${PARTY_HOST}/agents/sudoku-agent/${roomId}`,
-    );
-  }, [roomId]);
-
-  useEffect(() => {
-    return () => {
-      socket.close();
-    };
-  }, [socket]);
-
   return (
     <MultiplayerGame
+      roomId={roomId}
       playerId={playerId}
       playerName={playerName}
-      socket={socket}
+      difficulty={difficulty}
       onBack={onBack}
     />
   );
