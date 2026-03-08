@@ -367,6 +367,32 @@ body {
   animation: fade-in 0.15s ease-out;
 }
 
+/* ─── Portrait: compact layout to fit above browser toolbar ─── */
+@media (orientation: portrait) and (max-width: 768px) {
+  /* Shorter numpad grid cells: 3 rows must fit below board + controls */
+  .numpad-grid-btn {
+    aspect-ratio: auto !important;
+    height: min(8dvh, 3.25rem);
+  }
+  .numpad-grid {
+    gap: 0.25rem !important;
+  }
+  /* Tighter vertical spacing */
+  .game-layout {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  .game-layout .game-header {
+    margin-bottom: 0.5rem !important;
+  }
+  .game-layout .game-area {
+    gap: 0.5rem !important;
+  }
+  .game-layout .game-controls-col {
+    gap: 0.5rem !important;
+  }
+}
+
 /* ─── Landscape layout for phones ─── */
 @media (orientation: landscape) and (max-height: 500px) {
   /*

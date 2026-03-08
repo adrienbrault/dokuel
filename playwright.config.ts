@@ -44,6 +44,16 @@ export default defineConfig({
       },
     },
     {
+      name: "iPhone 14 Safari",
+      use: {
+        ...devices["iPhone 14"],
+        defaultBrowserType: "chromium",
+        deviceScaleFactor: 1,
+        // Real Safari portrait with status bar + bottom toolbar (~190px lost)
+        viewport: { width: 390, height: 654 },
+      },
+    },
+    {
       name: "iPhone 14 Landscape",
       use: {
         ...devices["iPhone 14"],
