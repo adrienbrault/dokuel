@@ -17,10 +17,11 @@
 		"screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
 	},
 	"dependencies": {
-		"agents": "^0.7.5",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",
-		"sudoku": "^0.0.3"
+		"sudoku": "^0.0.3",
+		"y-webrtc": "^10.3.0",
+		"yjs": "^13.6.29"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.6",
@@ -37,7 +38,6 @@
 		"tailwindcss": "^4.2.1",
 		"typescript": "~5.9.3",
 		"vite": "^7.3.1",
-		"vitest": "^4.0.18",
-		"wrangler": "^4.71.0"
+		"vitest": "^4.0.18"
 	}
 }
