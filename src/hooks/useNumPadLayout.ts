@@ -1,73 +1,54 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import type { NumPadLayout } from "../lib/types.ts";
 
-const STORAGE_KEY = "sudoku-numpad-layout";
-
-function getStored(): NumPadLayout {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "row" || stored === "grid") {
-      return stored;
-    }
-  } catch {
-    // localStorage not available
-  }
-  return "row";
-}
+/**
+ * Auto-detects the best numpad layout based on viewport.
+ * - Landscape phones: always grid (sidebar layout)
+ * - Portrait: grid when enough vertical space, row when tight
+ */
 
 const landscapeQuery =
   typeof window !== "undefined"
     ? window.matchMedia("(orientation: landscape) and (max-height: 500px)")
     : null;
 
-function subscribeLandscape(cb: () => void) {
+// Portrait with enough room for 3×3 grid below board + controls
+// ~630px needed: header(40) + board(360) + controls(48) + grid(160) + gaps(20)
+const tallPortraitQuery =
+  typeof window !== "undefined"
+    ? window.matchMedia(
+        "(orientation: portrait) and (min-height: 640px) and (max-width: 768px)",
+      )
+    : null;
+
+// Desktop/tablet: always grid
+const desktopQuery =
+  typeof window !== "undefined"
+    ? window.matchMedia("(min-width: 769px)")
+    : null;
+
+function subscribe(cb: () => void) {
   landscapeQuery?.addEventListener("change", cb);
-  return () => landscapeQuery?.removeEventListener("change", cb);
+  tallPortraitQuery?.addEventListener("change", cb);
+  desktopQuery?.addEventListener("change", cb);
+  return () => {
+    landscapeQuery?.removeEventListener("change", cb);
+    tallPortraitQuery?.removeEventListener("change", cb);
+    desktopQuery?.removeEventListener("change", cb);
+  };
 }
 
-function getIsLandscape() {
-  return landscapeQuery?.matches ?? false;
+function getLayout(): NumPadLayout {
+  if (landscapeQuery?.matches) return "grid";
+  if (desktopQuery?.matches) return "row"; // desktop uses the vertical column
+  if (tallPortraitQuery?.matches) return "grid";
+  return "row";
 }
 
-function getIsLandscapeServer() {
-  return false;
+function getServerLayout(): NumPadLayout {
+  return "row";
 }
 
-let currentLayout = getStored();
-const listeners = new Set<() => void>();
-
-function subscribeLayout(cb: () => void) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-
-function getLayout() {
-  return currentLayout;
-}
-
-function setStoredLayout(l: NumPadLayout) {
-  currentLayout = l;
-  try {
-    localStorage.setItem(STORAGE_KEY, l);
-  } catch {
-    // localStorage not available
-  }
-  for (const cb of listeners) cb();
-}
-
-export function useNumPadLayout() {
-  const layout = useSyncExternalStore(subscribeLayout, getLayout, getStored);
-  const isLandscape = useSyncExternalStore(
-    subscribeLandscape,
-    getIsLandscape,
-    getIsLandscapeServer,
-  );
-
-  const setLayout = useCallback((l: NumPadLayout) => {
-    setStoredLayout(l);
-  }, []);
-
-  const effectiveLayout: NumPadLayout = isLandscape ? "grid" : layout;
-
-  return { layout, effectiveLayout, setLayout };
+export function useNumPadLayout(): NumPadLayout {
+  return useSyncExternalStore(subscribe, getLayout, getServerLayout);
 }

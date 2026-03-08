@@ -123,23 +123,6 @@ test("multiplayer lobby", async ({ page }, testInfo) => {
 	});
 });
 
-// --- Numpad layout variants ---
-
-test("solo game - numpad grid layout", async ({ page }, testInfo) => {
-	await page.goto("/");
-	await page.evaluate(() =>
-		localStorage.setItem("sudoku-numpad-layout", "grid"),
-	);
-	await page.goto("/");
-	await page.waitForLoadState("networkidle");
-	await page.getByText("Start Solo").click();
-	await page.getByText("Easy").click();
-	await page.waitForTimeout(800);
-	await page.screenshot({
-		path: screenshotPath("solo-numpad-grid", testInfo.project.name),
-	});
-});
-
 // --- Dark mode variants ---
 
 test("landing page - dark mode", async ({ page }, testInfo) => {
