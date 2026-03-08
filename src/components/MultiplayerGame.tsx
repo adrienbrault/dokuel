@@ -223,31 +223,34 @@ function MultiplayerBoard({
       {/* Board */}
       <div
         className={`
-					flex items-start gap-3 w-full justify-center
-					${position === "left" ? "flex-row" : ""}
-					${position === "right" ? "flex-row-reverse" : ""}
+					flex gap-3 w-full justify-center flex-1
+					${position === "left" ? "flex-row items-center max-w-lg mx-auto" : ""}
+					${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto" : ""}
 					${position === "bottom" ? "flex-col items-center" : ""}
 				`}
       >
         {position !== "bottom" && numPad}
-        <Board
-          board={game.board}
-          selectedCell={game.selectedCell}
-          conflicts={game.conflicts}
-          onSelectCell={game.selectCell}
-          animateReveal={!revealed}
-        />
-      </div>
-
-      {/* Controls */}
-      <div className="flex flex-col items-center gap-3 mt-4 w-full">
-        <GameControls
-          notesMode={game.notesMode}
-          onToggleNotes={game.toggleNotesMode}
-          onErase={game.erase}
-          onUndo={game.undo}
-        />
-        {position === "bottom" && numPad}
+        <div
+          className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"}`}
+        >
+          <Board
+            board={game.board}
+            selectedCell={game.selectedCell}
+            conflicts={game.conflicts}
+            onSelectCell={game.selectCell}
+            animateReveal={!revealed}
+          />
+          {/* Controls below board */}
+          <div className="flex flex-col items-center gap-3 w-full">
+            <GameControls
+              notesMode={game.notesMode}
+              onToggleNotes={game.toggleNotesMode}
+              onErase={game.erase}
+              onUndo={game.undo}
+            />
+            {position === "bottom" && numPad}
+          </div>
+        </div>
       </div>
 
       {/* Result */}

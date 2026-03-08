@@ -103,14 +103,14 @@ export function SoloGame({
       <div
         className={`
 					flex gap-3 w-full justify-center flex-1
-					${position === "left" ? "flex-row items-center" : ""}
-					${position === "right" ? "flex-row-reverse items-center" : ""}
+					${position === "left" ? "flex-row items-center max-w-lg mx-auto" : ""}
+					${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto" : ""}
 					${position === "bottom" ? "flex-col items-center" : ""}
 				`}
       >
         {position !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : ""} ${game.status === "completed" ? "animate-celebration" : ""}`}
+          className={`flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${game.status === "completed" ? "animate-celebration" : ""}`}
         >
           <Board
             board={game.board}
@@ -119,32 +119,18 @@ export function SoloGame({
             onSelectCell={game.selectCell}
             animateReveal={!revealed}
           />
-          {/* Controls + bottom numpad */}
-          {position === "bottom" && (
-            <div className="flex flex-col items-center gap-3 w-full">
-              <GameControls
-                notesMode={game.notesMode}
-                onToggleNotes={game.toggleNotesMode}
-                onErase={game.erase}
-                onUndo={game.undo}
-              />
-              {numPad}
-            </div>
-          )}
+          {/* Controls below board */}
+          <div className="flex flex-col items-center gap-3 w-full">
+            <GameControls
+              notesMode={game.notesMode}
+              onToggleNotes={game.toggleNotesMode}
+              onErase={game.erase}
+              onUndo={game.undo}
+            />
+            {position === "bottom" && numPad}
+          </div>
         </div>
       </div>
-
-      {/* Controls for side numpad positions */}
-      {position !== "bottom" && (
-        <div className="flex flex-col items-center gap-3 mt-4 w-full">
-          <GameControls
-            notesMode={game.notesMode}
-            onToggleNotes={game.toggleNotesMode}
-            onErase={game.erase}
-            onUndo={game.undo}
-          />
-        </div>
-      )}
 
       {/* Result modal */}
       {showResult && (
