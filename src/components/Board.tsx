@@ -6,10 +6,12 @@ import { Cell } from "./Cell.tsx";
 type BoardProps = {
   board: BoardType;
   selectedCell: Position | null;
-  selectedCells?: Set<number>;
+  selectedCells?: Set<number> | undefined;
   conflicts: Set<number>;
   onSelectCell: (row: number, col: number) => void;
-  onSetSelectedCells?: (cells: Set<number>, primary: Position) => void;
+  onSetSelectedCells?:
+    | ((cells: Set<number>, primary: Position) => void)
+    | undefined;
   animateReveal?: boolean;
 };
 

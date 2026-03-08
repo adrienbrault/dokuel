@@ -118,7 +118,7 @@ export function SoloGame({
   }, [game.status, difficulty, gameKey, onComplete, game.hintsUsed]);
 
   const handleNumber = (n: number) => {
-    if (game.selectedCell) {
+    if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n);
     }
   };
@@ -208,8 +208,10 @@ export function SoloGame({
           <Board
             board={game.board}
             selectedCell={paused ? null : game.selectedCell}
+            selectedCells={paused ? undefined : game.selectedCells}
             conflicts={showConflicts ? game.errors : EMPTY_CONFLICTS}
             onSelectCell={paused ? () => {} : game.selectCell}
+            onSetSelectedCells={paused ? undefined : game.setSelectedCells}
             animateReveal={!revealed}
           />
           {paused && (

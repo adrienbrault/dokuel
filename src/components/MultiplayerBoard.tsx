@@ -90,7 +90,7 @@ export function MultiplayerBoard({
   }, [gameOver]);
 
   const handleNumber = (n: number) => {
-    if (game.selectedCell) {
+    if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n);
     }
   };
@@ -129,8 +129,10 @@ export function MultiplayerBoard({
         <Board
           board={game.board}
           selectedCell={game.selectedCell}
+          selectedCells={game.selectedCells}
           conflicts={showConflicts ? game.errors : EMPTY_CONFLICTS}
           onSelectCell={game.selectCell}
+          onSetSelectedCells={game.setSelectedCells}
           animateReveal={!revealed}
         />
       }
