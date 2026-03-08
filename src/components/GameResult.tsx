@@ -48,7 +48,7 @@ export function GameResult({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-modal-backdrop">
+    <div className="modal-overlay p-6">
       {isWinner && (
         <div className="confetti-container">
           <span />
@@ -63,12 +63,12 @@ export function GameResult({
           <span />
         </div>
       )}
-      <div className="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full animate-modal-content relative">
+      <div className="modal-panel max-w-sm sm:max-w-md w-full relative">
         <div className="flex flex-col items-center gap-2">
           <span className="text-5xl animate-emoji-bounce">
             {isWinner ? "🎉" : "👏"}
           </span>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h2 className="heading">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
           {difficulty && (
@@ -80,7 +80,7 @@ export function GameResult({
           )}
         </div>
         <div className="flex flex-col items-center gap-1">
-          <span className="text-3xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100">
+          <span className="text-3xl font-mono font-bold tabular-nums text-text-primary">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
@@ -93,28 +93,22 @@ export function GameResult({
         {stats && !isMultiplayer && (
           <div className="grid grid-cols-3 gap-4 w-full text-center">
             <div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono tabular-nums">
+              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
                 {stats.gamesPlayed}
               </div>
-              <div className="text-xs text-gray-400 dark:text-gray-500">
-                Played
-              </div>
+              <div className="text-xs text-text-muted">Played</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono tabular-nums">
+              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
                 {formatTime(stats.bestTime)}
               </div>
-              <div className="text-xs text-gray-400 dark:text-gray-500">
-                Best
-              </div>
+              <div className="text-xs text-text-muted">Best</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono tabular-nums">
+              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
                 {formatTime(stats.averageTime)}
               </div>
-              <div className="text-xs text-gray-400 dark:text-gray-500">
-                Average
-              </div>
+              <div className="text-xs text-text-muted">Average</div>
             </div>
           </div>
         )}
@@ -123,7 +117,7 @@ export function GameResult({
           {onRematch && (
             <button
               type="button"
-              className="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white press-spring-soft select-none touch-manipulation"
+              className="btn btn-primary w-full py-3 text-lg"
               onClick={onRematch}
             >
               {isMultiplayer ? "Rematch" : "Play Again"}
@@ -131,7 +125,7 @@ export function GameResult({
           )}
           <button
             type="button"
-            className="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 press-spring-soft select-none touch-manipulation"
+            className="btn btn-secondary w-full py-3 text-lg"
             onClick={onNewGame}
           >
             New Game
@@ -139,7 +133,7 @@ export function GameResult({
           {!isMultiplayer && (
             <button
               type="button"
-              className="w-full py-2 rounded-xl text-sm font-medium text-gray-400 dark:text-gray-500 press-spring-soft select-none touch-manipulation"
+              className="btn btn-ghost w-full py-2"
               onClick={handleShare}
             >
               Share Result
