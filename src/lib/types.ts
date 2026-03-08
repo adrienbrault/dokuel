@@ -40,7 +40,6 @@ export type GameState = {
   difficulty: Difficulty;
   status: GameStatus;
   selectedCell: Position | null;
-  activeNumber: number | null; // for fill mode
   notesMode: boolean;
   timer: number; // seconds elapsed
   history: MoveAction[];

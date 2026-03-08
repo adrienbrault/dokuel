@@ -3,17 +3,11 @@ import type { NumPadPosition } from "../lib/types.ts";
 
 type NumPadProps = {
   position: NumPadPosition;
-  activeNumber: number | null;
   remainingCounts: Record<number, number>;
   onNumber: (n: number) => void;
 };
 
-export function NumPad({
-  position,
-  activeNumber,
-  remainingCounts,
-  onNumber,
-}: NumPadProps) {
+export function NumPad({ position, remainingCounts, onNumber }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
 
   return (
@@ -27,7 +21,6 @@ export function NumPad({
       aria-label="Number pad"
     >
       {DIGITS.map((n) => {
-        const isActive = activeNumber === n;
         const remaining = remainingCounts[n];
         const isComplete = remaining === 0;
 
@@ -43,11 +36,8 @@ export function NumPad({
 							select-none touch-manipulation
 							text-lg font-semibold
 							${isComplete ? "opacity-30 cursor-default" : "press-spring"}
-							${
-                isActive
-                  ? "bg-accent text-white shadow-md"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-              }
+							bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200
+							active:bg-accent active:text-white active:shadow-md
 						`}
             onClick={() => onNumber(n)}
             aria-label={`${n}, ${remaining} remaining`}

@@ -13,7 +13,6 @@ type State = {
   board: Board;
   status: GameStatus;
   selectedCell: Position | null;
-  activeNumber: number | null;
   notesMode: boolean;
   history: MoveAction[];
 };
@@ -23,8 +22,7 @@ type Action =
   | { type: "PLACE_NUMBER"; value: number }
   | { type: "ERASE" }
   | { type: "UNDO" }
-  | { type: "TOGGLE_NOTES" }
-  | { type: "SET_ACTIVE_NUMBER"; value: number };
+  | { type: "TOGGLE_NOTES" };
 
 function cloneBoard(board: Board): Board {
   return board.map((row) =>
@@ -144,13 +142,6 @@ function reducer(state: State, action: Action): State {
       return { ...state, notesMode: !state.notesMode };
     }
 
-    case "SET_ACTIVE_NUMBER": {
-      return {
-        ...state,
-        activeNumber: state.activeNumber === action.value ? null : action.value,
-      };
-    }
-
     default:
       return state;
   }
@@ -162,7 +153,6 @@ function initState(puzzle: string): State {
     board,
     status: "playing",
     selectedCell: null,
-    activeNumber: null,
     notesMode: false,
     history: [],
   };
@@ -230,16 +220,10 @@ export function useSudoku(puzzle: string, _solution: string) {
     dispatch({ type: "TOGGLE_NOTES" });
   }, []);
 
-  const setActiveNumber = useCallback(
-    (value: number) => dispatch({ type: "SET_ACTIVE_NUMBER", value }),
-    [],
-  );
-
   return {
     board: state.board,
     status: state.status,
     selectedCell: state.selectedCell,
-    activeNumber: state.activeNumber,
     notesMode: state.notesMode,
     conflicts,
     remainingCounts,
@@ -250,6 +234,5 @@ export function useSudoku(puzzle: string, _solution: string) {
     erase,
     undo,
     toggleNotesMode,
-    setActiveNumber,
   };
 }

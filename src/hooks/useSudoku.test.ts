@@ -206,18 +206,6 @@ describe("useSudoku", () => {
     expect(result.current.status).toBe("completed");
   });
 
-  it("setActiveNumber sets the active number for fill mode", () => {
-    const { result } = setupHook();
-    expect(result.current.activeNumber).toBeNull();
-
-    act(() => result.current.setActiveNumber(5));
-    expect(result.current.activeNumber).toBe(5);
-
-    // Toggling same number deselects
-    act(() => result.current.setActiveNumber(5));
-    expect(result.current.activeNumber).toBeNull();
-  });
-
   it("getRemainingCounts returns correct counts", () => {
     const { result } = setupHook();
     const counts = result.current.remainingCounts;
