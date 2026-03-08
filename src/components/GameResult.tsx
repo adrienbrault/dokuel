@@ -10,11 +10,10 @@ const DIFFICULTY_LABELS: Record<Difficulty, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  easy: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
-  medium:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
-  hard: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
-  expert: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400",
+  easy: "bg-difficulty-easy-bg text-difficulty-easy-text",
+  medium: "bg-difficulty-medium-bg text-difficulty-medium-text",
+  hard: "bg-difficulty-hard-bg text-difficulty-hard-text",
+  expert: "bg-difficulty-expert-bg text-difficulty-expert-text",
 };
 
 type GameResultProps = {
