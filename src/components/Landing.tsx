@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
+import { formatShortDate } from "../lib/format.ts";
 
 type LandingProps = {
   onSolo: () => void;
@@ -43,6 +44,7 @@ export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
             onClick={onDaily}
             completed={completed}
             streak={streak.currentStreak}
+            dateLabel={formatShortDate(today)}
           />
         </div>
         <div className="flex flex-col gap-3">
@@ -77,10 +79,12 @@ function DailyChallengeButton({
   onClick,
   completed,
   streak,
+  dateLabel,
 }: {
   onClick: () => void;
   completed: boolean;
   streak: number;
+  dateLabel: string;
 }) {
   return (
     <button
@@ -90,6 +94,9 @@ function DailyChallengeButton({
     >
       <span className="flex items-center justify-center gap-2">
         Daily Challenge
+        <span className="text-sm font-normal text-text-muted">
+          — {dateLabel}
+        </span>
         {completed && (
           <svg
             className="w-5 h-5 text-green-500"
