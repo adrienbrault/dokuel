@@ -166,7 +166,6 @@ function MultiplayerBoard({
   }, [gameOver]);
 
   const handleNumber = (n: number) => {
-    game.setActiveNumber(n);
     if (game.selectedCell) {
       game.placeNumber(n);
     }
@@ -175,7 +174,6 @@ function MultiplayerBoard({
   const numPad = (
     <NumPad
       position={position}
-      activeNumber={game.activeNumber}
       remainingCounts={game.remainingCounts}
       onNumber={handleNumber}
     />

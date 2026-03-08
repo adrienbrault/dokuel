@@ -56,7 +56,6 @@ export function SoloGame({
   }, [game.status, difficulty]);
 
   const handleNumber = (n: number) => {
-    game.setActiveNumber(n);
     if (game.selectedCell) {
       game.placeNumber(n);
     }
@@ -75,7 +74,6 @@ export function SoloGame({
   const numPad = (
     <NumPad
       position={position}
-      activeNumber={game.activeNumber}
       remainingCounts={game.remainingCounts}
       onNumber={handleNumber}
     />
