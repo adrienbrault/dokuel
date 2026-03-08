@@ -10,3 +10,5 @@ export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   hard: "Hard",
   expert: "Expert",
 };
+
+export const EMPTY_CONFLICTS = new Set<number>();

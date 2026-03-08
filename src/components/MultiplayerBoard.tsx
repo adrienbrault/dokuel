@@ -3,6 +3,7 @@ import { useNumPadLayout } from "../hooks/useNumPadLayout.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
+import { EMPTY_CONFLICTS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import { solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel } from "../lib/types.ts";
@@ -13,8 +14,6 @@ import { GameResult } from "./GameResult.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
-
-const EMPTY_CONFLICTS = new Set<number>();
 
 export type MultiplayerBoardProps = {
   puzzle: string;

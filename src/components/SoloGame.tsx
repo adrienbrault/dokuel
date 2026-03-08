@@ -3,6 +3,7 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadLayout } from "../hooks/useNumPadLayout.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
+import { EMPTY_CONFLICTS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import {
   deleteGame,
@@ -21,8 +22,6 @@ import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
-
-const EMPTY_CONFLICTS = new Set<number>();
 
 function boardToValues(board: { value: number | null }[][]): string {
   return board
