@@ -3,14 +3,12 @@ import type { RoomState } from "../lib/types.ts";
 
 type LobbyProps = {
   roomState: RoomState;
-  playerId: string;
   onStart: () => void;
   onBack: () => void;
 };
 
-export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
-  const isHost = playerId === roomState.hostId;
-  const canStart = isHost && roomState.players.length === 2;
+export function Lobby({ roomState, onStart, onBack }: LobbyProps) {
+  const canStart = roomState.players.length === 2;
   const waiting = roomState.players.length < 2;
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -110,11 +108,10 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
       </div>
 
       <div className="flex flex-col gap-3 w-full">
-        {isHost && (
-          <button
-            type="button"
-            disabled={!canStart}
-            className={`
+        <button
+          type="button"
+          disabled={!canStart}
+          className={`
 							w-full py-4 rounded-xl text-lg font-semibold
 							transition-all duration-100 select-none touch-manipulation
 							active:scale-[0.98]
@@ -124,11 +121,10 @@ export function Lobby({ roomState, playerId, onStart, onBack }: LobbyProps) {
                   : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               }
 						`}
-            onClick={onStart}
-          >
-            Start Game
-          </button>
-        )}
+          onClick={onStart}
+        >
+          Start Game
+        </button>
         <button
           type="button"
           className="text-sm text-gray-400 dark:text-gray-500 mt-2 touch-manipulation"

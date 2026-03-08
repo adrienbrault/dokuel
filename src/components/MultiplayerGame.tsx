@@ -45,7 +45,6 @@ export function MultiplayerGame({
       <div className="flex min-h-dvh items-center justify-center bg-white dark:bg-gray-950 animate-screen-enter">
         <Lobby
           roomState={mp.roomState}
-          playerId={playerId}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />

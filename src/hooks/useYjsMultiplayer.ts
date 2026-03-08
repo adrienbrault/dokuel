@@ -186,12 +186,6 @@ export function useYjsMultiplayer({
     const room = roomRef.current;
     if (!room) return;
 
-    const roomMap = room.doc.getMap("room");
-    if (roomMap.get("hostId") !== playerId) {
-      setError("Only the host can start the game");
-      return;
-    }
-
     const players = getPlayers(room);
     if (players.length < 2) {
       setError("Need 2 players to start");
@@ -199,7 +193,7 @@ export function useYjsMultiplayer({
     }
 
     startGame(room, difficulty);
-  }, [playerId, difficulty]);
+  }, [difficulty]);
 
   const sendProgress = useCallback(
     (cellsRemaining: number, completionPercent: number) => {
