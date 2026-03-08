@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
+
 type LandingProps = {
   onSolo: () => void;
   onDaily: () => void;
@@ -6,6 +9,10 @@ type LandingProps = {
 };
 
 export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const completed = useMemo(() => isDailyCompleted(today), [today]);
+  const streak = useMemo(() => getDailyStreak(), []);
+
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-sm px-6">
       <div className="flex flex-col items-center gap-2">
@@ -36,7 +43,11 @@ export function Landing({ onSolo, onDaily, onCreate, onJoin }: LandingProps) {
             Solo
           </span>
           <ActionButton label="Start Solo" onClick={onSolo} primary />
-          <ActionButton label="Daily Challenge" onClick={onDaily} />
+          <DailyChallengeButton
+            onClick={onDaily}
+            completed={completed}
+            streak={streak.currentStreak}
+          />
         </div>
         <div className="flex flex-col gap-3">
           <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
@@ -65,6 +76,47 @@ function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
       <span className="text-accent shrink-0">{icon}</span>
       <span className="text-sm text-gray-500 dark:text-gray-400">{text}</span>
     </div>
+  );
+}
+
+function DailyChallengeButton({
+  onClick,
+  completed,
+  streak,
+}: {
+  onClick: () => void;
+  completed: boolean;
+  streak: number;
+}) {
+  return (
+    <button
+      type="button"
+      className="w-full py-4 rounded-xl text-lg font-semibold press-spring-soft select-none touch-manipulation bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 relative"
+      onClick={onClick}
+    >
+      <span className="flex items-center justify-center gap-2">
+        Daily Challenge
+        {completed && (
+          <svg
+            className="w-5 h-5 text-green-500"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-label="Completed"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+              clipRule="evenodd"
+            />
+          </svg>
+        )}
+      </span>
+      {streak > 0 && (
+        <span className="text-xs font-medium text-accent mt-0.5 block">
+          {streak}-day streak
+        </span>
+      )}
+    </button>
   );
 }
 

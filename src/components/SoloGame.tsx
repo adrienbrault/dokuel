@@ -41,6 +41,7 @@ type SoloGameProps = {
   title?: string | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
+  onComplete?: ((time: number) => void) | undefined;
 };
 
 export function SoloGame({
@@ -51,6 +52,7 @@ export function SoloGame({
   title,
   onBack,
   onRematch,
+  onComplete,
 }: SoloGameProps) {
   const saved = useMemo(() => (gameKey ? loadGame(gameKey) : null), [gameKey]);
 
@@ -94,9 +96,10 @@ export function SoloGame({
     if (game.status !== "completed") return;
     if (gameKey) deleteGame(gameKey);
     saveGameResult(difficulty, timerSecondsRef.current, true);
+    onComplete?.(timerSecondsRef.current);
     const id = setTimeout(() => setShowResult(true), 300);
     return () => clearTimeout(id);
-  }, [game.status, difficulty, gameKey]);
+  }, [game.status, difficulty, gameKey, onComplete]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell) {
