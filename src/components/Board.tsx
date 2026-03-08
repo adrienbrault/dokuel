@@ -72,7 +72,6 @@ export function Board({
           moved: false,
           shiftClick: true,
         };
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         return;
       }
 
@@ -83,7 +82,6 @@ export function Board({
         moved: false,
         shiftClick: false,
       };
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
     [onSetSelectedCells, getCellFromPoint, selectedCells, selectedCell],
   );
@@ -118,10 +116,9 @@ export function Board({
   }, []);
 
   const handlePointerUp = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
+    (_e: PointerEvent<HTMLDivElement>) => {
       const drag = dragRef.current;
       if (!drag) return;
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       // Shift+click or drag: suppress the subsequent Cell onClick
       if (drag.shiftClick || (drag.moved && drag.cells.size > 1)) {
         suppressClickRef.current = true;
@@ -136,7 +133,7 @@ export function Board({
 
   return (
     <div
-      className="grid grid-cols-9 border-2 border-board-border rounded-md overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25"
+      className="grid grid-cols-9 border-2 border-board-border rounded-md overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
       role="region"
       aria-label="Sudoku board"
       onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
