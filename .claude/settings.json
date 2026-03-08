@@ -11,11 +11,11 @@
 				]
 			},
 			{
-				"matcher": "Bash",
+				"matcher": "Edit|Write",
 				"hooks": [
 					{
 						"type": "command",
-						"command": "cd \"$CLAUDE_PROJECT_DIR\" && bun run typecheck 2>&1 | tail -20"
+						"command": "cd \"$CLAUDE_PROJECT_DIR\" && FILE=$(cat | jq -r '.tool_input.file_path // empty') && [ -n \"$FILE\" ] || exit 0 && case \"$FILE\" in *.test.ts|*.test.tsx) rtk bunx vitest run --reporter=dot \"$FILE\" 2>&1;; *.ts|*.tsx) TEST=\"${FILE%.ts}.test.ts\"; [ ! -f \"$TEST\" ] && TEST=\"${FILE%.tsx}.test.tsx\"; [ -f \"$TEST\" ] && rtk bunx vitest run --reporter=dot \"$TEST\" 2>&1 || true;; esac"
 					}
 				]
 			}
