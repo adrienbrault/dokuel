@@ -1,5 +1,4 @@
 import { formatTime } from "../lib/format.ts";
-import { getStatsForDifficulty } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
@@ -25,6 +24,8 @@ type GameResultProps = {
   isMultiplayer?: boolean | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
+  stats?: { gamesPlayed: number; bestTime: number; averageTime: number } | null;
+  isNewPB?: boolean | undefined;
 };
 
 export function GameResult({
@@ -35,13 +36,17 @@ export function GameResult({
   isMultiplayer,
   onRematch,
   onNewGame,
+  stats,
+  isNewPB,
 }: GameResultProps) {
-  const stats =
-    difficulty && timeSeconds != null
-      ? getStatsForDifficulty(difficulty)
-      : null;
-  const isNewBest =
-    stats != null && timeSeconds != null && timeSeconds < stats.bestTime;
+  const handleShare = () => {
+    const lines = ["Sudoku"];
+    if (difficulty) lines[0] += ` ${DIFFICULTY_LABELS[difficulty]}`;
+    lines.push(`Time: ${time}`);
+    if (isNewPB) lines.push("New Personal Best!");
+    lines.push("https://sudoku.brage.fr");
+    navigator.clipboard.writeText(lines.join("\n"));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-modal-backdrop">
@@ -79,17 +84,42 @@ export function GameResult({
           <span className="text-3xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100">
             {time}
           </span>
-          {isNewBest && (
-            <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-              New Best!
-            </span>
-          )}
-          {stats && !isNewBest && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Best: {formatTime(stats.bestTime)}
+          {isNewPB && !isMultiplayer && (
+            <span className="text-sm font-semibold text-accent">
+              New Personal Best!
             </span>
           )}
         </div>
+
+        {stats && !isMultiplayer && (
+          <div className="grid grid-cols-3 gap-4 w-full text-center">
+            <div>
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono tabular-nums">
+                {stats.gamesPlayed}
+              </div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">
+                Played
+              </div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono tabular-nums">
+                {formatTime(stats.bestTime)}
+              </div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">
+                Best
+              </div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono tabular-nums">
+                {formatTime(stats.averageTime)}
+              </div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">
+                Average
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3 w-full">
           {onRematch && (
             <button
@@ -107,6 +137,15 @@ export function GameResult({
           >
             New Game
           </button>
+          {!isMultiplayer && (
+            <button
+              type="button"
+              className="w-full py-2 rounded-xl text-sm font-medium text-gray-400 dark:text-gray-500 press-spring-soft select-none touch-manipulation"
+              onClick={handleShare}
+            >
+              Share Result
+            </button>
+          )}
         </div>
       </div>
     </div>
