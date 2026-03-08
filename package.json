@@ -20,6 +20,7 @@
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "roughjs": "^4.6.6",
     "sudoku": "^0.0.3",
     "y-webrtc": "^10.3.0",
     "yjs": "^13.6.29"
