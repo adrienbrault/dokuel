@@ -13,7 +13,7 @@ import {
   startGame,
   updateProgress,
 } from "../lib/p2p-room.ts";
-import type { Difficulty, Player, RoomState } from "../lib/types.ts";
+import type { Difficulty, RoomState } from "../lib/types.ts";
 
 type UseYjsMultiplayerOptions = {
   roomId: string;
@@ -32,7 +32,7 @@ type GameOverInfo = {
   winnerName: string;
 };
 
-function deriveRoomState(room: P2PRoom, playerId: string): RoomState | null {
+function deriveRoomState(room: P2PRoom): RoomState | null {
   const roomMap = room.doc.getMap("room");
   const status = roomMap.get("status") as string | undefined;
   if (!status) return null;
@@ -88,7 +88,7 @@ export function useYjsMultiplayer({
     joinRoom(room, playerId, playerName);
 
     const updateState = () => {
-      const state = deriveRoomState(room, playerId);
+      const state = deriveRoomState(room);
       setRoomState(state);
 
       if (state) {
