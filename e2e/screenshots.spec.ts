@@ -430,49 +430,18 @@ test("multiplayer - progress bars hidden", async ({ page }, testInfo) => {
 	});
 });
 
-test("multiplayer - settings with opponent bar toggle", async ({
-	page,
-}, testInfo) => {
+test("solo game - assist level popover", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.waitForLoadState("networkidle");
 	await page.getByText("Start Solo").click();
 	await page.getByText("Easy").click();
 	await page.waitForTimeout(800);
 
-	// Open settings popover
-	await page.getByLabel("Settings").click();
+	// Open assist level setting popover
+	await page.getByLabel("Assist level").click();
 	await page.waitForTimeout(200);
 
-	// Inject the opponent bar toggle into the settings popover
-	await page.evaluate(() => {
-		const popover = document.querySelector(".absolute.right-0.top-full");
-		if (!popover) return;
-
-		const section = document.createElement("div");
-		section.className = "mt-3 pt-3 border-t border-border-default";
-		section.innerHTML = `
-			<label class="flex items-center gap-3 cursor-pointer select-none touch-manipulation">
-				<span class="text-sm text-text-secondary">Opponent bar</span>
-				<button type="button" role="switch" aria-checked="true" aria-label="Opponent bar"
-					class="relative w-11 h-6 rounded-full transition-colors duration-200 bg-accent">
-					<span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 translate-x-5"></span>
-				</button>
-			</label>
-		`;
-		// Insert after numpad position section
-		const numpadSection = popover.querySelector("p + div");
-		if (numpadSection) {
-			numpadSection.after(section);
-		} else {
-			popover.appendChild(section);
-		}
-	});
-
-	await page.waitForTimeout(200);
 	await page.screenshot({
-		path: screenshotPath(
-			"multiplayer-settings-toggle",
-			testInfo.project.name,
-		),
+		path: screenshotPath("solo-assist-popover", testInfo.project.name),
 	});
 });

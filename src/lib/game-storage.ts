@@ -10,6 +10,18 @@ export type SavedGame = {
   assistLevel: AssistLevel;
 };
 
+export function boardToValues(board: { value: number | null }[][]): string {
+  return board
+    .flatMap((row) =>
+      row.map((c) => (c.value === null ? "." : String(c.value))),
+    )
+    .join("");
+}
+
+export function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
+  return board.flatMap((row) => row.map((c) => Array.from(c.notes)));
+}
+
 const STORAGE_PREFIX = "sudoku_save_";
 
 export function saveGame(key: string, data: SavedGame): void {
