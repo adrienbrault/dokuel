@@ -13,7 +13,7 @@
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
     "diff-coverage": "bun scripts/diff-coverage.ts",
-    "ci": "bun run lint && bun run typecheck && bun run test",
+    "ci": "bash scripts/parallel-ci.sh",
     "e2e": "bunx playwright test",
     "screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
   },
