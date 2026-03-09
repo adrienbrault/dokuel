@@ -53,10 +53,7 @@ function fromCellKey(key: number): Position {
   return { row: Math.floor(key / GRID_SIZE), col: key % GRID_SIZE };
 }
 
-function handleBatchNoteToggle(
-  state: State,
-  value: number,
-): State {
+function handleBatchNoteToggle(state: State, value: number): State {
   const board = cloneBoard(state.board);
   const targets: Position[] = [];
   for (const key of state.selectedCells) {
@@ -68,9 +65,7 @@ function handleBatchNoteToggle(
   }
   if (targets.length === 0) return state;
 
-  const allHave = targets.every((p) =>
-    board[p.row]![p.col]!.notes.has(value),
-  );
+  const allHave = targets.every((p) => board[p.row]![p.col]!.notes.has(value));
   const added: Position[] = [];
   const removed: Position[] = [];
   for (const pos of targets) {
