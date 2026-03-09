@@ -1,0 +1,41 @@
+name: Screenshots
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    environment:
+      name: screenshots
+      url: ${{ steps.deploy.outputs.deployment-url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run screenshot tests
+        run: bunx playwright test e2e/screenshots.spec.ts
+
+      - name: Generate HTML gallery
+        run: bun scripts/generate-screenshot-gallery.ts
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy e2e/screenshots-site --project-name=dokuel-screenshots --branch="${{ github.head_ref || github.ref_name }}"
+
