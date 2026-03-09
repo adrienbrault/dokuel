@@ -1,3 +1,4 @@
+import { BOX_SIZE, GRID_SIZE } from "./constants.ts";
 import type { HintExplanation } from "./hint-engine.ts";
 import { getBoxOrigin, getCandidates } from "./sudoku.ts";
 import type { Board, Position } from "./types.ts";
@@ -18,25 +19,25 @@ function findEliminatorsForDigit(
 ): Position[] {
   const eliminators: Position[] = [];
   if (excludeGroupType !== "row" || excludeGroupIndex !== row) {
-    for (let c = 0; c < 9; c++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
       if (c !== col && board[row]![c]!.value === digit) {
         eliminators.push({ row, col: c });
       }
     }
   }
   if (excludeGroupType !== "col" || excludeGroupIndex !== col) {
-    for (let r = 0; r < 9; r++) {
+    for (let r = 0; r < GRID_SIZE; r++) {
       if (r !== row && board[r]![col]!.value === digit) {
         eliminators.push({ row: r, col });
       }
     }
   }
-  const boxIndex = getBoxOrigin(row) + Math.floor(col / 3);
+  const boxIndex = getBoxOrigin(row) + Math.floor(col / BOX_SIZE);
   if (excludeGroupType !== "box" || excludeGroupIndex !== boxIndex) {
     const boxRow = getBoxOrigin(row);
     const boxCol = getBoxOrigin(col);
-    for (let r = boxRow; r < boxRow + 3; r++) {
-      for (let c = boxCol; c < boxCol + 3; c++) {
+    for (let r = boxRow; r < boxRow + BOX_SIZE; r++) {
+      for (let c = boxCol; c < boxCol + BOX_SIZE; c++) {
         if ((r !== row || c !== col) && board[r]![c]!.value === digit) {
           eliminators.push({ row: r, col: c });
         }
@@ -55,7 +56,7 @@ function findHiddenSingleInGroup(
     [];
 
   if (type === "row") {
-    for (let c = 0; c < 9; c++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
       if (board[index]![c]!.value === null) {
         emptyCells.push({
           row: index,
@@ -65,7 +66,7 @@ function findHiddenSingleInGroup(
       }
     }
   } else if (type === "col") {
-    for (let r = 0; r < 9; r++) {
+    for (let r = 0; r < GRID_SIZE; r++) {
       if (board[r]![index]!.value === null) {
         emptyCells.push({
           row: r,
@@ -76,9 +77,9 @@ function findHiddenSingleInGroup(
     }
   } else {
     const boxRow = getBoxOrigin(index);
-    const boxCol = (index % 3) * 3;
-    for (let r = boxRow; r < boxRow + 3; r++) {
-      for (let c = boxCol; c < boxCol + 3; c++) {
+    const boxCol = (index % BOX_SIZE) * BOX_SIZE;
+    for (let r = boxRow; r < boxRow + BOX_SIZE; r++) {
+      for (let c = boxCol; c < boxCol + BOX_SIZE; c++) {
         if (board[r]![c]!.value === null) {
           emptyCells.push({
             row: r,
@@ -90,7 +91,7 @@ function findHiddenSingleInGroup(
     }
   }
 
-  for (let d = 1; d <= 9; d++) {
+  for (let d = 1; d <= GRID_SIZE; d++) {
     const possibleCells = emptyCells.filter((c) => c.candidates.has(d));
     if (possibleCells.length === 1) {
       const cell = possibleCells[0]!;
@@ -99,22 +100,22 @@ function findHiddenSingleInGroup(
       const name = groupName(type, index);
       const related: Position[] = [];
       if (type === "row") {
-        for (let c = 0; c < 9; c++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           if (c !== cell.col && board[index]![c]!.value !== null) {
             related.push({ row: index, col: c });
           }
         }
       } else if (type === "col") {
-        for (let r = 0; r < 9; r++) {
+        for (let r = 0; r < GRID_SIZE; r++) {
           if (r !== cell.row && board[r]![index]!.value !== null) {
             related.push({ row: r, col: index });
           }
         }
       } else {
         const boxRow = getBoxOrigin(index);
-        const boxCol = (index % 3) * 3;
-        for (let r = boxRow; r < boxRow + 3; r++) {
-          for (let c = boxCol; c < boxCol + 3; c++) {
+        const boxCol = (index % BOX_SIZE) * BOX_SIZE;
+        for (let r = boxRow; r < boxRow + BOX_SIZE; r++) {
+          for (let c = boxCol; c < boxCol + BOX_SIZE; c++) {
             if (
               (r !== cell.row || c !== cell.col) &&
               board[r]![c]!.value !== null
@@ -155,15 +156,15 @@ function findHiddenSingleInGroup(
 }
 
 export function findHiddenSingle(board: Board): HintExplanation | null {
-  for (let row = 0; row < 9; row++) {
+  for (let row = 0; row < GRID_SIZE; row++) {
     const result = findHiddenSingleInGroup(board, "row", row);
     if (result) return result;
   }
-  for (let col = 0; col < 9; col++) {
+  for (let col = 0; col < GRID_SIZE; col++) {
     const result = findHiddenSingleInGroup(board, "col", col);
     if (result) return result;
   }
-  for (let box = 0; box < 9; box++) {
+  for (let box = 0; box < GRID_SIZE; box++) {
     const result = findHiddenSingleInGroup(board, "box", box);
     if (result) return result;
   }

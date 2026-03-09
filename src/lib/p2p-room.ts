@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { BOARD_CELLS } from "./constants.ts";
 import { countFilledCells, generatePuzzle, solvePuzzle } from "./sudoku.ts";
 import type { AssistLevel, Difficulty, Player } from "./types.ts";
 
@@ -46,7 +47,7 @@ export function joinRoom(
     const playerMap = new Y.Map<unknown>();
     playerMap.set("name", playerName);
     playerMap.set("color", PLAYER_COLORS[joinOrder % PLAYER_COLORS.length]);
-    playerMap.set("cellsRemaining", 81);
+    playerMap.set("cellsRemaining", BOARD_CELLS);
     playerMap.set("completionPercent", 0);
     playerMap.set("joinOrder", joinOrder);
     players.set(playerId, playerMap);
@@ -82,7 +83,7 @@ export function startGame(room: P2PRoom, difficulty: Difficulty): void {
     const players = room.doc.getMap("players");
     for (const [, playerMap] of players) {
       const p = playerMap as Y.Map<unknown>;
-      p.set("cellsRemaining", 81 - clueCount);
+      p.set("cellsRemaining", BOARD_CELLS - clueCount);
       p.set("completionPercent", 0);
     }
   });

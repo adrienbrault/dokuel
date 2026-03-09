@@ -1,5 +1,9 @@
 import type { Difficulty } from "./types.ts";
 
+export const GRID_SIZE = 9;
+export const BOX_SIZE = 3;
+export const BOARD_CELLS = 81;
+
 export const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 export const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard", "expert"];

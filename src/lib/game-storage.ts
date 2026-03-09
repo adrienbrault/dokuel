@@ -1,3 +1,4 @@
+import { BOARD_CELLS } from "./constants.ts";
 import { countFilledCells } from "./sudoku.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
@@ -39,11 +40,11 @@ export function loadGame(key: string): SavedGame | null {
     const data = JSON.parse(raw);
     if (
       typeof data.puzzle !== "string" ||
-      data.puzzle.length !== 81 ||
+      data.puzzle.length !== BOARD_CELLS ||
       typeof data.values !== "string" ||
-      data.values.length !== 81 ||
+      data.values.length !== BOARD_CELLS ||
       !Array.isArray(data.notes) ||
-      data.notes.length !== 81 ||
+      data.notes.length !== BOARD_CELLS ||
       typeof data.timer !== "number"
     ) {
       return null;

@@ -1,3 +1,4 @@
+import { BOX_SIZE, GRID_SIZE } from "./constants.ts";
 import { findHiddenSingle } from "./hint-hidden-single.ts";
 import { getBoxOrigin, getCandidates } from "./sudoku.ts";
 import type { Board, Position } from "./types.ts";
@@ -25,7 +26,7 @@ function getEliminatingCells(
   const addIfNew = (r: number, c: number) => {
     const v = board[r]![c]!.value;
     if (v !== null) {
-      const key = r * 9 + c;
+      const key = r * GRID_SIZE + c;
       if (!seen.has(key)) {
         seen.add(key);
         related.push({ row: r, col: c });
@@ -33,16 +34,16 @@ function getEliminatingCells(
     }
   };
 
-  for (let c = 0; c < 9; c++) {
+  for (let c = 0; c < GRID_SIZE; c++) {
     if (c !== col) addIfNew(row, c);
   }
-  for (let r = 0; r < 9; r++) {
+  for (let r = 0; r < GRID_SIZE; r++) {
     if (r !== row) addIfNew(r, col);
   }
   const bRow = getBoxOrigin(row);
   const bCol = getBoxOrigin(col);
-  for (let r = bRow; r < bRow + 3; r++) {
-    for (let c = bCol; c < bCol + 3; c++) {
+  for (let r = bRow; r < bRow + BOX_SIZE; r++) {
+    for (let c = bCol; c < bCol + BOX_SIZE; c++) {
       if (r !== row || c !== col) addIfNew(r, c);
     }
   }
@@ -54,8 +55,8 @@ function getEliminatingCells(
  * Try to find a naked single: a cell where only one candidate remains.
  */
 function findNakedSingle(board: Board): HintExplanation | null {
-  for (let row = 0; row < 9; row++) {
-    for (let col = 0; col < 9; col++) {
+  for (let row = 0; row < GRID_SIZE; row++) {
+    for (let col = 0; col < GRID_SIZE; col++) {
       if (board[row]![col]!.value !== null) continue;
       const candidates = getCandidates(board, row, col);
       if (candidates.size === 1) {
@@ -130,8 +131,8 @@ export function findHint(
     targetRow = selectedCell.row;
     targetCol = selectedCell.col;
   } else {
-    for (let r = 0; r < 9 && targetRow === -1; r++) {
-      for (let c = 0; c < 9; c++) {
+    for (let r = 0; r < GRID_SIZE && targetRow === -1; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
         if (board[r]![c]!.value === null) {
           targetRow = r;
           targetCol = c;
@@ -142,7 +143,7 @@ export function findHint(
   }
   if (targetRow === -1) return null;
 
-  const value = Number(solution[targetRow * 9 + targetCol]);
+  const value = Number(solution[targetRow * GRID_SIZE + targetCol]);
   const candidates = getCandidates(board, targetRow, targetCol);
 
   return {

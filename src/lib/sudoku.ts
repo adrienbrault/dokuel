@@ -1,4 +1,5 @@
 import * as sudokuLib from "sudoku";
+import { BOARD_CELLS, BOX_SIZE, GRID_SIZE } from "./constants.ts";
 import type { Board, Cell, Difficulty } from "./types.ts";
 
 export function countFilledCells(boardString: string): number {
@@ -25,7 +26,7 @@ export function generatePuzzle(difficulty: Difficulty): string {
 
   const givenIndices: number[] = [];
   const emptyIndices: number[] = [];
-  for (let i = 0; i < 81; i++) {
+  for (let i = 0; i < BOARD_CELLS; i++) {
     if (raw[i] !== null) {
       givenIndices.push(i);
     } else {
@@ -61,10 +62,10 @@ export function solvePuzzle(puzzle: string): string {
 
 export function parsePuzzle(puzzle: string): Board {
   const board: Board = [];
-  for (let row = 0; row < 9; row++) {
+  for (let row = 0; row < GRID_SIZE; row++) {
     const cells: Cell[] = [];
-    for (let col = 0; col < 9; col++) {
-      const char = puzzle[row * 9 + col];
+    for (let col = 0; col < GRID_SIZE; col++) {
+      const char = puzzle[row * GRID_SIZE + col];
       const isEmpty = char === ".";
       cells.push({
         value: isEmpty ? null : Number(char),
@@ -79,7 +80,7 @@ export function parsePuzzle(puzzle: string): Board {
 
 /** Encode row,col as a single number for use as Set key. */
 export function cellKey(row: number, col: number): number {
-  return row * 9 + col;
+  return row * GRID_SIZE + col;
 }
 
 /**
@@ -89,21 +90,21 @@ export function cellKey(row: number, col: number): number {
 export function getConflicts(board: Board): Set<number> {
   const conflicts = new Set<number>();
 
-  for (let row = 0; row < 9; row++) {
-    for (let col = 0; col < 9; col++) {
+  for (let row = 0; row < GRID_SIZE; row++) {
+    for (let col = 0; col < GRID_SIZE; col++) {
       const value = board[row]![col]!.value;
       if (value === null) continue;
 
       const key = cellKey(row, col);
 
-      for (let c = 0; c < 9; c++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
         if (c !== col && board[row]![c]!.value === value) {
           conflicts.add(key);
           conflicts.add(cellKey(row, c));
         }
       }
 
-      for (let r = 0; r < 9; r++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
         if (r !== row && board[r]![col]!.value === value) {
           conflicts.add(key);
           conflicts.add(cellKey(r, col));
@@ -112,8 +113,8 @@ export function getConflicts(board: Board): Set<number> {
 
       const boxRow = getBoxOrigin(row);
       const boxCol = getBoxOrigin(col);
-      for (let r = boxRow; r < boxRow + 3; r++) {
-        for (let c = boxCol; c < boxCol + 3; c++) {
+      for (let r = boxRow; r < boxRow + BOX_SIZE; r++) {
+        for (let c = boxCol; c < boxCol + BOX_SIZE; c++) {
           if ((r !== row || c !== col) && board[r]![c]!.value === value) {
             conflicts.add(key);
             conflicts.add(cellKey(r, c));
@@ -133,11 +134,11 @@ export function getConflicts(board: Board): Set<number> {
  */
 export function getErrors(board: Board, solution: string): Set<number> {
   const errors = new Set<number>();
-  for (let row = 0; row < 9; row++) {
-    for (let col = 0; col < 9; col++) {
+  for (let row = 0; row < GRID_SIZE; row++) {
+    for (let col = 0; col < GRID_SIZE; col++) {
       const cell = board[row]![col]!;
       if (cell.isGiven || cell.value === null) continue;
-      const solutionValue = Number(solution[row * 9 + col]);
+      const solutionValue = Number(solution[row * GRID_SIZE + col]);
       if (cell.value !== solutionValue) {
         errors.add(cellKey(row, col));
       }
@@ -162,25 +163,25 @@ export function getCandidates(
 ): Set<number> {
   const used = new Set<number>();
 
-  for (let c = 0; c < 9; c++) {
+  for (let c = 0; c < GRID_SIZE; c++) {
     const v = board[row]![c]!.value;
     if (v !== null) used.add(v);
   }
-  for (let r = 0; r < 9; r++) {
+  for (let r = 0; r < GRID_SIZE; r++) {
     const v = board[r]![col]!.value;
     if (v !== null) used.add(v);
   }
   const boxRow = getBoxOrigin(row);
   const boxCol = getBoxOrigin(col);
-  for (let r = boxRow; r < boxRow + 3; r++) {
-    for (let c = boxCol; c < boxCol + 3; c++) {
+  for (let r = boxRow; r < boxRow + BOX_SIZE; r++) {
+    for (let c = boxCol; c < boxCol + BOX_SIZE; c++) {
       const v = board[r]![c]!.value;
       if (v !== null) used.add(v);
     }
   }
 
   const candidates = new Set<number>();
-  for (let d = 1; d <= 9; d++) {
+  for (let d = 1; d <= GRID_SIZE; d++) {
     if (!used.has(d)) candidates.add(d);
   }
   return candidates;
