@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./e2e",
   outputDir: "./e2e/results",
   snapshotPathTemplate: "{testDir}/screenshots/{arg}{ext}",
+  fullyParallel: true,
   use: {
     baseURL: "http://localhost:5173",
   },
