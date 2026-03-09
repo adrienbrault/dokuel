@@ -75,7 +75,7 @@ export function FriendsList({
           onKeyDown={(e) => e.key === "Enter" && handleAddFriend()}
           placeholder="Enter friend code"
           className="flex-1 px-3 py-2 text-sm rounded-lg bg-bg-inset border border-border-default text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent/30"
-          maxLength={12}
+          maxLength={24}
           aria-label="Friend code input"
         />
         <button

@@ -84,7 +84,7 @@ test("landing page", async ({ page }, testInfo) => {
 
 test("landing page - with friends", async ({ page }, testInfo) => {
   await setLocalStorage(page, [
-    ["sudoku_player_id", "me123abc"],
+    ["sudoku_player_id", "bold-hawk-42"],
     [
       "sudoku_friends",
       JSON.stringify([
