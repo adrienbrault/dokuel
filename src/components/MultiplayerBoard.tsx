@@ -66,11 +66,15 @@ export function MultiplayerBoard({
   const prevCellsRef = useRef(game.cellsRemaining);
   const [revealed, setRevealed] = useState(false);
 
+  const totalToFill = useMemo(
+    () => 81 - countFilledCells(puzzle),
+    [puzzle],
+  );
+
   const myPercent = useMemo(() => {
-    const total = 81 - countFilledCells(puzzle);
-    const filled = total - game.cellsRemaining;
-    return total > 0 ? Math.round((filled / total) * 100) : 0;
-  }, [game.cellsRemaining, puzzle]);
+    const filled = totalToFill - game.cellsRemaining;
+    return totalToFill > 0 ? Math.round((filled / totalToFill) * 100) : 0;
+  }, [game.cellsRemaining, totalToFill]);
 
   useEffect(() => {
     const id = setTimeout(() => setRevealed(true), 600);
@@ -81,12 +85,9 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (prevCellsRef.current !== game.cellsRemaining) {
       prevCellsRef.current = game.cellsRemaining;
-      const total = 81 - countFilledCells(puzzle);
-      const filled = total - game.cellsRemaining;
-      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-      onProgress(game.cellsRemaining, percent);
+      onProgress(game.cellsRemaining, myPercent);
     }
-  }, [game.cellsRemaining, onProgress, puzzle]);
+  }, [game.cellsRemaining, onProgress, myPercent]);
 
   // Check completion
   useEffect(() => {
