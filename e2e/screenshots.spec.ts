@@ -22,7 +22,7 @@ async function setLocalStorage(page: Page, entries: [string, string][]) {
 
 /** Wait for the landing page to be interactive. */
 async function waitForLanding(page: Page) {
-  await page.getByText("Start Solo").waitFor();
+  await page.getByText("Solo").first().waitFor();
 }
 
 /** Wait for the Sudoku board to be rendered. */
