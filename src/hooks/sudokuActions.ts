@@ -40,83 +40,77 @@ function clearPeerNotes(
   return clearedNotes;
 }
 
-export function handlePlaceNumber(
+function handleBatchToggleNote(state: State, value: number): State {
+  const board = cloneBoard(state.board);
+  const targets: Position[] = [];
+  for (const key of state.selectedCells) {
+    const r = Math.floor(key / 9);
+    const c = key % 9;
+    const target = board[r]![c]!;
+    if (!target.isGiven && target.value === null) {
+      targets.push({ row: r, col: c });
+    }
+  }
+  if (targets.length === 0) return state;
+
+  // If all targets already have the note, remove it; otherwise add it
+  const allHave = targets.every((p) => board[p.row]![p.col]!.notes.has(value));
+  const added: Position[] = [];
+  const removed: Position[] = [];
+  for (const pos of targets) {
+    const notes = board[pos.row]![pos.col]!.notes;
+    if (allHave) {
+      notes.delete(value);
+      removed.push(pos);
+    } else if (!notes.has(value)) {
+      notes.add(value);
+      added.push(pos);
+    }
+  }
+  if (added.length === 0 && removed.length === 0) return state;
+  const moveAction: MoveAction = {
+    type: "batchToggleNote",
+    note: value,
+    added,
+    removed,
+  };
+  return {
+    ...state,
+    board,
+    history: [...state.history, moveAction],
+    activeHint: null,
+  };
+}
+
+function handleSingleToggleNote(state: State, value: number): State {
+  const { row, col } = state.selectedCell!;
+  const board = cloneBoard(state.board);
+  const notes = board[row]![col]!.notes;
+  const moveAction: MoveAction = {
+    type: "toggleNote",
+    position: { row, col },
+    note: value,
+  };
+  if (notes.has(value)) {
+    notes.delete(value);
+  } else {
+    notes.add(value);
+  }
+  return {
+    ...state,
+    board,
+    history: [...state.history, moveAction],
+    activeHint: null,
+  };
+}
+
+function handlePlaceValue(
   state: State,
   value: number,
-  autoEliminateNotes = true,
+  autoEliminateNotes: boolean,
 ): State {
-  if (!state.selectedCell || state.status === "completed") return state;
-  const { row, col } = state.selectedCell;
+  const { row, col } = state.selectedCell!;
   const cell = state.board[row]![col]!;
-
-  // Multi-cell batch note toggle
-  if (state.notesMode && state.selectedCells.size > 1) {
-    const board = cloneBoard(state.board);
-    const targets: Position[] = [];
-    for (const key of state.selectedCells) {
-      const r = Math.floor(key / 9);
-      const c = key % 9;
-      const target = board[r]![c]!;
-      if (!target.isGiven && target.value === null) {
-        targets.push({ row: r, col: c });
-      }
-    }
-    if (targets.length === 0) return state;
-
-    // If all targets have the note, remove it; otherwise add it
-    const allHave = targets.every((p) =>
-      board[p.row]![p.col]!.notes.has(value),
-    );
-    const added: Position[] = [];
-    const removed: Position[] = [];
-    for (const pos of targets) {
-      const notes = board[pos.row]![pos.col]!.notes;
-      if (allHave) {
-        notes.delete(value);
-        removed.push(pos);
-      } else if (!notes.has(value)) {
-        notes.add(value);
-        added.push(pos);
-      }
-    }
-    if (added.length === 0 && removed.length === 0) return state;
-    const moveAction: MoveAction = {
-      type: "batchToggleNote",
-      note: value,
-      added,
-      removed,
-    };
-    return {
-      ...state,
-      board,
-      history: [...state.history, moveAction],
-      activeHint: null,
-    };
-  }
-
-  if (cell.isGiven) return state;
-
-  if (state.notesMode) {
-    const board = cloneBoard(state.board);
-    const notes = board[row]![col]!.notes;
-    const moveAction: MoveAction = {
-      type: "toggleNote",
-      position: { row, col },
-      note: value,
-    };
-    if (notes.has(value)) {
-      notes.delete(value);
-    } else {
-      notes.add(value);
-    }
-    return {
-      ...state,
-      board,
-      history: [...state.history, moveAction],
-      activeHint: null,
-    };
-  }
-
   const board = cloneBoard(state.board);
   board[row]![col]!.value = value;
   board[row]![col]!.notes = new Set();
@@ -133,7 +127,6 @@ export function handlePlaceNumber(
   };
   const conflicts = getConflicts(board);
   const complete = isBoardComplete(board, conflicts);
-
   return {
     ...state,
     board,
@@ -141,6 +134,20 @@ export function handlePlaceNumber(
     history: [...state.history, moveAction],
     activeHint: null,
   };
+}
+
+export function handlePlaceNumber(
+  state: State,
+  value: number,
+  autoEliminateNotes = true,
+): State {
+  if (!state.selectedCell || state.status === "completed") return state;
+  if (state.notesMode && state.selectedCells.size > 1)
+    return handleBatchToggleNote(state, value);
+  const { row, col } = state.selectedCell;
+  if (state.board[row]![col]!.isGiven) return state;
+  if (state.notesMode) return handleSingleToggleNote(state, value);
+  return handlePlaceValue(state, value, autoEliminateNotes);
 }
 
 export function handleErase(state: State): State {
