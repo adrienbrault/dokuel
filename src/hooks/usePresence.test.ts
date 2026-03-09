@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, it, jest, mock } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
 import { Doc } from "yjs";
 import type { Friend } from "../lib/friends.ts";
-import {
-  getPendingInvites,
-  storePendingInvite,
-} from "../lib/friends.ts";
+import { getPendingInvites, storePendingInvite } from "../lib/friends.ts";
 import { usePresence } from "./usePresence.ts";
 
 // Shared state for mock — declared before jest.mock so hoisting works
@@ -385,9 +382,10 @@ describe("usePresence", () => {
       result.current.broadcastGame("my-room", "medium");
     });
 
-    const game = mockState
-      .capturedDoc!.getMap("games")
-      .get("me123") as Record<string, unknown>;
+    const game = mockState.capturedDoc!.getMap("games").get("me123") as Record<
+      string,
+      unknown
+    >;
     expect(game).toBeDefined();
     expect(game.roomId).toBe("my-room");
     expect(game.difficulty).toBe("medium");
@@ -414,8 +412,6 @@ describe("usePresence", () => {
       result.current.clearGame();
     });
 
-    expect(
-      mockState.capturedDoc!.getMap("games").get("me123"),
-    ).toBeUndefined();
+    expect(mockState.capturedDoc!.getMap("games").get("me123")).toBeUndefined();
   });
 });

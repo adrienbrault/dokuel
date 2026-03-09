@@ -61,10 +61,10 @@ export function usePresence({
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(
     () => EMPTY_SET,
   );
-  const [pendingInvites, setPendingInvites] =
-    useState<Invite[]>(EMPTY_INVITES);
-  const [friendActiveGames, setFriendActiveGames] =
-    useState<Map<string, ActiveGame>>(() => EMPTY_GAMES);
+  const [pendingInvites, setPendingInvites] = useState<Invite[]>(EMPTY_INVITES);
+  const [friendActiveGames, setFriendActiveGames] = useState<
+    Map<string, ActiveGame>
+  >(() => EMPTY_GAMES);
 
   const docRef = useRef<Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);

@@ -271,9 +271,7 @@ describe("FriendsList", () => {
 
     expect(screen.getByText("Bold Lion")).toBeInTheDocument();
     expect(screen.getByText("has an open game")).toBeInTheDocument();
-    expect(
-      screen.getByLabelText("Join Bold Lion's game"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Join Bold Lion's game")).toBeInTheDocument();
   });
 
   it("calls onJoinGame when join active game button clicked", () => {
