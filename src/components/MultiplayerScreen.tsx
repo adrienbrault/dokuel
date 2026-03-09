@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import type { Friend } from "../lib/friends.ts";
 import {
   getPlayerId,
   getPlayerName,
@@ -12,6 +13,8 @@ export function MultiplayerScreen({
   difficulty,
   onBack,
   onAddFriend,
+  friends,
+  onInviteFriendToRoom,
 }: {
   roomId: string;
   difficulty: Difficulty;
@@ -19,6 +22,8 @@ export function MultiplayerScreen({
   onAddFriend?:
     | ((opponentId: string, opponentName: string) => void)
     | undefined;
+  friends?: Friend[] | undefined;
+  onInviteFriendToRoom?: ((friendId: string) => void) | undefined;
 }) {
   const playerId = useMemo(getPlayerId, []);
   const [playerName, setName] = useState(getPlayerName);
@@ -37,6 +42,8 @@ export function MultiplayerScreen({
       difficulty={difficulty}
       onBack={onBack}
       onAddFriend={onAddFriend}
+      friends={friends}
+      onInviteFriendToRoom={onInviteFriendToRoom}
     />
   );
 }

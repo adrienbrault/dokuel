@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { Friend } from "../lib/friends.ts";
 import type { AssistLevel, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 
@@ -9,6 +10,8 @@ type LobbyProps = {
   onAssistLevelChange?: (level: AssistLevel) => void;
   onStart: () => void;
   onBack: () => void;
+  friends?: Friend[] | undefined;
+  onInviteFriend?: ((friendId: string) => void) | undefined;
 };
 
 export function Lobby({
@@ -18,6 +21,8 @@ export function Lobby({
   onAssistLevelChange,
   onStart,
   onBack,
+  friends,
+  onInviteFriend,
 }: LobbyProps) {
   const canStart = roomState.players.length === 2;
   const waiting = roomState.players.length < 2;
@@ -170,6 +175,30 @@ export function Lobby({
           </div>
         )}
       </div>
+
+      {waiting && friends && friends.length > 0 && onInviteFriend && (
+        <div className="flex flex-col gap-2 w-full">
+          <h3 className="label tracking-wide">Invite a Friend</h3>
+          {friends.map((friend) => (
+            <div
+              key={friend.playerId}
+              className="flex items-center justify-between px-3 py-2 rounded-lg bg-bg-raised"
+            >
+              <span className="text-sm text-text-primary font-medium truncate">
+                {friend.name}
+              </span>
+              <button
+                type="button"
+                className="btn btn-md btn-primary"
+                onClick={() => onInviteFriend(friend.playerId)}
+                aria-label={`Invite ${friend.name}`}
+              >
+                Invite
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {onAssistLevelChange && (
         <AssistLevelPicker

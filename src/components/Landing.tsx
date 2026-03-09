@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import type { Invite } from "../hooks/usePresence.ts";
+import type { ActiveGame, Invite } from "../hooks/usePresence.ts";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime, getTodayISO } from "../lib/format.ts";
@@ -35,10 +35,12 @@ type LandingProps = {
   friends?: Friend[];
   onlineFriendIds?: Set<string>;
   pendingInvites?: Invite[];
+  friendActiveGames?: Map<string, ActiveGame>;
   onAddFriend?: (code: string) => void;
   onRemoveFriend?: (playerId: string) => void;
   onInviteFriend?: (friendId: string) => void;
   onJoinInvite?: (invite: Invite) => void;
+  onJoinGame?: (game: ActiveGame) => void;
 };
 
 export function Landing({
@@ -57,6 +59,8 @@ export function Landing({
   onRemoveFriend,
   onInviteFriend,
   onJoinInvite,
+  friendActiveGames,
+  onJoinGame,
 }: LandingProps) {
   const today = useMemo(() => getTodayISO(), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
@@ -144,19 +148,23 @@ export function Landing({
           friends &&
           onlineFriendIds &&
           pendingInvites &&
+          friendActiveGames &&
           onAddFriend &&
           onRemoveFriend &&
           onInviteFriend &&
-          onJoinInvite && (
+          onJoinInvite &&
+          onJoinGame && (
             <FriendsList
               playerId={playerId}
               friends={friends}
               onlineFriendIds={onlineFriendIds}
               pendingInvites={pendingInvites}
+              friendActiveGames={friendActiveGames}
               onAddFriend={onAddFriend}
               onRemoveFriend={onRemoveFriend}
               onInviteFriend={onInviteFriend}
               onJoinInvite={onJoinInvite}
+              onJoinGame={onJoinGame}
             />
           )}
       </div>

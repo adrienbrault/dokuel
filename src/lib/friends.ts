@@ -51,3 +51,56 @@ export function removeFriend(playerId: string): Friend[] {
 export function isFriend(playerId: string): boolean {
   return getFriends().some((f) => f.playerId === playerId);
 }
+
+// --- Pending outgoing invites (localStorage persistence) ---
+
+export type PendingInvite = {
+  targetPlayerId: string;
+  roomId: string;
+  fromId: string;
+  fromName: string;
+  difficulty: string;
+  timestamp: number;
+};
+
+const PENDING_INVITES_KEY = "sudoku_pending_invites";
+
+export function getPendingInvites(): PendingInvite[] {
+  try {
+    const raw = localStorage.getItem(PENDING_INVITES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePendingInvites(invites: PendingInvite[]): void {
+  try {
+    localStorage.setItem(PENDING_INVITES_KEY, JSON.stringify(invites));
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
+export function storePendingInvite(invite: PendingInvite): void {
+  const invites = getPendingInvites().filter(
+    (i) => i.targetPlayerId !== invite.targetPlayerId,
+  );
+  invites.push(invite);
+  savePendingInvites(invites);
+}
+
+export function clearPendingInvite(targetPlayerId: string): void {
+  const invites = getPendingInvites().filter(
+    (i) => i.targetPlayerId !== targetPlayerId,
+  );
+  savePendingInvites(invites);
+}
+
+export function clearStalePendingInvites(maxAgeMs: number): void {
+  const now = Date.now();
+  const invites = getPendingInvites().filter(
+    (i) => now - i.timestamp < maxAgeMs,
+  );
+  savePendingInvites(invites);
+}

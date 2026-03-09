@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import type { Friend } from "../lib/friends.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -14,6 +15,8 @@ type MultiplayerGameProps = {
   onAddFriend?:
     | ((opponentId: string, opponentName: string) => void)
     | undefined;
+  friends?: Friend[] | undefined;
+  onInviteFriendToRoom?: ((friendId: string) => void) | undefined;
 };
 
 export function MultiplayerGame({
@@ -24,6 +27,8 @@ export function MultiplayerGame({
   onRename,
   onBack,
   onAddFriend,
+  friends,
+  onInviteFriendToRoom,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const [toast, setToast] = useState<string | null>(null);
@@ -57,6 +62,8 @@ export function MultiplayerGame({
           onAssistLevelChange={mp.setAssistLevel}
           onStart={mp.sendStartGame}
           onBack={onBack}
+          friends={friends}
+          onInviteFriend={onInviteFriendToRoom}
         />
         {toast && <Toast message={toast} />}
       </div>

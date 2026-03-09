@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, jest } from "bun:test";
-import { addFriend, getFriends, isFriend, removeFriend } from "./friends.ts";
+import {
+  addFriend,
+  clearPendingInvite,
+  clearStalePendingInvites,
+  getFriends,
+  getPendingInvites,
+  isFriend,
+  removeFriend,
+  storePendingInvite,
+} from "./friends.ts";
 
 describe("friends", () => {
   beforeEach(() => {
@@ -78,6 +87,104 @@ describe("friends", () => {
 
     it("returns false for unknown playerId", () => {
       expect(isFriend("abc12345")).toBe(false);
+    });
+  });
+
+  describe("pending invites", () => {
+    it("returns empty array when no pending invites", () => {
+      expect(getPendingInvites()).toEqual([]);
+    });
+
+    it("stores and retrieves a pending invite", () => {
+      storePendingInvite({
+        targetPlayerId: "friend1",
+        roomId: "room-abc",
+        fromId: "me123",
+        fromName: "Swift Panda",
+        difficulty: "medium",
+        timestamp: 1000,
+      });
+      const invites = getPendingInvites();
+      expect(invites).toHaveLength(1);
+      expect(invites[0]!.targetPlayerId).toBe("friend1");
+      expect(invites[0]!.roomId).toBe("room-abc");
+    });
+
+    it("overwrites invite for the same target player", () => {
+      storePendingInvite({
+        targetPlayerId: "friend1",
+        roomId: "room-1",
+        fromId: "me123",
+        fromName: "Swift Panda",
+        difficulty: "medium",
+        timestamp: 1000,
+      });
+      storePendingInvite({
+        targetPlayerId: "friend1",
+        roomId: "room-2",
+        fromId: "me123",
+        fromName: "Swift Panda",
+        difficulty: "hard",
+        timestamp: 2000,
+      });
+      const invites = getPendingInvites();
+      expect(invites).toHaveLength(1);
+      expect(invites[0]!.roomId).toBe("room-2");
+    });
+
+    it("clears a specific pending invite", () => {
+      storePendingInvite({
+        targetPlayerId: "friend1",
+        roomId: "room-1",
+        fromId: "me123",
+        fromName: "Swift Panda",
+        difficulty: "medium",
+        timestamp: 1000,
+      });
+      storePendingInvite({
+        targetPlayerId: "friend2",
+        roomId: "room-2",
+        fromId: "me123",
+        fromName: "Swift Panda",
+        difficulty: "hard",
+        timestamp: 2000,
+      });
+      clearPendingInvite("friend1");
+      const invites = getPendingInvites();
+      expect(invites).toHaveLength(1);
+      expect(invites[0]!.targetPlayerId).toBe("friend2");
+    });
+
+    it("removes stale invites older than maxAge", () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date("2026-03-01T10:00:00Z"));
+      storePendingInvite({
+        targetPlayerId: "friend1",
+        roomId: "room-old",
+        fromId: "me123",
+        fromName: "Swift Panda",
+        difficulty: "medium",
+        timestamp: Date.now(),
+      });
+
+      jest.setSystemTime(new Date("2026-03-01T11:00:00Z"));
+      storePendingInvite({
+        targetPlayerId: "friend2",
+        roomId: "room-new",
+        fromId: "me123",
+        fromName: "Swift Panda",
+        difficulty: "hard",
+        timestamp: Date.now(),
+      });
+
+      // 31 minutes later — first invite is stale (30 min max)
+      jest.setSystemTime(new Date("2026-03-01T10:31:00Z"));
+      clearStalePendingInvites(30 * 60 * 1000);
+
+      const invites = getPendingInvites();
+      expect(invites).toHaveLength(1);
+      expect(invites[0]!.targetPlayerId).toBe("friend2");
+      jest.useRealTimers();
     });
   });
 });
