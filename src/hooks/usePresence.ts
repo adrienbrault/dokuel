@@ -3,6 +3,11 @@ import { WebrtcProvider } from "y-webrtc";
 import { Doc } from "yjs";
 import { SIGNALING_URL } from "../lib/constants.ts";
 import type { Friend } from "../lib/friends.ts";
+import {
+  clearStalePendingInvites,
+  getPendingInvites,
+  storePendingInvite,
+} from "../lib/friends.ts";
 import type { Difficulty } from "../lib/types.ts";
 
 export type Invite = {
@@ -10,6 +15,13 @@ export type Invite = {
   fromId: string;
   fromName: string;
   difficulty: Difficulty;
+  timestamp: number;
+};
+
+export type ActiveGame = {
+  roomId: string;
+  difficulty: string;
+  hostName: string;
   timestamp: number;
 };
 
@@ -23,17 +35,22 @@ type UsePresenceOptions = {
 type UsePresenceReturn = {
   onlineFriendIds: Set<string>;
   pendingInvites: Invite[];
+  friendActiveGames: Map<string, ActiveGame>;
   sendInvite: (
     targetPlayerId: string,
     roomId: string,
     difficulty: Difficulty,
   ) => void;
   clearInvite: (fromPlayerId: string) => void;
+  broadcastGame: (roomId: string, difficulty: string) => void;
+  clearGame: () => void;
 };
 
 const PRESENCE_ROOM = "dokuel-presence";
 const EMPTY_SET = new Set<string>();
 const EMPTY_INVITES: Invite[] = [];
+const EMPTY_GAMES = new Map<string, ActiveGame>();
+const INVITE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 
 export function usePresence({
   playerId,
@@ -44,7 +61,10 @@ export function usePresence({
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(
     () => EMPTY_SET,
   );
-  const [pendingInvites, setPendingInvites] = useState<Invite[]>(EMPTY_INVITES);
+  const [pendingInvites, setPendingInvites] =
+    useState<Invite[]>(EMPTY_INVITES);
+  const [friendActiveGames, setFriendActiveGames] =
+    useState<Map<string, ActiveGame>>(() => EMPTY_GAMES);
 
   const docRef = useRef<Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
@@ -59,6 +79,7 @@ export function usePresence({
     if (!enabled) {
       setOnlineFriendIds(EMPTY_SET);
       setPendingInvites(EMPTY_INVITES);
+      setFriendActiveGames(EMPTY_GAMES);
       return;
     }
 
@@ -106,9 +127,38 @@ export function usePresence({
     invitesMap.observe(updateInvites);
     updateInvites();
 
+    // Track friend active games
+    const gamesMap = doc.getMap("games");
+    const updateGames = () => {
+      const games = new Map<string, ActiveGame>();
+      for (const [hostId, value] of gamesMap.entries()) {
+        if (hostId === playerId) continue;
+        if (friendIdsRef.current.has(hostId)) {
+          games.set(hostId, value as ActiveGame);
+        }
+      }
+      setFriendActiveGames(games);
+    };
+
+    gamesMap.observe(updateGames);
+    updateGames();
+
+    // Re-broadcast stored pending invites on connect
+    clearStalePendingInvites(INVITE_MAX_AGE_MS);
+    for (const stored of getPendingInvites()) {
+      invitesMap.set(stored.targetPlayerId, {
+        roomId: stored.roomId,
+        fromId: stored.fromId,
+        fromName: stored.fromName,
+        difficulty: stored.difficulty,
+        timestamp: stored.timestamp,
+      });
+    }
+
     return () => {
       provider.awareness.off("change", updateOnlineFriends);
       invitesMap.unobserve(updateInvites);
+      gamesMap.unobserve(updateGames);
       provider.disconnect();
       provider.destroy();
       doc.destroy();
@@ -122,12 +172,19 @@ export function usePresence({
       const doc = docRef.current;
       if (!doc) return;
       const invitesMap = doc.getMap("invites");
-      invitesMap.set(targetPlayerId, {
+      const invite = {
         roomId,
         fromId: playerId,
         fromName: playerName,
         difficulty,
         timestamp: Date.now(),
+      };
+      invitesMap.set(targetPlayerId, invite);
+
+      // Persist for re-broadcasting if we disconnect before friend sees it
+      storePendingInvite({
+        targetPlayerId,
+        ...invite,
       });
     },
     [playerId, playerName],
@@ -147,5 +204,35 @@ export function usePresence({
     [playerId],
   );
 
-  return { onlineFriendIds, pendingInvites, sendInvite, clearInvite };
+  const broadcastGame = useCallback(
+    (roomId: string, difficulty: string) => {
+      const doc = docRef.current;
+      if (!doc) return;
+      const gamesMap = doc.getMap("games");
+      gamesMap.set(playerId, {
+        roomId,
+        difficulty,
+        hostName: playerName,
+        timestamp: Date.now(),
+      });
+    },
+    [playerId, playerName],
+  );
+
+  const clearGame = useCallback(() => {
+    const doc = docRef.current;
+    if (!doc) return;
+    const gamesMap = doc.getMap("games");
+    gamesMap.delete(playerId);
+  }, [playerId]);
+
+  return {
+    onlineFriendIds,
+    pendingInvites,
+    friendActiveGames,
+    sendInvite,
+    clearInvite,
+    broadcastGame,
+    clearGame,
+  };
 }
