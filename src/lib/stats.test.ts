@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { getStats, getStatsForDifficulty, saveGameResult } from "./stats.ts";
+import {
+  getActivityDates,
+  getCompletionRate,
+  getImprovementDelta,
+  getRecentTimes,
+  getStats,
+  getStatsForDifficulty,
+  saveGameResult,
+} from "./stats.ts";
 
 describe("stats", () => {
   beforeEach(() => {
@@ -79,6 +87,87 @@ describe("stats", () => {
       const result = getStatsForDifficulty("easy");
       expect(result?.gamesPlayed).toBe(1);
       expect(result?.bestTime).toBe(100);
+    });
+  });
+
+  describe("getRecentTimes", () => {
+    it("returns empty array when no games exist", () => {
+      expect(getRecentTimes("easy")).toEqual([]);
+    });
+
+    it("returns only won game times for the difficulty", () => {
+      saveGameResult("easy", 100, true);
+      saveGameResult("easy", 200, false);
+      saveGameResult("easy", 150, true);
+      expect(getRecentTimes("easy")).toEqual([100, 150]);
+    });
+
+    it("returns last N times when limit specified", () => {
+      for (let i = 1; i <= 15; i++) {
+        saveGameResult("easy", i * 10, true);
+      }
+      expect(getRecentTimes("easy", 5)).toEqual([110, 120, 130, 140, 150]);
+    });
+
+    it("filters by difficulty", () => {
+      saveGameResult("easy", 100, true);
+      saveGameResult("medium", 200, true);
+      expect(getRecentTimes("medium")).toEqual([200]);
+    });
+  });
+
+  describe("getImprovementDelta", () => {
+    it("returns null when fewer than 2 won games", () => {
+      saveGameResult("easy", 100, true);
+      expect(getImprovementDelta("easy")).toBeNull();
+    });
+
+    it("returns negative delta when last game was faster", () => {
+      saveGameResult("easy", 200, true);
+      saveGameResult("easy", 180, true);
+      expect(getImprovementDelta("easy")).toBe(-20);
+    });
+
+    it("returns positive delta when last game was slower", () => {
+      saveGameResult("easy", 100, true);
+      saveGameResult("easy", 130, true);
+      expect(getImprovementDelta("easy")).toBe(30);
+    });
+  });
+
+  describe("getActivityDates", () => {
+    it("returns empty map when no games", () => {
+      expect(getActivityDates()).toEqual(new Map());
+    });
+
+    it("counts games per date", () => {
+      // saveGameResult uses today's date
+      saveGameResult("easy", 100, true);
+      saveGameResult("medium", 200, true);
+      const result = getActivityDates();
+      const today = new Date().toISOString().slice(0, 10);
+      expect(result.get(today)).toBe(2);
+    });
+  });
+
+  describe("getCompletionRate", () => {
+    it("returns zero rate when no games", () => {
+      expect(getCompletionRate("easy")).toEqual({
+        won: 0,
+        total: 0,
+        rate: 0,
+      });
+    });
+
+    it("computes rate from wins and losses", () => {
+      saveGameResult("easy", 100, true);
+      saveGameResult("easy", 200, true);
+      saveGameResult("easy", 300, false);
+      expect(getCompletionRate("easy")).toEqual({
+        won: 2,
+        total: 3,
+        rate: 67,
+      });
     });
   });
 });
