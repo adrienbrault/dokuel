@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { Sparkline } from "./Sparkline.tsx";
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   easy: "bg-difficulty-easy-bg text-difficulty-easy-text",
@@ -30,6 +31,8 @@ type GameResultProps = {
     | undefined;
   opponentId?: string | undefined;
   opponentName?: string | undefined;
+  recentTimes?: number[] | undefined;
+  improvementDelta?: number | null | undefined;
 };
 
 export function buildShareText({
@@ -78,6 +81,8 @@ export function GameResult({
   onAddFriend,
   opponentId,
   opponentName,
+  recentTimes,
+  improvementDelta,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
   const [friendAdded, setFriendAdded] = useState(false);
@@ -137,6 +142,16 @@ export function GameResult({
               New Personal Best!
             </span>
           )}
+          {improvementDelta != null && !isNewPB && !isMultiplayer && (
+            <span
+              className={`text-sm font-medium ${improvementDelta < 0 ? "text-emerald-500" : "text-rose-400"}`}
+            >
+              {improvementDelta < 0
+                ? `${Math.abs(improvementDelta)}s faster`
+                : `${improvementDelta}s slower`}{" "}
+              than last game
+            </span>
+          )}
         </div>
 
         {stats && !isMultiplayer && (
@@ -159,6 +174,15 @@ export function GameResult({
               </div>
               <div className="text-xs text-text-muted">Average</div>
             </div>
+          </div>
+        )}
+
+        {recentTimes && recentTimes.length >= 2 && !isMultiplayer && (
+          <div className="flex flex-col items-center gap-1">
+            <Sparkline times={recentTimes} width={160} height={36} />
+            <span className="text-[0.625rem] text-text-muted">
+              Last {recentTimes.length} games
+            </span>
           </div>
         )}
 

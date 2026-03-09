@@ -13,7 +13,12 @@ import {
   type SavedGame,
   saveGame,
 } from "../lib/game-storage.ts";
-import { getStatsForDifficulty, saveGameResult } from "../lib/stats.ts";
+import {
+  getImprovementDelta,
+  getRecentTimes,
+  getStatsForDifficulty,
+  saveGameResult,
+} from "../lib/stats.ts";
 import { cellKey, generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
@@ -321,6 +326,8 @@ export function SoloGame({
               (personalBest === null || timerSecondsRef.current < personalBest)
             }
             hintsUsed={game.hintsUsed}
+            recentTimes={getRecentTimes(difficulty)}
+            improvementDelta={getImprovementDelta(difficulty)}
             streakInfo={streakInfo}
             isDaily={!!streakInfo || !!title?.startsWith("Daily")}
             tip={
