@@ -141,7 +141,7 @@ export function FriendsList({
               )}
               <button
                 type="button"
-                className="btn btn-md btn-ghost text-text-muted"
+                className="btn btn-ghost px-3 py-3.5 text-text-muted"
                 onClick={() => onRemoveFriend(friend.playerId)}
                 aria-label={`Remove ${friend.name}`}
               >
