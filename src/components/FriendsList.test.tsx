@@ -136,7 +136,7 @@ describe("FriendsList", () => {
     expect(offlineDot).toBeInTheDocument();
   });
 
-  it("shows invite button only for online friends", () => {
+  it("shows invite button for all friends regardless of online status", () => {
     const friends = [
       makeFriend("friend1", "Bold Lion"),
       makeFriend("friend2", "Clever Fox"),
@@ -153,9 +153,7 @@ describe("FriendsList", () => {
     expandFriendsList();
 
     expect(screen.getByLabelText("Invite Bold Lion")).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText("Invite Clever Fox"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Invite Clever Fox")).toBeInTheDocument();
   });
 
   it("calls onInviteFriend when invite button clicked", () => {

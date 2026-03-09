@@ -172,16 +172,14 @@ export function FriendsList({
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {isOnline && (
-                    <button
-                      type="button"
-                      className="btn btn-md btn-primary"
-                      onClick={() => onInviteFriend(friend.playerId)}
-                      aria-label={`Invite ${friend.name}`}
-                    >
-                      Invite
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={`btn btn-md ${isOnline ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => onInviteFriend(friend.playerId)}
+                    aria-label={`Invite ${friend.name}`}
+                  >
+                    Invite
+                  </button>
                   <button
                     type="button"
                     className="btn btn-ghost px-3 py-3.5 text-text-muted"
