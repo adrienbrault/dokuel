@@ -22,8 +22,8 @@ export function MultiplayerScreen({
   onAddFriend?:
     | ((opponentId: string, opponentName: string) => void)
     | undefined;
-  friends?: Friend[];
-  onInviteFriendToRoom?: (friendId: string) => void;
+  friends?: Friend[] | undefined;
+  onInviteFriendToRoom?: ((friendId: string) => void) | undefined;
 }) {
   const playerId = useMemo(getPlayerId, []);
   const [playerName, setName] = useState(getPlayerName);

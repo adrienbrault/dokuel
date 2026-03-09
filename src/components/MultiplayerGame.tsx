@@ -15,8 +15,8 @@ type MultiplayerGameProps = {
   onAddFriend?:
     | ((opponentId: string, opponentName: string) => void)
     | undefined;
-  friends?: Friend[];
-  onInviteFriendToRoom?: (friendId: string) => void;
+  friends?: Friend[] | undefined;
+  onInviteFriendToRoom?: ((friendId: string) => void) | undefined;
 };
 
 export function MultiplayerGame({
