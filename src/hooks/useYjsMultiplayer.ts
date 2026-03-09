@@ -78,64 +78,50 @@ export function useYjsMultiplayer({
   playerNameRef.current = playerName;
 
   useEffect(() => {
+    // --- Connection setup ---
     const doc = new Y.Doc();
     const provider = new WebrtcProvider(roomId, doc, {
       signaling: [SIGNALING_URL],
     });
-
     const room = createRoomFromDoc(doc, roomId);
     roomRef.current = room;
     providerRef.current = provider;
-
     joinRoom(room, playerId, playerName);
 
+    // --- Room state derivation ---
     const updateState = () => {
       const state = deriveRoomState(room);
       setRoomState(state);
+      if (!state) return;
 
-      if (state) {
-        const roomMap = doc.getMap("room");
-        const currentPuzzle = roomMap.get("puzzle") as string | null;
-        const gameNumber = (roomMap.get("gameNumber") as number) || 0;
-        const winnerId = roomMap.get("winnerId") as string | null;
-        const winnerName = roomMap.get("winnerName") as string | null;
+      const roomMap = doc.getMap("room");
+      const currentPuzzle = roomMap.get("puzzle") as string | null;
+      const gameNumber = (roomMap.get("gameNumber") as number) || 0;
+      const winnerId = roomMap.get("winnerId") as string | null;
+      const winnerName = roomMap.get("winnerName") as string | null;
 
-        // Detect new game (start or rematch)
-        if (gameNumber > lastGameNumberRef.current) {
-          lastGameNumberRef.current = gameNumber;
-          setPuzzle(currentPuzzle);
-          setGameOver(null);
-          setOpponentProgress(null);
-        }
-
-        // Detect winner
-        if (winnerId && winnerName) {
-          setGameOver({ winnerId, winnerName });
-        }
-
-        // Update opponent progress
-        const progress = getOpponentProgress(room, playerId);
-        if (progress) {
-          setOpponentProgress(progress);
-        }
+      if (gameNumber > lastGameNumberRef.current) {
+        lastGameNumberRef.current = gameNumber;
+        setPuzzle(currentPuzzle);
+        setGameOver(null);
+        setOpponentProgress(null);
       }
+      if (winnerId && winnerName) {
+        setGameOver({ winnerId, winnerName });
+      }
+      const progress = getOpponentProgress(room, playerId);
+      if (progress) setOpponentProgress(progress);
     };
 
-    // Listen for changes on room map
+    // --- Room map observers ---
     const roomMap = doc.getMap("room");
     roomMap.observe(updateState);
-
-    // Listen for changes on players map
     const playersMap = doc.getMap("players");
     playersMap.observeDeep(updateState);
 
-    // Track peer connections via awareness
+    // --- Awareness / presence tracking ---
     const awareness = provider.awareness;
-    awareness.setLocalStateField("user", {
-      id: playerId,
-      name: playerName,
-    });
-
+    awareness.setLocalStateField("user", { id: playerId, name: playerName });
     const updatePresence = () => {
       const states = awareness.getStates();
       let hasOpponent = false;
@@ -151,19 +137,14 @@ export function useYjsMultiplayer({
       }
       setOpponentDisconnected(!hasOpponent && getPlayers(room).length > 1);
     };
-
     awareness.on("change", updatePresence);
 
-    // Track connection status via provider
+    // --- Connection status ---
     const onStatus = ({ connected: isConnected }: { connected: boolean }) => {
       setConnected(isConnected);
     };
     provider.on("status", onStatus);
-
-    // Also listen for peers to detect when WebRTC connects
-    const onPeers = () => {
-      updatePresence();
-    };
+    const onPeers = () => updatePresence();
     provider.on("peers", onPeers);
 
     // Initial state
