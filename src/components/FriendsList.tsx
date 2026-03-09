@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard.ts";
 import type { Invite } from "../hooks/usePresence.ts";
 import type { Friend } from "../lib/friends.ts";
 
@@ -24,12 +25,10 @@ export function FriendsList({
   onJoinInvite,
 }: FriendsListProps) {
   const [friendCode, setFriendCode] = useState("");
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(playerId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copy(playerId);
   };
 
   const handleAddFriend = () => {

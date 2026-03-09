@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard.ts";
 import type { AssistLevel, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 
@@ -21,8 +22,8 @@ export function Lobby({
 }: LobbyProps) {
   const canStart = roomState.players.length === 2;
   const waiting = roomState.players.length < 2;
-  const [copied, setCopied] = useState(false);
-  const [codeCopied, setCodeCopied] = useState(false);
+  const { copied, copy: copyShare } = useCopyToClipboard();
+  const { copied: codeCopied, copy: copyCode } = useCopyToClipboard();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,9 +59,7 @@ export function Lobby({
         // User cancelled or share failed, fall through to clipboard
       }
     }
-    await navigator.clipboard.writeText(gameUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    await copyShare(gameUrl);
   }
 
   return (
@@ -70,11 +69,7 @@ export function Lobby({
         <button
           type="button"
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-bg-raised cursor-pointer touch-manipulation press-spring-soft"
-          onClick={async () => {
-            await navigator.clipboard.writeText(roomState.roomId);
-            setCodeCopied(true);
-            setTimeout(() => setCodeCopied(false), 2000);
-          }}
+          onClick={() => copyCode(roomState.roomId)}
           title="Copy room code"
         >
           <span className="caption">{codeCopied ? "Copied!" : "Room:"}</span>

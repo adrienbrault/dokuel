@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard.ts";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
@@ -79,7 +80,7 @@ export function GameResult({
   opponentId,
   opponentName,
 }: GameResultProps) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
   const [friendAdded, setFriendAdded] = useState(false);
 
   const handleShare = () => {
@@ -91,9 +92,7 @@ export function GameResult({
       streakInfo,
       isDaily,
     });
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copy(text);
   };
 
   return (
