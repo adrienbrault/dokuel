@@ -1,3 +1,4 @@
+import { STORAGE_KEYS } from "./constants.ts";
 import { generatePlayerName } from "./name-generator.ts";
 
 export function generateId() {
@@ -5,29 +6,29 @@ export function generateId() {
 }
 
 export function getPlayerId(): string {
-  let id = localStorage.getItem("sudoku_player_id");
+  let id = localStorage.getItem(STORAGE_KEYS.PLAYER_ID);
   if (!id) {
-    id = sessionStorage.getItem("sudoku_player_id");
+    id = sessionStorage.getItem(STORAGE_KEYS.PLAYER_ID);
     if (!id) {
       id = generateId();
     }
-    localStorage.setItem("sudoku_player_id", id);
+    localStorage.setItem(STORAGE_KEYS.PLAYER_ID, id);
   }
   return id;
 }
 
 export function getPlayerName(): string {
-  let name = localStorage.getItem("sudoku_player_name");
+  let name = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
   if (!name) {
-    name = sessionStorage.getItem("sudoku_player_name");
+    name = sessionStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
     if (!name) {
       name = generatePlayerName();
     }
-    localStorage.setItem("sudoku_player_name", name);
+    localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
   }
   return name;
 }
 
 export function persistPlayerName(name: string): void {
-  localStorage.setItem("sudoku_player_name", name);
+  localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
 }

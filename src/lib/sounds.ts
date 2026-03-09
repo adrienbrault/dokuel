@@ -27,7 +27,9 @@ function playTone(frequency: number, duration: number, volume = 0.1) {
   osc.stop(ctx.currentTime + duration);
 }
 
-const STORAGE_KEY = "sudoku_sound";
+import { STORAGE_KEYS } from "./constants.ts";
+
+const STORAGE_KEY = STORAGE_KEYS.SOUND;
 
 export function getSoundEnabled(): boolean {
   return localStorage.getItem(STORAGE_KEY) !== "false";

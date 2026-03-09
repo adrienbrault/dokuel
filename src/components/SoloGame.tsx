@@ -3,7 +3,7 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadLayout } from "../hooks/useNumPadLayout.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
-import { EMPTY_CONFLICTS } from "../lib/constants.ts";
+import { EMPTY_CONFLICTS, STORAGE_KEYS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import {
   boardToNotes,
@@ -76,7 +76,7 @@ export function SoloGame({
   );
   const [paused, setPaused] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
-    () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
+    () => localStorage.getItem(STORAGE_KEYS.NUMPAD_TIP_DISMISSED) === "1",
   );
 
   // Capture PB before this game's result is saved
@@ -306,7 +306,7 @@ export function SoloGame({
             }
             onDismissTip={() => {
               setTipDismissed(true);
-              localStorage.setItem("sudoku_numpad_tip_dismissed", "1");
+              localStorage.setItem(STORAGE_KEYS.NUMPAD_TIP_DISMISSED, "1");
             }}
           />
         ) : undefined

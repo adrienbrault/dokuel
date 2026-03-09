@@ -1,3 +1,4 @@
+import { STORAGE_KEYS } from "../lib/constants.ts";
 import type { AssistLevel } from "../lib/types.ts";
 import { useLocalStorage } from "./useLocalStorage.ts";
 
@@ -9,7 +10,7 @@ function isAssistLevel(v: string): v is AssistLevel {
 
 export function useAssistLevel() {
   const [level, setLevel] = useLocalStorage<AssistLevel>(
-    "sudoku_assist_level",
+    STORAGE_KEYS.ASSIST_LEVEL,
     "standard",
     isAssistLevel,
   );

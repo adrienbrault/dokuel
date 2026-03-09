@@ -1,4 +1,4 @@
-import { BOARD_CELLS } from "./constants.ts";
+import { BOARD_CELLS, STORAGE_KEYS } from "./constants.ts";
 import { countFilledCells } from "./sudoku.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
@@ -23,7 +23,7 @@ export function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
   return board.flatMap((row) => row.map((c) => Array.from(c.notes)));
 }
 
-const STORAGE_PREFIX = "sudoku_save_";
+const STORAGE_PREFIX = STORAGE_KEYS.GAME_SAVE_PREFIX;
 
 export function saveGame(key: string, data: SavedGame): void {
   try {

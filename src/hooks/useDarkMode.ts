@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { STORAGE_KEYS } from "../lib/constants.ts";
 
 type Theme = "light" | "dark" | "system";
 
@@ -14,7 +15,7 @@ function applyTheme(theme: Theme) {
 
 export function useDarkMode() {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem("sudoku_theme") as Theme | null;
+    const stored = localStorage.getItem(STORAGE_KEYS.THEME) as Theme | null;
     return stored || "system";
   });
 
@@ -32,7 +33,7 @@ export function useDarkMode() {
   }, [theme]);
 
   const setTheme = useCallback((t: Theme) => {
-    localStorage.setItem("sudoku_theme", t);
+    localStorage.setItem(STORAGE_KEYS.THEME, t);
     setThemeState(t);
   }, []);
 

@@ -4,7 +4,9 @@ export type Friend = {
   addedAt: string;
 };
 
-const STORAGE_KEY = "sudoku_friends";
+import { STORAGE_KEYS } from "./constants.ts";
+
+const STORAGE_KEY = STORAGE_KEYS.FRIENDS;
 
 export function getFriends(): Friend[] {
   try {

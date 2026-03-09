@@ -1,3 +1,4 @@
+import { STORAGE_KEYS } from "../lib/constants.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { useLocalStorage } from "./useLocalStorage.ts";
 
@@ -9,7 +10,7 @@ function isNumPadPosition(v: string): v is NumPadPosition {
 
 export function useNumPadPosition() {
   const [position, setPosition] = useLocalStorage<NumPadPosition>(
-    "sudoku-numpad-position",
+    STORAGE_KEYS.NUMPAD_POSITION,
     "bottom",
     isNumPadPosition,
   );

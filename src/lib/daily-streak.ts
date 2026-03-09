@@ -4,7 +4,9 @@ export type DailyStreak = {
   longestStreak: number;
 };
 
-const STORAGE_KEY = "sudoku_daily_streak";
+import { STORAGE_KEYS } from "./constants.ts";
+
+const STORAGE_KEY = STORAGE_KEYS.DAILY_STREAK;
 
 const DEFAULT_STREAK: DailyStreak = {
   currentStreak: 0,

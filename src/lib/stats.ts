@@ -1,3 +1,4 @@
+import { STORAGE_KEYS } from "./constants.ts";
 import { getTodayISO } from "./format.ts";
 import type { Difficulty } from "./types.ts";
 
@@ -9,7 +10,7 @@ export type GameStats = {
   hintsUsed?: number;
 };
 
-const STORAGE_KEY = "sudoku_stats";
+const STORAGE_KEY = STORAGE_KEYS.STATS;
 
 export function getStats(): GameStats[] {
   try {

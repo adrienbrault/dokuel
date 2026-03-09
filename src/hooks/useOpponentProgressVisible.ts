@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { STORAGE_KEYS } from "../lib/constants.ts";
 import { useLocalStorage } from "./useLocalStorage.ts";
 
 type BoolStr = "true" | "false";
@@ -9,7 +10,7 @@ function isBoolStr(v: string): v is BoolStr {
 
 export function useOpponentProgressVisible() {
   const [raw, setRaw] = useLocalStorage<BoolStr>(
-    "sudoku-opponent-progress-visible",
+    STORAGE_KEYS.OPPONENT_PROGRESS,
     "true",
     isBoolStr,
   );
