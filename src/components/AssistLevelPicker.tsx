@@ -53,7 +53,7 @@ export function AssistLevelPicker({ value, onChange }: AssistLevelPickerProps) {
               {option.label}
             </span>
             <span
-              className={`text-[0.625rem] leading-none transition-colors duration-200 ${
+              className={`text-xs leading-none transition-colors duration-200 ${
                 isActive ? "text-text-on-accent/70" : "text-text-muted"
               }`}
             >
