@@ -1,5 +1,6 @@
-import type React from "react";
-import { type PointerEvent, useCallback, useMemo, useRef } from "react";
+import { useMemo } from "react";
+import { useDragSelection } from "../hooks/useDragSelection.ts";
+import { GRID_SIZE } from "../lib/constants.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
@@ -40,14 +41,12 @@ export function Board({
       ? board[selectedCell.row]![selectedCell.col]!.value
       : null;
 
-  // In full assist mode, collect rows/cols of all cells matching selected value
-  // (excluding the selected cell itself) for cross-highlight
   const matchRowColSet = useMemo(() => {
     if (!isFull || selectedValue === null) return null;
     const rows = new Set<number>();
     const cols = new Set<number>();
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
         if (
           board[r]![c]!.value === selectedValue &&
           !(selectedCell!.row === r && selectedCell!.col === c)
@@ -60,105 +59,10 @@ export function Board({
     return rows.size > 0 || cols.size > 0 ? { rows, cols } : null;
   }, [board, selectedValue, isFull, selectedCell]);
 
-  const dragRef = useRef<{
-    startKey: number;
-    startPos: Position;
-    cells: Set<number>;
-    moved: boolean;
-    shiftClick: boolean;
-  } | null>(null);
-
-  const getCellFromPoint = useCallback(
-    (x: number, y: number): { row: number; col: number } | null => {
-      const el = document.elementFromPoint(x, y);
-      if (!el) return null;
-      const btn = el.closest("[data-row]") as HTMLElement | null;
-      if (!btn) return null;
-      const row = Number(btn.dataset.row);
-      const col = Number(btn.dataset.col);
-      if (Number.isNaN(row) || Number.isNaN(col)) return null;
-      return { row, col };
-    },
-    [],
-  );
-
-  const handlePointerDown = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!onSetSelectedCells) return;
-      const pos = getCellFromPoint(e.clientX, e.clientY);
-      if (!pos) return;
-      const key = cellKey(pos.row, pos.col);
-
-      // Shift+click: add to existing selection
-      if (e.shiftKey && selectedCells && selectedCells.size > 0) {
-        const newCells = new Set(selectedCells);
-        newCells.add(key);
-        const primary = selectedCell ?? pos;
-        onSetSelectedCells(newCells, primary);
-        dragRef.current = {
-          startKey: key,
-          startPos: pos,
-          cells: newCells,
-          moved: false,
-          shiftClick: true,
-        };
-        return;
-      }
-
-      dragRef.current = {
-        startKey: key,
-        startPos: pos,
-        cells: new Set([key]),
-        moved: false,
-        shiftClick: false,
-      };
-    },
-    [onSetSelectedCells, getCellFromPoint, selectedCells, selectedCell],
-  );
-
-  const handlePointerMove = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      const drag = dragRef.current;
-      if (!drag || !onSetSelectedCells) return;
-      const pos = getCellFromPoint(e.clientX, e.clientY);
-      if (!pos) return;
-      const key = cellKey(pos.row, pos.col);
-      if (key !== drag.startKey) {
-        drag.moved = true;
-      }
-      if (!drag.cells.has(key)) {
-        drag.cells = new Set(drag.cells);
-        drag.cells.add(key);
-        onSetSelectedCells(drag.cells, drag.startPos);
-      }
-    },
-    [onSetSelectedCells, getCellFromPoint],
-  );
-
-  // Suppress Cell onClick after Shift+click to avoid resetting multi-selection
-  const suppressClickRef = useRef(false);
-  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (suppressClickRef.current) {
-      e.stopPropagation();
-      e.preventDefault();
-      suppressClickRef.current = false;
-    }
-  }, []);
-
-  const handlePointerUp = useCallback(
-    (_e: PointerEvent<HTMLDivElement>) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-      // Shift+click or drag: suppress the subsequent Cell onClick
-      if (drag.shiftClick || (drag.moved && drag.cells.size > 1)) {
-        suppressClickRef.current = true;
-        if (drag.moved && drag.cells.size > 1 && onSetSelectedCells) {
-          onSetSelectedCells(drag.cells, drag.startPos);
-        }
-      }
-      dragRef.current = null;
-    },
-    [onSetSelectedCells],
+  const dragHandlers = useDragSelection(
+    selectedCell,
+    selectedCells,
+    onSetSelectedCells,
   );
 
   return (
@@ -166,10 +70,7 @@ export function Board({
       className="grid grid-cols-9 border-2 border-board-border rounded-md overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
       role="region"
       aria-label="Sudoku board"
-      onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
-      onPointerMove={onSetSelectedCells ? handlePointerMove : undefined}
-      onPointerUp={onSetSelectedCells ? handlePointerUp : undefined}
-      onClickCapture={onSetSelectedCells ? handleClick : undefined}
+      {...dragHandlers}
     >
       {board.flatMap((row, rowIdx) =>
         row.map((cell, colIdx) => {
@@ -219,7 +120,7 @@ export function Board({
               onSelect={onSelectCell}
               revealDelay={
                 animateReveal && cell.isGiven
-                  ? (rowIdx * 9 + colIdx) * 6
+                  ? (rowIdx * GRID_SIZE + colIdx) * 6
                   : undefined
               }
             />
