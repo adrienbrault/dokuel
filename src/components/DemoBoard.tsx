@@ -68,7 +68,7 @@ const DEMO_SCRIPT: DemoAction[] = [
 ];
 
 const EMPTY_CONFLICTS = new Set<number>();
-const ACTION_INTERVAL_MS = 4000;
+const ACTION_INTERVAL_MS = 1500;
 
 function cloneBoard(board: BoardType): BoardType {
   return board.map((row) =>
@@ -158,7 +158,7 @@ export function DemoBoard() {
   }, []);
 
   return (
-    <div className="w-full max-w-[min(100vw-2rem,20rem)] mx-auto pointer-events-none select-none">
+    <div className="w-3/5 sm:w-full max-w-[20rem] mx-auto pointer-events-none select-none">
       <Board
         board={board}
         selectedCell={selectedCell}
