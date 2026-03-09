@@ -196,7 +196,7 @@ function SettingsBar({ settings }: { settings?: SettingItem[] | undefined }) {
             {setting.icon}
           </button>
           {openKey === setting.key && (
-            <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in min-w-48">
+            <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in min-w-64">
               {setting.content}
             </div>
           )}
