@@ -28,7 +28,12 @@ export function Sparkline({
     pad + (1 - (times[times.length - 1]! - min) / range) * (height - pad * 2);
 
   return (
-    <svg width={width} height={height} className="text-accent">
+    <svg
+      width={width}
+      height={height}
+      className="text-accent"
+      aria-hidden="true"
+    >
       <polyline
         points={points}
         fill="none"

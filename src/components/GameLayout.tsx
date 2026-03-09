@@ -199,6 +199,7 @@ function SettingsBar({ settings }: { settings?: SettingItem[] | undefined }) {
             <>
               {/* Mobile: bottom sheet */}
               <div className="lg:hidden">
+                {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismiss */}
                 <div
                   className="fixed inset-0 bg-black/20 z-40 animate-fade-in"
                   onClick={() => setOpenKey(null)}
