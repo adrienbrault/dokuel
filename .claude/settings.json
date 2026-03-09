@@ -16,16 +16,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "cd \"$CLAUDE_PROJECT_DIR\" && FILE=$(cat | jq -r '.tool_input.file_path // empty') && if [ -n \"$FILE\" ]; then bunx biome check --write \"$FILE\" 2>/dev/null; fi"
-					}
-				]
-			},
-			{
-				"matcher": "Edit|Write",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "cd \"$CLAUDE_PROJECT_DIR\" && FILE=$(cat | jq -r '.tool_input.file_path // empty') && if [ -z \"$FILE\" ]; then exit 0; fi && case \"$FILE\" in *.test.ts|*.test.tsx) bun test \"$FILE\" 2>&1;; *.tsx) TEST=\"${FILE%.tsx}.test.tsx\"; if [ -f \"$TEST\" ]; then bun test \"$TEST\" 2>&1; fi;; *.ts) TEST=\"${FILE%.ts}.test.ts\"; if [ -f \"$TEST\" ]; then bun test \"$TEST\" 2>&1; fi;; esac"
+						"command": "cd \"$CLAUDE_PROJECT_DIR\" && FILE=$(cat | jq -r '.tool_input.file_path // empty') && if [ -z \"$FILE\" ]; then exit 0; fi && bunx biome format --write \"$FILE\" 2>/dev/null & FMT=$! && TEST=''; case \"$FILE\" in *.test.ts|*.test.tsx) TEST=\"$FILE\";; *.tsx) T=\"${FILE%.tsx}.test.tsx\"; [ -f \"$T\" ] && TEST=\"$T\";; *.ts) T=\"${FILE%.ts}.test.ts\"; [ -f \"$T\" ] && TEST=\"$T\";; esac && if [ -n \"$TEST\" ]; then bun test \"$TEST\" 2>&1; fi; wait $FMT"
 					}
 				]
 			}
