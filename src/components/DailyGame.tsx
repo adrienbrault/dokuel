@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { getDailyPuzzle } from "../lib/daily.ts";
-import { recordDailyCompletion } from "../lib/daily-streak.ts";
+import { recordDailyCompletion, saveDailyResult } from "../lib/daily-streak.ts";
 import { formatShortDate, getTodayISO } from "../lib/format.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
@@ -11,13 +11,17 @@ export function DailyGame({ onBack }: { onBack: () => void }) {
     currentStreak: number;
     longestStreak: number;
   }>();
-  const handleComplete = useCallback(() => {
-    const streak = recordDailyCompletion(date);
-    setStreakInfo({
-      currentStreak: streak.currentStreak,
-      longestStreak: streak.longestStreak,
-    });
-  }, [date]);
+  const handleComplete = useCallback(
+    (time: number) => {
+      const streak = recordDailyCompletion(date);
+      saveDailyResult(date, time);
+      setStreakInfo({
+        currentStreak: streak.currentStreak,
+        longestStreak: streak.longestStreak,
+      });
+    },
+    [date],
+  );
 
   return (
     <SoloGame

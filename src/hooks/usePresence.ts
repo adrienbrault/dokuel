@@ -13,16 +13,24 @@ export type Invite = {
   timestamp: number;
 };
 
+export type FriendDailyResult = {
+  playerId: string;
+  playerName: string;
+  time: number;
+};
+
 type UsePresenceOptions = {
   playerId: string;
   playerName: string;
   friends: Friend[];
   enabled: boolean;
+  dailyResult?: { date: string; time: number } | undefined;
 };
 
 type UsePresenceReturn = {
   onlineFriendIds: Set<string>;
   pendingInvites: Invite[];
+  friendDailyResults: FriendDailyResult[];
   sendInvite: (
     targetPlayerId: string,
     roomId: string,
@@ -35,16 +43,21 @@ const PRESENCE_ROOM = "dokuel-presence";
 const EMPTY_SET = new Set<string>();
 const EMPTY_INVITES: Invite[] = [];
 
+const EMPTY_DAILY_RESULTS: FriendDailyResult[] = [];
+
 export function usePresence({
   playerId,
   playerName,
   friends,
   enabled,
+  dailyResult,
 }: UsePresenceOptions): UsePresenceReturn {
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(
     () => EMPTY_SET,
   );
   const [pendingInvites, setPendingInvites] = useState<Invite[]>(EMPTY_INVITES);
+  const [friendDailyResults, setFriendDailyResults] =
+    useState<FriendDailyResult[]>(EMPTY_DAILY_RESULTS);
 
   const docRef = useRef<Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
@@ -59,6 +72,7 @@ export function usePresence({
     if (!enabled) {
       setOnlineFriendIds(EMPTY_SET);
       setPendingInvites(EMPTY_INVITES);
+      setFriendDailyResults(EMPTY_DAILY_RESULTS);
       return;
     }
 
@@ -70,24 +84,45 @@ export function usePresence({
     docRef.current = doc;
     providerRef.current = provider;
 
-    // Broadcast own identity
+    // Broadcast own identity and daily result
     provider.awareness.setLocalStateField("user", {
       id: playerId,
       name: playerName,
+      dailyResult: dailyResult ?? null,
     });
 
-    // Track online friends via awareness
+    // Track online friends and their daily results via awareness
+    const todayStr = new Date().toISOString().slice(0, 10);
     const updateOnlineFriends = () => {
       const states = provider.awareness.getStates();
       const online = new Set<string>();
+      const dailyResults: FriendDailyResult[] = [];
       for (const [clientId, state] of states) {
         if (clientId === doc.clientID) continue;
-        const user = state.user as { id: string } | undefined;
+        const user = state.user as
+          | {
+              id: string;
+              name: string;
+              dailyResult?: { date: string; time: number } | null;
+            }
+          | undefined;
         if (user?.id && friendIdsRef.current.has(user.id)) {
           online.add(user.id);
+          if (user.dailyResult && user.dailyResult.date === todayStr) {
+            dailyResults.push({
+              playerId: user.id,
+              playerName: user.name,
+              time: user.dailyResult.time,
+            });
+          }
         }
       }
       setOnlineFriendIds(online);
+      setFriendDailyResults(
+        dailyResults.length > 0
+          ? dailyResults.sort((a, b) => a.time - b.time)
+          : EMPTY_DAILY_RESULTS,
+      );
     };
 
     provider.awareness.on("change", updateOnlineFriends);
@@ -115,7 +150,7 @@ export function usePresence({
       docRef.current = null;
       providerRef.current = null;
     };
-  }, [enabled, playerId, playerName]);
+  }, [enabled, playerId, playerName, dailyResult]);
 
   const sendInvite = useCallback(
     (targetPlayerId: string, roomId: string, difficulty: Difficulty) => {
@@ -147,5 +182,11 @@ export function usePresence({
     [playerId],
   );
 
-  return { onlineFriendIds, pendingInvites, sendInvite, clearInvite };
+  return {
+    onlineFriendIds,
+    pendingInvites,
+    friendDailyResults,
+    sendInvite,
+    clearInvite,
+  };
 }

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import type { Invite } from "../hooks/usePresence.ts";
+import type { FriendDailyResult, Invite } from "../hooks/usePresence.ts";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime, getTodayISO } from "../lib/format.ts";
@@ -12,16 +12,9 @@ import {
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
 import { countFilledCells } from "../lib/sudoku.ts";
+import { DemoBoard } from "./DemoBoard.tsx";
 import { FriendsList } from "./FriendsList.tsx";
-import {
-  ActionButton,
-  CalendarIcon,
-  FeatureRow,
-  GitHubIcon,
-  GlobeIcon,
-  StatsIcon,
-  ZapIcon,
-} from "./LandingIcons.tsx";
+import { ActionButton, GitHubIcon, StatsIcon } from "./LandingIcons.tsx";
 
 type LandingProps = {
   onSolo: () => void;
@@ -31,6 +24,8 @@ type LandingProps = {
   onContinue: (gameKey: string, difficulty: string) => void;
   onStats: () => void;
   onAbout: () => void;
+  onQuickPlay?: (() => void) | undefined;
+  lastDifficulty?: import("../lib/types.ts").Difficulty | undefined;
   playerId?: string;
   friends?: Friend[];
   onlineFriendIds?: Set<string>;
@@ -39,6 +34,7 @@ type LandingProps = {
   onRemoveFriend?: (playerId: string) => void;
   onInviteFriend?: (friendId: string) => void;
   onJoinInvite?: (invite: Invite) => void;
+  friendDailyResults?: FriendDailyResult[] | undefined;
 };
 
 export function Landing({
@@ -49,6 +45,8 @@ export function Landing({
   onContinue,
   onStats,
   onAbout,
+  onQuickPlay,
+  lastDifficulty,
   playerId,
   friends,
   onlineFriendIds,
@@ -57,6 +55,7 @@ export function Landing({
   onRemoveFriend,
   onInviteFriend,
   onJoinInvite,
+  friendDailyResults,
 }: LandingProps) {
   const today = useMemo(() => getTodayISO(), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
@@ -90,26 +89,11 @@ export function Landing({
         <h1 className="heading-xl">Dokuel</h1>
         {!isReturningUser && (
           <p className="text-sm text-text-muted">
-            1v1 sudoku duel — no account needed.
+            Race your friends to solve sudoku.
           </p>
         )}
       </div>
-      {!isReturningUser && (
-        <div className="flex flex-col gap-1.5 sm:gap-3 w-full">
-          <FeatureRow
-            icon={<ZapIcon />}
-            text="Real-time 1v1 — race a friend peer-to-peer"
-          />
-          <FeatureRow
-            icon={<CalendarIcon />}
-            text="Daily challenge — same puzzle for everyone"
-          />
-          <FeatureRow
-            icon={<GlobeIcon />}
-            text="Mobile & desktop — dark mode, haptics, sounds"
-          />
-        </div>
-      )}
+      {!isReturningUser && <DemoBoard />}
       <div className="flex flex-col gap-3 sm:gap-6 w-full">
         {savedGames.length > 0 && (
           <div className="flex flex-col gap-3">
@@ -126,7 +110,24 @@ export function Landing({
         )}
         <div className="flex flex-col gap-3">
           <span className="label">Solo</span>
-          <ActionButton label="Start Solo" onClick={onSolo} primary />
+          {isReturningUser && onQuickPlay ? (
+            <>
+              <ActionButton
+                label={`Play ${DIFFICULTY_LABELS[lastDifficulty ?? "medium"] ?? "Medium"}`}
+                onClick={onQuickPlay}
+                primary
+              />
+              <button
+                type="button"
+                className="text-sm text-text-muted hover:text-accent transition-colors"
+                onClick={onSolo}
+              >
+                Choose difficulty
+              </button>
+            </>
+          ) : (
+            <ActionButton label="Start Solo" onClick={onSolo} primary />
+          )}
           <DailyChallengeButton
             onClick={onDaily}
             completed={completed}
@@ -134,6 +135,15 @@ export function Landing({
             dateLabel={formatShortDate(today)}
             progress={dailyProgress}
           />
+          {friendDailyResults && friendDailyResults.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-center">
+              {friendDailyResults.map((r) => (
+                <span key={r.playerId} className="text-xs text-text-muted">
+                  {r.playerName} {formatTime(r.time)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-3">
           <span className="label">Multiplayer</span>
@@ -160,13 +170,28 @@ export function Landing({
             />
           )}
       </div>
-      <button type="button" className="btn btn-ghost text-sm" onClick={onStats}>
-        <span className="flex items-center gap-1.5">
-          <StatsIcon />
-          View Stats
-        </span>
-      </button>
+      <div className="flex flex-col gap-2 text-center max-w-sm">
+        <p className="text-sm text-text-secondary">
+          Four difficulty levels, daily challenges, pencil notes, hints, and
+          personal best tracking — all in your browser, no account needed.
+        </p>
+        <p className="text-sm text-text-secondary">
+          Race friends in real-time 1v1 via peer-to-peer — your game data never
+          touches a server.
+        </p>
+      </div>
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          className="btn btn-ghost text-sm"
+          onClick={onStats}
+        >
+          <span className="flex items-center gap-1.5">
+            <StatsIcon />
+            Stats
+          </span>
+        </button>
+        <span className="text-text-muted text-xs">·</span>
         <button
           type="button"
           className="text-xs text-text-muted hover:text-accent transition-colors"

@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import {
+  getDailyResult,
   getDailyStreak,
   isDailyCompleted,
   recordDailyCompletion,
+  saveDailyResult,
 } from "./daily-streak.ts";
 
 describe("daily-streak", () => {
@@ -100,6 +102,22 @@ describe("daily-streak", () => {
     it("returns false for a different date", () => {
       recordDailyCompletion("2026-03-07");
       expect(isDailyCompleted("2026-03-08")).toBe(false);
+    });
+  });
+
+  describe("saveDailyResult / getDailyResult", () => {
+    it("returns null when no result saved", () => {
+      expect(getDailyResult("2026-03-08")).toBeNull();
+    });
+
+    it("saves and retrieves a daily result time", () => {
+      saveDailyResult("2026-03-08", 142);
+      expect(getDailyResult("2026-03-08")).toBe(142);
+    });
+
+    it("returns null for a different date", () => {
+      saveDailyResult("2026-03-07", 100);
+      expect(getDailyResult("2026-03-08")).toBeNull();
     });
   });
 });

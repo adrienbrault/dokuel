@@ -1,4 +1,4 @@
-const ADJECTIVES = [
+export const ADJECTIVES = [
   "red",
   "blue",
   "bold",
@@ -26,7 +26,7 @@ const ADJECTIVES = [
   "wise",
 ];
 
-const NOUNS = [
+export const NOUNS = [
   "bear",
   "bird",
   "cats",

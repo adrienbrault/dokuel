@@ -196,9 +196,51 @@ function SettingsBar({ settings }: { settings?: SettingItem[] | undefined }) {
             {setting.icon}
           </button>
           {openKey === setting.key && (
-            <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in min-w-64">
-              {setting.content}
-            </div>
+            <>
+              {/* Mobile: bottom sheet */}
+              <div className="lg:hidden">
+                {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismiss */}
+                <div
+                  className="fixed inset-0 bg-black/20 z-40 animate-fade-in"
+                  onClick={() => setOpenKey(null)}
+                  onKeyDown={() => {}}
+                  role="presentation"
+                />
+                <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-overlay border-t border-border-default rounded-t-2xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg animate-slide-up">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm text-text-primary font-medium">
+                      {setting.label}
+                    </p>
+                    <button
+                      type="button"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary transition-colors"
+                      onClick={() => setOpenKey(null)}
+                      aria-label="Close settings"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                  {setting.content}
+                </div>
+              </div>
+              {/* Desktop: popover */}
+              <div className="hidden lg:block absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in min-w-64">
+                {setting.content}
+              </div>
+            </>
           )}
         </div>
       ))}

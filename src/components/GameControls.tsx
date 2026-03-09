@@ -5,6 +5,8 @@ type GameControlsProps = {
   onUndo: () => void;
   historyLength?: number | undefined;
   onHint?: (() => void) | undefined;
+  showNotesTooltip?: boolean | undefined;
+  onDismissNotesTooltip?: (() => void) | undefined;
 };
 
 export function GameControls({
@@ -14,6 +16,8 @@ export function GameControls({
   onUndo,
   historyLength,
   onHint,
+  showNotesTooltip,
+  onDismissNotesTooltip,
 }: GameControlsProps) {
   return (
     <div className="flex gap-1.5 sm:gap-3 w-full max-w-lg">
@@ -25,12 +29,23 @@ export function GameControls({
         disabled={!historyLength || historyLength === 0}
       />
       <ControlButton label="Erase" icon="⌫" onClick={onErase} active={false} />
-      <ControlButton
-        label="Notes"
-        icon="✏"
-        onClick={onToggleNotes}
-        active={notesMode}
-      />
+      <div className="relative flex-1 flex">
+        <ControlButton
+          label="Notes"
+          icon="✏"
+          onClick={onToggleNotes}
+          active={notesMode}
+        />
+        {showNotesTooltip && (
+          <button
+            type="button"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-bg-overlay border border-border-default rounded-lg shadow-lg px-3 py-2 text-xs text-text-secondary whitespace-nowrap animate-fade-in z-50"
+            onClick={onDismissNotesTooltip}
+          >
+            Tap Notes to pencil in candidates for a cell.
+          </button>
+        )}
+      </div>
       {onHint && (
         <ControlButton label="Hint" icon="💡" onClick={onHint} active={false} />
       )}

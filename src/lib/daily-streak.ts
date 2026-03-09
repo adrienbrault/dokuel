@@ -54,3 +54,20 @@ export function recordDailyCompletion(date: string): DailyStreak {
 export function isDailyCompleted(date: string): boolean {
   return getDailyStreak().lastCompletedDate === date;
 }
+
+export function saveDailyResult(date: string, timeSeconds: number): void {
+  try {
+    localStorage.setItem(`sudoku_daily_result_${date}`, String(timeSeconds));
+  } catch {}
+}
+
+export function getDailyResult(date: string): number | null {
+  try {
+    const raw = localStorage.getItem(`sudoku_daily_result_${date}`);
+    if (raw) {
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    }
+  } catch {}
+  return null;
+}

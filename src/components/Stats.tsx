@@ -2,8 +2,16 @@ import { useMemo } from "react";
 import { DIFFICULTIES, DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak } from "../lib/daily-streak.ts";
 import { formatTime } from "../lib/format.ts";
-import { getStats, getStatsForDifficulty } from "../lib/stats.ts";
+import {
+  getActivityDates,
+  getCompletionRate,
+  getRecentTimes,
+  getStats,
+  getStatsForDifficulty,
+} from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { CalendarHeatmap } from "./CalendarHeatmap.tsx";
+import { Sparkline } from "./Sparkline.tsx";
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   easy: "text-difficulty-easy",
@@ -19,6 +27,7 @@ type StatsProps = {
 export function Stats({ onBack }: StatsProps) {
   const allStats = useMemo(() => getStats(), []);
   const streak = useMemo(() => getDailyStreak(), []);
+  const activityDates = useMemo(() => getActivityDates(), []);
   const totalWins = allStats.filter((s) => s.won).length;
 
   return (
@@ -48,6 +57,11 @@ export function Stats({ onBack }: StatsProps) {
           </div>
         </div>
 
+        <div className="card p-4 w-full flex flex-col items-center gap-2">
+          <span className="text-xs text-text-muted">Last 90 days</span>
+          <CalendarHeatmap data={activityDates} days={90} />
+        </div>
+
         <div className="flex flex-col gap-4 w-full">
           {DIFFICULTIES.map((diff) => (
             <DifficultyStats key={diff} difficulty={diff} />
@@ -68,6 +82,8 @@ export function Stats({ onBack }: StatsProps) {
 
 function DifficultyStats({ difficulty }: { difficulty: Difficulty }) {
   const stats = useMemo(() => getStatsForDifficulty(difficulty), [difficulty]);
+  const recentTimes = useMemo(() => getRecentTimes(difficulty), [difficulty]);
+  const completion = useMemo(() => getCompletionRate(difficulty), [difficulty]);
 
   return (
     <div className="card p-4 w-full">
@@ -80,23 +96,34 @@ function DifficultyStats({ difficulty }: { difficulty: Difficulty }) {
         {stats && (
           <span className="text-xs text-text-muted">
             {stats.gamesPlayed} {stats.gamesPlayed === 1 ? "win" : "wins"}
+            {completion.total > 0 && ` · ${completion.rate}% win rate`}
           </span>
         )}
       </div>
       {stats ? (
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div>
-            <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-              {formatTime(stats.bestTime)}
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
+                {formatTime(stats.bestTime)}
+              </div>
+              <div className="text-xs text-text-muted">Best</div>
             </div>
-            <div className="text-xs text-text-muted">Best</div>
-          </div>
-          <div>
-            <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-              {formatTime(stats.averageTime)}
+            <div>
+              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
+                {formatTime(stats.averageTime)}
+              </div>
+              <div className="text-xs text-text-muted">Average</div>
             </div>
-            <div className="text-xs text-text-muted">Average</div>
           </div>
+          {recentTimes.length >= 2 && (
+            <div className="flex flex-col items-center gap-1">
+              <Sparkline times={recentTimes} width={160} height={36} />
+              <span className="text-[0.625rem] text-text-muted">
+                Last {recentTimes.length} games
+              </span>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-sm text-text-muted text-center">No games yet</p>

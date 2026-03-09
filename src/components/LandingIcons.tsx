@@ -112,6 +112,74 @@ export function StatsIcon() {
   );
 }
 
+const MINI_CELLS = [
+  { r: 0, c: 0, v: "5", d: 0.0, p: "a" },
+  { r: 0, c: 2, v: "3", d: 0.3, p: "b" },
+  { r: 0, c: 3, v: "9", d: 0, p: "g" },
+  { r: 1, c: 1, v: "7", d: 0.6, p: "a" },
+  { r: 1, c: 3, v: "1", d: 0.5, p: "b" },
+  { r: 2, c: 0, v: "4", d: 0.8, p: "b" },
+  { r: 2, c: 2, v: "8", d: 0.9, p: "a" },
+  { r: 3, c: 1, v: "6", d: 0, p: "g" },
+  { r: 3, c: 3, v: "2", d: 1.2, p: "a" },
+  { r: 3, c: 0, v: "9", d: 1.1, p: "b" },
+];
+
+export function MiniBoard() {
+  const size = 4;
+  const cellSize = 36;
+  const gap = 2;
+  const total = size * (cellSize + gap) - gap;
+
+  return (
+    <svg
+      width={total}
+      height={total}
+      viewBox={`0 0 ${total} ${total}`}
+      role="img"
+      aria-label="Game preview"
+      className="mx-auto"
+    >
+      {/* Grid cells */}
+      {Array.from({ length: size * size }, (_, i) => {
+        const r = Math.floor(i / size);
+        const c = i % size;
+        return (
+          <rect
+            key={i}
+            x={c * (cellSize + gap)}
+            y={r * (cellSize + gap)}
+            width={cellSize}
+            height={cellSize}
+            rx={4}
+            className="fill-bg-raised"
+          />
+        );
+      })}
+      {/* Animated numbers */}
+      {MINI_CELLS.map(({ r, c, v, d, p }) => (
+        <text
+          key={`${r}-${c}`}
+          x={c * (cellSize + gap) + cellSize / 2}
+          y={r * (cellSize + gap) + cellSize / 2 + 1}
+          textAnchor="middle"
+          dominantBaseline="central"
+          className={`text-sm font-semibold ${p === "g" ? "fill-text-secondary" : p === "a" ? "fill-accent" : "fill-rose-400 dark:fill-rose-300"}`}
+          style={{
+            opacity: p === "g" ? 1 : 0,
+            animation:
+              p === "g"
+                ? "none"
+                : `mini-cell-in 0.3s ease-out ${d + 0.5}s forwards`,
+          }}
+        >
+          {v}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
 export function GitHubIcon() {
   return (
     <svg
