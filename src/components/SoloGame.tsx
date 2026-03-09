@@ -24,6 +24,7 @@ import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
+import { ProgressBar } from "./ProgressBar.tsx";
 import { AssistLevelIcon, NumPadPositionIcon } from "./SettingIcons.tsx";
 import { Timer } from "./Timer.tsx";
 
@@ -85,6 +86,17 @@ export function SoloGame({
     [difficulty],
   );
   const personalBest = priorStats?.bestTime ?? null;
+
+  const givenCount = useMemo(
+    () => puzzle.split("").filter((c) => c !== ".").length,
+    [puzzle],
+  );
+  const progressPercent = useMemo(() => {
+    const userFillable = 81 - givenCount;
+    if (userFillable === 0) return 100;
+    const userFilled = 81 - game.cellsRemaining - givenCount;
+    return Math.round((userFilled / userFillable) * 100);
+  }, [givenCount, game.cellsRemaining]);
 
   // Auto-save on every board change
   useEffect(() => {
@@ -204,19 +216,18 @@ export function SoloGame({
               timerSecondsRef.current = s;
             }}
           />
-          <span className="text-xs text-text-muted font-mono tabular-nums">
-            {paused ? (
-              "Paused"
-            ) : (
-              <>
-                <span className="text-accent font-medium">
-                  {81 - game.cellsRemaining}
-                </span>
-                /81
-                {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
-              </>
-            )}
-          </span>
+          {paused ? (
+            <span className="text-xs text-text-muted">Paused</span>
+          ) : (
+            <div className="flex items-center gap-2 w-32">
+              <ProgressBar percent={progressPercent} color="bg-accent" />
+            </div>
+          )}
+          {!paused && personalBest !== null && (
+            <span className="text-xs text-text-muted font-mono tabular-nums">
+              PB {formatTime(personalBest)}
+            </span>
+          )}
         </button>
       }
       numPad={
