@@ -10,7 +10,7 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
-import type { Invite } from "./hooks/usePresence.ts";
+import type { ActiveGame, Invite } from "./hooks/usePresence.ts";
 import { usePresence } from "./hooks/usePresence.ts";
 import { DEFAULT_DIFFICULTY, DIFFICULTIES } from "./lib/constants.ts";
 import {
@@ -157,6 +157,7 @@ function App() {
     (friendId: string) => {
       const roomId = generateRoomCode();
       presence.sendInvite(friendId, roomId, DEFAULT_DIFFICULTY);
+      presence.broadcastGame(roomId, DEFAULT_DIFFICULTY);
       navigate({ name: "multiplayer", roomId, difficulty: DEFAULT_DIFFICULTY });
     },
     [presence, navigate],
@@ -172,6 +173,17 @@ function App() {
       });
     },
     [presence, navigate],
+  );
+
+  const handleJoinGame = useCallback(
+    (game: ActiveGame) => {
+      navigate({
+        name: "multiplayer",
+        roomId: game.roomId,
+        difficulty: game.difficulty as Difficulty,
+      });
+    },
+    [navigate],
   );
 
   switch (screen.name) {
@@ -217,6 +229,8 @@ function App() {
             onRemoveFriend={handleRemoveFriend}
             onInviteFriend={handleInviteFriend}
             onJoinInvite={handleJoinInvite}
+            friendActiveGames={presence.friendActiveGames}
+            onJoinGame={handleJoinGame}
           />
         </div>
       );
@@ -237,6 +251,7 @@ function App() {
                 });
               } else {
                 const roomId = generateRoomCode();
+                presence.broadcastGame(roomId, difficulty);
                 navigate({
                   name: "multiplayer",
                   roomId,

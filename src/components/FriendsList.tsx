@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Invite } from "../hooks/usePresence.ts";
+import type { ActiveGame, Invite } from "../hooks/usePresence.ts";
 import type { Friend } from "../lib/friends.ts";
 
 type FriendsListProps = {
@@ -7,10 +7,12 @@ type FriendsListProps = {
   friends: Friend[];
   onlineFriendIds: Set<string>;
   pendingInvites: Invite[];
+  friendActiveGames: Map<string, ActiveGame>;
   onAddFriend: (code: string) => void;
   onRemoveFriend: (playerId: string) => void;
   onInviteFriend: (friendId: string) => void;
   onJoinInvite: (invite: Invite) => void;
+  onJoinGame: (game: ActiveGame) => void;
 };
 
 export function FriendsList({
@@ -18,10 +20,12 @@ export function FriendsList({
   friends,
   onlineFriendIds,
   pendingInvites,
+  friendActiveGames,
   onAddFriend,
   onRemoveFriend,
   onInviteFriend,
   onJoinInvite,
+  onJoinGame,
 }: FriendsListProps) {
   const [friendCode, setFriendCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -122,6 +126,30 @@ export function FriendsList({
             className="btn btn-md btn-primary"
             onClick={() => onJoinInvite(invite)}
             aria-label={`Join ${invite.fromName}'s game`}
+          >
+            Join
+          </button>
+        </div>
+      ))}
+
+      {/* Friend active games — always visible */}
+      {Array.from(friendActiveGames.entries()).map(([hostId, game]) => (
+        <div
+          key={hostId}
+          className="flex items-center justify-between px-3 py-2 rounded-lg bg-accent/10 border border-accent/20"
+        >
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-sm text-text-primary font-medium">
+              {game.hostName}
+            </span>
+            <span className="text-xs text-text-muted">has an open game</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-md btn-primary"
+            onClick={() => onJoinGame(game)}
+            aria-label={`Join ${game.hostName}'s game`}
           >
             Join
           </button>

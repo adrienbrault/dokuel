@@ -1,6 +1,6 @@
 import { describe, expect, it, jest } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { Invite } from "../hooks/usePresence.ts";
+import type { ActiveGame, Invite } from "../hooks/usePresence.ts";
 import type { Friend } from "../lib/friends.ts";
 import { FriendsList } from "./FriendsList.tsx";
 
@@ -23,10 +23,12 @@ const defaultProps = {
   friends: [] as Friend[],
   onlineFriendIds: new Set<string>(),
   pendingInvites: [] as Invite[],
+  friendActiveGames: new Map<string, ActiveGame>(),
   onAddFriend: jest.fn(),
   onRemoveFriend: jest.fn(),
   onInviteFriend: jest.fn(),
   onJoinInvite: jest.fn(),
+  onJoinGame: jest.fn(),
 };
 
 function expandFriendsList() {
@@ -243,5 +245,58 @@ describe("FriendsList", () => {
     expect(
       screen.queryByLabelText("Friend code input"),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows friend active games with join button without expanding", () => {
+    const friends = [makeFriend("friend1", "Bold Lion")];
+    const friendActiveGames = new Map<string, ActiveGame>([
+      [
+        "friend1",
+        {
+          roomId: "game-room",
+          difficulty: "hard",
+          hostName: "Bold Lion",
+          timestamp: Date.now(),
+        },
+      ],
+    ]);
+
+    render(
+      <FriendsList
+        {...defaultProps}
+        friends={friends}
+        friendActiveGames={friendActiveGames}
+      />,
+    );
+
+    expect(screen.getByText("Bold Lion")).toBeInTheDocument();
+    expect(screen.getByText("has an open game")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Join Bold Lion's game"),
+    ).toBeInTheDocument();
+  });
+
+  it("calls onJoinGame when join active game button clicked", () => {
+    const onJoinGame = jest.fn();
+    const friends = [makeFriend("friend1", "Bold Lion")];
+    const game: ActiveGame = {
+      roomId: "game-room",
+      difficulty: "hard",
+      hostName: "Bold Lion",
+      timestamp: Date.now(),
+    };
+    const friendActiveGames = new Map([["friend1", game]]);
+
+    render(
+      <FriendsList
+        {...defaultProps}
+        friends={friends}
+        friendActiveGames={friendActiveGames}
+        onJoinGame={onJoinGame}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Join Bold Lion's game"));
+    expect(onJoinGame).toHaveBeenCalledWith(game);
   });
 });
