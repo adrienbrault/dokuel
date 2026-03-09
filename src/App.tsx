@@ -12,20 +12,21 @@ import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import type { Invite } from "./hooks/usePresence.ts";
 import { usePresence } from "./hooks/usePresence.ts";
+import { DEFAULT_DIFFICULTY, DIFFICULTIES } from "./lib/constants.ts";
 import {
   addFriend,
   getFriends,
   removeFriend as removeFriendFromStorage,
 } from "./lib/friends.ts";
-import { getPlayerId, getPlayerName } from "./lib/player-identity.ts";
+import {
+  generateId,
+  getPlayerId,
+  getPlayerName,
+} from "./lib/player-identity.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { AssistLevel, Difficulty } from "./lib/types.ts";
 import "./index.css";
-
-function generateId() {
-  return Math.random().toString(36).slice(2, 10);
-}
 
 type Screen =
   | { name: "landing" }
@@ -47,12 +48,7 @@ type Screen =
   | { name: "stats" }
   | { name: "about" };
 
-const VALID_DIFFICULTIES = new Set<string>([
-  "easy",
-  "medium",
-  "hard",
-  "expert",
-]);
+const VALID_DIFFICULTIES = new Set<string>(DIFFICULTIES);
 
 function screenToPath(screen: Screen): string {
   switch (screen.name) {
@@ -103,7 +99,7 @@ function pathToScreen(pathname: string): Screen {
   return {
     name: "multiplayer",
     roomId: path,
-    difficulty: "medium" as Difficulty,
+    difficulty: DEFAULT_DIFFICULTY,
   };
 }
 
@@ -160,8 +156,8 @@ function App() {
   const handleInviteFriend = useCallback(
     (friendId: string) => {
       const roomId = generateRoomCode();
-      presence.sendInvite(friendId, roomId, "medium");
-      navigate({ name: "multiplayer", roomId, difficulty: "medium" });
+      presence.sendInvite(friendId, roomId, DEFAULT_DIFFICULTY);
+      navigate({ name: "multiplayer", roomId, difficulty: DEFAULT_DIFFICULTY });
     },
     [presence, navigate],
   );
@@ -302,7 +298,7 @@ function App() {
             navigate({
               name: "multiplayer",
               roomId,
-              difficulty: "medium",
+              difficulty: DEFAULT_DIFFICULTY,
             });
           }}
           onBack={() => navigate({ name: "landing" })}

@@ -9,6 +9,35 @@ function screenshotPath(name: string, project: string) {
 	return join(SCREENSHOT_DIR, `${name}--${project.replace(/\s+/g, "-")}.png`);
 }
 
+async function injectProgressBars(page: import("@playwright/test").Page) {
+	await page.evaluate(() => {
+		const header = document.querySelector(
+			".flex.items-center.justify-between.w-full",
+		);
+		if (!header) return;
+		const bars = document.createElement("div");
+		bars.className =
+			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
+		bars.innerHTML = `
+			<div class="flex items-center gap-2">
+				<span class="text-xs text-text-secondary w-24 truncate">You</span>
+				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
+					<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
+				</div>
+				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
+			</div>
+			<div class="flex items-center gap-2">
+				<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
+				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
+					<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
+				</div>
+				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
+			</div>
+		`;
+		header.after(bars);
+	});
+}
+
 test("landing page", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.waitForLoadState("networkidle");
@@ -329,33 +358,7 @@ test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
 	await page.waitForTimeout(800);
 
 	// Inject dual progress bars above the board to simulate multiplayer view
-	await page.evaluate(() => {
-		const header = document.querySelector(
-			".flex.items-center.justify-between.w-full",
-		);
-		if (!header) return;
-
-		const bars = document.createElement("div");
-		bars.className =
-			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
-		bars.innerHTML = `
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">You</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-					<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
-				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-					<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
-				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
-			</div>
-		`;
-		header.after(bars);
-	});
+	await injectProgressBars(page);
 
 	await page.waitForTimeout(300);
 	await page.screenshot({
@@ -377,33 +380,7 @@ test("multiplayer - dual progress bars (dark mode)", async ({
 	await page.waitForTimeout(800);
 
 	// Inject dual progress bars
-	await page.evaluate(() => {
-		const header = document.querySelector(
-			".flex.items-center.justify-between.w-full",
-		);
-		if (!header) return;
-
-		const bars = document.createElement("div");
-		bars.className =
-			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
-		bars.innerHTML = `
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">You</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-					<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
-				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-					<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
-				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
-			</div>
-		`;
-		header.after(bars);
-	});
+	await injectProgressBars(page);
 
 	await page.waitForTimeout(300);
 	await page.screenshot({
