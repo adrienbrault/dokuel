@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import type { NumPadPosition } from "../lib/types.ts";
+import { KeyboardShortcuts } from "./KeyboardShortcuts.tsx";
 
 export type SettingItem = {
   key: string;
@@ -42,7 +43,7 @@ export function GameLayout({
   headerExtra,
   footer,
   boardClassName = "",
-  headerClassName = "max-w-lg lg:max-w-4xl",
+  headerClassName = "max-w-lg lg:max-w-5xl",
   onDeselectCell,
   settings,
 }: GameLayoutProps) {
@@ -86,16 +87,16 @@ export function GameLayout({
         <div
           className={`
             game-area flex gap-3 w-full justify-center flex-1
-            lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
-            ${position === "left" ? "flex-row items-center max-w-lg mx-auto lg:max-w-4xl" : ""}
-            ${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto lg:max-w-4xl lg:flex-row" : ""}
+            lg:flex-row lg:items-start lg:max-w-5xl lg:mx-auto lg:gap-8
+            ${position === "left" ? "flex-row items-center max-w-lg mx-auto lg:max-w-5xl" : ""}
+            ${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto lg:max-w-5xl lg:flex-row" : ""}
             ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-start" : ""}
           `}
         >
           {/* Mobile: show numpad in position (left/right) */}
           <div className="lg:hidden">{position !== "bottom" && numPad}</div>
           <div
-            className={`game-board-col flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+            className={`game-board-col flex flex-col items-center gap-3 ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
           >
             {board}
             <div className="game-controls-col flex flex-col items-center gap-3 w-full">
@@ -111,9 +112,10 @@ export function GameLayout({
             {controls}
             {numPad}
           </div>
-          {/* Desktop: always show numpad on the right */}
-          <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
+          {/* Desktop: numpad + keyboard shortcuts on the right */}
+          <div className="hidden lg:flex lg:flex-col lg:gap-6 lg:pt-2">
             {numPad}
+            <KeyboardShortcuts />
           </div>
         </div>
 

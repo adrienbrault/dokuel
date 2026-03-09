@@ -133,7 +133,7 @@ export function MultiplayerBoard({
       onBack={onBack}
       position={position}
       onDeselectCell={game.deselectCell}
-      headerClassName="max-w-[min(100vw-2rem,28rem)]"
+      headerClassName="max-w-[min(100vw-2rem,28rem)] lg:max-w-5xl"
       settings={settings}
       timer={
         <div className="flex flex-col items-center">
