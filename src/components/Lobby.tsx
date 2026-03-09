@@ -149,21 +149,21 @@ export function Lobby({
           );
         })}
         {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
-            <span className="text-sm text-text-muted">
+          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-accent/30">
+            <span className="text-sm text-text-secondary">
               Waiting for opponent
             </span>
             <span className="flex gap-0.5" aria-hidden="true">
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
                 style={{ animationDelay: "0ms" }}
               />
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
                 style={{ animationDelay: "150ms" }}
               />
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
                 style={{ animationDelay: "300ms" }}
               />
             </span>
