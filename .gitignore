@@ -18,6 +18,7 @@ coverage-diff
 
 # Playwright
 e2e/screenshots
+e2e/screenshots-site
 e2e/results
 playwright-report
 test-results
