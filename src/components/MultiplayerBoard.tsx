@@ -66,10 +66,7 @@ export function MultiplayerBoard({
   const prevCellsRef = useRef(game.cellsRemaining);
   const [revealed, setRevealed] = useState(false);
 
-  const totalToFill = useMemo(
-    () => 81 - countFilledCells(puzzle),
-    [puzzle],
-  );
+  const totalToFill = useMemo(() => 81 - countFilledCells(puzzle), [puzzle]);
 
   const myPercent = useMemo(() => {
     const filled = totalToFill - game.cellsRemaining;
@@ -161,7 +158,8 @@ export function MultiplayerBoard({
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell
-              ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
+              ? (game.board[game.selectedCell.row]?.[game.selectedCell.col]
+                  ?.value ?? null)
               : null
           }
           showRemainingCounts={assistLevel === "full"}
