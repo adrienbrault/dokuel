@@ -118,7 +118,7 @@ describe("usePresence", () => {
     );
 
     expect(mockState.awareness.localState).toEqual({
-      user: { id: "me123", name: "Swift Panda" },
+      user: { id: "me123", name: "Swift Panda", dailyResult: null },
     });
   });
 
