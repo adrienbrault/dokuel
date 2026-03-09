@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test } from "./fixtures";
 
 const SCREENSHOT_DIR = join(import.meta.dirname, "screenshots");
 mkdirSync(SCREENSHOT_DIR, { recursive: true });

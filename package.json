@@ -15,7 +15,7 @@
     "diff-coverage": "bun scripts/diff-coverage.ts",
     "ci": "bash scripts/parallel-ci.sh",
     "e2e": "bunx playwright test",
-    "screenshots": "bunx playwright test e2e/screenshots.spec.ts --reporter=html"
+    "screenshots": "bun run build && bunx playwright test e2e/screenshots.spec.ts --reporter=html"
   },
   "dependencies": {
     "react": "^19.2.0",

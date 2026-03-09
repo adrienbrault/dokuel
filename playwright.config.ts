@@ -7,11 +7,9 @@ export default defineConfig({
   fullyParallel: true,
   use: {
     baseURL: "http://localhost:5173",
-  },
-  webServer: {
-    command: "bun run dev",
-    port: 5173,
-    reuseExistingServer: true,
+    launchOptions: {
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    },
   },
   projects: [
     {
