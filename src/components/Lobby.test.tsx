@@ -1,8 +1,13 @@
 import { describe, expect, it, jest } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Friend } from "../lib/friends.ts";
 import type { RoomState } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
+
+function makeFriend(playerId: string, name: string): Friend {
+  return { playerId, name, addedAt: new Date().toISOString() };
+}
 
 const BASE_STATE: RoomState = {
   roomId: "abc123",
@@ -130,5 +135,74 @@ describe("Lobby", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /start/i }));
     expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it("shows invite buttons for friends when waiting for opponent", () => {
+    const friends = [
+      makeFriend("friend1", "Bold Lion"),
+      makeFriend("friend2", "Clever Fox"),
+    ];
+    const onInviteFriend = jest.fn();
+
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        onStart={jest.fn()}
+        onBack={jest.fn()}
+        friends={friends}
+        onInviteFriend={onInviteFriend}
+      />,
+    );
+
+    expect(screen.getByText("Bold Lion")).toBeInTheDocument();
+    expect(screen.getByText("Clever Fox")).toBeInTheDocument();
+    expect(screen.getByLabelText("Invite Bold Lion")).toBeInTheDocument();
+  });
+
+  it("calls onInviteFriend when lobby invite button clicked", async () => {
+    const friends = [makeFriend("friend1", "Bold Lion")];
+    const onInviteFriend = jest.fn();
+
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        onStart={jest.fn()}
+        onBack={jest.fn()}
+        friends={friends}
+        onInviteFriend={onInviteFriend}
+      />,
+    );
+
+    await userEvent.click(screen.getByLabelText("Invite Bold Lion"));
+    expect(onInviteFriend).toHaveBeenCalledWith("friend1");
+  });
+
+  it("hides friend invite section when opponent already joined", () => {
+    const state: RoomState = {
+      ...BASE_STATE,
+      players: [
+        ...BASE_STATE.players,
+        {
+          id: "p2",
+          name: "Bob",
+          color: "#EF4444",
+          cellsRemaining: 81,
+          completionPercent: 0,
+        },
+      ],
+    };
+    const friends = [makeFriend("friend1", "Bold Lion")];
+
+    render(
+      <Lobby
+        roomState={state}
+        onStart={jest.fn()}
+        onBack={jest.fn()}
+        friends={friends}
+        onInviteFriend={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByLabelText("Invite Bold Lion")).not.toBeInTheDocument();
   });
 });
