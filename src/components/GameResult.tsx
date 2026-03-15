@@ -25,11 +25,6 @@ type GameResultProps = {
   isDaily?: boolean | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
-  onAddFriend?:
-    | ((opponentId: string, opponentName: string) => void)
-    | undefined;
-  opponentId?: string | undefined;
-  opponentName?: string | undefined;
 };
 
 export function buildShareText({
@@ -75,12 +70,8 @@ export function GameResult({
   isDaily,
   tip,
   onDismissTip,
-  onAddFriend,
-  opponentId,
-  opponentName,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
-  const [friendAdded, setFriendAdded] = useState(false);
 
   const handleShare = () => {
     const text = buildShareText({
@@ -198,19 +189,6 @@ export function GameResult({
               onClick={handleShare}
             >
               {copied ? "Copied!" : "Share Result"}
-            </button>
-          )}
-          {isMultiplayer && onAddFriend && opponentId && opponentName && (
-            <button
-              type="button"
-              className="btn btn-ghost w-full py-2"
-              onClick={() => {
-                onAddFriend(opponentId, opponentName);
-                setFriendAdded(true);
-              }}
-              disabled={friendAdded}
-            >
-              {friendAdded ? "Friend Added!" : `Add ${opponentName} as Friend`}
             </button>
           )}
         </div>

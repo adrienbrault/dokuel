@@ -82,45 +82,6 @@ test("landing page", async ({ page }, testInfo) => {
   });
 });
 
-test("landing page - with friends", async ({ page }, testInfo) => {
-  await setLocalStorage(page, [
-    ["sudoku_player_id", "me123abc"],
-    [
-      "sudoku_friends",
-      JSON.stringify([
-        {
-          playerId: "friend01",
-          name: "Bold Lion",
-          addedAt: "2026-03-07T10:00:00Z",
-        },
-        {
-          playerId: "friend02",
-          name: "Clever Fox",
-          addedAt: "2026-03-06T10:00:00Z",
-        },
-      ]),
-    ],
-    // Also set some stats so we get returning-user view
-    [
-      "sudoku_stats",
-      JSON.stringify([
-        {
-          difficulty: "easy",
-          time: 120,
-          date: "2026-03-07",
-          won: true,
-          hintsUsed: 0,
-        },
-      ]),
-    ],
-  ]);
-  await gotoLanding(page);
-  await page.screenshot({
-    path: screenshotPath("landing-friends", testInfo.project.name),
-    fullPage: true,
-  });
-});
-
 test("solo game", async ({ page }, testInfo) => {
   await gotoSoloGame(page);
   await page.screenshot({

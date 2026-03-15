@@ -22,9 +22,6 @@ describe("About", () => {
       screen.getByRole("heading", { name: /1v1 multiplayer/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /friends/i }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("heading", { name: /mobile/i }),
     ).toBeInTheDocument();
   });

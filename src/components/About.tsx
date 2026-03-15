@@ -117,22 +117,6 @@ export function About({ onBack, onPlay }: AboutProps) {
         </section>
 
         <section className="flex flex-col gap-2 w-full">
-          <SectionHeading>Friends</SectionHeading>
-          <p className="text-sm text-text-secondary">
-            Add friends and see who's online — no account needed. Challenge them
-            to a duel with one tap.
-          </p>
-          <FeatureList
-            items={[
-              "Add friends via shareable friend code",
-              "See which friends are online in real time",
-              "Send and receive game invites from the landing page",
-              "One-tap join for pending invites",
-            ]}
-          />
-        </section>
-
-        <section className="flex flex-col gap-2 w-full">
           <SectionHeading>Mobile-First Design</SectionHeading>
           <p className="text-sm text-text-secondary">
             Built for touch screens first, with thoughtful details that make

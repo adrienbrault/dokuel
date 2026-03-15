@@ -35,13 +35,6 @@
 - 60-second disconnect countdown with option to claim win
 - Rematch without leaving the room
 
-### Friends
-
-- Add friends via shareable friend code — no accounts needed
-- See which friends are online in real time
-- Send and receive game invites directly from the landing page
-- One-tap join for pending invites
-
 ### Mobile-First UX
 
 - Touch-optimized with 44px+ tap targets
@@ -130,8 +123,6 @@ stateDiagram-v2
     Landing --> Join: Join Game
     Landing --> Stats: View Stats
     Landing --> Solo: Continue saved game
-    Landing --> MP: Accept friend invite
-
     Diff --> Solo: Solo mode + pick difficulty
     Diff --> MP: Create mode + pick difficulty
     Diff --> Landing: Back
@@ -265,21 +256,20 @@ src/
 ├── components/     # React UI components
 │   ├── Board, Cell, NumPad, NumPadPositionToggle
 │   ├── SoloGame, DailyGame, MultiplayerGame, MultiplayerBoard, MultiplayerScreen
-│   ├── Landing, Lobby, JoinScreen, FriendsList
+│   ├── Landing, Lobby, JoinScreen
 │   ├── GameLayout, GameControls, GameResult, HintBanner
 │   ├── Stats, DifficultyPicker, AssistLevelPicker, Timer
 │   ├── DarkModeToggle, SoundToggle, ToggleSwitch, Toast
 │   └── App (router)
 ├── hooks/          # State management
 │   ├── useSudoku, sudokuReducer, sudokuActions
-│   ├── useYjsMultiplayer, usePresence
+│   ├── useYjsMultiplayer
 │   ├── useKeyboard, useNumPadPosition, useDarkMode
 │   └── useAssistLevel, useOpponentProgressVisible
 ├── lib/            # Pure logic — no React dependency
 │   ├── sudoku (engine), types, p2p-room (Yjs CRDT), room-code
 │   ├── daily (seeded RNG), daily-streak, stats, game-storage
 │   ├── hint-engine, hint-hidden-single
-│   ├── friends, player-identity
 │   └── name-generator, haptics, sounds, format, constants
 ```
 
@@ -288,7 +278,6 @@ src/
 - **Peer-to-peer multiplayer** — game state syncs via Yjs CRDTs over WebRTC. A self-hosted Cloudflare Worker at `signal.dokuel.com` handles peer discovery; all game data flows directly between players
 - **React hooks only** — `useReducer` for game state, no external state library
 - **Three-level assist system** — Paper (no assistance), Standard (conflict highlighting + auto-clear notes), Full (conflicts + row/column highlighting). Configurable at difficulty selection and during gameplay
-- **Friends without accounts** — shareable friend codes, online presence via Yjs awareness, game invites from the landing page
 - **No accounts** — auto-generated fun names (adjective + animal), persisted in localStorage; session identity in sessionStorage for reconnect
 - **Colocated tests** — `*.test.ts` / `*.test.tsx` files sit next to the code they test
 

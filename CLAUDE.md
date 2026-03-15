@@ -178,9 +178,9 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ## Project Conventions
 
 ### File Structure
-- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, DailyGame, MultiplayerGame, MultiplayerBoard, MultiplayerScreen, Landing, Lobby, JoinScreen, FriendsList, GameLayout, GameControls, GameResult, HintBanner, Stats, DifficultyPicker, AssistLevelPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast, LandingIcons)
-- Hooks: `src/hooks/` — custom React hooks (useSudoku, sudokuReducer, sudokuActions, useYjsMultiplayer, usePresence, useKeyboard, useNumPadPosition, useDarkMode, useAssistLevel, useOpponentProgressVisible)
-- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, daily challenge, daily-streak, stats, game-storage, hint-engine, hint-hidden-single, friends, player-identity, name-generator, haptics, sounds, format, constants)
+- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, DailyGame, MultiplayerGame, MultiplayerBoard, MultiplayerScreen, Landing, Lobby, JoinScreen, GameLayout, GameControls, GameResult, HintBanner, Stats, DifficultyPicker, AssistLevelPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast, LandingIcons)
+- Hooks: `src/hooks/` — custom React hooks (useSudoku, sudokuReducer, sudokuActions, useYjsMultiplayer, useKeyboard, useNumPadPosition, useDarkMode, useAssistLevel, useOpponentProgressVisible)
+- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, daily challenge, daily-streak, stats, game-storage, hint-engine, hint-hidden-single, name-generator, haptics, sounds, format, constants)
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)
@@ -248,7 +248,6 @@ You cannot judge visual quality from code alone. **Always screenshot, always rev
 - **Board sharing**: Sharer's cells become locked/given on both boards. Notes not shared.
 - **Numpad positions**: Bottom (default), Left, Right. Persisted in localStorage. Configured via settings popover.
 - **No accounts**: Auto-generated fun names (adjective + animal). Name persisted in localStorage, editable in lobby. sessionStorage for reconnect identity.
-- **Friends**: Shareable friend codes, online presence via Yjs awareness protocol, game invites from landing page. All stored in localStorage.
 - **Daily challenge**: Deterministic puzzle via seeded RNG — same date, same board, any device. Streak tracking (current + longest). Progress indicator on landing page.
 - **Stats tracking**: Per-difficulty game history (best time, average, games played) in localStorage. Personal best shown during gameplay.
 - **Game persistence**: Auto-save in-progress games to localStorage. Resume on return.

@@ -32,11 +32,6 @@ export type MultiplayerBoardProps = {
   onComplete: (board: string) => void;
   onRematch: () => void;
   onBack: () => void;
-  onAddFriend?:
-    | ((opponentId: string, opponentName: string) => void)
-    | undefined;
-  opponentId?: string | undefined;
-  opponentName?: string | undefined;
 };
 
 export function MultiplayerBoard({
@@ -51,9 +46,6 @@ export function MultiplayerBoard({
   onComplete,
   onRematch,
   onBack,
-  onAddFriend,
-  opponentId,
-  opponentName,
 }: MultiplayerBoardProps) {
   const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
   const game = useSudoku(puzzle, solution);
@@ -210,9 +202,6 @@ export function MultiplayerBoard({
             isMultiplayer
             onNewGame={onBack}
             onRematch={onRematch}
-            onAddFriend={onAddFriend}
-            opponentId={opponentId}
-            opponentName={opponentName}
           />
         ) : undefined
       }

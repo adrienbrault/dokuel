@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import type { ActiveGame, Invite } from "../hooks/usePresence.ts";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime, getTodayISO } from "../lib/format.ts";
-import type { Friend } from "../lib/friends.ts";
 import {
   deleteGame,
   listSavedGames,
@@ -12,7 +10,6 @@ import {
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
 import { countFilledCells } from "../lib/sudoku.ts";
-import { FriendsList } from "./FriendsList.tsx";
 import {
   ActionButton,
   CalendarIcon,
@@ -31,16 +28,6 @@ type LandingProps = {
   onContinue: (gameKey: string, difficulty: string) => void;
   onStats: () => void;
   onAbout: () => void;
-  playerId?: string;
-  friends?: Friend[];
-  onlineFriendIds?: Set<string>;
-  pendingInvites?: Invite[];
-  friendActiveGames?: Map<string, ActiveGame>;
-  onAddFriend?: (code: string) => void;
-  onRemoveFriend?: (playerId: string) => void;
-  onInviteFriend?: (friendId: string) => void;
-  onJoinInvite?: (invite: Invite) => void;
-  onJoinGame?: (game: ActiveGame) => void;
 };
 
 export function Landing({
@@ -51,16 +38,6 @@ export function Landing({
   onContinue,
   onStats,
   onAbout,
-  playerId,
-  friends,
-  onlineFriendIds,
-  pendingInvites,
-  onAddFriend,
-  onRemoveFriend,
-  onInviteFriend,
-  onJoinInvite,
-  friendActiveGames,
-  onJoinGame,
 }: LandingProps) {
   const today = useMemo(() => getTodayISO(), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
@@ -144,29 +121,6 @@ export function Landing({
           <ActionButton label="Create Game" onClick={onCreate} />
           <ActionButton label="Join Game" onClick={onJoin} />
         </div>
-        {playerId &&
-          friends &&
-          onlineFriendIds &&
-          pendingInvites &&
-          friendActiveGames &&
-          onAddFriend &&
-          onRemoveFriend &&
-          onInviteFriend &&
-          onJoinInvite &&
-          onJoinGame && (
-            <FriendsList
-              playerId={playerId}
-              friends={friends}
-              onlineFriendIds={onlineFriendIds}
-              pendingInvites={pendingInvites}
-              friendActiveGames={friendActiveGames}
-              onAddFriend={onAddFriend}
-              onRemoveFriend={onRemoveFriend}
-              onInviteFriend={onInviteFriend}
-              onJoinInvite={onJoinInvite}
-              onJoinGame={onJoinGame}
-            />
-          )}
       </div>
       <button type="button" className="btn btn-ghost text-sm" onClick={onStats}>
         <span className="flex items-center gap-1.5">
