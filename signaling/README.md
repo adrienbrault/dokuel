@@ -40,6 +40,27 @@ bunx wrangler login
 bunx wrangler deploy
 ```
 
+### 4. TURN Relay (for NAT traversal)
+
+WebRTC peer-to-peer connections fail on restrictive networks (4G/mobile, corporate firewalls) where symmetric NAT blocks direct connections. A TURN relay server acts as a fallback — peers relay traffic through it when they can't connect directly.
+
+#### Setup
+
+1. **Create a TURN key** in the [Cloudflare dashboard](https://dash.cloudflare.com) → Calls/Realtime → TURN Keys → Create
+2. **Add Worker secrets** (the TURN key ID and API token):
+   ```bash
+   cd signaling
+   bunx wrangler secret put TURN_KEY_ID
+   bunx wrangler secret put TURN_KEY_API_TOKEN
+   ```
+3. **Deploy** — the signaling worker already has a `/turn-credentials` endpoint that generates short-lived TURN credentials using the Cloudflare TURN API. The client fetches these before establishing a WebRTC connection.
+
+Without these secrets, the worker returns an empty `iceServers` array and the client falls back to STUN-only (direct connections only, no relay).
+
+#### Cost
+
+Cloudflare TURN: $0.05/GB of relayed data. Sudoku CRDT sync is tiny — a typical game relays kilobytes, not megabytes.
+
 ## Architecture
 
 - **Worker**: Routes all WebSocket connections to a single Durable Object instance
