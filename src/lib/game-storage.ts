@@ -1,4 +1,3 @@
-import { countFilledCells } from "./sudoku.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type SavedGame = {
@@ -9,18 +8,6 @@ export type SavedGame = {
   difficulty: Difficulty;
   assistLevel: AssistLevel;
 };
-
-export function boardToValues(board: { value: number | null }[][]): string {
-  return board
-    .flatMap((row) =>
-      row.map((c) => (c.value === null ? "." : String(c.value))),
-    )
-    .join("");
-}
-
-export function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
-  return board.flatMap((row) => row.map((c) => Array.from(c.notes)));
-}
 
 const STORAGE_PREFIX = "sudoku_save_";
 
@@ -80,8 +67,8 @@ export function listSavedGames(): SavedGameSummary[] {
       if (key.startsWith("daily-")) continue;
       const game = loadGame(key);
       if (!game) continue;
-      const filledCells = countFilledCells(game.values);
-      const givenCells = countFilledCells(game.puzzle);
+      const filledCells = game.values.split("").filter((c) => c !== ".").length;
+      const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
         key,
         difficulty: game.difficulty,

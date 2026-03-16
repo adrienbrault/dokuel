@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DifficultyPicker } from "./DifficultyPicker.tsx";
 
 describe("DifficultyPicker", () => {
@@ -13,7 +13,7 @@ describe("DifficultyPicker", () => {
   });
 
   it("renders difficulty options", () => {
-    render(<DifficultyPicker onSelect={jest.fn()} onBack={jest.fn()} />);
+    render(<DifficultyPicker onSelect={vi.fn()} onBack={vi.fn()} />);
 
     expect(screen.getByText("Easy")).toBeInTheDocument();
     expect(screen.getByText("Medium")).toBeInTheDocument();
@@ -22,15 +22,15 @@ describe("DifficultyPicker", () => {
   });
 
   it("calls onSelect with difficulty and standard assist level by default", async () => {
-    const onSelect = jest.fn();
-    render(<DifficultyPicker onSelect={onSelect} onBack={jest.fn()} />);
+    const onSelect = vi.fn();
+    render(<DifficultyPicker onSelect={onSelect} onBack={vi.fn()} />);
 
     await userEvent.click(screen.getByText("Medium"));
     expect(onSelect).toHaveBeenCalledWith("medium", "standard");
   });
 
   it("shows assist level picker defaulting to standard", () => {
-    render(<DifficultyPicker onSelect={jest.fn()} onBack={jest.fn()} />);
+    render(<DifficultyPicker onSelect={vi.fn()} onBack={vi.fn()} />);
 
     expect(
       screen.getByRole("radiogroup", { name: /assistance/i }),
@@ -39,8 +39,8 @@ describe("DifficultyPicker", () => {
   });
 
   it("calls onSelect with selected assist level", async () => {
-    const onSelect = jest.fn();
-    render(<DifficultyPicker onSelect={onSelect} onBack={jest.fn()} />);
+    const onSelect = vi.fn();
+    render(<DifficultyPicker onSelect={onSelect} onBack={vi.fn()} />);
 
     await userEvent.click(screen.getByRole("radio", { name: /paper/i }));
     await userEvent.click(screen.getByText("Easy"));

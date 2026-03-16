@@ -67,7 +67,7 @@ function ControlButton({
       aria-pressed={active}
     >
       <span className="text-lg leading-none">{icon}</span>
-      <span className="text-xs mt-0.5 leading-none">{label}</span>
+      <span className="text-[0.625rem] mt-0.5 leading-none">{label}</span>
     </button>
   );
 }

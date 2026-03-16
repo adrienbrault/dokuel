@@ -9,7 +9,7 @@ bun run test:watch   # Run tests in watch mode
 bun run lint         # Check lint + format (biome check)
 bun run lint:fix     # Auto-fix lint + format (biome check --write)
 bun run typecheck    # TypeScript check (tsc --noEmit -p tsconfig.app.json)
-bun run ci           # Full CI: lint + typecheck + test (parallel)
+bun run ci           # Full CI: lint + typecheck + test
 bun run diff-coverage # Check test coverage on git-changed lines
 ```
 
@@ -17,9 +17,9 @@ bun run diff-coverage # Check test coverage on git-changed lines
 
 Hooks in `.claude/settings.json` automate quality checks — **do not duplicate their work manually**:
 
-- **PostToolUse (Edit/Write/NotebookEdit)**: Auto-formats with Biome (`biome format`, not `check` — lint is deferred to CI) and runs the related test file in parallel. No need to manually run tests after editing — just check the hook output.
+- **PostToolUse (Edit/Write)**: Auto-formats with Biome, then runs the related test file via `vitest run`. No need to manually run tests after editing — just check the hook output.
 - **PreToolUse (Edit/Write)**: Blocks writes to `.env`, secrets, keys.
-- **Stop**: Runs `bun run ci` (lint, typecheck, test in parallel) — blocks stopping if any check fails. Then runs `bun run diff-coverage` — reports which changed lines lack test coverage (advisory, does not block). Review the output and add tests for important code paths.
+- **Stop**: Runs `bun run ci` — blocks stopping if lint, typecheck, or tests fail. Then runs `bun run diff-coverage` — reports which changed lines lack test coverage (advisory, does not block). Review the output and add tests for important code paths.
 
 **What this means for workflow**: Edit a file → hook formats it and runs its tests → you see pass/fail immediately. Only run `bun run ci` or `bun run test` manually when you need the full suite or coverage.
 
@@ -178,9 +178,9 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ## Project Conventions
 
 ### File Structure
-- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, DailyGame, MultiplayerGame, MultiplayerBoard, MultiplayerScreen, Landing, Lobby, JoinScreen, GameLayout, GameControls, GameResult, HintBanner, Stats, DifficultyPicker, AssistLevelPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast, LandingIcons)
-- Hooks: `src/hooks/` — custom React hooks (useSudoku, sudokuReducer, sudokuActions, useYjsMultiplayer, useKeyboard, useNumPadPosition, useDarkMode, useAssistLevel, useOpponentProgressVisible)
-- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, daily challenge, daily-streak, stats, game-storage, hint-engine, hint-hidden-single, name-generator, haptics, sounds, format, constants)
+- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing, GameLayout, GameControls, GameResult, Stats, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast)
+- Hooks: `src/hooks/` — custom React hooks (useSudoku, useYjsMultiplayer, useKeyboard, useNumPadPosition, useDarkMode)
+- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, daily challenge, daily-streak, stats, game-storage, name-generator, haptics, sounds, format, constants)
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)
@@ -243,13 +243,35 @@ You cannot judge visual quality from code alone. **Always screenshot, always rev
 
 ## Key Design Decisions
 
-- **Assist levels**: Three levels — Paper (no highlights), Standard (conflict highlighting + auto-clear notes), Full (conflicts + row/column highlighting). Configurable at difficulty selection and during gameplay. Board complete only when all filled + valid.
-- **Peer-to-peer**: No server needed. Game state syncs via Yjs CRDTs over WebRTC. Self-hosted signaling server at signal.dokuel.com for peer discovery.
+- **Soft validation**: Conflicts shown visually, not blocked. Toggleable at difficulty selection and during gameplay. Board complete only when all filled + valid.
+- **Peer-to-peer**: No server needed. Game state syncs via Yjs CRDTs over WebRTC. Public signaling servers used only for peer discovery.
 - **Board sharing**: Sharer's cells become locked/given on both boards. Notes not shared.
 - **Numpad positions**: Bottom (default), Left, Right. Persisted in localStorage. Configured via settings popover.
 - **No accounts**: Auto-generated fun names (adjective + animal). Name persisted in localStorage, editable in lobby. sessionStorage for reconnect identity.
-- **Daily challenge**: Deterministic puzzle via seeded RNG — same date, same board, any device. Streak tracking (current + longest). Progress indicator on landing page.
+- **Daily challenge**: Deterministic puzzle via seeded RNG — same date, same board, any device. Streak tracking (current + longest).
 - **Stats tracking**: Per-difficulty game history (best time, average, games played) in localStorage. Personal best shown during gameplay.
 - **Game persistence**: Auto-save in-progress games to localStorage. Resume on return.
-- **Hints**: Reveal one cell's correct value (solo only). Hint-assisted games excluded from PB tracking. Hint engine with technique explanations (naked-single, hidden-single).
+- **Hints**: Reveal one cell's correct value (solo only). Hint-assisted games excluded from PB tracking.
 - **Sound effects**: Synthesized via Web Audio API, toggleable.
+
+<!-- rtk-instructions v2 -->
+# RTK — Always Prefix Shell Commands
+
+**Always prefix commands with `rtk`** — it compresses output to save tokens. Safe to use everywhere; passes through unchanged if no filter exists.
+
+```bash
+# Even in chains:
+rtk git add file.ts && rtk git commit -m "msg" && rtk git push
+```
+
+Key commands for this project:
+```bash
+rtk vitest run          # Test failures only (99% savings)
+rtk playwright test     # E2E failures only (94%)
+rtk tsc                 # TS errors grouped by file (83%)
+rtk lint                # Biome violations grouped (84%)
+rtk git status/log/diff/add/commit/push  # All git subcommands (59-80%)
+rtk gh pr view/checks   # GitHub PR info (79-87%)
+rtk bun run <script>    # Compact script output
+```
+<!-- /rtk-instructions -->

@@ -90,8 +90,6 @@ export type AssistLevel = "paper" | "standard" | "full";
 
 export type NumPadPosition = "bottom" | "left" | "right";
 
-export type NumPadLayout = "row" | "grid";
-
 // --- Multiplayer ---
 
 export type RoomStatus = "lobby" | "playing" | "finished";

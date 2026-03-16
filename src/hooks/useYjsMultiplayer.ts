@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
-import { SIGNALING_URL } from "../lib/constants.ts";
 import {
   claimWinner,
   createRoomFromDoc,
@@ -16,7 +15,6 @@ import {
   updatePlayerName,
   updateProgress,
 } from "../lib/p2p-room.ts";
-import { fetchIceServers } from "../lib/turn-credentials.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 
 type UseYjsMultiplayerOptions = {
@@ -79,120 +77,107 @@ export function useYjsMultiplayer({
   playerNameRef.current = playerName;
 
   useEffect(() => {
-    let disposed = false;
     const doc = new Y.Doc();
+    const provider = new WebrtcProvider(roomId, doc, {
+      signaling: ["wss://signal.dokuel.com"],
+    });
 
-    const setup = async () => {
-      const iceServers = await fetchIceServers();
-      if (disposed) {
-        doc.destroy();
-        return;
-      }
+    const room = createRoomFromDoc(doc, roomId);
+    roomRef.current = room;
+    providerRef.current = provider;
 
-      const provider = new WebrtcProvider(roomId, doc, {
-        signaling: [SIGNALING_URL],
-        peerOpts: {
-          config: { iceServers },
-        },
-      });
+    joinRoom(room, playerId, playerName);
 
-      const room = createRoomFromDoc(doc, roomId);
-      roomRef.current = room;
-      providerRef.current = provider;
+    const updateState = () => {
+      const state = deriveRoomState(room);
+      setRoomState(state);
 
-      joinRoom(room, playerId, playerName);
-
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: same logic as before, async wrapper adds nesting
-      const updateState = () => {
-        const state = deriveRoomState(room);
-        setRoomState(state);
-        if (!state) return;
-
+      if (state) {
         const roomMap = doc.getMap("room");
+        const currentPuzzle = roomMap.get("puzzle") as string | null;
         const gameNumber = (roomMap.get("gameNumber") as number) || 0;
+        const winnerId = roomMap.get("winnerId") as string | null;
+        const winnerName = roomMap.get("winnerName") as string | null;
 
+        // Detect new game (start or rematch)
         if (gameNumber > lastGameNumberRef.current) {
           lastGameNumberRef.current = gameNumber;
-          setPuzzle(roomMap.get("puzzle") as string | null);
+          setPuzzle(currentPuzzle);
           setGameOver(null);
           setOpponentProgress(null);
         }
 
-        const winnerId = roomMap.get("winnerId") as string | null;
-        const winnerName = roomMap.get("winnerName") as string | null;
+        // Detect winner
         if (winnerId && winnerName) {
           setGameOver({ winnerId, winnerName });
         }
 
+        // Update opponent progress
         const progress = getOpponentProgress(room, playerId);
         if (progress) {
           setOpponentProgress(progress);
         }
-      };
-
-      // Listen for changes on room map
-      const roomMap = doc.getMap("room");
-      roomMap.observe(updateState);
-
-      // Listen for changes on players map
-      const playersMap = doc.getMap("players");
-      playersMap.observeDeep(updateState);
-
-      // Track peer connections via awareness
-      const awareness = provider.awareness;
-      awareness.setLocalStateField("user", {
-        id: playerId,
-        name: playerName,
-      });
-
-      const updatePresence = () => {
-        const states = awareness.getStates();
-        let hasOpponent = false;
-        for (const [clientId, state] of states) {
-          if (
-            clientId !== doc.clientID &&
-            state.user &&
-            state.user.id !== playerId
-          ) {
-            hasOpponent = true;
-            break;
-          }
-        }
-        setOpponentDisconnected(!hasOpponent && getPlayers(room).length > 1);
-      };
-
-      awareness.on("change", updatePresence);
-
-      // Track connection status via provider
-      const onStatus = ({ connected: isConnected }: { connected: boolean }) => {
-        setConnected(isConnected);
-      };
-      provider.on("status", onStatus);
-
-      // Also listen for peers to detect when WebRTC connects
-      const onPeers = () => {
-        updatePresence();
-      };
-      provider.on("peers", onPeers);
-
-      // Initial state
-      setConnected(provider.connected);
-      updateState();
+      }
     };
 
-    void setup();
+    // Listen for changes on room map
+    const roomMap = doc.getMap("room");
+    roomMap.observe(updateState);
+
+    // Listen for changes on players map
+    const playersMap = doc.getMap("players");
+    playersMap.observeDeep(updateState);
+
+    // Track peer connections via awareness
+    const awareness = provider.awareness;
+    awareness.setLocalStateField("user", {
+      id: playerId,
+      name: playerName,
+    });
+
+    const updatePresence = () => {
+      const states = awareness.getStates();
+      let hasOpponent = false;
+      for (const [clientId, state] of states) {
+        if (
+          clientId !== doc.clientID &&
+          state.user &&
+          state.user.id !== playerId
+        ) {
+          hasOpponent = true;
+          break;
+        }
+      }
+      setOpponentDisconnected(!hasOpponent && getPlayers(room).length > 1);
+    };
+
+    awareness.on("change", updatePresence);
+
+    // Track connection status via provider
+    const onStatus = ({ connected: isConnected }: { connected: boolean }) => {
+      setConnected(isConnected);
+    };
+    provider.on("status", onStatus);
+
+    // Also listen for peers to detect when WebRTC connects
+    const onPeers = () => {
+      updatePresence();
+    };
+    provider.on("peers", onPeers);
+
+    // Initial state
+    setConnected(provider.connected);
+    updateState();
 
     return () => {
-      disposed = true;
-      const provider = providerRef.current;
-      const room = roomRef.current;
-      if (provider) {
-        provider.disconnect();
-        provider.destroy();
-      }
-      if (room) {
-        destroyRoom(room);
-      }
+      roomMap.unobserve(updateState);
+      playersMap.unobserveDeep(updateState);
+      awareness.off("change", updatePresence);
+      provider.off("status", onStatus);
+      provider.off("peers", onPeers);
+      provider.disconnect();
+      provider.destroy();
+      destroyRoom(room);
       roomRef.current = null;
       providerRef.current = null;
     };

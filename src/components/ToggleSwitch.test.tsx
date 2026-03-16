@@ -1,12 +1,12 @@
-import { describe, expect, it, jest } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
 describe("ToggleSwitch", () => {
   it("renders with checked state", () => {
     render(
-      <ToggleSwitch checked={true} onChange={jest.fn()} label="Show errors" />,
+      <ToggleSwitch checked={true} onChange={vi.fn()} label="Show errors" />,
     );
 
     const toggle = screen.getByRole("switch");
@@ -15,7 +15,7 @@ describe("ToggleSwitch", () => {
 
   it("renders with unchecked state", () => {
     render(
-      <ToggleSwitch checked={false} onChange={jest.fn()} label="Show errors" />,
+      <ToggleSwitch checked={false} onChange={vi.fn()} label="Show errors" />,
     );
 
     const toggle = screen.getByRole("switch");
@@ -23,7 +23,7 @@ describe("ToggleSwitch", () => {
   });
 
   it("calls onChange when clicked", async () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     render(
       <ToggleSwitch checked={true} onChange={onChange} label="Show errors" />,
     );
@@ -36,7 +36,7 @@ describe("ToggleSwitch", () => {
     render(
       <ToggleSwitch
         checked={false}
-        onChange={jest.fn()}
+        onChange={vi.fn()}
         label="Show placement errors"
       />,
     );

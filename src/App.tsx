@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { About } from "./components/About.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
@@ -10,7 +9,6 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
-import { DEFAULT_DIFFICULTY, DIFFICULTIES } from "./lib/constants.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { AssistLevel, Difficulty } from "./lib/types.ts";
@@ -37,10 +35,14 @@ type Screen =
       difficulty: Difficulty;
     }
   | { name: "join" }
-  | { name: "stats" }
-  | { name: "about" };
+  | { name: "stats" };
 
-const VALID_DIFFICULTIES = new Set<string>(DIFFICULTIES);
+const VALID_DIFFICULTIES = new Set<string>([
+  "easy",
+  "medium",
+  "hard",
+  "expert",
+]);
 
 function screenToPath(screen: Screen): string {
   switch (screen.name) {
@@ -55,8 +57,6 @@ function screenToPath(screen: Screen): string {
       return "/join";
     case "stats":
       return "/stats";
-    case "about":
-      return "/about";
     case "multiplayer":
       return `/${screen.roomId}`;
   }
@@ -69,7 +69,6 @@ function pathToScreen(pathname: string): Screen {
   if (path === "daily") return { name: "daily" };
   if (path === "join") return { name: "join" };
   if (path === "stats") return { name: "stats" };
-  if (path === "about") return { name: "about" };
 
   if (path.startsWith("solo/")) {
     const parts = path.slice(5).split("/");
@@ -91,7 +90,7 @@ function pathToScreen(pathname: string): Screen {
   return {
     name: "multiplayer",
     roomId: path,
-    difficulty: DEFAULT_DIFFICULTY,
+    difficulty: "medium" as Difficulty,
   };
 }
 
@@ -149,7 +148,6 @@ function App() {
             onCreate={() => navigate({ name: "difficulty", mode: "create" })}
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
-            onAbout={() => navigate({ name: "about" })}
             onContinue={(gameKey, difficulty) => {
               gameIdRef.current++;
               navigate({
@@ -238,18 +236,10 @@ function App() {
             navigate({
               name: "multiplayer",
               roomId,
-              difficulty: DEFAULT_DIFFICULTY,
+              difficulty: "medium",
             });
           }}
           onBack={() => navigate({ name: "landing" })}
-        />
-      );
-
-    case "about":
-      return (
-        <About
-          onBack={() => navigate({ name: "landing" })}
-          onPlay={() => navigate({ name: "landing" })}
         />
       );
   }

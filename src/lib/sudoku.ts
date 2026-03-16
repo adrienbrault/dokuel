@@ -1,14 +1,6 @@
 import * as sudokuLib from "sudoku";
 import type { Board, Cell, Difficulty } from "./types.ts";
 
-export function countFilledCells(boardString: string): number {
-  let count = 0;
-  for (let i = 0; i < boardString.length; i++) {
-    if (boardString[i] !== ".") count++;
-  }
-  return count;
-}
-
 const DIFFICULTY_CLUES: Record<Difficulty, { min: number; max: number }> = {
   easy: { min: 36, max: 45 },
   medium: { min: 28, max: 35 },

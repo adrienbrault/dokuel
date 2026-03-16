@@ -1,6 +1,6 @@
-import { describe, expect, it, jest } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 
@@ -27,9 +27,7 @@ const BASE_STATE: RoomState = {
 
 describe("Lobby", () => {
   it("shows room code and waiting message with one player", () => {
-    render(
-      <Lobby roomState={BASE_STATE} onStart={jest.fn()} onBack={jest.fn()} />,
-    );
+    render(<Lobby roomState={BASE_STATE} onStart={vi.fn()} onBack={vi.fn()} />);
 
     expect(screen.getByText(/abc123/i)).toBeInTheDocument();
     expect(screen.getByText(/waiting/i)).toBeInTheDocument();
@@ -52,8 +50,8 @@ describe("Lobby", () => {
       ],
     };
 
-    const onStart = jest.fn();
-    render(<Lobby roomState={state} onStart={onStart} onBack={jest.fn()} />);
+    const onStart = vi.fn();
+    render(<Lobby roomState={state} onStart={onStart} onBack={vi.fn()} />);
 
     const startBtn = screen.getByRole("button", { name: /start/i });
     expect(startBtn).not.toBeDisabled();
@@ -75,18 +73,16 @@ describe("Lobby", () => {
       ],
     };
 
-    const onStart = jest.fn();
-    render(<Lobby roomState={state} onStart={onStart} onBack={jest.fn()} />);
+    const onStart = vi.fn();
+    render(<Lobby roomState={state} onStart={onStart} onBack={vi.fn()} />);
 
     const startBtn = screen.getByRole("button", { name: /start/i });
     expect(startBtn).not.toBeDisabled();
   });
 
   it("copies game link to clipboard when share button clicked", async () => {
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText: jest.fn().mockResolvedValue(undefined) },
-      writable: true,
-      configurable: true,
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
     });
     // Ensure Web Share API is not available so clipboard fallback is used
     Object.defineProperty(navigator, "share", {
@@ -98,9 +94,7 @@ describe("Lobby", () => {
       writable: true,
     });
 
-    render(
-      <Lobby roomState={BASE_STATE} onStart={jest.fn()} onBack={jest.fn()} />,
-    );
+    render(<Lobby roomState={BASE_STATE} onStart={vi.fn()} onBack={vi.fn()} />);
 
     const shareBtn = screen.getByRole("button", { name: /share|copy|invite/i });
     await userEvent.click(shareBtn);
@@ -125,8 +119,8 @@ describe("Lobby", () => {
       ],
     };
 
-    const onStart = jest.fn();
-    render(<Lobby roomState={state} onStart={onStart} onBack={jest.fn()} />);
+    const onStart = vi.fn();
+    render(<Lobby roomState={state} onStart={onStart} onBack={vi.fn()} />);
 
     await userEvent.click(screen.getByRole("button", { name: /start/i }));
     expect(onStart).toHaveBeenCalledOnce();

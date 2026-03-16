@@ -127,16 +127,6 @@
           }
         }
       }
-    },
-    {
-      "includes": ["src/App.tsx"],
-      "linter": {
-        "rules": {
-          "nursery": {
-            "noExcessiveLinesPerFile": "off"
-          }
-        }
-      }
     }
   ]
 }
