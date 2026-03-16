@@ -1,4 +1,3 @@
-import { getTodayISO } from "./format.ts";
 import type { Difficulty } from "./types.ts";
 
 export type GameStats = {
@@ -30,7 +29,7 @@ export function saveGameResult(
   stats.push({
     difficulty,
     time,
-    date: getTodayISO(),
+    date: new Date().toISOString().slice(0, 10),
     won,
     hintsUsed: hintsUsed ?? 0,
   });

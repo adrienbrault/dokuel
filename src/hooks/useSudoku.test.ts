@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { cellKey, generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import { useSudoku } from "./useSudoku.ts";
 

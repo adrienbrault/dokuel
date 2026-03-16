@@ -30,7 +30,7 @@ export function JoinScreen({
             placeholder="e.g. loud-duck-38"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="card w-full px-4 py-3 text-text-primary text-center text-lg font-mono focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="card w-full px-4 py-3 text-text-primary text-center text-lg font-mono"
           />
           <p className="text-xs text-text-muted">
             Ask the host for their room code

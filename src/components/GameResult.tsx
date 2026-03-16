@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
+
+const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+  expert: "Expert",
+};
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   easy: "bg-difficulty-easy-bg text-difficulty-easy-text",

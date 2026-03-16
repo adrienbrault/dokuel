@@ -10,8 +10,6 @@
 
 type Env = {
   SIGNALING_ROOM: DurableObjectNamespace;
-  TURN_KEY_ID: string;
-  TURN_KEY_API_TOKEN: string;
 };
 
 export default {
@@ -30,13 +28,8 @@ export default {
       return stub.fetch(request);
     }
 
-    // TURN credentials endpoint
-    const url = new URL(request.url);
-    if (url.pathname === "/turn-credentials" && request.method === "POST") {
-      return handleTurnCredentials(env);
-    }
-
     // Health check (non-WebSocket requests)
+    const url = new URL(request.url);
     if (url.pathname === "/" || url.pathname === "/health") {
       return new Response("ok", { headers: corsHeaders() });
     }
@@ -44,38 +37,6 @@ export default {
     return new Response("Expected WebSocket", { status: 426 });
   },
 };
-
-async function handleTurnCredentials(env: Env): Promise<Response> {
-  if (!env.TURN_KEY_ID || !env.TURN_KEY_API_TOKEN) {
-    return new Response(JSON.stringify({ iceServers: [] }), {
-      headers: { ...corsHeaders(), "Content-Type": "application/json" },
-    });
-  }
-
-  const resp = await fetch(
-    `https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.TURN_KEY_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ttl: 86400 }),
-    },
-  );
-
-  if (!resp.ok) {
-    return new Response(JSON.stringify({ iceServers: [] }), {
-      status: 502,
-      headers: { ...corsHeaders(), "Content-Type": "application/json" },
-    });
-  }
-
-  const body = await resp.text();
-  return new Response(body, {
-    headers: { ...corsHeaders(), "Content-Type": "application/json" },
-  });
-}
 
 function corsHeaders(): Record<string, string> {
   return {

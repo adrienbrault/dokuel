@@ -1,16 +1,16 @@
-import { describe, expect, it, jest } from "bun:test";
 import { fireEvent, renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { useKeyboard } from "./useKeyboard.ts";
 
 function setup(overrides: Partial<Parameters<typeof useKeyboard>[0]> = {}) {
   const options = {
     selectedCell: { row: 4, col: 4 } as { row: number; col: number } | null,
-    onSelectCell: jest.fn(),
-    onDeselectCell: jest.fn(),
-    onPlaceNumber: jest.fn(),
-    onErase: jest.fn(),
-    onUndo: jest.fn(),
-    onToggleNotes: jest.fn(),
+    onSelectCell: vi.fn(),
+    onDeselectCell: vi.fn(),
+    onPlaceNumber: vi.fn(),
+    onErase: vi.fn(),
+    onUndo: vi.fn(),
+    onToggleNotes: vi.fn(),
     enabled: true,
     ...overrides,
   };

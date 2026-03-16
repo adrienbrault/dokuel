@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNumPadLayout } from "../hooks/useNumPadLayout.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
-import { EMPTY_CONFLICTS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
-import { countFilledCells, solvePuzzle } from "../lib/sudoku.ts";
+import { solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
-import { GameLayout, type SettingItem } from "./GameLayout.tsx";
+import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { NumPad } from "./NumPad.tsx";
-import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
-import { NumPadPositionIcon, OpponentBarIcon } from "./SettingIcons.tsx";
 import { Timer } from "./Timer.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
+
+const EMPTY_CONFLICTS = new Set<number>();
 
 export type MultiplayerBoardProps = {
   puzzle: string;
@@ -50,7 +48,6 @@ export function MultiplayerBoard({
   const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
   const game = useSudoku(puzzle, solution);
   const { position, setPosition } = useNumPadPosition();
-  const numPadLayout = useNumPadLayout(position);
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
   const timerSecondsRef = useRef(0);
@@ -58,12 +55,11 @@ export function MultiplayerBoard({
   const prevCellsRef = useRef(game.cellsRemaining);
   const [revealed, setRevealed] = useState(false);
 
-  const totalToFill = useMemo(() => 81 - countFilledCells(puzzle), [puzzle]);
-
   const myPercent = useMemo(() => {
-    const filled = totalToFill - game.cellsRemaining;
-    return totalToFill > 0 ? Math.round((filled / totalToFill) * 100) : 0;
-  }, [game.cellsRemaining, totalToFill]);
+    const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
+    const filled = total - game.cellsRemaining;
+    return total > 0 ? Math.round((filled / total) * 100) : 0;
+  }, [game.cellsRemaining, puzzle]);
 
   useEffect(() => {
     const id = setTimeout(() => setRevealed(true), 600);
@@ -74,9 +70,12 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (prevCellsRef.current !== game.cellsRemaining) {
       prevCellsRef.current = game.cellsRemaining;
-      onProgress(game.cellsRemaining, myPercent);
+      const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
+      const filled = total - game.cellsRemaining;
+      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+      onProgress(game.cellsRemaining, percent);
     }
-  }, [game.cellsRemaining, onProgress, myPercent]);
+  }, [game.cellsRemaining, onProgress, puzzle]);
 
   // Check completion
   useEffect(() => {
@@ -97,36 +96,13 @@ export function MultiplayerBoard({
     }
   };
 
-  const settings: SettingItem[] = [
-    {
-      key: "position",
-      label: "Numpad position",
-      icon: <NumPadPositionIcon position={position} />,
-      content: (
-        <NumPadPositionToggle position={position} onChange={setPosition} />
-      ),
-    },
-    {
-      key: "opponent",
-      label: "Opponent bar",
-      icon: <OpponentBarIcon visible={showOpponentProgress} />,
-      content: (
-        <ToggleSwitch
-          checked={showOpponentProgress}
-          onChange={toggleOpponentProgress}
-          label="Opponent bar"
-        />
-      ),
-    },
-  ];
-
   return (
     <GameLayout
       onBack={onBack}
       position={position}
+      onPositionChange={setPosition}
       onDeselectCell={game.deselectCell}
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
-      settings={settings}
       timer={
         <div className="flex flex-col items-center">
           <Timer
@@ -146,12 +122,10 @@ export function MultiplayerBoard({
       numPad={
         <NumPad
           position={position}
-          layout={numPadLayout}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell
-              ? (game.board[game.selectedCell.row]?.[game.selectedCell.col]
-                  ?.value ?? null)
+              ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
               : null
           }
           showRemainingCounts={assistLevel === "full"}
@@ -177,6 +151,13 @@ export function MultiplayerBoard({
           onToggleNotes={game.toggleNotesMode}
           onErase={game.erase}
           onUndo={game.undo}
+        />
+      }
+      settingsExtra={
+        <ToggleSwitch
+          checked={showOpponentProgress}
+          onChange={toggleOpponentProgress}
+          label="Opponent bar"
         />
       }
       headerExtra={
