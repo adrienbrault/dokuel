@@ -1,30 +1,6 @@
 import type { HintExplanation } from "./hint-engine.ts";
+import { candidatesAt } from "./sudoku-candidates.ts";
 import type { Board, Position } from "./types.ts";
-
-function getCandidates(board: Board, row: number, col: number): Set<number> {
-  const used = new Set<number>();
-  for (let c = 0; c < 9; c++) {
-    const v = board[row]![c]!.value;
-    if (v !== null) used.add(v);
-  }
-  for (let r = 0; r < 9; r++) {
-    const v = board[r]![col]!.value;
-    if (v !== null) used.add(v);
-  }
-  const boxRow = Math.floor(row / 3) * 3;
-  const boxCol = Math.floor(col / 3) * 3;
-  for (let r = boxRow; r < boxRow + 3; r++) {
-    for (let c = boxCol; c < boxCol + 3; c++) {
-      const v = board[r]![c]!.value;
-      if (v !== null) used.add(v);
-    }
-  }
-  const candidates = new Set<number>();
-  for (let d = 1; d <= 9; d++) {
-    if (!used.has(d)) candidates.add(d);
-  }
-  return candidates;
-}
 
 function groupName(type: "row" | "col" | "box", index: number): string {
   if (type === "row") return `row ${index + 1}`;
@@ -84,7 +60,7 @@ function findHiddenSingleInGroup(
         emptyCells.push({
           row: index,
           col: c,
-          candidates: getCandidates(board, index, c),
+          candidates: candidatesAt(board, index, c),
         });
       }
     }
@@ -94,7 +70,7 @@ function findHiddenSingleInGroup(
         emptyCells.push({
           row: r,
           col: index,
-          candidates: getCandidates(board, r, index),
+          candidates: candidatesAt(board, r, index),
         });
       }
     }
@@ -107,7 +83,7 @@ function findHiddenSingleInGroup(
           emptyCells.push({
             row: r,
             col: c,
-            candidates: getCandidates(board, r, c),
+            candidates: candidatesAt(board, r, c),
           });
         }
       }
