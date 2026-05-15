@@ -4,8 +4,13 @@ export default defineConfig({
   testDir: "./e2e",
   outputDir: "./e2e/results",
   snapshotPathTemplate: "{testDir}/screenshots/{arg}{ext}",
+  fullyParallel: true,
+  timeout: 8_000,
+  expect: { timeout: 3_000 },
   use: {
     baseURL: "http://localhost:5173",
+    actionTimeout: 3_000,
+    navigationTimeout: 5_000,
   },
   webServer: {
     command: "bun run dev",
