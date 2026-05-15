@@ -89,6 +89,12 @@ export function Lobby({
         >
           {copied ? "Link Copied!" : "Share Invite Link"}
         </button>
+        <p className="caption mt-1">
+          Difficulty:{" "}
+          <span className="font-medium text-text-primary capitalize">
+            {roomState.difficulty}
+          </span>
+        </p>
       </div>
 
       <div className="flex flex-col gap-3 w-full">
