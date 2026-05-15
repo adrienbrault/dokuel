@@ -41,7 +41,7 @@ export function MultiplayerScreen({
   onBack,
 }: {
   roomId: string;
-  difficulty: Difficulty;
+  difficulty: Difficulty | null;
   onBack: () => void;
 }) {
   const playerId = useMemo(getPlayerId, []);
