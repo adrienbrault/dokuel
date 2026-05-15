@@ -90,6 +90,26 @@ describe("useYjsMultiplayer", () => {
     expect(countClues(puzzle)).toBeLessThanOrEqual(21);
   });
 
+  it("setDifficulty updates the Yjs room difficulty", () => {
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-set",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+
+    const doc = mocks.lastDoc!;
+    expect(doc.getMap("room").get("difficulty")).toBe("easy");
+
+    act(() => {
+      result.current.setDifficulty("hard");
+    });
+
+    expect(doc.getMap("room").get("difficulty")).toBe("hard");
+  });
+
   it("sendRematch uses Yjs difficulty, not the local prop", () => {
     const { result } = renderHook(() =>
       useYjsMultiplayer({
