@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   deleteGame,
   loadGame,
@@ -12,9 +12,9 @@ import { useSudoku } from "./useSudoku.ts";
 
 type UseResumableSudokuOptions = {
   /** localStorage key for autosave. When omitted, no save/resume happens. */
-  gameKey?: string;
+  gameKey?: string | undefined;
   /** Pre-built puzzle to use when no saved game is present. */
-  initialPuzzle?: string;
+  initialPuzzle?: string | undefined;
   /** Difficulty used to generate a new puzzle and to record stats. */
   difficulty: Difficulty;
   /** Assist level for a fresh game; overridden by saved.assistLevel when resuming. */
@@ -22,7 +22,7 @@ type UseResumableSudokuOptions = {
   /** Reads the current timer value. Called at save time and on completion. */
   getTimerSeconds: () => number;
   /** Called once when the board transitions to completed. */
-  onComplete?: (timeSeconds: number) => void;
+  onComplete?: ((timeSeconds: number) => void) | undefined;
 };
 
 function boardToValues(board: { value: number | null }[][]): string {
