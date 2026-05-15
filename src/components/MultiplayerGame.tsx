@@ -51,6 +51,7 @@ export function MultiplayerGame({
             mp.updateName(name);
           }}
           onAssistLevelChange={mp.setAssistLevel}
+          onDifficultyChange={mp.setDifficulty}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
