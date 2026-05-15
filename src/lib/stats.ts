@@ -1,3 +1,4 @@
+import { readJson, writeJson } from "./storage.ts";
 import type { Difficulty } from "./types.ts";
 
 export type GameStats = {
@@ -11,12 +12,7 @@ export type GameStats = {
 const STORAGE_KEY = "sudoku_stats";
 
 export function getStats(): GameStats[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return readJson<GameStats[]>(STORAGE_KEY, []);
 }
 
 export function saveGameResult(
@@ -34,8 +30,7 @@ export function saveGameResult(
     hintsUsed: hintsUsed ?? 0,
   });
   // Keep last 100 games
-  const trimmed = stats.slice(-100);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  writeJson(STORAGE_KEY, stats.slice(-100));
 }
 
 export function getStatsForDifficulty(difficulty: Difficulty) {

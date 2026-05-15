@@ -1,3 +1,5 @@
+import { readJson, writeJson } from "./storage.ts";
+
 export type DailyStreak = {
   currentStreak: number;
   lastCompletedDate: string;
@@ -6,19 +8,12 @@ export type DailyStreak = {
 
 const STORAGE_KEY = "sudoku_daily_streak";
 
-const DEFAULT_STREAK: DailyStreak = {
-  currentStreak: 0,
-  lastCompletedDate: "",
-  longestStreak: 0,
-};
+function freshStreak(): DailyStreak {
+  return { currentStreak: 0, lastCompletedDate: "", longestStreak: 0 };
+}
 
 export function getDailyStreak(): DailyStreak {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { ...DEFAULT_STREAK };
-  } catch {
-    return { ...DEFAULT_STREAK };
-  }
+  return readJson<DailyStreak>(STORAGE_KEY, freshStreak());
 }
 
 /** Check if the given date string is exactly one day after the other. */
@@ -47,7 +42,7 @@ export function recordDailyCompletion(date: string): DailyStreak {
   streak.lastCompletedDate = date;
   streak.longestStreak = Math.max(streak.longestStreak, streak.currentStreak);
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(streak));
+  writeJson(STORAGE_KEY, streak);
   return streak;
 }
 

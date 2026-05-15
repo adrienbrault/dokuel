@@ -1,3 +1,4 @@
+import { readJson, removeKey, writeJson } from "./storage.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type SavedGame = {
@@ -12,40 +13,39 @@ export type SavedGame = {
 const STORAGE_PREFIX = "sudoku_save_";
 
 export function saveGame(key: string, data: SavedGame): void {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
-  } catch {
-    // localStorage full or unavailable — silently ignore
+  writeJson(STORAGE_PREFIX + key, data);
+}
+
+function validateSavedGame(raw: unknown): SavedGame | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+  if (
+    typeof data.puzzle !== "string" ||
+    data.puzzle.length !== 81 ||
+    typeof data.values !== "string" ||
+    data.values.length !== 81 ||
+    !Array.isArray(data.notes) ||
+    data.notes.length !== 81 ||
+    typeof data.timer !== "number"
+  ) {
+    return null;
   }
+  // Backward compat: migrate old showConflicts boolean to assistLevel
+  if (!data.assistLevel && "showConflicts" in data) {
+    data.assistLevel = data.showConflicts === false ? "paper" : "standard";
+  }
+  if (!data.assistLevel) {
+    data.assistLevel = "standard";
+  }
+  return data as unknown as SavedGame;
 }
 
 export function loadGame(key: string): SavedGame | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + key);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (
-      typeof data.puzzle !== "string" ||
-      data.puzzle.length !== 81 ||
-      typeof data.values !== "string" ||
-      data.values.length !== 81 ||
-      !Array.isArray(data.notes) ||
-      data.notes.length !== 81 ||
-      typeof data.timer !== "number"
-    ) {
-      return null;
-    }
-    // Backward compat: migrate old showConflicts boolean to assistLevel
-    if (!data.assistLevel && "showConflicts" in data) {
-      data.assistLevel = data.showConflicts === false ? "paper" : "standard";
-    }
-    if (!data.assistLevel) {
-      data.assistLevel = "standard";
-    }
-    return data as SavedGame;
-  } catch {
-    return null;
-  }
+  return readJson<SavedGame | null>(
+    STORAGE_PREFIX + key,
+    null,
+    validateSavedGame,
+  );
 }
 
 export type SavedGameSummary = {
@@ -84,9 +84,5 @@ export function listSavedGames(): SavedGameSummary[] {
 }
 
 export function deleteGame(key: string): void {
-  try {
-    localStorage.removeItem(STORAGE_PREFIX + key);
-  } catch {
-    // silently ignore
-  }
+  removeKey(STORAGE_PREFIX + key);
 }
