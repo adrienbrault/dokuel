@@ -11,6 +11,7 @@ import {
   type P2PRoom,
   requestRematch,
   setAssistLevel as setRoomAssistLevel,
+  setDifficulty as setRoomDifficulty,
   startGame,
   updatePlayerName,
   updateProgress,
@@ -21,7 +22,7 @@ type UseYjsMultiplayerOptions = {
   roomId: string;
   playerId: string;
   playerName: string;
-  difficulty: Difficulty;
+  difficulty: Difficulty | null;
 };
 
 type OpponentProgress = {
@@ -75,6 +76,9 @@ export function useYjsMultiplayer({
   const lastGameNumberRef = useRef<number>(0);
   const playerNameRef = useRef(playerName);
   playerNameRef.current = playerName;
+  // Captured at mount so the joiner does not stomp on the host's
+  // Yjs difficulty when re-renders happen with a different prop value.
+  const initialDifficultyRef = useRef(difficulty);
 
   useEffect(() => {
     const doc = new Y.Doc();
@@ -87,6 +91,16 @@ export function useYjsMultiplayer({
     providerRef.current = provider;
 
     joinRoom(room, playerId, playerName);
+
+    // The host publishes their chosen difficulty so joiners see it
+    // in the lobby before either player clicks Start. Joiners pass null
+    // — they only learn the difficulty once Yjs syncs.
+    const initialDifficulty = initialDifficultyRef.current;
+    if (initialDifficulty && doc.getMap("room").get("hostId") === playerId) {
+      doc.transact(() => {
+        doc.getMap("room").set("difficulty", initialDifficulty);
+      });
+    }
 
     const updateState = () => {
       const state = deriveRoomState(room);
@@ -193,8 +207,10 @@ export function useYjsMultiplayer({
       return;
     }
 
-    startGame(room, difficulty);
-  }, [difficulty]);
+    const roomDifficulty =
+      (room.doc.getMap("room").get("difficulty") as Difficulty) || "medium";
+    startGame(room, roomDifficulty);
+  }, []);
 
   const sendProgress = useCallback(
     (cellsRemaining: number, completionPercent: number) => {
@@ -217,8 +233,10 @@ export function useYjsMultiplayer({
   const sendRematch = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
-    requestRematch(room, difficulty);
-  }, [difficulty]);
+    const roomDifficulty =
+      (room.doc.getMap("room").get("difficulty") as Difficulty) || "medium";
+    requestRematch(room, roomDifficulty);
+  }, []);
 
   const updateName = useCallback(
     (newName: string) => {
@@ -244,6 +262,12 @@ export function useYjsMultiplayer({
     setRoomAssistLevel(room, level);
   }, []);
 
+  const setDifficulty = useCallback((level: Difficulty) => {
+    const room = roomRef.current;
+    if (!room) return;
+    setRoomDifficulty(room, level);
+  }, []);
+
   return {
     connected,
     roomState,
@@ -258,5 +282,6 @@ export function useYjsMultiplayer({
     sendRematch,
     updateName,
     setAssistLevel,
+    setDifficulty,
   };
 }

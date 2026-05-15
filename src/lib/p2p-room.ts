@@ -64,6 +64,12 @@ export function setAssistLevel(room: P2PRoom, level: AssistLevel): void {
   });
 }
 
+export function setDifficulty(room: P2PRoom, level: Difficulty): void {
+  room.doc.transact(() => {
+    room.doc.getMap("room").set("difficulty", level);
+  });
+}
+
 export function startGame(room: P2PRoom, difficulty: Difficulty): void {
   const puzzle = generatePuzzle(difficulty);
   const solution = solvePuzzle(puzzle);

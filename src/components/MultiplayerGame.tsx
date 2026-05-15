@@ -8,7 +8,7 @@ type MultiplayerGameProps = {
   playerId: string;
   playerName: string;
   roomId: string;
-  difficulty: import("../lib/types.ts").Difficulty;
+  difficulty: import("../lib/types.ts").Difficulty | null;
   onRename?: (name: string) => void;
   onBack: () => void;
 };
@@ -51,6 +51,7 @@ export function MultiplayerGame({
             mp.updateName(name);
           }}
           onAssistLevelChange={mp.setAssistLevel}
+          onDifficultyChange={mp.setDifficulty}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
@@ -66,7 +67,7 @@ export function MultiplayerGame({
           key={mp.puzzle}
           puzzle={mp.puzzle}
           playerId={playerId}
-          difficulty={difficulty}
+          difficulty={mp.roomState?.difficulty ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}
