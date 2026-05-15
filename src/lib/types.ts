@@ -111,6 +111,8 @@ export type RoomState = {
   players: Player[];
   puzzle: string | null; // 81-char string, null in lobby
   winnerId: string | null;
+  winnerName: string | null;
+  gameNumber: number;
   events: GameEvent[];
 };
 

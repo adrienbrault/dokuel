@@ -1,12 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import {
   claimWinner,
   createRoomFromDoc,
+  getHostId,
   getOpponentProgress,
   getPlayers,
+  getRoomState,
   getRoomStatus,
   joinRoom,
+  observeRoomChanges,
   type P2PRoom,
   requestRematch,
   setDifficulty,
@@ -281,6 +284,135 @@ describe("p2p-room", () => {
       const players = getPlayers(room);
       expect(players[0]!.id).toBe("player2");
       expect(players[1]!.id).toBe("player1");
+    });
+  });
+
+  describe("getRoomState", () => {
+    it("returns null before anyone joins (no status yet)", () => {
+      const room: P2PRoom = { doc: new Y.Doc(), roomId: "empty" };
+      expect(getRoomState(room)).toBeNull();
+    });
+
+    it("returns null after createRoomFromDoc but before joinRoom", () => {
+      const room = createTestRoom();
+      // status is initialised by createRoomFromDoc, but there are no players —
+      // a room state with no players is meaningless to the UI.
+      expect(getRoomState(room)).toBeNull();
+    });
+
+    it("returns a full snapshot after joinRoom", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+
+      const state = getRoomState(room);
+      expect(state).not.toBeNull();
+      expect(state!.status).toBe("lobby");
+      expect(state!.hostId).toBe("player1");
+      expect(state!.difficulty).toBe("medium");
+      expect(state!.assistLevel).toBe("standard");
+      expect(state!.players).toHaveLength(1);
+      expect(state!.puzzle).toBeNull();
+      expect(state!.winnerId).toBeNull();
+      expect(state!.winnerName).toBeNull();
+      expect(state!.gameNumber).toBe(0);
+    });
+
+    it("reflects startGame", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "hard");
+
+      const state = getRoomState(room)!;
+      expect(state.status).toBe("playing");
+      expect(state.difficulty).toBe("hard");
+      expect(state.puzzle).toHaveLength(81);
+      expect(state.gameNumber).toBe(1);
+    });
+
+    it("reflects claimWinner with both id and name", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "medium");
+      claimWinner(room, "player1", "Alice");
+
+      const state = getRoomState(room)!;
+      expect(state.winnerId).toBe("player1");
+      expect(state.winnerName).toBe("Alice");
+      expect(state.status).toBe("finished");
+    });
+  });
+
+  describe("getHostId", () => {
+    it("returns the empty string before joinRoom", () => {
+      const room = createTestRoom();
+      expect(getHostId(room)).toBe("");
+    });
+
+    it("returns the first joined player's id", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      expect(getHostId(room)).toBe("player1");
+    });
+  });
+
+  describe("observeRoomChanges", () => {
+    it("invokes the callback on room map changes", () => {
+      const room = createTestRoom();
+      const callback = vi.fn();
+      observeRoomChanges(room, callback);
+
+      setDifficulty(room, "hard");
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("invokes the callback on players map changes", () => {
+      const room = createTestRoom();
+      const callback = vi.fn();
+      observeRoomChanges(room, callback);
+
+      joinRoom(room, "player1", "Alice");
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("returns an unsubscribe function that stops both observers", () => {
+      const room = createTestRoom();
+      const callback = vi.fn();
+      const unsubscribe = observeRoomChanges(room, callback);
+
+      unsubscribe();
+      setDifficulty(room, "hard");
+      joinRoom(room, "player1", "Alice");
+      expect(callback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("startGame with default difficulty", () => {
+    it("uses the room's current difficulty when none is passed", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      setDifficulty(room, "expert");
+
+      startGame(room);
+
+      expect(getRoomState(room)!.difficulty).toBe("expert");
+    });
+  });
+
+  describe("requestRematch with default difficulty", () => {
+    it("uses the room's current difficulty when none is passed", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      setDifficulty(room, "hard");
+      startGame(room);
+
+      requestRematch(room);
+
+      expect(getRoomState(room)!.difficulty).toBe("hard");
     });
   });
 });
