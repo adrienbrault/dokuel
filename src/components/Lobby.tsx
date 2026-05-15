@@ -1,13 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
-
-const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] = [
-  { value: "easy", label: "Easy" },
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
-  { value: "expert", label: "Expert" },
-];
 
 type LobbyProps = {
   roomState: RoomState;

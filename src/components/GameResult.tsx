@@ -1,20 +1,10 @@
 import { useState } from "react";
+import {
+  DIFFICULTY_BADGE_CLASSES,
+  DIFFICULTY_LABELS,
+} from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
-
-const DIFFICULTY_LABELS: Record<Difficulty, string> = {
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-  expert: "Expert",
-};
-
-const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  easy: "bg-difficulty-easy-bg text-difficulty-easy-text",
-  medium: "bg-difficulty-medium-bg text-difficulty-medium-text",
-  hard: "bg-difficulty-hard-bg text-difficulty-hard-text",
-  expert: "bg-difficulty-expert-bg text-difficulty-expert-text",
-};
 
 type GameResultProps = {
   isWinner: boolean;
@@ -119,7 +109,7 @@ export function GameResult({
           </h2>
           {difficulty && (
             <span
-              className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${DIFFICULTY_COLORS[difficulty]}`}
+              className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}
             >
               {DIFFICULTY_LABELS[difficulty]}
             </span>
