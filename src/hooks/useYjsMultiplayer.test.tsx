@@ -47,7 +47,7 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomState?.difficulty).toBe("expert");
   });
 
-  it("joiner with null difficulty does not write null to Yjs", () => {
+  it("joiner does not write difficulty or hostId to Yjs", () => {
     renderHook(() =>
       useYjsMultiplayer({
         roomId: "room-joiner",
@@ -57,8 +57,9 @@ describe("useYjsMultiplayer", () => {
       }),
     );
 
-    const doc = mocks.lastDoc!;
-    expect(doc.getMap("room").get("difficulty")).toBe("medium");
+    const roomMap = mocks.lastDoc!.getMap("room");
+    expect(roomMap.has("difficulty")).toBe(false);
+    expect(roomMap.has("hostId")).toBe(false);
   });
 
   it("sendStartGame uses Yjs difficulty, not the local prop", () => {

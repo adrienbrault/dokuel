@@ -15,21 +15,26 @@ export type P2PRoom = {
 };
 
 export function createRoomFromDoc(doc: Y.Doc, roomId: string): P2PRoom {
-  const roomMap = doc.getMap("room");
-  if (!roomMap.has("status")) {
-    doc.transact(() => {
-      roomMap.set("status", "lobby");
-      roomMap.set("difficulty", "medium");
-      roomMap.set("assistLevel", "standard");
-      roomMap.set("hostId", "");
-      roomMap.set("puzzle", null);
-      roomMap.set("solution", null);
-      roomMap.set("winnerId", null);
-      roomMap.set("winnerName", null);
-      roomMap.set("gameNumber", 0);
-    });
-  }
+  // No Yjs writes here. The creator publishes status/hostId/difficulty
+  // via claimHost; joiners stay silent until sync arrives. Both peers
+  // independently writing the same keys here would race during the
+  // initial WebRTC sync (joiner's defaults could stomp the host's
+  // pick — the cause of "the other person can change difficulty" and
+  // "difficulty reset to medium").
   return { doc, roomId };
+}
+
+export function claimHost(room: P2PRoom, hostId: string): void {
+  room.doc.transact(() => {
+    const roomMap = room.doc.getMap("room");
+    roomMap.set("hostId", hostId);
+    if (!roomMap.has("status")) {
+      roomMap.set("status", "lobby");
+    }
+    if (!roomMap.has("assistLevel")) {
+      roomMap.set("assistLevel", "standard");
+    }
+  });
 }
 
 export function joinRoom(
@@ -50,11 +55,6 @@ export function joinRoom(
     playerMap.set("completionPercent", 0);
     playerMap.set("joinOrder", joinOrder);
     players.set(playerId, playerMap);
-
-    const roomMap = room.doc.getMap("room");
-    if (!roomMap.get("hostId")) {
-      roomMap.set("hostId", playerId);
-    }
   });
 }
 

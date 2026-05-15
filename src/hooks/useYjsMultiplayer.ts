@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
 import {
+  claimHost,
   claimWinner,
   createRoomFromDoc,
   destroyRoom,
@@ -90,17 +91,17 @@ export function useYjsMultiplayer({
     roomRef.current = room;
     providerRef.current = provider;
 
-    joinRoom(room, playerId, playerName);
-
-    // The host publishes their chosen difficulty so joiners see it
-    // in the lobby before either player clicks Start. Joiners pass null
-    // — they only learn the difficulty once Yjs syncs.
+    // The creator (initialDifficulty != null) is the only peer that
+    // publishes hostId and difficulty to Yjs. Joiners stay silent on
+    // these keys so the Yjs merge can't pick the joiner's local
+    // defaults as the winner after sync.
     const initialDifficulty = initialDifficultyRef.current;
-    if (initialDifficulty && doc.getMap("room").get("hostId") === playerId) {
-      doc.transact(() => {
-        doc.getMap("room").set("difficulty", initialDifficulty);
-      });
+    if (initialDifficulty !== null) {
+      claimHost(room, playerId);
+      setRoomDifficulty(room, initialDifficulty);
     }
+
+    joinRoom(room, playerId, playerName);
 
     const updateState = () => {
       const state = deriveRoomState(room);
