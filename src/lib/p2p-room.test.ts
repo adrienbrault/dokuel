@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import {
+  claimHost,
   claimWinner,
   createRoomFromDoc,
   getOpponentProgress,
@@ -26,13 +27,39 @@ function createTestRoom(doc?: Y.Doc): P2PRoom {
   return createRoomFromDoc(doc ?? new Y.Doc(), "test-room");
 }
 
+// Yjs's typed Doc constructor does not advertise clientID even though
+// the runtime accepts it. Cast through unknown so tests can pin a
+// deterministic tiebreak for concurrent Y.Map writes.
+type DocOpts = ConstructorParameters<typeof Y.Doc>[0];
+function makeDoc(clientID: number): Y.Doc {
+  return new Y.Doc({ clientID } as unknown as DocOpts);
+}
+
+// Simulates two peers operating independently before WebRTC sync.
+function syncDocs(doc1: Y.Doc, doc2: Y.Doc): void {
+  Y.applyUpdate(doc2, Y.encodeStateAsUpdate(doc1));
+  Y.applyUpdate(doc1, Y.encodeStateAsUpdate(doc2));
+}
+
 describe("p2p-room", () => {
+  describe("claimHost", () => {
+    it("writes the host id and seeds lobby status", () => {
+      const room = createTestRoom();
+      claimHost(room, "creator-id");
+
+      const roomMap = room.doc.getMap("room");
+      expect(roomMap.get("hostId")).toBe("creator-id");
+      expect(roomMap.get("status")).toBe("lobby");
+      expect(roomMap.get("assistLevel")).toBe("standard");
+    });
+  });
+
   describe("joinRoom", () => {
-    it("sets first player as host", () => {
+    it("does not set hostId — that's the host's explicit job", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
 
-      expect(room.doc.getMap("room").get("hostId")).toBe("player1");
+      expect(room.doc.getMap("room").has("hostId")).toBe(false);
     });
 
     it("assigns first player color blue", () => {
@@ -53,14 +80,6 @@ describe("p2p-room", () => {
       const p1 = players.get("player1") as Y.Map<unknown>;
       const p2 = players.get("player2") as Y.Map<unknown>;
       expect(p1.get("color")).not.toBe(p2.get("color"));
-    });
-
-    it("does not overwrite host when second player joins", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-
-      expect(room.doc.getMap("room").get("hostId")).toBe("player1");
     });
 
     it("initializes player with zero progress", () => {
@@ -151,15 +170,16 @@ describe("p2p-room", () => {
       expect(p1.get("completionPercent")).toBe(0);
     });
 
-    it("increments gameNumber", () => {
+    it("increments gameNumber from 0 on first start", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
 
-      expect(room.doc.getMap("room").get("gameNumber")).toBe(0);
-
       startGame(room, "medium");
       expect(room.doc.getMap("room").get("gameNumber")).toBe(1);
+
+      startGame(room, "medium");
+      expect(room.doc.getMap("room").get("gameNumber")).toBe(2);
     });
   });
 
@@ -281,6 +301,49 @@ describe("p2p-room", () => {
       const players = getPlayers(room);
       expect(players[0]!.id).toBe("player2");
       expect(players[1]!.id).toBe("player1");
+    });
+  });
+
+  describe("two-peer race", () => {
+    // Both peers run createRoomFromDoc + joinRoom independently on
+    // their own Y.Doc before WebRTC sync. Yjs resolves concurrent
+    // writes to the same key by clientID tiebreak; we pick the joiner
+    // as the clientID that would WIN that tiebreak so that any
+    // double-write from the joiner stomps the creator. The fix is
+    // for the joiner to make no write in the first place.
+    it("keeps the creator as host even when joiner sets up first", () => {
+      const creatorDoc = makeDoc(2);
+      const joinerDoc = makeDoc(1);
+
+      const creatorRoom = createRoomFromDoc(creatorDoc, "race-room");
+      claimHost(creatorRoom, "creator-id");
+      joinRoom(creatorRoom, "creator-id", "Alice");
+
+      const joinerRoom = createRoomFromDoc(joinerDoc, "race-room");
+      joinRoom(joinerRoom, "joiner-id", "Bob");
+
+      syncDocs(creatorDoc, joinerDoc);
+
+      expect(creatorDoc.getMap("room").get("hostId")).toBe("creator-id");
+      expect(joinerDoc.getMap("room").get("hostId")).toBe("creator-id");
+    });
+
+    it("keeps the creator's difficulty after sync", () => {
+      const creatorDoc = makeDoc(2);
+      const joinerDoc = makeDoc(1);
+
+      const creatorRoom = createRoomFromDoc(creatorDoc, "race-room");
+      claimHost(creatorRoom, "creator-id");
+      setDifficulty(creatorRoom, "hard");
+      joinRoom(creatorRoom, "creator-id", "Alice");
+
+      const joinerRoom = createRoomFromDoc(joinerDoc, "race-room");
+      joinRoom(joinerRoom, "joiner-id", "Bob");
+
+      syncDocs(creatorDoc, joinerDoc);
+
+      expect(creatorDoc.getMap("room").get("difficulty")).toBe("hard");
+      expect(joinerDoc.getMap("room").get("difficulty")).toBe("hard");
     });
   });
 });
