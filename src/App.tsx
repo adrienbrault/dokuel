@@ -9,14 +9,11 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
+import { generateId } from "./lib/id.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { AssistLevel, Difficulty } from "./lib/types.ts";
 import "./index.css";
-
-function generateId() {
-  return Math.random().toString(36).slice(2, 10);
-}
 
 type Screen =
   | { name: "landing" }
