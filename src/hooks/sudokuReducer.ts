@@ -105,11 +105,10 @@ function handleUndo(state: State): State {
       lastAction.type === "hint"
         ? Math.max(0, state.hintsUsed - 1)
         : state.hintsUsed,
-    activeHint: null,
   };
 }
 
-export function reducer(state: State, action: Action): State {
+function dispatchAction(state: State, action: Action): State {
   switch (action.type) {
     case "SELECT_CELL": {
       const key = cellKey(action.row, action.col);
@@ -117,7 +116,6 @@ export function reducer(state: State, action: Action): State {
         ...state,
         selectedCell: { row: action.row, col: action.col },
         selectedCells: new Set([key]),
-        activeHint: null,
       };
     }
 
@@ -126,7 +124,6 @@ export function reducer(state: State, action: Action): State {
         ...state,
         selectedCell: null,
         selectedCells: new Set(),
-        activeHint: null,
       };
 
     case "SET_SELECTED_CELLS":
@@ -134,7 +131,6 @@ export function reducer(state: State, action: Action): State {
         ...state,
         selectedCell: action.primary,
         selectedCells: action.cells,
-        activeHint: null,
       };
 
     case "PLACE_NUMBER":
@@ -150,7 +146,7 @@ export function reducer(state: State, action: Action): State {
       return { ...state, notesMode: !state.notesMode };
 
     case "DISMISS_HINT":
-      return { ...state, activeHint: null };
+      return state;
 
     case "HINT": {
       if (!state.solution || state.status === "completed") return state;
@@ -170,6 +166,16 @@ export function reducer(state: State, action: Action): State {
     default:
       return state;
   }
+}
+
+// Every action clears activeHint except the two that own it:
+// HINT installs a new hint, and TOGGLE_NOTES is unrelated to hints
+// (notes mode can be toggled while a hint is showing).
+export function reducer(state: State, action: Action): State {
+  const next = dispatchAction(state, action);
+  if (action.type === "HINT" || action.type === "TOGGLE_NOTES") return next;
+  if (next.activeHint === null) return next;
+  return { ...next, activeHint: null };
 }
 
 export function initState(args: {
