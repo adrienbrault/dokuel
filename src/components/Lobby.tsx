@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
+import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 
 type LobbyProps = {
   roomState: RoomState;
@@ -182,47 +183,13 @@ export function Lobby({
       </div>
 
       {isHost && onDifficultyChange && (
-        <div
-          role="radiogroup"
-          aria-label="Difficulty"
-          className="relative flex w-full rounded-xl bg-bg-inset p-1"
-        >
-          <div
-            className="absolute top-1 bottom-1 rounded-lg bg-accent shadow-sm transition-transform duration-200 ease-out"
-            style={{
-              width: `calc((100% - 0.5rem) / 4)`,
-              transform: `translateX(calc(${DIFFICULTY_OPTIONS.findIndex(
-                (o) => o.value === roomState.difficulty,
-              )} * 100%))`,
-            }}
-            aria-hidden="true"
-          />
-          {DIFFICULTY_OPTIONS.map((option) => {
-            const isActive = option.value === roomState.difficulty;
-            return (
-              <label
-                key={option.value}
-                className={`relative z-10 flex flex-1 items-center justify-center rounded-lg py-2 cursor-pointer select-none touch-manipulation transition-colors duration-200 ${
-                  isActive ? "text-text-on-accent" : "text-text-secondary"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="room-difficulty"
-                  value={option.value}
-                  checked={isActive}
-                  onChange={() => {
-                    if (!isActive) onDifficultyChange(option.value);
-                  }}
-                  className="sr-only"
-                />
-                <span className="text-sm font-semibold leading-none">
-                  {option.label}
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <SlidingRadioGroup
+          options={DIFFICULTY_OPTIONS}
+          value={roomState.difficulty}
+          onChange={onDifficultyChange}
+          name="room-difficulty"
+          ariaLabel="Difficulty"
+        />
       )}
 
       {onAssistLevelChange && (
