@@ -75,6 +75,9 @@ export function useYjsMultiplayer({
   const lastGameNumberRef = useRef<number>(0);
   const playerNameRef = useRef(playerName);
   playerNameRef.current = playerName;
+  // Captured at mount so the joiner does not stomp on the host's
+  // Yjs difficulty when re-renders happen with a different prop value.
+  const initialDifficultyRef = useRef(difficulty);
 
   useEffect(() => {
     const doc = new Y.Doc();
@@ -87,6 +90,15 @@ export function useYjsMultiplayer({
     providerRef.current = provider;
 
     joinRoom(room, playerId, playerName);
+
+    // The host publishes their chosen difficulty so joiners see it
+    // in the lobby before either player clicks Start.
+    const initialDifficulty = initialDifficultyRef.current;
+    if (doc.getMap("room").get("hostId") === playerId) {
+      doc.transact(() => {
+        doc.getMap("room").set("difficulty", initialDifficulty);
+      });
+    }
 
     const updateState = () => {
       const state = deriveRoomState(room);
