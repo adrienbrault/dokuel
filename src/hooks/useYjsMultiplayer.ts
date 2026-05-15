@@ -5,9 +5,12 @@ import {
   claimWinner,
   createRoomFromDoc,
   destroyRoom,
+  getHostId,
   getOpponentProgress,
   getPlayers,
+  getRoomState,
   joinRoom,
+  observeRoomChanges,
   type P2PRoom,
   requestRematch,
   setAssistLevel as setRoomAssistLevel,
@@ -34,27 +37,6 @@ type GameOverInfo = {
   winnerId: string;
   winnerName: string;
 };
-
-function deriveRoomState(room: P2PRoom): RoomState | null {
-  const roomMap = room.doc.getMap("room");
-  const status = roomMap.get("status") as string | undefined;
-  if (!status) return null;
-
-  const players = getPlayers(room);
-  if (players.length === 0) return null;
-
-  return {
-    roomId: room.roomId,
-    status: status as RoomState["status"],
-    difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
-    assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
-    hostId: (roomMap.get("hostId") as string) || "",
-    players,
-    puzzle: (roomMap.get("puzzle") as string) || null,
-    winnerId: (roomMap.get("winnerId") as string) || null,
-    events: [],
-  };
-}
 
 export function useYjsMultiplayer({
   roomId,
@@ -96,51 +78,39 @@ export function useYjsMultiplayer({
     // in the lobby before either player clicks Start. Joiners pass null
     // — they only learn the difficulty once Yjs syncs.
     const initialDifficulty = initialDifficultyRef.current;
-    if (initialDifficulty && doc.getMap("room").get("hostId") === playerId) {
-      doc.transact(() => {
-        doc.getMap("room").set("difficulty", initialDifficulty);
-      });
+    if (initialDifficulty && getHostId(room) === playerId) {
+      setRoomDifficulty(room, initialDifficulty);
     }
 
     const updateState = () => {
-      const state = deriveRoomState(room);
+      const state = getRoomState(room);
       setRoomState(state);
+      if (!state) return;
 
-      if (state) {
-        const roomMap = doc.getMap("room");
-        const currentPuzzle = roomMap.get("puzzle") as string | null;
-        const gameNumber = (roomMap.get("gameNumber") as number) || 0;
-        const winnerId = roomMap.get("winnerId") as string | null;
-        const winnerName = roomMap.get("winnerName") as string | null;
+      // Detect new game (start or rematch)
+      if (state.gameNumber > lastGameNumberRef.current) {
+        lastGameNumberRef.current = state.gameNumber;
+        setPuzzle(state.puzzle);
+        setGameOver(null);
+        setOpponentProgress(null);
+      }
 
-        // Detect new game (start or rematch)
-        if (gameNumber > lastGameNumberRef.current) {
-          lastGameNumberRef.current = gameNumber;
-          setPuzzle(currentPuzzle);
-          setGameOver(null);
-          setOpponentProgress(null);
-        }
+      // Detect winner
+      if (state.winnerId && state.winnerName) {
+        setGameOver({
+          winnerId: state.winnerId,
+          winnerName: state.winnerName,
+        });
+      }
 
-        // Detect winner
-        if (winnerId && winnerName) {
-          setGameOver({ winnerId, winnerName });
-        }
-
-        // Update opponent progress
-        const progress = getOpponentProgress(room, playerId);
-        if (progress) {
-          setOpponentProgress(progress);
-        }
+      // Update opponent progress
+      const progress = getOpponentProgress(room, playerId);
+      if (progress) {
+        setOpponentProgress(progress);
       }
     };
 
-    // Listen for changes on room map
-    const roomMap = doc.getMap("room");
-    roomMap.observe(updateState);
-
-    // Listen for changes on players map
-    const playersMap = doc.getMap("players");
-    playersMap.observeDeep(updateState);
+    const unobserveRoom = observeRoomChanges(room, updateState);
 
     // Track peer connections via awareness
     const awareness = provider.awareness;
@@ -184,8 +154,7 @@ export function useYjsMultiplayer({
     updateState();
 
     return () => {
-      roomMap.unobserve(updateState);
-      playersMap.unobserveDeep(updateState);
+      unobserveRoom();
       awareness.off("change", updatePresence);
       provider.off("status", onStatus);
       provider.off("peers", onPeers);
@@ -206,10 +175,7 @@ export function useYjsMultiplayer({
       setError("Need 2 players to start");
       return;
     }
-
-    const roomDifficulty =
-      (room.doc.getMap("room").get("difficulty") as Difficulty) || "medium";
-    startGame(room, roomDifficulty);
+    startGame(room);
   }, []);
 
   const sendProgress = useCallback(
@@ -233,9 +199,7 @@ export function useYjsMultiplayer({
   const sendRematch = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
-    const roomDifficulty =
-      (room.doc.getMap("room").get("difficulty") as Difficulty) || "medium";
-    requestRematch(room, roomDifficulty);
+    requestRematch(room);
   }, []);
 
   const updateName = useCallback(
