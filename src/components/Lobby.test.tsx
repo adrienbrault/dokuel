@@ -103,6 +103,13 @@ describe("Lobby", () => {
     );
   });
 
+  it("displays the room difficulty so joiners see it", () => {
+    const state: RoomState = { ...BASE_STATE, difficulty: "expert" };
+    render(<Lobby roomState={state} onStart={vi.fn()} onBack={vi.fn()} />);
+
+    expect(screen.getByText(/expert/i)).toBeInTheDocument();
+  });
+
   it("calls onStart when start button clicked", async () => {
     const state: RoomState = {
       ...BASE_STATE,
