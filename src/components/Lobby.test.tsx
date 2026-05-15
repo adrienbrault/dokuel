@@ -110,6 +110,38 @@ describe("Lobby", () => {
     expect(screen.getByText(/expert/i)).toBeInTheDocument();
   });
 
+  it("lets the host change difficulty via picker", async () => {
+    const onDifficultyChange = vi.fn();
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        playerId="p1"
+        onDifficultyChange={onDifficultyChange}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /hard/i }));
+    expect(onDifficultyChange).toHaveBeenCalledWith("hard");
+  });
+
+  it("does not show the difficulty picker to joiners", () => {
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        playerId="p2"
+        onDifficultyChange={vi.fn()}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("radio", { name: /hard/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("calls onStart when start button clicked", async () => {
     const state: RoomState = {
       ...BASE_STATE,
