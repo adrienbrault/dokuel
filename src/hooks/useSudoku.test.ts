@@ -155,22 +155,13 @@ describe("useSudoku", () => {
   it("detects conflicts on each move", () => {
     const { result } = setupHook();
 
-    // Find two empty cells in the same row
-    const pos1 = findEmptyCell(result.current.board);
-    if (!pos1) throw new Error("No empty cell found");
-
-    let pos2: { row: number; col: number } | null = null;
-    for (let c = 0; c < 9; c++) {
-      if (
-        c !== pos1.col &&
-        !result.current.board[pos1.row]![c]!.isGiven &&
-        result.current.board[pos1.row]![c]!.value === null
-      ) {
-        pos2 = { row: pos1.row, col: c };
-        break;
-      }
-    }
-    if (!pos2) throw new Error("No second empty cell in same row");
+    // Find any row that has at least two empty non-given cells. Scanning
+    // for the first empty cell and then looking for a second in its row
+    // is flaky: the chosen row can have a single empty cell on some
+    // puzzles, which surfaced as an intermittent CI failure.
+    const pair = findTwoEmptyCellsInSameRow(result.current.board);
+    if (!pair) throw new Error("No row with two empty cells");
+    const { pos1, pos2 } = pair;
 
     act(() => result.current.selectCell(pos1.row, pos1.col));
     act(() => result.current.placeNumber(9));
@@ -444,6 +435,23 @@ function findCellWithPeers(
     }
   }
   throw new Error("No empty cell with row and col peers found");
+}
+
+function findTwoEmptyCellsInSameRow(
+  board: { value: number | null; isGiven: boolean }[][],
+) {
+  for (let row = 0; row < 9; row++) {
+    const cols: number[] = [];
+    for (let col = 0; col < 9; col++) {
+      if (!board[row]![col]!.isGiven && board[row]![col]!.value === null) {
+        cols.push(col);
+      }
+    }
+    if (cols.length >= 2) {
+      return { pos1: { row, col: cols[0]! }, pos2: { row, col: cols[1]! } };
+    }
+  }
+  return null;
 }
 
 function findEmptyCell(board: { value: number | null; isGiven: boolean }[][]) {
