@@ -75,4 +75,32 @@ describe("useYjsMultiplayer", () => {
     expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
     expect(countClues(puzzle)).toBeLessThanOrEqual(21);
   });
+
+  it("sendRematch uses Yjs difficulty, not the local prop", () => {
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-rematch",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+
+    const doc = mocks.lastDoc!;
+    const fakeRoom = { doc, roomId: "room-rematch" };
+
+    act(() => {
+      joinRoom(fakeRoom, "p2", "Bob");
+      setDifficulty(fakeRoom, "expert");
+      result.current.sendStartGame();
+    });
+
+    act(() => {
+      result.current.sendRematch();
+    });
+
+    const puzzle = doc.getMap("room").get("puzzle") as string;
+    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
+    expect(countClues(puzzle)).toBeLessThanOrEqual(21);
+  });
 });
