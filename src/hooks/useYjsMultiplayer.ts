@@ -231,8 +231,10 @@ export function useYjsMultiplayer({
   const sendRematch = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
-    requestRematch(room, difficulty);
-  }, [difficulty]);
+    const roomDifficulty =
+      (room.doc.getMap("room").get("difficulty") as Difficulty) || "medium";
+    requestRematch(room, roomDifficulty);
+  }, []);
 
   const updateName = useCallback(
     (newName: string) => {
