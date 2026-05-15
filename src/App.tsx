@@ -32,7 +32,7 @@ type Screen =
   | {
       name: "multiplayer";
       roomId: string;
-      difficulty: Difficulty;
+      difficulty: Difficulty | null;
     }
   | { name: "join" }
   | { name: "stats" };
@@ -86,11 +86,12 @@ function pathToScreen(pathname: string): Screen {
     return { name: "landing" };
   }
 
-  // Everything else is treated as a multiplayer roomId
+  // Everything else is treated as a multiplayer roomId. Difficulty
+  // is unknown to the joiner until Yjs syncs from the host.
   return {
     name: "multiplayer",
     roomId: path,
-    difficulty: "medium" as Difficulty,
+    difficulty: null,
   };
 }
 
@@ -236,7 +237,7 @@ function App() {
             navigate({
               name: "multiplayer",
               roomId,
-              difficulty: "medium",
+              difficulty: null,
             });
           }}
           onBack={() => navigate({ name: "landing" })}

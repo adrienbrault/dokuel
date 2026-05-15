@@ -21,7 +21,7 @@ type UseYjsMultiplayerOptions = {
   roomId: string;
   playerId: string;
   playerName: string;
-  difficulty: Difficulty;
+  difficulty: Difficulty | null;
 };
 
 type OpponentProgress = {
@@ -92,9 +92,10 @@ export function useYjsMultiplayer({
     joinRoom(room, playerId, playerName);
 
     // The host publishes their chosen difficulty so joiners see it
-    // in the lobby before either player clicks Start.
+    // in the lobby before either player clicks Start. Joiners pass null
+    // — they only learn the difficulty once Yjs syncs.
     const initialDifficulty = initialDifficultyRef.current;
-    if (doc.getMap("room").get("hostId") === playerId) {
+    if (initialDifficulty && doc.getMap("room").get("hostId") === playerId) {
       doc.transact(() => {
         doc.getMap("room").set("difficulty", initialDifficulty);
       });
