@@ -9,6 +9,7 @@ import {
   joinRoom,
   type P2PRoom,
   requestRematch,
+  setDifficulty,
   startGame,
   updateProgress,
 } from "./p2p-room.ts";
@@ -159,6 +160,17 @@ describe("p2p-room", () => {
 
       startGame(room, "medium");
       expect(room.doc.getMap("room").get("gameNumber")).toBe(1);
+    });
+  });
+
+  describe("setDifficulty", () => {
+    it("updates the room difficulty in the Yjs map", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+
+      setDifficulty(room, "expert");
+
+      expect(room.doc.getMap("room").get("difficulty")).toBe("expert");
     });
   });
 
