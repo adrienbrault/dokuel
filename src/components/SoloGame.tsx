@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
@@ -59,8 +60,8 @@ export function SoloGame({
   }
 
   const { position, setPosition } = useNumPadPosition();
-  const [showResult, setShowResult] = useState(false);
-  const [revealed, setRevealed] = useState(false);
+  const revealed = useDelayedFlag(true, 600);
+  const showResult = useDelayedFlag(game.status === "completed", 300);
   const [paused, setPaused] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
@@ -72,17 +73,6 @@ export function SoloGame({
     [difficulty],
   );
   const personalBest = priorStats?.bestTime ?? null;
-
-  useEffect(() => {
-    const id = setTimeout(() => setRevealed(true), 600);
-    return () => clearTimeout(id);
-  }, []);
-
-  useEffect(() => {
-    if (game.status !== "completed") return;
-    const id = setTimeout(() => setShowResult(true), 300);
-    return () => clearTimeout(id);
-  }, [game.status]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {

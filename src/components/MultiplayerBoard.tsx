@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
@@ -51,20 +52,15 @@ export function MultiplayerBoard({
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
   const timerSecondsRef = useRef(0);
-  const [showResult, setShowResult] = useState(false);
   const prevCellsRef = useRef(game.cellsRemaining);
-  const [revealed, setRevealed] = useState(false);
+  const revealed = useDelayedFlag(true, 600);
+  const showResult = useDelayedFlag(gameOver !== null, 300);
 
   const myPercent = useMemo(() => {
     const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
     const filled = total - game.cellsRemaining;
     return total > 0 ? Math.round((filled / total) * 100) : 0;
   }, [game.cellsRemaining, puzzle]);
-
-  useEffect(() => {
-    const id = setTimeout(() => setRevealed(true), 600);
-    return () => clearTimeout(id);
-  }, []);
 
   // Send progress when cells change
   useEffect(() => {
@@ -82,13 +78,6 @@ export function MultiplayerBoard({
     if (game.status !== "completed") return;
     onComplete(puzzle);
   }, [game.status, onComplete, puzzle]);
-
-  // Show result on game over
-  useEffect(() => {
-    if (!gameOver) return;
-    const id = setTimeout(() => setShowResult(true), 300);
-    return () => clearTimeout(id);
-  }, [gameOver]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
