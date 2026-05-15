@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 
@@ -201,12 +202,9 @@ function SettingsButton({
               Keyboard shortcuts
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-              <Shortcut keys="1–9" label="Place number" />
-              <Shortcut keys="←↑→↓" label="Move cursor" />
-              <Shortcut keys="N" label="Toggle notes" />
-              <Shortcut keys="Backspace" label="Erase" />
-              <Shortcut keys="⌘Z" label="Undo" />
-              <Shortcut keys="Esc" label="Deselect" />
+              {KEYBOARD_SHORTCUTS.map((s) => (
+                <Shortcut key={s.label} keys={s.keys} label={s.label} />
+              ))}
             </div>
           </div>
         </div>
