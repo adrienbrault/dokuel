@@ -26,6 +26,14 @@ function createTestRoom(doc?: Y.Doc): P2PRoom {
   return createRoomFromDoc(doc ?? new Y.Doc(), "test-room");
 }
 
+// Simulates two peers operating independently before WebRTC sync.
+// Higher clientID wins concurrent Y.Map writes in YATA, so we put the
+// joiner at the higher ID to exercise the worst-case ordering.
+function syncDocs(doc1: Y.Doc, doc2: Y.Doc): void {
+  Y.applyUpdate(doc2, Y.encodeStateAsUpdate(doc1));
+  Y.applyUpdate(doc1, Y.encodeStateAsUpdate(doc2));
+}
+
 describe("p2p-room", () => {
   describe("joinRoom", () => {
     it("sets first player as host", () => {
@@ -281,6 +289,47 @@ describe("p2p-room", () => {
       const players = getPlayers(room);
       expect(players[0]!.id).toBe("player2");
       expect(players[1]!.id).toBe("player1");
+    });
+  });
+
+  describe("two-peer race", () => {
+    // Both peers run createRoomFromDoc + joinRoom independently on
+    // their own Y.Doc before WebRTC sync. Yjs resolves concurrent
+    // writes to the same key by clientID tiebreak; we pick the joiner
+    // as the clientID that would WIN that tiebreak so that any
+    // double-write from the joiner stomps the creator. The fix is
+    // for the joiner to make no write in the first place.
+    it("keeps the creator as host even when joiner sets up first", () => {
+      const creatorDoc = new Y.Doc({ clientID: 2 });
+      const joinerDoc = new Y.Doc({ clientID: 1 });
+
+      const creatorRoom = createRoomFromDoc(creatorDoc, "race-room");
+      joinRoom(creatorRoom, "creator-id", "Alice");
+
+      const joinerRoom = createRoomFromDoc(joinerDoc, "race-room");
+      joinRoom(joinerRoom, "joiner-id", "Bob");
+
+      syncDocs(creatorDoc, joinerDoc);
+
+      expect(creatorDoc.getMap("room").get("hostId")).toBe("creator-id");
+      expect(joinerDoc.getMap("room").get("hostId")).toBe("creator-id");
+    });
+
+    it("keeps the creator's difficulty after sync", () => {
+      const creatorDoc = new Y.Doc({ clientID: 2 });
+      const joinerDoc = new Y.Doc({ clientID: 1 });
+
+      const creatorRoom = createRoomFromDoc(creatorDoc, "race-room");
+      joinRoom(creatorRoom, "creator-id", "Alice");
+      setDifficulty(creatorRoom, "hard");
+
+      const joinerRoom = createRoomFromDoc(joinerDoc, "race-room");
+      joinRoom(joinerRoom, "joiner-id", "Bob");
+
+      syncDocs(creatorDoc, joinerDoc);
+
+      expect(creatorDoc.getMap("room").get("difficulty")).toBe("hard");
+      expect(joinerDoc.getMap("room").get("difficulty")).toBe("hard");
     });
   });
 });
