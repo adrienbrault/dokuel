@@ -1,6 +1,15 @@
 import { useEffect } from "react";
 import type { Position } from "../lib/types.ts";
 
+export const KEYBOARD_SHORTCUTS: { keys: string; label: string }[] = [
+  { keys: "1–9", label: "Place number" },
+  { keys: "←↑→↓", label: "Move cursor" },
+  { keys: "N", label: "Toggle notes" },
+  { keys: "Backspace", label: "Erase" },
+  { keys: "⌘Z", label: "Undo" },
+  { keys: "Esc", label: "Deselect" },
+];
+
 type UseKeyboardOptions = {
   selectedCell: Position | null;
   onSelectCell: (row: number, col: number) => void;

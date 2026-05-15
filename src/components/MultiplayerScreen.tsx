@@ -1,11 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
+import { generateId } from "../lib/id.ts";
 import { generatePlayerName } from "../lib/name-generator.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
-
-function generateId() {
-  return Math.random().toString(36).slice(2, 10);
-}
 
 function getPlayerId() {
   let id = localStorage.getItem("sudoku_player_id");

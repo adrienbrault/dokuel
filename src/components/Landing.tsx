@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime } from "../lib/format.ts";
 import {
@@ -190,13 +191,6 @@ function DailyChallengeButton({
   );
 }
 
-const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-  expert: "Expert",
-};
-
 function progressPercent(game: SavedGameSummary): number {
   const remaining = 81 - game.givenCells;
   if (remaining === 0) return 100;
@@ -223,8 +217,8 @@ function ContinueButton({
         <span className="flex items-center justify-center gap-2">
           Continue
           <span className="text-sm font-normal opacity-80">
-            {DIFFICULTY_LABELS[game.difficulty] ?? game.difficulty} ·{" "}
-            {progressPercent(game)}% · {formatTime(game.timer)}
+            {DIFFICULTY_LABELS[game.difficulty]} · {progressPercent(game)}% ·{" "}
+            {formatTime(game.timer)}
           </span>
         </span>
       </button>

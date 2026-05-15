@@ -91,7 +91,6 @@ export function handlePlaceNumber(
       ...state,
       board,
       history: [...state.history, moveAction],
-      activeHint: null,
     };
   }
 
@@ -114,7 +113,6 @@ export function handlePlaceNumber(
       ...state,
       board,
       history: [...state.history, moveAction],
-      activeHint: null,
     };
   }
 
@@ -140,7 +138,6 @@ export function handlePlaceNumber(
     board,
     status: complete ? "completed" : state.status,
     history: [...state.history, moveAction],
-    activeHint: null,
   };
 }
 
@@ -178,7 +175,6 @@ export function handleErase(state: State): State {
       ...state,
       board,
       history: [...state.history, moveAction],
-      activeHint: null,
     };
   }
 
@@ -200,6 +196,5 @@ export function handleErase(state: State): State {
     ...state,
     board,
     history: [...state.history, moveAction],
-    activeHint: null,
   };
 }
