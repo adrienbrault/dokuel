@@ -160,7 +160,7 @@ function SettingsButton({
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in min-w-48">
+        <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-text-muted font-medium">
               Numpad position

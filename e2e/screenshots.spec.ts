@@ -356,6 +356,21 @@ test("multiplayer - progress bars hidden", async ({ page }, testInfo) => {
 	});
 });
 
+test("solo game - settings popover open", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	await page.getByText("Start Solo").click();
+	await page.getByText("Easy").click();
+	await page.waitForTimeout(800);
+
+	await page.getByLabel("Settings").click();
+	await page.waitForTimeout(300);
+
+	await page.screenshot({
+		path: screenshotPath("solo-settings-popover", testInfo.project.name),
+	});
+});
+
 test("multiplayer - settings with opponent bar toggle", async ({
 	page,
 }, testInfo) => {
