@@ -205,8 +205,10 @@ export function useYjsMultiplayer({
       return;
     }
 
-    startGame(room, difficulty);
-  }, [difficulty]);
+    const roomDifficulty =
+      (room.doc.getMap("room").get("difficulty") as Difficulty) || "medium";
+    startGame(room, roomDifficulty);
+  }, []);
 
   const sendProgress = useCallback(
     (cellsRemaining: number, completionPercent: number) => {
