@@ -1,4 +1,5 @@
 import { demo } from "./builders.ts";
+import { challenge } from "./challenge-builder.ts";
 import type { Guide } from "./types.ts";
 
 const PUZZLE = ".".repeat(81);
@@ -70,4 +71,71 @@ export const X_WING: Guide = {
     },
   ],
   demos: [X_WING_DEMO],
+  challenges: [
+    challenge(
+      "xw-c1",
+      "Tap the four cells that form the X-Wing on the digit 4.",
+    )
+      .puzzle(PUZZLE)
+      .restrict([2, 3], [4, 5])
+      .restrict([2, 7], [4, 6])
+      .restrict([6, 3], [4, 8])
+      .restrict([6, 7], [4, 9])
+      .restrict([0, 3], [1, 4])
+      .restrict([4, 3], [2, 4])
+      .restrict([0, 7], [3, 4])
+      .restrict([4, 7], [7, 4])
+      .selectCells([
+        [2, 3],
+        [2, 7],
+        [6, 3],
+        [6, 7],
+      ])
+      .explain(
+        "Rows 2 and 6 each carry 4 only in columns 3 and 7 — those four cells lock 4 into two columns, an X-Wing. The extra 4s in column 3 and column 7 are the candidates the pattern eliminates.",
+      )
+      .build(),
+    challenge(
+      "xw-c2",
+      "Tap the four cells that form the X-Wing on the digit 6.",
+    )
+      .puzzle(PUZZLE)
+      .restrict([1, 1], [6, 2])
+      .restrict([1, 8], [6, 9])
+      .restrict([7, 1], [6, 3])
+      .restrict([7, 8], [6, 5])
+      .restrict([3, 1], [6, 7])
+      .restrict([5, 8], [6, 4])
+      .selectCells([
+        [1, 1],
+        [1, 8],
+        [7, 1],
+        [7, 8],
+      ])
+      .explain(
+        "Rows 1 and 7 hold 6 only in columns 1 and 8 — those four cells form the rectangle. The lone 6 in column 1 at (3,1) and the one in column 8 at (5,8) are what the pattern eliminates.",
+      )
+      .build(),
+    challenge(
+      "xw-c3",
+      "Tap the four cells that form the X-Wing on the digit 9.",
+    )
+      .puzzle(PUZZLE)
+      .restrict([0, 2], [9, 1])
+      .restrict([0, 5], [9, 3])
+      .restrict([4, 2], [9, 7])
+      .restrict([4, 5], [9, 8])
+      .restrict([2, 2], [9, 4])
+      .restrict([6, 5], [9, 2])
+      .selectCells([
+        [0, 2],
+        [0, 5],
+        [4, 2],
+        [4, 5],
+      ])
+      .explain(
+        "In rows 0 and 4 the digit 9 only fits in columns 2 and 5 — the four cells form the X-Wing. The extra 9 candidates further down columns 2 and 5 fall away.",
+      )
+      .build(),
+  ],
 };
