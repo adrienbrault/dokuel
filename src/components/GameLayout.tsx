@@ -107,7 +107,7 @@ export function GameLayout({
       */}
       <div
         className={`
-          flex w-full flex-1 gap-3 justify-center
+          flex w-full gap-3
           ${MOBILE_POSITION[position]}
           lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]
           lg:items-start lg:gap-6 lg:max-w-6xl lg:mx-auto
