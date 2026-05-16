@@ -15,10 +15,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+	type CombinedSheet,
 	DEVICE_ORDER,
 	deviceLabel,
+	listCombinedSheets,
 	listShots,
-	sceneLabel,
 	type Shot,
 } from "./screenshot-meta.ts";
 
@@ -74,44 +75,118 @@ function renderHero(shots: Shot[]): string {
 	].join("\n");
 }
 
-function renderMatrix(shots: Shot[]): string {
-	const byScene = new Map<string, Map<string, string>>();
-	const devices = new Set<string>();
-	for (const { scene, device, file } of shots) {
-		if (!byScene.has(scene)) byScene.set(scene, new Map());
-		byScene.get(scene)?.set(device, file);
-		devices.add(device);
-	}
+function combinedUrl(file: string): string {
+	return `${BASE_URL}/combined/${file}`;
+}
 
-	const sortedDevices = [...devices].sort((a, b) => {
+const DEVICE_PART_TITLES: Record<string, string> = {
+	a: "Menus & entry",
+	b: "Active gameplay",
+};
+
+const FEATURE_TITLES: Record<string, string> = {
+	onboarding: "Onboarding & landing",
+	solo: "Solo gameplay",
+	numpad: "Numpad positions",
+	multiplayer: "Multiplayer",
+	"dark-mode-a": "Dark-mode pairs (landing & solo)",
+	"dark-mode-b": "Dark-mode pairs (difficulty & multiplayer)",
+};
+
+function parseDeviceSheet(file: string): { device: string; part: string } {
+	// device--<Device>--<part>.png  (Device may contain '-', e.g. iPad-Mini)
+	const base = file.replace(/^device--/, "").replace(/\.png$/, "");
+	const lastDash = base.lastIndexOf("--");
+	return {
+		device: base.slice(0, lastDash),
+		part: base.slice(lastDash + 2),
+	};
+}
+
+function renderCombined(sheets: CombinedSheet[]): string {
+	const deviceSheets = sheets.filter((s) => s.kind === "device");
+	const featureSheets = sheets.filter((s) => s.kind === "feature");
+
+	// Per-device table: rows = devices in canonical order, cols = part a/b.
+	const byDevice = new Map<string, Map<string, string>>();
+	for (const { file } of deviceSheets) {
+		const { device, part } = parseDeviceSheet(file);
+		if (!byDevice.has(device)) byDevice.set(device, new Map());
+		byDevice.get(device)?.set(part, file);
+	}
+	const sortedDevices = [...byDevice.keys()].sort((a, b) => {
 		const ai = DEVICE_ORDER.indexOf(a);
 		const bi = DEVICE_ORDER.indexOf(b);
 		return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
 	});
 
-	const sortedScenes = [...byScene.keys()].sort();
+	const deviceRows = sortedDevices.map((d) => {
+		const parts = byDevice.get(d);
+		const aCell = parts?.get("a");
+		const bCell = parts?.get("b");
+		const cell = (file: string | undefined, partLabel: string): string => {
+			if (!file) return '    <td align="center">—</td>';
+			return `    <td align="center"><a href="${combinedUrl(file)}"><img src="${combinedUrl(file)}" width="320" alt="${deviceLabel(d)} · ${partLabel}" /></a></td>`;
+		};
+		return [
+			"  <tr>",
+			`    <th align="left">${deviceLabel(d)}</th>`,
+			cell(aCell, DEVICE_PART_TITLES.a),
+			cell(bCell, DEVICE_PART_TITLES.b),
+			"  </tr>",
+		].join("\n");
+	});
 
-	const header = `| Scene | ${sortedDevices.map(deviceLabel).join(" | ")} |`;
-	const sep = `| --- | ${sortedDevices.map(() => "---").join(" | ")} |`;
+	const deviceTable = [
+		"<table>",
+		"  <thead>",
+		"    <tr>",
+		'      <th align="left">Device</th>',
+		`      <th align="center">${DEVICE_PART_TITLES.a}</th>`,
+		`      <th align="center">${DEVICE_PART_TITLES.b}</th>`,
+		"    </tr>",
+		"  </thead>",
+		"  <tbody>",
+		...deviceRows,
+		"  </tbody>",
+		"</table>",
+	].join("\n");
 
-	const rows = sortedScenes.map((scene) => {
-		const row = byScene.get(scene);
-		if (!row) return "";
-		const cells = sortedDevices.map((d) => {
-			const file = row.get(d);
-			if (!file) return "—";
-			return `<a href="${url(file)}"><img src="${url(file)}" width="160" alt="${sceneLabel(scene)} on ${deviceLabel(d)}" /></a>`;
-		});
-		return `| **${sceneLabel(scene)}** | ${cells.join(" | ")} |`;
+	// Per-feature: stack each sheet full-width (they have varying aspects).
+	const featureOrder = Object.keys(FEATURE_TITLES);
+	const orderedFeatures = [...featureSheets].sort((a, b) => {
+		const aKey = a.file.replace(/^feature--/, "").replace(/\.png$/, "");
+		const bKey = b.file.replace(/^feature--/, "").replace(/\.png$/, "");
+		const ai = featureOrder.indexOf(aKey);
+		const bi = featureOrder.indexOf(bKey);
+		return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+	});
+
+	const featureBlocks = orderedFeatures.map(({ file }) => {
+		const key = file.replace(/^feature--/, "").replace(/\.png$/, "");
+		const title = FEATURE_TITLES[key] ?? key;
+		return [
+			`#### ${title}`,
+			"",
+			`<a href="${combinedUrl(file)}"><img src="${combinedUrl(file)}" width="800" alt="${title}" /></a>`,
+		].join("\n");
 	});
 
 	return [
 		"<details>",
-		`<summary>All ${sortedScenes.length} scenes × ${sortedDevices.length} devices</summary>`,
+		`<summary>All ${sheets.length} contact sheets (${deviceSheets.length} per-device · ${featureSheets.length} per-feature)</summary>`,
 		"",
-		header,
-		sep,
-		...rows,
+		"### Per-device",
+		"",
+		"Each device gets two sheets: menus & entry (landing, difficulty, daily challenge, join, solo entry, multiplayer lobby) and active gameplay (in-progress, win modal, settings popover, numpad variants, multiplayer progress).",
+		"",
+		deviceTable,
+		"",
+		"### Per-feature",
+		"",
+		"Each feature sheet shows related scenes across all 4 devices (devices as rows).",
+		"",
+		featureBlocks.join("\n\n"),
 		"",
 		"</details>",
 	].join("\n");
@@ -138,6 +213,12 @@ function main(): void {
 	if (shots.length === 0) {
 		throw new Error("No screenshots found — nothing to update.");
 	}
+	const sheets = listCombinedSheets();
+	if (sheets.length === 0) {
+		throw new Error(
+			"No combined sheets found — run 'bun run screenshots:combine' first.",
+		);
+	}
 
 	const readme = readFileSync(README_PATH, "utf-8");
 	const withHero = replaceBlock(readme, HERO_START, HERO_END, renderHero(shots));
@@ -145,7 +226,7 @@ function main(): void {
 		withHero,
 		MATRIX_START,
 		MATRIX_END,
-		renderMatrix(shots),
+		renderCombined(sheets),
 	);
 
 	if (withMatrix === readme) {
@@ -154,9 +235,7 @@ function main(): void {
 	}
 	writeFileSync(README_PATH, withMatrix);
 	console.log(
-		`README.md updated: ${shots.length} screenshots across ${
-			new Set(shots.map((s) => s.scene)).size
-		} scenes.`,
+		`README.md updated: ${shots.length} screenshots, ${sheets.length} combined sheets.`,
 	);
 }
 

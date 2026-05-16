@@ -17,6 +17,8 @@ export const DEVICE_ORDER = ["iPhone-SE", "iPhone-14", "iPad-Mini", "Desktop"];
 
 export type Shot = { file: string; scene: string; device: string };
 
+export type CombinedSheet = { file: string; kind: "device" | "feature" };
+
 /**
  * Lists individual scene PNGs in SCREENSHOTS_DIR. Filenames produced by
  * combine-screenshots.ts (`device--*.png`, `feature--*.png`) live in the
@@ -43,6 +45,22 @@ export function listShots(): Shot[] {
 				scene: base.slice(0, sepIdx),
 				device: base.slice(sepIdx + 2),
 			};
+		});
+}
+
+/**
+ * Lists combined contact sheets produced by combine-screenshots.ts.
+ * Returns an empty array when the directory is missing — callers decide
+ * whether that's an error.
+ */
+export function listCombinedSheets(): CombinedSheet[] {
+	if (!existsSync(COMBINED_DIR)) return [];
+	return readdirSync(COMBINED_DIR)
+		.filter((f) => f.endsWith(".png"))
+		.map((file) => {
+			if (file.startsWith("device--")) return { file, kind: "device" };
+			if (file.startsWith("feature--")) return { file, kind: "feature" };
+			throw new Error(`Unexpected combined sheet filename: ${file}`);
 		});
 }
 
