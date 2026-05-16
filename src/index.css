@@ -63,7 +63,7 @@
   --color-cell-highlight: oklch(0.22 0.02 168);
   --color-cell-same-number: oklch(0.26 0.05 168);
   --color-cell-match-row-col: oklch(0.2 0.015 168);
-  --color-cell-given: oklch(0.92 0.005 80);
+  --color-cell-given: oklch(0.78 0.005 80);
   --color-cell-user: oklch(0.7 0.13 168);
   --color-cell-conflict: oklch(0.7 0.18 25);
   --color-cell-conflict-bg: oklch(0.25 0.05 25);
@@ -77,7 +77,7 @@
   --color-border-default: oklch(0.32 0.008 80);
 
   /* Semantic text */
-  --color-text-primary: oklch(0.93 0.005 80);
+  --color-text-primary: oklch(0.78 0.005 80);
   --color-text-secondary: oklch(0.7 0.008 80);
   --color-text-muted: oklch(0.5 0.008 80);
 
