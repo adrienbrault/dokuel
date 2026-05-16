@@ -85,4 +85,25 @@ describe("Board same-number row/col highlighting (full assist)", () => {
     const cell40 = screen.getByLabelText("Cell row 5 column 1, empty");
     expect(cell40.className).not.toContain("bg-cell-match-row-col");
   });
+
+  it("highlights cells in the same box as matching-number cells", () => {
+    const board = makeBoard([
+      [1, 2, 5],
+      [4, 6, 5],
+    ]);
+
+    render(
+      <Board
+        board={board}
+        selectedCell={{ row: 1, col: 2 }}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        assistLevel="full"
+      />,
+    );
+
+    // (3,7) shares box (1,2) with matching 5 at (4,6); not in row 4 or col 6
+    const cell37 = screen.getByLabelText("Cell row 4 column 8, empty");
+    expect(cell37.className).toContain("bg-cell-match-row-col");
+  });
 });
