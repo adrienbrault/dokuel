@@ -4,7 +4,14 @@ import {
   DIFFICULTY_LABELS,
 } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
+import type { TechniqueId } from "../lib/guides/types.ts";
 import type { Difficulty } from "../lib/types.ts";
+
+type GuideSuggestion = {
+  id: TechniqueId;
+  title: string;
+  onOpen: () => void;
+};
 
 type GameResultProps = {
   isWinner: boolean;
@@ -21,6 +28,7 @@ type GameResultProps = {
   isDaily?: boolean | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
+  guideSuggestion?: GuideSuggestion | undefined;
 };
 
 export function buildShareText({
@@ -66,6 +74,7 @@ export function GameResult({
   isDaily,
   tip,
   onDismissTip,
+  guideSuggestion,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
 
@@ -188,6 +197,18 @@ export function GameResult({
             </button>
           )}
         </div>
+        {guideSuggestion && (
+          <button
+            type="button"
+            className="text-sm text-text-secondary text-center leading-relaxed hover:text-accent transition-colors"
+            onClick={guideSuggestion.onOpen}
+          >
+            Try this technique →{" "}
+            <span className="font-semibold text-accent">
+              {guideSuggestion.title}
+            </span>
+          </button>
+        )}
         {tip && (
           <button
             type="button"

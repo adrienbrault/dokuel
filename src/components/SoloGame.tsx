@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useGuideProgress } from "../hooks/useGuideProgress.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
+import { GUIDES } from "../lib/guides/index.ts";
+import { suggestGuide } from "../lib/guides/suggest.ts";
+import type { TechniqueId } from "../lib/guides/types.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
@@ -33,6 +37,7 @@ type SoloGameProps = {
     | ((time: number, result: GameCompletionResult) => void)
     | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
+  onOpenGuide?: ((id: TechniqueId) => void) | undefined;
 };
 
 export function SoloGame({
@@ -46,6 +51,7 @@ export function SoloGame({
   onRematch,
   onComplete,
   streakInfo,
+  onOpenGuide,
 }: SoloGameProps) {
   const timerSecondsRef = useRef(0);
 
@@ -72,6 +78,18 @@ export function SoloGame({
   const [paused, setPaused] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
+  );
+  const guideProgress = useGuideProgress();
+  const suggestedGuide = useMemo(
+    () =>
+      onOpenGuide
+        ? suggestGuide(GUIDES, {
+            difficulty,
+            hintsUsed: game.hintsUsed,
+            viewed: guideProgress.viewed,
+          })
+        : null,
+    [onOpenGuide, difficulty, game.hintsUsed, guideProgress.viewed],
   );
 
   // Capture PB before this game's result is saved
@@ -260,6 +278,15 @@ export function SoloGame({
               setTipDismissed(true);
               localStorage.setItem("sudoku_numpad_tip_dismissed", "1");
             }}
+            guideSuggestion={
+              suggestedGuide && onOpenGuide
+                ? {
+                    id: suggestedGuide.id,
+                    title: suggestedGuide.title,
+                    onOpen: () => onOpenGuide(suggestedGuide.id),
+                  }
+                : undefined
+            }
           />
         ) : undefined
       }

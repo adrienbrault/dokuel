@@ -209,6 +209,7 @@ function App() {
           gameKey={screen.gameKey}
           assistLevel={screen.assistLevel}
           onBack={() => navigate({ name: "landing" })}
+          onOpenGuide={(guideId) => navigate({ name: "guides", guideId })}
           onRematch={() => {
             gameIdRef.current++;
             navigate(
@@ -226,7 +227,12 @@ function App() {
       );
 
     case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+      return (
+        <DailyGame
+          onBack={() => navigate({ name: "landing" })}
+          onOpenGuide={(guideId) => navigate({ name: "guides", guideId })}
+        />
+      );
 
     case "multiplayer":
       return (
