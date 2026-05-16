@@ -413,3 +413,30 @@ test("guide detail - x-wing", async ({ page }, testInfo) => {
 		fullPage: true,
 	});
 });
+
+test("guide detail - claiming", async ({ page }, testInfo) => {
+	await page.goto("/learn/claiming");
+	await page.waitForSelector("text=Claiming");
+	await page.screenshot({
+		path: screenshotPath("guide-claiming", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - naked triples", async ({ page }, testInfo) => {
+	await page.goto("/learn/naked-triples");
+	await page.waitForSelector("text=Naked Triples");
+	await page.screenshot({
+		path: screenshotPath("guide-naked-triples", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - jellyfish", async ({ page }, testInfo) => {
+	await page.goto("/learn/jellyfish");
+	await page.waitForSelector("text=Jellyfish");
+	await page.screenshot({
+		path: screenshotPath("guide-jellyfish", testInfo.project.name),
+		fullPage: true,
+	});
+});
