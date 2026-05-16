@@ -129,6 +129,7 @@ export function Landing({
                 {hasUnviewedGuide && (
                   <span
                     className="w-2 h-2 rounded-full bg-accent"
+                    role="img"
                     aria-label="New guides available"
                   />
                 )}

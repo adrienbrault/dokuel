@@ -41,7 +41,7 @@ export function TechniqueDemo({ demo }: TechniqueDemoProps) {
       step.holdMs ?? DEFAULT_HOLD_MS,
     );
     return () => clearTimeout(t);
-  }, [playing, stepIndex, step.holdMs, demo.steps.length]);
+  }, [playing, step, demo.steps.length]);
 
   return (
     <div className="flex flex-col gap-4 w-full">
