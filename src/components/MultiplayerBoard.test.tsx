@@ -16,11 +16,15 @@ const SOLVED =
 // Three empty cells so placing one does not complete the puzzle and trigger
 // the autosave cleanup path.
 const PUZZLE = `...${SOLVED.slice(3)}`;
+// Different shape so the rematch test can distinguish the boards: hole at
+// (0,4) instead of (0,0..2).
+const PUZZLE_B = `${SOLVED.slice(0, 4)}.${SOLVED.slice(5)}`;
 
 function baseProps() {
   return {
     roomId: "room-abc",
     puzzle: PUZZLE,
+    gameNumber: 1,
     playerId: "p1",
     difficulty: "easy" as const,
     opponentProgress: null,
@@ -40,6 +44,29 @@ describe("MultiplayerBoard local autosave", () => {
 
   afterEach(() => {
     localStorage.clear();
+  });
+
+  it("swaps to the new puzzle when gameNumber increments without remounting", () => {
+    const props = baseProps();
+    const { rerender } = render(<MultiplayerBoard {...props} />);
+
+    // Original puzzle: (0,0) empty, (0,4) is given as 7.
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 1, empty/),
+    ).not.toBeNull();
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 5, value 7/),
+    ).not.toBeNull();
+
+    rerender(<MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={2} />);
+
+    // New puzzle: (0,0) is given as 5, (0,4) is empty.
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+    ).not.toBeNull();
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 5, empty/),
+    ).not.toBeNull();
   });
 
   it("restores placed cell values on remount with same roomId and puzzle", () => {

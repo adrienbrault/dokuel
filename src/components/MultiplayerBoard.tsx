@@ -21,6 +21,12 @@ const EMPTY_CONFLICTS = new Set<number>();
 export type MultiplayerBoardProps = {
   roomId: string;
   puzzle: string;
+  /**
+   * Monotonic counter from the Yjs room; bumps on every new puzzle
+   * (start or rematch). Drives the in-place board reset that replaces
+   * the old `key={puzzle}` remount trick.
+   */
+  gameNumber: number;
   playerId: string;
   difficulty: import("../lib/types.ts").Difficulty;
   assistLevel?: AssistLevel;
@@ -39,6 +45,7 @@ export type MultiplayerBoardProps = {
 export function MultiplayerBoard({
   roomId,
   puzzle,
+  gameNumber,
   playerId,
   difficulty,
   assistLevel = "standard",
@@ -63,6 +70,15 @@ export function MultiplayerBoard({
   );
   const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
   const game = useSudoku(puzzle, solution, savedBoard);
+  // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
+  // Reset the reducer in-place rather than remount the whole subtree:
+  // keeps the timer ref, num-pad position, and any other UI state alive.
+  const prevGameNumberRef = useRef(gameNumber);
+  useEffect(() => {
+    if (gameNumber === prevGameNumberRef.current) return;
+    prevGameNumberRef.current = gameNumber;
+    game.reset(puzzle, solution, savedBoard);
+  }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();

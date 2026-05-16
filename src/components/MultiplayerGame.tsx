@@ -40,9 +40,9 @@ export function MultiplayerGame({
     return (
       <>
         <MultiplayerBoard
-          key={mp.puzzle}
           roomId={roomId}
           puzzle={mp.puzzle}
+          gameNumber={mp.roomState?.gameNumber ?? 0}
           playerId={playerId}
           difficulty={mp.roomState?.difficulty ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
