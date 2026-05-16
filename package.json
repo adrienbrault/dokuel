@@ -16,7 +16,8 @@
     "diff-coverage": "bun scripts/diff-coverage.ts",
     "ci": "bun run lint && bun run typecheck && bun run test",
     "e2e": "vite build && bunx playwright test",
-    "screenshots": "vite build && bunx playwright test e2e/screenshots.spec.ts --reporter=line",
+    "screenshots": "vite build && bunx playwright test e2e/screenshots.spec.ts --reporter=line && bun run screenshots:combine",
+    "screenshots:combine": "bun run scripts/combine-screenshots.ts",
     "screenshots:readme": "bun run screenshots && bun run scripts/update-readme-screenshots.ts"
   },
   "dependencies": {
@@ -40,6 +41,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^4.0.18",
     "jsdom": "^28.1.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",

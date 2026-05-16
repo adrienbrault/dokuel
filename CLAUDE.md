@@ -225,10 +225,23 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 
 ### Commands
 ```bash
-bun run screenshots         # Run screenshot tests, saves PNGs to e2e/screenshots/
+bun run screenshots         # Capture PNGs + build combined sheets for agent review
+bun run screenshots:combine # Rebuild combined sheets from existing PNGs (no recapture)
 bun run screenshots:readme  # Re-capture + rewrite README screenshot sections
 bun run e2e                 # Run all Playwright tests
 ```
+
+### Agent-friendly contact sheets
+`bun run screenshots` writes 14 combined sheets under `e2e/screenshots/combined/`
+alongside the 72 individual PNGs. **Read these first** — they let you scan the
+whole app in a handful of images instead of opening 72 PNGs one at a time, with
+cells big enough to read button text and sudoku digits after vision-pipeline
+downscaling:
+
+- `device--<Device>--a.png` / `device--<Device>--b.png` (4 devices × 2 parts = 8 sheets) — one device, 9 scenes in a 3×3 grid. Part **a** is menus & entry (landing, difficulty, daily challenge, join, solo entry, multiplayer lobby), part **b** is active gameplay (in-progress, win modal, settings popover, numpad variants, multiplayer progress). Use when you want to see how one device renders across the whole app.
+- `feature--<group>.png` (×6) — related scenes across all 4 devices, devices as rows. Groups: `onboarding`, `solo`, `numpad`, `multiplayer`, `dark-mode-a`, `dark-mode-b`. Use when you want to compare a feature across viewports.
+
+Drill into the individual `e2e/screenshots/<scene>--<device>.png` files only when a sheet flags something worth a closer look. The combined directory is gitignored.
 
 ### README automation
 `.github/workflows/screenshots.yml` runs on every push to `main`:
