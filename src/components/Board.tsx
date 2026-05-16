@@ -40,12 +40,13 @@ export function Board({
       ? board[selectedCell.row]![selectedCell.col]!.value
       : null;
 
-  // In full assist mode, collect rows/cols of all cells matching selected value
-  // (excluding the selected cell itself) for cross-highlight
+  // In full assist mode, collect rows/cols/boxes of all cells matching selected
+  // value (excluding the selected cell itself) for cross-highlight
   const matchRowColSet = (() => {
     if (!isFull || selectedValue === null) return null;
     const rows = new Set<number>();
     const cols = new Set<number>();
+    const boxes = new Set<number>();
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         if (
@@ -54,10 +55,13 @@ export function Board({
         ) {
           rows.add(r);
           cols.add(c);
+          boxes.add(Math.floor(r / 3) * 3 + Math.floor(c / 3));
         }
       }
     }
-    return rows.size > 0 || cols.size > 0 ? { rows, cols } : null;
+    return rows.size > 0 || cols.size > 0 || boxes.size > 0
+      ? { rows, cols, boxes }
+      : null;
   })();
 
   const dragRef = useRef<{
@@ -200,7 +204,10 @@ export function Board({
             !isSelected &&
             !isSameNumber &&
             (matchRowColSet.rows.has(rowIdx) ||
-              matchRowColSet.cols.has(colIdx));
+              matchRowColSet.cols.has(colIdx) ||
+              matchRowColSet.boxes.has(
+                Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
+              ));
 
           return (
             <Cell
