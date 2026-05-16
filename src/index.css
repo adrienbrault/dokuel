@@ -105,6 +105,11 @@ body {
   /* Stop iOS Safari from interpreting in-game drag gestures as
    * pull-to-refresh and reloading the page mid-game. */
   overscroll-behavior: none;
+  /* Match the app surface so iOS Safari's overscroll bounce, safe-area
+   * inset regions, and address-bar collapse blend with the page rather
+   * than flashing browser default white. Paired with <meta name="theme-color">
+   * in index.html (kept in sync by useDarkMode for manual toggles). */
+  background-color: var(--color-bg-primary);
 }
 
 html {
