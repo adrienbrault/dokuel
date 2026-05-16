@@ -95,12 +95,12 @@ export function GameLayout({
           className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           <div
-            className={`w-full flex justify-center ${
+            className={`flex justify-center lg:w-full lg:mx-0 ${
               position === "bottom"
-                ? "-mx-4 lg:mx-0"
+                ? "w-[calc(100%+2rem)] -mx-4"
                 : position === "left"
-                  ? "-mr-4 lg:mr-0"
-                  : "-ml-4 lg:ml-0"
+                  ? "w-[calc(100%+1rem)] -mr-4"
+                  : "w-[calc(100%+1rem)] -ml-4"
             }`}
           >
             {board}
