@@ -1,11 +1,5 @@
-import type React from "react";
-import {
-  type PointerEvent,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
@@ -70,106 +64,11 @@ export function Board({
       : null;
   })();
 
-  const dragRef = useRef<{
-    startKey: number;
-    startPos: Position;
-    cells: Set<number>;
-    moved: boolean;
-    shiftClick: boolean;
-  } | null>(null);
-
-  const getCellFromPoint = useCallback(
-    (x: number, y: number): { row: number; col: number } | null => {
-      const el = document.elementFromPoint(x, y);
-      if (!el) return null;
-      const btn = el.closest("[data-row]") as HTMLElement | null;
-      if (!btn) return null;
-      const row = Number(btn.dataset.row);
-      const col = Number(btn.dataset.col);
-      if (Number.isNaN(row) || Number.isNaN(col)) return null;
-      return { row, col };
-    },
-    [],
-  );
-
-  const handlePointerDown = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!onSetSelectedCells) return;
-      const pos = getCellFromPoint(e.clientX, e.clientY);
-      if (!pos) return;
-      const key = cellKey(pos.row, pos.col);
-
-      // Shift+click: add to existing selection
-      if (e.shiftKey && selectedCells && selectedCells.size > 0) {
-        const newCells = new Set(selectedCells);
-        newCells.add(key);
-        const primary = selectedCell ?? pos;
-        onSetSelectedCells(newCells, primary);
-        dragRef.current = {
-          startKey: key,
-          startPos: pos,
-          cells: newCells,
-          moved: false,
-          shiftClick: true,
-        };
-        return;
-      }
-
-      dragRef.current = {
-        startKey: key,
-        startPos: pos,
-        cells: new Set([key]),
-        moved: false,
-        shiftClick: false,
-      };
-    },
-    [onSetSelectedCells, getCellFromPoint, selectedCells, selectedCell],
-  );
-
-  const handlePointerMove = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      const drag = dragRef.current;
-      if (!drag || !onSetSelectedCells) return;
-      const pos = getCellFromPoint(e.clientX, e.clientY);
-      if (!pos) return;
-      const key = cellKey(pos.row, pos.col);
-      if (key !== drag.startKey) {
-        drag.moved = true;
-      }
-      if (!drag.cells.has(key)) {
-        drag.cells = new Set(drag.cells);
-        drag.cells.add(key);
-        onSetSelectedCells(drag.cells, drag.startPos);
-      }
-    },
-    [onSetSelectedCells, getCellFromPoint],
-  );
-
-  // Suppress Cell onClick after Shift+click to avoid resetting multi-selection
-  const suppressClickRef = useRef(false);
-  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (suppressClickRef.current) {
-      e.stopPropagation();
-      e.preventDefault();
-      suppressClickRef.current = false;
-    }
-  }, []);
-
-  const handlePointerUp = useCallback(
-    (_e: PointerEvent<HTMLDivElement>) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-      // Shift+click or drag: suppress the subsequent Cell onClick
-      if (drag.shiftClick || (drag.moved && drag.cells.size > 1)) {
-        suppressClickRef.current = true;
-        if (drag.moved && drag.cells.size > 1 && onSetSelectedCells) {
-          onSetSelectedCells(drag.cells, drag.startPos);
-        }
-      }
-      dragRef.current = null;
-    },
-    [onSetSelectedCells],
-  );
+  const dragHandlers = useDragSelect({
+    selectedCell,
+    selectedCells,
+    onSetSelectedCells,
+  });
 
   // Snap the board to an integer-pixel size so every cell and every gap
   // renders at exact device pixels. Sub-pixel cell widths cause adjacent
@@ -211,10 +110,16 @@ export function Board({
         className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
         role="region"
         aria-label="Sudoku board"
-        onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
-        onPointerMove={onSetSelectedCells ? handlePointerMove : undefined}
-        onPointerUp={onSetSelectedCells ? handlePointerUp : undefined}
-        onClickCapture={onSetSelectedCells ? handleClick : undefined}
+        onPointerDown={
+          onSetSelectedCells ? dragHandlers.onPointerDown : undefined
+        }
+        onPointerMove={
+          onSetSelectedCells ? dragHandlers.onPointerMove : undefined
+        }
+        onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
+        onClickCapture={
+          onSetSelectedCells ? dragHandlers.onClickCapture : undefined
+        }
       >
         {Array.from({ length: 9 }, (_, boxIdx) => {
           const boxRow = Math.floor(boxIdx / 3);
