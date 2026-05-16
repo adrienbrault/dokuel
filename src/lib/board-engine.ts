@@ -41,7 +41,12 @@ export type Action =
   | { type: "SELECT_CELL"; row: number; col: number }
   | { type: "DESELECT_CELL" }
   | { type: "SET_SELECTED_CELLS"; cells: Set<number>; primary: Position }
-  | { type: "PLACE_NUMBER"; value: number; autoEliminateNotes: boolean }
+  | {
+      type: "PLACE_NUMBER";
+      value: number;
+      autoEliminateNotes: boolean;
+      asNote?: boolean | undefined;
+    }
   | { type: "ERASE" }
   | { type: "UNDO" }
   | { type: "HINT" }
@@ -102,13 +107,15 @@ function handlePlaceNumber(
   state: State,
   value: number,
   autoEliminateNotes: boolean,
+  asNote?: boolean,
 ): State {
   if (!state.selectedCell || state.status === "completed") return state;
   const { row, col } = state.selectedCell;
   const cell = state.board[row]![col]!;
+  const noteMode = asNote ?? state.notesMode;
 
   // Multi-cell batch note toggle
-  if (state.notesMode && state.selectedCells.size > 1) {
+  if (noteMode && state.selectedCells.size > 1) {
     const board = cloneBoard(state.board);
     const targets: Position[] = [];
     for (const key of state.selectedCells) {
@@ -153,7 +160,7 @@ function handlePlaceNumber(
 
   if (cell.isGiven) return state;
 
-  if (state.notesMode) {
+  if (noteMode) {
     const board = cloneBoard(state.board);
     const notes = board[row]![col]!.notes;
     const moveAction: MoveAction = {
@@ -390,7 +397,12 @@ function dispatchAction(state: State, action: Action): State {
       };
 
     case "PLACE_NUMBER":
-      return handlePlaceNumber(state, action.value, action.autoEliminateNotes);
+      return handlePlaceNumber(
+        state,
+        action.value,
+        action.autoEliminateNotes,
+        action.asNote,
+      );
 
     case "ERASE":
       return handleErase(state);

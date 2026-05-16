@@ -60,9 +60,9 @@ export function useSudoku(
   );
 
   const placeNumber = useCallback(
-    (value: number, autoEliminateNotes = true) => {
+    (value: number, autoEliminateNotes = true, asNote?: boolean) => {
       gameFeedback.onPlace();
-      dispatch({ type: "PLACE_NUMBER", value, autoEliminateNotes });
+      dispatch({ type: "PLACE_NUMBER", value, autoEliminateNotes, asNote });
     },
     [],
   );

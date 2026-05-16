@@ -408,6 +408,38 @@ describe("useSudoku", () => {
     ).toBe(true);
   });
 
+  it("placeNumber with asNote=true toggles a note even when notes mode is off", () => {
+    const { result } = setupHook();
+
+    const pos = findEmptyCell(result.current.board);
+    if (!pos) throw new Error("No empty cell found");
+
+    expect(result.current.notesMode).toBe(false);
+    act(() => result.current.selectCell(pos.row, pos.col));
+    act(() => result.current.placeNumber(7, true, true));
+
+    expect(result.current.board[pos.row]![pos.col]!.value).toBeNull();
+    expect(result.current.board[pos.row]![pos.col]!.notes.has(7)).toBe(true);
+    expect(result.current.notesMode).toBe(false);
+
+    act(() => result.current.placeNumber(7, true, true));
+    expect(result.current.board[pos.row]![pos.col]!.notes.has(7)).toBe(false);
+  });
+
+  it("placeNumber with asNote=false places a value even when notes mode is on", () => {
+    const { result } = setupHook();
+
+    const pos = findEmptyCell(result.current.board);
+    if (!pos) throw new Error("No empty cell found");
+
+    act(() => result.current.toggleNotesMode());
+    expect(result.current.notesMode).toBe(true);
+    act(() => result.current.selectCell(pos.row, pos.col));
+    act(() => result.current.placeNumber(4, true, false));
+
+    expect(result.current.board[pos.row]![pos.col]!.value).toBe(4);
+  });
+
   describe("hint", () => {
     it("places the deduced value on the board", () => {
       const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
