@@ -154,7 +154,7 @@ describe("useResumableSudoku", () => {
     expect(stats!.bestTime).toBe(90);
   });
 
-  it("calls onComplete with the timer value on completion", () => {
+  it("calls onComplete with the timer value and an empty result for non-daily games", () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() =>
       useResumableSudoku({
@@ -169,7 +169,34 @@ describe("useResumableSudoku", () => {
     act(() => result.current.game.selectCell(0, 0));
     act(() => result.current.game.placeNumber(5));
 
-    expect(onComplete).toHaveBeenCalledWith(73);
+    expect(onComplete).toHaveBeenCalledWith(73, {});
+  });
+
+  it("when dailyDate is given, onComplete receives the recorded streak", () => {
+    const onComplete = vi.fn();
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        initialPuzzle: puzzleMissingOneCell(),
+        difficulty: "medium",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 90,
+        dailyDate: "2026-05-16",
+        onComplete,
+      }),
+    );
+
+    act(() => result.current.game.selectCell(0, 0));
+    act(() => result.current.game.placeNumber(5));
+
+    expect(onComplete).toHaveBeenCalledWith(
+      90,
+      expect.objectContaining({
+        streak: expect.objectContaining({
+          currentStreak: 1,
+          lastCompletedDate: "2026-05-16",
+        }),
+      }),
+    );
   });
 
   it("setAssistLevel updates the level and is preserved across auto-saves", () => {

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { completeGame } from "../lib/game-completion.ts";
+import {
+  completeGame,
+  type GameCompletionResult,
+} from "../lib/game-completion.ts";
 import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell, Difficulty } from "../lib/types.ts";
@@ -16,8 +19,12 @@ type UseResumableSudokuOptions = {
   initialAssistLevel: AssistLevel;
   /** Reads the current timer value. Called at save time and on completion. */
   getTimerSeconds: () => number;
+  /** ISO date (YYYY-MM-DD) — signals a daily challenge, drives streak. */
+  dailyDate?: string | undefined;
   /** Called once when the board transitions to completed. */
-  onComplete?: ((timeSeconds: number) => void) | undefined;
+  onComplete?:
+    | ((timeSeconds: number, result: GameCompletionResult) => void)
+    | undefined;
 };
 
 function boardToValues(board: { value: number | null }[][]): string {
@@ -47,6 +54,7 @@ export function useResumableSudoku({
   difficulty,
   initialAssistLevel,
   getTimerSeconds,
+  dailyDate,
   onComplete,
 }: UseResumableSudokuOptions) {
   const saved = useMemo(() => (gameKey ? loadGame(gameKey) : null), [gameKey]);
@@ -96,18 +104,20 @@ export function useResumableSudoku({
   useEffect(() => {
     if (game.status !== "completed") return;
     const seconds = getTimerSeconds();
-    completeGame({
+    const result = completeGame({
       gameKey,
       difficulty,
       timeSeconds: seconds,
       hintsUsed: game.hintsUsed,
+      dailyDate,
     });
-    onComplete?.(seconds);
+    onComplete?.(seconds, result);
   }, [
     game.status,
     difficulty,
     gameKey,
     game.hintsUsed,
+    dailyDate,
     getTimerSeconds,
     onComplete,
   ]);
