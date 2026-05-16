@@ -4,6 +4,7 @@ import { NAKED_PAIRS } from "./naked-pairs.ts";
 import { NAKED_SINGLES } from "./naked-singles.ts";
 import { POINTING_PAIRS } from "./pointing-pairs.ts";
 import { SCANNING } from "./scanning.ts";
+import { SWORDFISH } from "./swordfish.ts";
 import type { Guide } from "./types.ts";
 import { X_WING } from "./x-wing.ts";
 
@@ -15,6 +16,7 @@ export const GUIDES: Guide[] = [
   HIDDEN_PAIRS,
   POINTING_PAIRS,
   X_WING,
+  SWORDFISH,
 ];
 
 export function findGuide(id: string): Guide | null {
