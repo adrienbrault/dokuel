@@ -121,6 +121,27 @@ describe("GameResult", () => {
     expect(text).toContain("🔥 5-day streak");
   });
 
+  it("renders guideSuggestion CTA with title and invokes onOpen when clicked", async () => {
+    const onOpen = vi.fn();
+    render(
+      <GameResult
+        isWinner={true}
+        time="03:00"
+        onNewGame={vi.fn()}
+        guideSuggestion={{
+          id: "naked-singles",
+          title: "Naked Singles",
+          onOpen,
+        }}
+      />,
+    );
+
+    const cta = screen.getByRole("button", { name: /naked singles/i });
+    expect(cta).toBeInTheDocument();
+    await userEvent.click(cta);
+    expect(onOpen).toHaveBeenCalledOnce();
+  });
+
   it("calls onRematch and onNewGame when buttons clicked", async () => {
     const onRematch = vi.fn();
     const onNewGame = vi.fn();

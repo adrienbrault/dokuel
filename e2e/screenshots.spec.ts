@@ -386,3 +386,129 @@ test("multiplayer - settings with opponent bar toggle", async ({
 		),
 	});
 });
+
+test("guides list", async ({ page }, testInfo) => {
+	await page.goto("/learn");
+	await page.waitForSelector("text=Strategy Guides");
+	await page.screenshot({
+		path: screenshotPath("guides-list", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - naked singles", async ({ page }, testInfo) => {
+	await page.goto("/learn/naked-singles");
+	await page.waitForSelector("text=Naked Singles");
+	await page.screenshot({
+		path: screenshotPath("guide-naked-singles", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - scanning", async ({ page }, testInfo) => {
+	await page.goto("/learn/scanning");
+	await page.waitForSelector("text=Scanning");
+	await page.screenshot({
+		path: screenshotPath("guide-scanning", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - hidden singles", async ({ page }, testInfo) => {
+	await page.goto("/learn/hidden-singles");
+	await page.waitForSelector("text=Hidden Singles");
+	await page.screenshot({
+		path: screenshotPath("guide-hidden-singles", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - naked pairs", async ({ page }, testInfo) => {
+	await page.goto("/learn/naked-pairs");
+	await page.waitForSelector("text=Naked Pairs");
+	await page.screenshot({
+		path: screenshotPath("guide-naked-pairs", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - hidden pairs", async ({ page }, testInfo) => {
+	await page.goto("/learn/hidden-pairs");
+	await page.waitForSelector("text=Hidden Pairs");
+	await page.screenshot({
+		path: screenshotPath("guide-hidden-pairs", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - hidden triples", async ({ page }, testInfo) => {
+	await page.goto("/learn/hidden-triples");
+	await page.waitForSelector("text=Hidden Triples");
+	await page.screenshot({
+		path: screenshotPath("guide-hidden-triples", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - pointing pairs", async ({ page }, testInfo) => {
+	await page.goto("/learn/pointing-pairs");
+	await page.waitForSelector("text=Pointing Pairs");
+	await page.screenshot({
+		path: screenshotPath("guide-pointing-pairs", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - swordfish", async ({ page }, testInfo) => {
+	await page.goto("/learn/swordfish");
+	await page.waitForSelector("text=Swordfish");
+	await page.screenshot({
+		path: screenshotPath("guide-swordfish", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - y-wing", async ({ page }, testInfo) => {
+	await page.goto("/learn/y-wing");
+	await page.waitForSelector("text=Y-Wing");
+	await page.screenshot({
+		path: screenshotPath("guide-y-wing", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - x-wing", async ({ page }, testInfo) => {
+	await page.goto("/learn/x-wing");
+	await page.waitForSelector("text=X-Wing");
+	await page.screenshot({
+		path: screenshotPath("guide-x-wing", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - claiming", async ({ page }, testInfo) => {
+	await page.goto("/learn/claiming");
+	await page.waitForSelector("text=Claiming");
+	await page.screenshot({
+		path: screenshotPath("guide-claiming", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - naked triples", async ({ page }, testInfo) => {
+	await page.goto("/learn/naked-triples");
+	await page.waitForSelector("text=Naked Triples");
+	await page.screenshot({
+		path: screenshotPath("guide-naked-triples", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - jellyfish", async ({ page }, testInfo) => {
+	await page.goto("/learn/jellyfish");
+	await page.waitForSelector("text=Jellyfish");
+	await page.screenshot({
+		path: screenshotPath("guide-jellyfish", testInfo.project.name),
+		fullPage: true,
+	});
+});

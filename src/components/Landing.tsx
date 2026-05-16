@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useGuideProgress } from "../hooks/useGuideProgress.ts";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime } from "../lib/format.ts";
@@ -8,6 +9,7 @@ import {
   loadGame,
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
+import { GUIDES } from "../lib/guides/index.ts";
 import { getStats } from "../lib/stats.ts";
 
 type LandingProps = {
@@ -17,6 +19,7 @@ type LandingProps = {
   onJoin: () => void;
   onContinue: (gameKey: string, difficulty: string) => void;
   onStats: () => void;
+  onGuides: () => void;
 };
 
 export function Landing({
@@ -26,7 +29,11 @@ export function Landing({
   onJoin,
   onContinue,
   onStats,
+  onGuides,
 }: LandingProps) {
+  const guideProgress = useGuideProgress();
+  const hasUnviewedGuide =
+    GUIDES.length > 0 && guideProgress.viewed.size < GUIDES.length;
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
@@ -109,6 +116,27 @@ export function Landing({
           <ActionButton label="Create Game" onClick={onCreate} />
           <ActionButton label="Join Game" onClick={onJoin} />
         </div>
+        {GUIDES.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <span className="label">Learn</span>
+            <button
+              type="button"
+              className="btn btn-lg btn-secondary w-full relative"
+              onClick={onGuides}
+            >
+              <span className="flex items-center justify-center gap-2">
+                Strategy Guides
+                {hasUnviewedGuide && (
+                  <span
+                    className="w-2 h-2 rounded-full bg-accent"
+                    role="img"
+                    aria-label="New guides available"
+                  />
+                )}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
       <button type="button" className="btn btn-ghost text-sm" onClick={onStats}>
         <span className="flex items-center gap-1.5">
