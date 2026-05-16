@@ -19,12 +19,22 @@ function mockMatchMedia(prefersDark: boolean) {
   });
 }
 
+function getOverrideThemeColor(): string | null {
+  const meta = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"]:not([media])',
+  );
+  return meta?.content ?? null;
+}
+
 describe("useDarkMode", () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove("dark");
     listeners = [];
     mockMatchMedia(false);
+    for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
+      m.remove();
+    }
   });
 
   it("defaults to system theme when localStorage is empty", () => {
@@ -89,5 +99,30 @@ describe("useDarkMode", () => {
       for (const listener of listeners) listener();
     });
     expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("does not write a non-media theme-color override in system mode", () => {
+    renderHook(() => useDarkMode());
+    expect(getOverrideThemeColor()).toBeNull();
+  });
+
+  it("sets a dark theme-color override when manually selecting dark", () => {
+    localStorage.setItem("sudoku_theme", "dark");
+    renderHook(() => useDarkMode());
+    expect(getOverrideThemeColor()).toBe("#0b0906");
+  });
+
+  it("sets a light theme-color override when manually selecting light", () => {
+    localStorage.setItem("sudoku_theme", "light");
+    renderHook(() => useDarkMode());
+    expect(getOverrideThemeColor()).toBe("#fdfbf9");
+  });
+
+  it("removes the theme-color override when switching back to system", () => {
+    const { result } = renderHook(() => useDarkMode());
+    act(() => result.current.setTheme("dark"));
+    expect(getOverrideThemeColor()).toBe("#0b0906");
+    act(() => result.current.setTheme("system"));
+    expect(getOverrideThemeColor()).toBeNull();
   });
 });
