@@ -415,6 +415,21 @@ export function reducer(state: State, action: Action): State {
   return { ...next, activeHint: null };
 }
 
+/**
+ * Inverse of the `savedBoard` half of {@link initState}: project a live
+ * Board back into the `SavedBoard` schema used by autosave. Pairing the
+ * two keeps the `Board ↔ SavedBoard` round-trip owned by one module.
+ */
+export function serializeBoard(board: Board): SavedBoard {
+  const values = board
+    .flatMap((row) =>
+      row.map((c) => (c.value === null ? "." : String(c.value))),
+    )
+    .join("");
+  const notes = board.flatMap((row) => row.map((c) => Array.from(c.notes)));
+  return { values, notes };
+}
+
 export function initState(args: {
   puzzle: string;
   solution?: string | undefined;
