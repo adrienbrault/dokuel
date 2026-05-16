@@ -127,6 +127,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/lib/board-engine.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
     }
   ]
 }
