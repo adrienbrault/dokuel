@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Challenge, ChallengeQuestion } from "../../lib/guides/types.ts";
 import { cellKey, parsePuzzle } from "../../lib/sudoku.ts";
 import type { Board as BoardType } from "../../lib/types.ts";
@@ -20,11 +20,6 @@ export function ChallengePanel({ challenges }: ChallengePanelProps) {
     cells: Set<number>;
     digits: Set<number>;
   }>(() => ({ cells: new Set(), digits: new Set() }));
-
-  useEffect(() => {
-    setVerdict(null);
-    setPicks({ cells: new Set(), digits: new Set() });
-  }, [variantIndex]);
 
   const board = useMemo<BoardType>(() => {
     const b = parsePuzzle(current.puzzle);
@@ -79,6 +74,8 @@ export function ChallengePanel({ challenges }: ChallengePanelProps) {
 
   const tryAnother = () => {
     setVariantIndex((i) => i + 1);
+    setVerdict(null);
+    setPicks({ cells: new Set(), digits: new Set() });
   };
 
   const q = current.question;
