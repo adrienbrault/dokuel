@@ -208,7 +208,7 @@ export function Board({
           gridTemplateColumns: `repeat(3, ${boxPx}px)`,
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
         }}
-        className="grid gap-[2px] bg-board-border p-[2px] rounded-lg overflow-hidden shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
         role="region"
         aria-label="Sudoku board"
         onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
