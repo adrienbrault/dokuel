@@ -115,8 +115,8 @@
     },
     {
       "includes": [
-        "src/lib/p2p-room.ts",
-        "src/lib/p2p-room.test.ts",
+        "src/hooks/p2p-room.ts",
+        "src/hooks/p2p-room.test.ts",
         "src/hooks/useYjsMultiplayer.ts",
         "src/lib/sudoku.ts"
       ],

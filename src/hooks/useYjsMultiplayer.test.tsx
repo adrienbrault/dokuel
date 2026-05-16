@@ -27,7 +27,7 @@ vi.mock("y-webrtc", () => {
 });
 
 const { useYjsMultiplayer } = await import("./useYjsMultiplayer.ts");
-const { joinRoom, setDifficulty } = await import("../lib/p2p-room.ts");
+const { joinRoom, setDifficulty } = await import("./p2p-room.ts");
 
 function countClues(puzzle: string): number {
   return puzzle.split("").filter((c) => c !== ".").length;

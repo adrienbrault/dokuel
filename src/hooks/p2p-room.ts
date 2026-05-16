@@ -1,6 +1,20 @@
 import * as Y from "yjs";
-import { generatePuzzle, solvePuzzle } from "./sudoku.ts";
-import type { AssistLevel, Difficulty, Player, RoomState } from "./types.ts";
+import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
+import type {
+  AssistLevel,
+  Difficulty,
+  Player,
+  RoomState,
+} from "../lib/types.ts";
+
+/**
+ * Internal to the multiplayer module. The only sanctioned production
+ * consumer is {@link ./useYjsMultiplayer.ts} (the external seam). The
+ * Yjs schema lives here; the hook owns React lifecycle and projects
+ * room state for the UI. Co-located in `src/hooks/` so a schema
+ * migration touches one directory. Do not import from outside this
+ * directory.
+ */
 
 const PLAYER_COLORS = [
   "#3B82F6", // blue
@@ -243,4 +257,46 @@ export function getPlayers(room: P2PRoom): Player[] {
 
 export function destroyRoom(room: P2PRoom): void {
   room.doc.destroy();
+}
+
+/**
+ * Schema for the WebRTC awareness payload — kept here next to the rest
+ * of the multiplayer schema so a rename of "user"/"id"/"name" lands in
+ * one place. The hook just hands the awareness object in.
+ */
+type Awareness = {
+  setLocalStateField: (field: string, value: unknown) => void;
+  getStates: () => Map<number, { user?: { id: string; name: string } }>;
+};
+
+export function announcePresence(
+  awareness: Awareness,
+  playerId: string,
+  playerName: string,
+): void {
+  awareness.setLocalStateField("user", { id: playerId, name: playerName });
+}
+
+/**
+ * True when an awareness peer other than us is present in the room.
+ * `playersInRoomCount` lets the caller suppress "opponent disconnected"
+ * before a second player has ever joined.
+ */
+export function presenceHasOpponent(
+  awareness: Awareness,
+  ownClientId: number,
+  ownPlayerId: string,
+  playersInRoomCount: number,
+): boolean {
+  if (playersInRoomCount <= 1) return false;
+  for (const [clientId, state] of awareness.getStates()) {
+    if (
+      clientId !== ownClientId &&
+      state.user &&
+      state.user.id !== ownPlayerId
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
