@@ -1,4 +1,5 @@
 import { demo } from "./builders.ts";
+import { challenge } from "./challenge-builder.ts";
 import type { Guide } from "./types.ts";
 
 const PUZZLE = [
@@ -41,4 +42,27 @@ export const NAKED_SINGLES: Guide = {
     },
   ],
   demos: [NAKED_SINGLE_DEMO],
+  challenges: [
+    challenge("ns-c1", "Which digit must go in the highlighted cell?")
+      .puzzle(`12345678.${".".repeat(72)}`)
+      .place([0, 8], 9)
+      .explain(
+        "Row 0 already contains every digit from 1 to 8 — the only legal value left is 9.",
+      )
+      .build(),
+    challenge("ns-c2", "Which digit must go in the highlighted cell?")
+      .puzzle(`${".".repeat(27)}.23456789${".".repeat(45)}`)
+      .place([3, 0], 1)
+      .explain(
+        "Columns 1–8 of row 3 already hold 2 through 9. Only 1 is missing, so it must take the empty cell on the left.",
+      )
+      .build(),
+    challenge("ns-c3", "Which digit must go in the highlighted cell?")
+      .puzzle(`${".".repeat(54)}1235.6789${".".repeat(18)}`)
+      .place([6, 4], 4)
+      .explain(
+        "Row 6 already carries 1, 2, 3, 5, 6, 7, 8, and 9. The single digit missing is 4 — it goes in the gap.",
+      )
+      .build(),
+  ],
 };

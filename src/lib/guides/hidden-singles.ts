@@ -1,4 +1,5 @@
 import { demo } from "./builders.ts";
+import { challenge } from "./challenge-builder.ts";
 import type { Guide } from "./types.ts";
 
 const PUZZLE = [
@@ -54,4 +55,74 @@ export const HIDDEN_SINGLES: Guide = {
     },
   ],
   demos: [HIDDEN_SINGLE_DEMO],
+  challenges: [
+    challenge("hs-c1", "Tap the cell in row 0 where the digit 7 must go.")
+      .puzzle(
+        [
+          ".12.345.6",
+          ".........",
+          ".........",
+          "7........",
+          ".........",
+          ".......7.",
+          ".........",
+          ".........",
+          ".........",
+        ].join(""),
+      )
+      .restrict([0, 0], [7, 8, 9])
+      .restrict([0, 3], [7, 8, 9])
+      .restrict([0, 7], [7, 8, 9])
+      .selectCells([[0, 3]])
+      .explain(
+        "Columns 0 and 7 both already carry a 7, so the left and right empty cells in row 0 can't be 7 — only the middle one survives.",
+      )
+      .build(),
+    challenge("hs-c2", "Tap the cell in column 4 where the digit 2 must go.")
+      .puzzle(
+        [
+          "...2.....",
+          ".........",
+          ".........",
+          "2........",
+          ".........",
+          "........2",
+          ".....2...",
+          ".........",
+          ".........",
+        ].join(""),
+      )
+      .restrict([1, 4], [2, 4, 6])
+      .restrict([4, 4], [2, 7, 9])
+      .restrict([7, 4], [2, 4, 8])
+      .restrict([8, 4], [2, 4, 8])
+      .selectCells([[4, 4]])
+      .explain(
+        "Row 3 carries a 2 (blocking row 3 in column 4); the top box already holds a 2 (blocking rows 1 and 2); and the bottom box's 2 blocks rows 6, 7, and 8 — only row 4's column-4 cell can hold the 2.",
+      )
+      .build(),
+    challenge("hs-c3", "Tap the cell in the top-left box where 8 must go.")
+      .puzzle(
+        [
+          ".........",
+          "........8",
+          "....8....",
+          ".........",
+          "..8......",
+          ".........",
+          ".........",
+          ".........",
+          ".8.......",
+        ].join(""),
+      )
+      .restrict([0, 0], [3, 8, 9])
+      .restrict([0, 2], [3, 8, 9])
+      .restrict([2, 0], [3, 5, 8])
+      .restrict([2, 2], [5, 8, 9])
+      .selectCells([[0, 0]])
+      .explain(
+        "Row 1 and row 2 each have an 8 (knocking out the bottom two rows of the box); column 1 and column 2 also each carry an 8 (knocking out the right two columns). Only the top-left corner of the box survives.",
+      )
+      .build(),
+  ],
 };

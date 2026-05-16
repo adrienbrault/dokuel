@@ -1,4 +1,5 @@
 import { demo } from "./builders.ts";
+import { challenge } from "./challenge-builder.ts";
 import type { Guide } from "./types.ts";
 
 const PUZZLE = [
@@ -57,6 +58,45 @@ const SCAN_DEMO = demo("scan-box-for-5", "Where can 5 go in the top-left box?")
   .place(1, 1, 5)
   .build();
 
+// Variant 1: 6 in top-left box. Blockers leave only (0, 2).
+const C1_PUZZLE = [
+  ".........",
+  ".....6...",
+  "........6",
+  ".........",
+  ".........",
+  "6........",
+  ".........",
+  ".6.......",
+  ".........",
+].join("");
+
+// Variant 2: 7 in top-right box. Blockers leave only (1, 7).
+const C2_PUZZLE = [
+  "7........",
+  ".........",
+  "....7....",
+  ".........",
+  ".........",
+  "......7..",
+  ".........",
+  "........7",
+  ".........",
+].join("");
+
+// Variant 3: 3 in bottom-middle box. Blockers leave only (7, 5).
+const C3_PUZZLE = [
+  "...3.....",
+  ".........",
+  ".........",
+  "....3....",
+  ".........",
+  ".........",
+  "3........",
+  ".........",
+  "........3",
+].join("");
+
 export const SCANNING: Guide = {
   id: "scanning",
   title: "Scanning",
@@ -74,4 +114,27 @@ export const SCANNING: Guide = {
     },
   ],
   demos: [SCAN_DEMO],
+  challenges: [
+    challenge("scan-c1", "Tap the cell in the top-left box where 6 must go.")
+      .puzzle(C1_PUZZLE)
+      .selectCells([[0, 2]])
+      .explain(
+        "Rows 1 and 2 already host a 6, knocking out the bottom two rows of the box; columns 0 and 1 also each carry a 6, ruling out the left two columns. Only the top-right cell of the box survives.",
+      )
+      .build(),
+    challenge("scan-c2", "Tap the cell in the top-right box where 7 must go.")
+      .puzzle(C2_PUZZLE)
+      .selectCells([[1, 7]])
+      .explain(
+        "Rows 0 and 2 carry 7s, blocking the top and bottom rows of the box. Columns 6 and 8 carry 7s too — leaving only the middle cell of the box's middle row.",
+      )
+      .build(),
+    challenge("scan-c3", "Tap the cell in the bottom-middle box where 3 goes.")
+      .puzzle(C3_PUZZLE)
+      .selectCells([[7, 5]])
+      .explain(
+        "Rows 6 and 8 already host a 3, and columns 3 and 4 also each carry one — only the middle-right cell of the bottom-middle box survives.",
+      )
+      .build(),
+  ],
 };
