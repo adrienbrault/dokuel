@@ -199,7 +199,7 @@ export function Board({
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-lg aspect-square flex items-center justify-center"
+      className="w-full max-w-lg mx-auto aspect-square flex items-center justify-center"
     >
       <div
         style={{

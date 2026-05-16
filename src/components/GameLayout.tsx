@@ -26,6 +26,22 @@ type GameLayoutProps = {
   settingsExtra?: ReactNode | undefined;
 };
 
+// Mobile-only flex layout per numpad position. Desktop overrides `display`
+// to `grid` via `lg:grid`, so these flex-direction tokens only apply <lg.
+const MOBILE_POSITION = {
+  bottom: "flex-col items-center",
+  left: "flex-row items-center max-w-lg mx-auto",
+  right: "flex-row-reverse items-center max-w-lg mx-auto",
+} as const;
+
+// Visibility of the side slots on mobile. On desktop both slots always
+// render (as spacers when empty) so the center column stays centered.
+const SIDE_SLOT_MOBILE = {
+  left: { left: "flex", right: "hidden" },
+  right: { left: "hidden", right: "flex" },
+  bottom: { left: "hidden", right: "hidden" },
+} as const;
+
 export function GameLayout({
   onBack,
   timer,
@@ -48,6 +64,8 @@ export function GameLayout({
     if (target.closest("button, [role='region']")) return;
     onDeselectCell();
   };
+
+  const sideSlot = SIDE_SLOT_MOBILE[position];
 
   return (
     <div
@@ -79,33 +97,40 @@ export function GameLayout({
 
       {headerExtra}
 
-      {/* Main game area — mobile: respects position; desktop: always side-by-side */}
+      {/*
+        Single tree, two layouts:
+          - mobile (<lg): flex-row/col driven by MOBILE_POSITION[position]
+          - desktop (lg+): 3-col grid that keeps the board visually centered
+            regardless of numpad side. Side slots always render (as spacers
+            when empty) so left/right/bottom positions stay symmetric.
+        Board / controls / numpad each render exactly once.
+      */}
       <div
         className={`
-          flex gap-3 w-full justify-center flex-1
-          lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
-          ${position === "left" ? "flex-row items-center max-w-lg mx-auto lg:max-w-4xl" : ""}
-          ${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto lg:max-w-4xl lg:flex-row" : ""}
-          ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-start" : ""}
+          flex w-full gap-3
+          ${MOBILE_POSITION[position]}
+          lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]
+          lg:items-start lg:gap-6 lg:max-w-6xl lg:mx-auto
         `}
       >
-        {/* Mobile: show numpad in position (left/right) */}
-        <div className="lg:hidden">{position !== "bottom" && numPad}</div>
+        <div className={`${sideSlot.left} lg:flex lg:justify-end`}>
+          {position === "left" && numPad}
+        </div>
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 ${
+            position === "bottom" ? "w-full" : "flex-1 min-w-0"
+          } lg:flex-none lg:min-w-0 ${
+            position === "bottom"
+              ? "lg:w-[min(36rem,calc(100dvh-18rem))]"
+              : "lg:w-[min(40rem,calc(100dvh-12rem))]"
+          } ${boardClassName}`}
         >
           {board}
-          <div className="flex flex-col items-center gap-3 w-full">
-            {controls}
-            {/* Mobile: show numpad at bottom if position=bottom */}
-            <div className="lg:hidden w-full">
-              {position === "bottom" && numPad}
-            </div>
-          </div>
+          {controls}
+          {position === "bottom" && numPad}
         </div>
-        {/* Desktop: always show numpad on the right */}
-        <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
-          {numPad}
+        <div className={`${sideSlot.right} lg:flex lg:justify-start`}>
+          {position === "right" && numPad}
         </div>
       </div>
 
