@@ -1,3 +1,4 @@
+import { HIDDEN_PAIRS } from "./hidden-pairs.ts";
 import { HIDDEN_SINGLES } from "./hidden-singles.ts";
 import { NAKED_PAIRS } from "./naked-pairs.ts";
 import { NAKED_SINGLES } from "./naked-singles.ts";
@@ -9,6 +10,7 @@ export const GUIDES: Guide[] = [
   NAKED_SINGLES,
   HIDDEN_SINGLES,
   NAKED_PAIRS,
+  HIDDEN_PAIRS,
 ];
 
 export function findGuide(id: string): Guide | null {
