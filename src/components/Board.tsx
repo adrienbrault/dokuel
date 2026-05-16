@@ -167,7 +167,7 @@ export function Board({
 
   return (
     <div
-      className="grid grid-cols-9 border-2 border-board-border rounded-md overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+      className="grid grid-cols-3 gap-[2px] bg-board-border p-[2px] rounded-lg overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
       role="region"
       aria-label="Sudoku board"
       onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
@@ -175,64 +175,79 @@ export function Board({
       onPointerUp={onSetSelectedCells ? handlePointerUp : undefined}
       onClickCapture={onSetSelectedCells ? handleClick : undefined}
     >
-      {board.flatMap((row, rowIdx) =>
-        row.map((cell, colIdx) => {
-          const isSelected =
-            selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
-          const isHighlighted =
-            !isPaper &&
-            selectedCell !== null &&
-            (selectedCell.row === rowIdx ||
-              selectedCell.col === colIdx ||
-              (Math.floor(selectedCell.row / 3) === Math.floor(rowIdx / 3) &&
-                Math.floor(selectedCell.col / 3) === Math.floor(colIdx / 3)));
-          const isSameNumber =
-            !isPaper &&
-            !isSelected &&
-            selectedValue !== null &&
-            cell.value !== null &&
-            cell.value === selectedValue;
-          const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
-          const isMultiSelected =
-            !isSelected &&
-            (selectedCells?.size ?? 0) > 1 &&
-            (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-          const isHintRelated =
-            !isSelected && (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-          const isSameNumberRowCol =
-            matchRowColSet !== null &&
-            !isSelected &&
-            !isSameNumber &&
-            (matchRowColSet.rows.has(rowIdx) ||
-              matchRowColSet.cols.has(colIdx) ||
-              matchRowColSet.boxes.has(
-                Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
-              ));
+      {Array.from({ length: 9 }, (_, boxIdx) => {
+        const boxRow = Math.floor(boxIdx / 3);
+        const boxCol = boxIdx % 3;
+        return (
+          <div
+            key={boxIdx}
+            className="grid grid-cols-3 gap-px bg-border-default"
+          >
+            {Array.from({ length: 9 }, (_, cellIdx) => {
+              const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
+              const colIdx = boxCol * 3 + (cellIdx % 3);
+              const cell = board[rowIdx]![colIdx]!;
+              const isSelected =
+                selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
+              const isHighlighted =
+                !isPaper &&
+                selectedCell !== null &&
+                (selectedCell.row === rowIdx ||
+                  selectedCell.col === colIdx ||
+                  (Math.floor(selectedCell.row / 3) ===
+                    Math.floor(rowIdx / 3) &&
+                    Math.floor(selectedCell.col / 3) ===
+                      Math.floor(colIdx / 3)));
+              const isSameNumber =
+                !isPaper &&
+                !isSelected &&
+                selectedValue !== null &&
+                cell.value !== null &&
+                cell.value === selectedValue;
+              const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
+              const isMultiSelected =
+                !isSelected &&
+                (selectedCells?.size ?? 0) > 1 &&
+                (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+              const isHintRelated =
+                !isSelected &&
+                (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+              const isSameNumberRowCol =
+                matchRowColSet !== null &&
+                !isSelected &&
+                !isSameNumber &&
+                (matchRowColSet.rows.has(rowIdx) ||
+                  matchRowColSet.cols.has(colIdx) ||
+                  matchRowColSet.boxes.has(
+                    Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
+                  ));
 
-          return (
-            <Cell
-              key={cellKey(rowIdx, colIdx)}
-              cell={cell}
-              row={rowIdx}
-              col={colIdx}
-              isSelected={isSelected}
-              isMultiSelected={isMultiSelected}
-              isHighlighted={isHighlighted && !isSelected}
-              isSameNumber={isSameNumber}
-              isConflict={isConflict}
-              isHintRelated={isHintRelated}
-              isSameNumberRowCol={isSameNumberRowCol}
-              assistLevel={assistLevel}
-              onSelect={onSelectCell}
-              revealDelay={
-                animateReveal && cell.isGiven
-                  ? (rowIdx * 9 + colIdx) * 6
-                  : undefined
-              }
-            />
-          );
-        }),
-      )}
+              return (
+                <Cell
+                  key={cellKey(rowIdx, colIdx)}
+                  cell={cell}
+                  row={rowIdx}
+                  col={colIdx}
+                  isSelected={isSelected}
+                  isMultiSelected={isMultiSelected}
+                  isHighlighted={isHighlighted && !isSelected}
+                  isSameNumber={isSameNumber}
+                  isConflict={isConflict}
+                  isHintRelated={isHintRelated}
+                  isSameNumberRowCol={isSameNumberRowCol}
+                  assistLevel={assistLevel}
+                  onSelect={onSelectCell}
+                  revealDelay={
+                    animateReveal && cell.isGiven
+                      ? (rowIdx * 9 + colIdx) * 6
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
