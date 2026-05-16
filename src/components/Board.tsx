@@ -65,6 +65,7 @@ export function Board({
   })();
 
   const dragHandlers = useDragSelect({
+    board,
     selectedCell,
     selectedCells,
     onSetSelectedCells,

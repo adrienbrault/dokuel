@@ -1,8 +1,9 @@
 import { type PointerEvent, useCallback, useRef } from "react";
 import { cellKey } from "../lib/sudoku.ts";
-import type { Position } from "../lib/types.ts";
+import type { Board as BoardType, Position } from "../lib/types.ts";
 
 type Options = {
+  board: BoardType;
   selectedCell: Position | null;
   selectedCells: Set<number> | undefined;
   onSetSelectedCells:
@@ -12,7 +13,7 @@ type Options = {
 
 type DragState = {
   startKey: number;
-  startPos: Position;
+  primaryPos: Position | null;
   cells: Set<number>;
   moved: boolean;
   shiftClick: boolean;
@@ -33,6 +34,7 @@ function getCellFromPoint(
 }
 
 export function useDragSelect({
+  board,
   selectedCell,
   selectedCells,
   onSetSelectedCells,
@@ -40,22 +42,29 @@ export function useDragSelect({
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
 
+  const isEmptyCell = useCallback(
+    (pos: Position) => board[pos.row]![pos.col]!.value === null,
+    [board],
+  );
+
   const onPointerDown = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
       if (!onSetSelectedCells) return;
       const pos = getCellFromPoint(e.clientX, e.clientY);
       if (!pos) return;
       const key = cellKey(pos.row, pos.col);
+      const empty = isEmptyCell(pos);
 
-      // Shift+click: add to existing selection
+      // Shift+click: add to existing selection (only empty cells)
       if (e.shiftKey && selectedCells && selectedCells.size > 0) {
+        if (!empty) return;
         const newCells = new Set(selectedCells);
         newCells.add(key);
         const primary = selectedCell ?? pos;
         onSetSelectedCells(newCells, primary);
         dragRef.current = {
           startKey: key,
-          startPos: pos,
+          primaryPos: pos,
           cells: newCells,
           moved: false,
           shiftClick: true,
@@ -65,13 +74,13 @@ export function useDragSelect({
 
       dragRef.current = {
         startKey: key,
-        startPos: pos,
-        cells: new Set([key]),
+        primaryPos: empty ? pos : null,
+        cells: empty ? new Set([key]) : new Set(),
         moved: false,
         shiftClick: false,
       };
     },
-    [onSetSelectedCells, selectedCells, selectedCell],
+    [onSetSelectedCells, selectedCells, selectedCell, isEmptyCell],
   );
 
   const onPointerMove = useCallback(
@@ -82,13 +91,15 @@ export function useDragSelect({
       if (!pos) return;
       const key = cellKey(pos.row, pos.col);
       if (key !== drag.startKey) drag.moved = true;
+      if (!isEmptyCell(pos)) return;
       if (!drag.cells.has(key)) {
         drag.cells = new Set(drag.cells);
         drag.cells.add(key);
-        onSetSelectedCells(drag.cells, drag.startPos);
+        if (drag.primaryPos === null) drag.primaryPos = pos;
+        onSetSelectedCells(drag.cells, drag.primaryPos);
       }
     },
-    [onSetSelectedCells],
+    [onSetSelectedCells, isEmptyCell],
   );
 
   const onPointerUp = useCallback(() => {
@@ -96,8 +107,13 @@ export function useDragSelect({
     if (!drag) return;
     if (drag.shiftClick || (drag.moved && drag.cells.size > 1)) {
       suppressClickRef.current = true;
-      if (drag.moved && drag.cells.size > 1 && onSetSelectedCells) {
-        onSetSelectedCells(drag.cells, drag.startPos);
+      if (
+        drag.moved &&
+        drag.cells.size > 1 &&
+        drag.primaryPos &&
+        onSetSelectedCells
+      ) {
+        onSetSelectedCells(drag.cells, drag.primaryPos);
       }
     }
     dragRef.current = null;
