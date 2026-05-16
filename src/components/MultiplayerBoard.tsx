@@ -140,15 +140,18 @@ export function MultiplayerBoard({
     if (gameOver) deleteGame(gameKey);
   }, [gameOver, gameKey]);
 
-  const handleNumber = (n: number) => {
+  // Touch numpad: tap is the cheap, frequent action (note); hold is the
+  // deliberate commit (value). Keyboard digit (if focused) still follows
+  // the in-reducer notesMode flag via useSudoku's default behavior.
+  const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper");
+      game.placeNumber(n, assistLevel !== "paper", true);
     }
   };
 
-  const handleLongPressNumber = (n: number) => {
+  const handleHoldValue = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
+      game.placeNumber(n, assistLevel !== "paper", false);
     }
   };
 
@@ -187,8 +190,8 @@ export function MultiplayerBoard({
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onNumber={handleNumber}
-          onLongPressNumber={handleLongPressNumber}
+          onNumber={handleTapNote}
+          onLongPressNumber={handleHoldValue}
         />
       }
       board={

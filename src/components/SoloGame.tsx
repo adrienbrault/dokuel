@@ -81,15 +81,26 @@ export function SoloGame({
   );
   const personalBest = priorStats?.bestTime ?? null;
 
-  const handleNumber = (n: number) => {
+  // Keyboard digit follows the current notesMode flag (N toggles it),
+  // preserving the established "press N then 1" pencil-mark workflow.
+  const handleKeyboardNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper");
     }
   };
 
-  const handleLongPressNumber = (n: number) => {
+  // Touch numpad: tap is the cheap, frequent action (note); hold is the
+  // deliberate commit (value). The 400ms hold doubles as a guard against
+  // accidental value placement.
+  const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", true);
+    }
+  };
+
+  const handleHoldValue = (n: number) => {
+    if (game.selectedCell || game.selectedCells.size > 0) {
+      game.placeNumber(n, assistLevel !== "paper", false);
     }
   };
 
@@ -120,7 +131,7 @@ export function SoloGame({
     selectedCell: game.selectedCell,
     onSelectCell: game.selectCell,
     onDeselectCell: game.deselectCell,
-    onPlaceNumber: handleNumber,
+    onPlaceNumber: handleKeyboardNumber,
     onErase: game.erase,
     onUndo: game.undo,
     onToggleNotes: game.toggleNotesMode,
@@ -189,8 +200,8 @@ export function SoloGame({
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onNumber={handleNumber}
-          onLongPressNumber={handleLongPressNumber}
+          onNumber={handleTapNote}
+          onLongPressNumber={handleHoldValue}
         />
       }
       board={

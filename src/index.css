@@ -263,19 +263,23 @@ body {
   animation: cell-reveal 0.15s ease-out both;
 }
 
-/* Bottom-up fill that signals "keep holding to add a note". Duration
-   matches NumPad's LONG_PRESS_MS; if one changes, change the other. */
-@keyframes longpress-fill {
+/* Long-press feedback for committing a value. The button scales up
+   past the finger so the user can SEE it growing, and a colored halo
+   expands outward as a "charging" hint. Duration matches NumPad's
+   LONG_PRESS_MS; if one changes, change the other. */
+@keyframes longpress-charge {
   from {
-    transform: scaleY(0);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--color-accent);
   }
   to {
-    transform: scaleY(1);
+    transform: scale(1.18);
+    box-shadow: 0 0 12px 4px var(--color-accent);
   }
 }
-.animate-longpress-fill {
-  animation: longpress-fill 400ms linear forwards;
-  transform-origin: bottom;
+.animate-longpress-charge {
+  animation: longpress-charge 400ms ease-out forwards;
+  z-index: 10;
 }
 
 @keyframes emoji-bounce {

@@ -200,18 +200,18 @@ test("join game screen", async ({ page }, testInfo) => {
 
 // --- Game states ---
 
-test("solo game - long-press fill on digit", async ({ page }, testInfo) => {
+test("solo game - long-press charge on digit", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();
 	await page.getByRole("button", { name: "Easy" }).click();
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-	// Select an empty cell so the long-press target is meaningful
+	// Select an empty cell so the long-press has a meaningful target
 	await page.locator('button[aria-label*=", empty"]').first().click();
 
-	// Press and hold a digit; screenshot mid-hold to show the fill overlay.
-	// Animations are disabled in this harness, so the overlay renders at
-	// its final scaleY(1) state — capturing "the visible affordance exists".
+	// Press and hold a digit; screenshot mid-hold to show the scale + halo.
+	// Animations are disabled in this harness, so the button renders at its
+	// final state — capturing that the affordance grows past finger size.
 	const digit = page
 		.locator(
 			'[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
@@ -223,7 +223,7 @@ test("solo game - long-press fill on digit", async ({ page }, testInfo) => {
 	await page.mouse.down();
 
 	await page.screenshot({
-		path: screenshotPath("solo-longpress-fill", testInfo.project.name),
+		path: screenshotPath("solo-longpress-charge", testInfo.project.name),
 	});
 
 	await page.mouse.up();
@@ -241,16 +241,15 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	);
 	const enabledCount = await enabledNumpad.count();
 
-	// Fill first few empty cells with values
+	// Fill first few empty cells with VALUES via keyboard (tap-on-numpad
+	// is now "note"; keyboard digit still follows notesMode, which is off,
+	// so it places a value).
 	for (let i = 0; i < 5; i++) {
 		await emptyCells.nth(0).click();
-		await enabledNumpad.nth(i % enabledCount).click();
+		await page.keyboard.press(String((i % 9) + 1));
 	}
 
-	// Notes button was removed; keyboard 'N' still toggles notes mode and
-	// is the fastest way to switch for this fixture.
-	await page.keyboard.press("n");
-
+	// Add notes to subsequent cells by tapping numpad digits — tap = note.
 	const remainingEmpty = page.locator('button[aria-label*=", empty"]');
 	for (let i = 0; i < 6; i++) {
 		const count = await enabledNumpad.count();

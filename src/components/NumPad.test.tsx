@@ -88,34 +88,27 @@ describe("NumPad", () => {
     expect(onLongPressNumber).not.toHaveBeenCalled();
   });
 
-  it("shows a progress indicator inside the pressed digit while holding", () => {
-    const onNumber = vi.fn();
+  it("flags the pressed digit with the charge animation while holding", () => {
     const onLongPressNumber = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={onNumber}
+        onNumber={vi.fn()}
         onLongPressNumber={onLongPressNumber}
       />,
     );
     const three = screen.getByRole("button", { name: /^3, / });
-    expect(
-      three.querySelector('[data-testid="longpress-progress"]'),
-    ).toBeNull();
+    expect(three.className).not.toContain("animate-longpress-charge");
 
     fireEvent.pointerDown(three, { pointerType: "touch" });
-    expect(
-      three.querySelector('[data-testid="longpress-progress"]'),
-    ).not.toBeNull();
+    expect(three.className).toContain("animate-longpress-charge");
 
     fireEvent.pointerUp(three, { pointerType: "touch" });
-    expect(
-      three.querySelector('[data-testid="longpress-progress"]'),
-    ).toBeNull();
+    expect(three.className).not.toContain("animate-longpress-charge");
   });
 
-  it("hides the progress indicator after long-press fires", () => {
+  it("clears the charge animation after long-press fires", () => {
     const onLongPressNumber = vi.fn();
     render(
       <NumPad
@@ -127,17 +120,15 @@ describe("NumPad", () => {
     );
     const nine = screen.getByRole("button", { name: /^9, / });
     fireEvent.pointerDown(nine, { pointerType: "touch" });
-    expect(
-      nine.querySelector('[data-testid="longpress-progress"]'),
-    ).not.toBeNull();
+    expect(nine.className).toContain("animate-longpress-charge");
     act(() => {
       vi.advanceTimersByTime(500);
     });
     expect(onLongPressNumber).toHaveBeenCalledWith(9);
-    expect(nine.querySelector('[data-testid="longpress-progress"]')).toBeNull();
+    expect(nine.className).not.toContain("animate-longpress-charge");
   });
 
-  it("does not render the progress indicator when long-press is disabled", () => {
+  it("does not start charging when long-press is disabled", () => {
     render(
       <NumPad
         position="bottom"
@@ -147,6 +138,18 @@ describe("NumPad", () => {
     );
     const five = screen.getByRole("button", { name: /^5, / });
     fireEvent.pointerDown(five, { pointerType: "touch" });
-    expect(five.querySelector('[data-testid="longpress-progress"]')).toBeNull();
+    expect(five.className).not.toContain("animate-longpress-charge");
+  });
+
+  it("renders the discoverability caption above the digits", () => {
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onLongPressNumber={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/tap = note · hold = enter/i)).toBeInTheDocument();
   });
 });
