@@ -19,49 +19,47 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Bot identity used by every git commit in this job. Git reads
+    # these env vars natively, so no per-step `git config` is needed.
+    # The 41898282 prefix is the numeric user-id of github-actions[bot];
+    # using it makes commits render with the bot's avatar.
+    env:
+      GIT_AUTHOR_NAME: github-actions[bot]
+      GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      GIT_COMMITTER_NAME: github-actions[bot]
+      GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
     steps:
       - uses: actions/checkout@v4
-
       - uses: oven-sh/setup-bun@v2
 
       - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run screenshots
 
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-
-      - name: Capture screenshots
-        run: bun run screenshots
-
-      # Force-push the PNG directory to the gh-pages branch as an orphan
-      # commit so that branch always has exactly one commit — no history
-      # growth, no binary blobs in main's pack files. Pages serves them
-      # at https://adrienbrault.github.io/dokuel/.
+      # Replace the gh-pages branch with a fresh single-commit orphan
+      # history containing just the captured PNGs — no history growth,
+      # no third-party action.
       - name: Publish screenshots to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./e2e/screenshots
-          publish_branch: gh-pages
-          force_orphan: true
-          user_name: "github-actions[bot]"
-          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_message: "screenshots: ${{ github.sha }}"
+        env:
+          REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        run: |
+          PUBLISH=$(mktemp -d)
+          cp e2e/screenshots/*.png "$PUBLISH/"
+          cd "$PUBLISH"
+          git init -q -b gh-pages
+          git add -A
+          git commit -q -m "screenshots: $GITHUB_SHA"
+          git push -q --force "$REMOTE" gh-pages
 
       - name: Update README
         run: bun run scripts/update-readme-screenshots.ts
 
       - name: Commit README
-        env:
-          GH_ACTOR: "github-actions[bot]"
         run: |
-          git config user.name "${GH_ACTOR}"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
           if git diff --staged --quiet; then
             echo "README screenshot URLs unchanged."
             exit 0
           fi
-          git commit -m "chore(docs): refresh README screenshots
-
-Auto-generated from $GITHUB_SHA by .github/workflows/screenshots.yml."
+          git commit -q -m "chore(docs): refresh README screenshots from $GITHUB_SHA"
           git push
