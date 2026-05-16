@@ -1,5 +1,5 @@
 import { cellKey, parsePuzzle } from "../sudoku.ts";
-import { candidatesAt } from "../sudoku-candidates.ts";
+import { candidatesAt, peersOf } from "../sudoku-candidates.ts";
 import type { CellCoord, CellOverlay, Demo, DemoStep } from "./types.ts";
 
 function toKey(coord: CellCoord): number {
@@ -20,7 +20,10 @@ class DemoBuilder {
   private _currentStep: StepDraft | null = null;
   private _steps: DemoStep[] = [];
   private _runningCandidates: Map<number, Set<number>> | null = null;
+  private _runningPlacements = new Map<number, number>();
   private _hasMutations = false;
+  private _hasPlacements = false;
+  private _restricts = new Map<number, Set<number>>();
 
   constructor(
     private readonly _id: string,
@@ -29,6 +32,16 @@ class DemoBuilder {
 
   puzzle(puzzle: string): this {
     this._puzzle = puzzle;
+    return this;
+  }
+
+  restrict(coord: CellCoord, digits: number[]): this {
+    const key = toKey(coord);
+    const set = new Set(digits);
+    this._restricts.set(key, set);
+    if (this._runningCandidates) {
+      this._runningCandidates.set(key, new Set(set));
+    }
     return this;
   }
 
@@ -44,6 +57,24 @@ class DemoBuilder {
 
   focus(cells: CellCoord[]): this {
     return this._addOverlay(cells, { kind: "focus" });
+  }
+
+  place(row: number, col: number, value: number): this {
+    const step = this._requireStep();
+    this._initRunningIfNeeded();
+    const key = cellKey(row, col);
+    const overlays = step.overlays.get(key) ?? [];
+    overlays.push({ kind: "solution", digits: [value] });
+    step.overlays.set(key, overlays);
+    this._runningPlacements.set(key, value);
+    this._runningCandidates!.delete(key);
+    for (const peer of peersOf(row, col)) {
+      const peerKey = cellKey(peer.row, peer.col);
+      this._runningCandidates!.get(peerKey)?.delete(value);
+    }
+    this._hasPlacements = true;
+    this._hasMutations = true;
+    return this;
   }
 
   eliminate(cells: CellCoord[], digits: number[]): this {
@@ -102,6 +133,9 @@ class DemoBuilder {
         }
       }
     }
+    for (const [key, digits] of this._restricts) {
+      initialCandidates.set(key, new Set(digits));
+    }
     return {
       id: this._id,
       title: this._title,
@@ -143,6 +177,9 @@ class DemoBuilder {
         }
       }
     }
+    for (const [key, digits] of this._restricts) {
+      this._runningCandidates.set(key, new Set(digits));
+    }
   }
 
   private _snapshotCandidates(): Map<number, Set<number>> {
@@ -154,6 +191,10 @@ class DemoBuilder {
     return snapshot;
   }
 
+  private _snapshotPlacements(): Map<number, number> {
+    return new Map(this._runningPlacements);
+  }
+
   private _finalizeStep(): void {
     if (!this._currentStep) return;
     const finalized: DemoStep = {
@@ -162,6 +203,9 @@ class DemoBuilder {
     };
     if (this._currentStep.candidates) {
       finalized.candidates = this._currentStep.candidates;
+    }
+    if (this._hasPlacements) {
+      finalized.placements = this._snapshotPlacements();
     }
     if (this._currentStep.holdMs !== undefined) {
       finalized.holdMs = this._currentStep.holdMs;

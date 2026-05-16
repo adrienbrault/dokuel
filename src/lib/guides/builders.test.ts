@@ -25,6 +25,42 @@ describe("demo() builder", () => {
     expect(result.initialCandidates.has(cellKey(0, 0))).toBe(false);
   });
 
+  it("restrict overrides initial candidates so authored cells show only the listed digits", () => {
+    const result = demo("x", "Example")
+      .puzzle(EMPTY_PUZZLE)
+      .restrict([0, 0], [4, 7])
+      .build();
+
+    expect(result.initialCandidates.get(cellKey(0, 0))).toEqual(
+      new Set([4, 7]),
+    );
+    // Untouched cells still get the auto-computed full candidate set.
+    expect(result.initialCandidates.get(cellKey(0, 1))?.size).toBe(9);
+  });
+
+  it("place records the placement this step and strips the value from peers next step", () => {
+    const result = demo("x", "Example")
+      .puzzle(EMPTY_PUZZLE)
+      .step("Place 5 at (0,0).")
+      .place(0, 0, 5)
+      .step("Next.")
+      .build();
+
+    // Step 0 carries a solution overlay on the placed cell.
+    expect(result.steps[0]!.overlays.get(cellKey(0, 0))).toEqual([
+      { kind: "solution", digits: [5] },
+    ]);
+    // Step 0 has the placement (visible immediately).
+    expect(result.steps[0]!.placements?.get(cellKey(0, 0))).toBe(5);
+    // Step 1 still has the placement (cumulative across steps).
+    expect(result.steps[1]!.placements?.get(cellKey(0, 0))).toBe(5);
+    // Step 1's candidates for a peer cell (0,1) no longer include 5.
+    const peerCandidates =
+      result.steps[1]!.candidates?.get(cellKey(0, 1)) ??
+      result.initialCandidates.get(cellKey(0, 1));
+    expect(peerCandidates?.has(5)).toBe(false);
+  });
+
   it("eliminate paints an eliminate overlay this step and removes the digit from later steps", () => {
     const result = demo("x", "Example")
       .puzzle(EMPTY_PUZZLE)
