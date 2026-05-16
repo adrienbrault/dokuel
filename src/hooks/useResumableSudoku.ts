@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  deleteGame,
-  loadGame,
-  type SavedGame,
-  saveGame,
-} from "../lib/game-storage.ts";
-import { saveGameResult } from "../lib/stats.ts";
+import { completeGame } from "../lib/game-completion.ts";
+import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell, Difficulty } from "../lib/types.ts";
 import { useSudoku } from "./useSudoku.ts";
@@ -97,12 +92,16 @@ export function useResumableSudoku({
     getTimerSeconds,
   ]);
 
-  // On completion: clean up save, record stats, notify caller
+  // On completion: orchestrate side effects via completeGame, notify caller
   useEffect(() => {
     if (game.status !== "completed") return;
     const seconds = getTimerSeconds();
-    if (gameKey) deleteGame(gameKey);
-    saveGameResult(difficulty, seconds, true, game.hintsUsed);
+    completeGame({
+      gameKey,
+      difficulty,
+      timeSeconds: seconds,
+      hintsUsed: game.hintsUsed,
+    });
     onComplete?.(seconds);
   }, [
     game.status,
