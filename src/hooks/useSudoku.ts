@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import { initState, reducer, type SavedBoard } from "../lib/board-engine.ts";
+import {
+  initState,
+  projectBoard,
+  reducer,
+  type SavedBoard,
+} from "../lib/board-engine.ts";
 import { gameFeedback } from "../lib/game-feedback.ts";
-import { cellKey, getConflicts, getErrors } from "../lib/sudoku.ts";
+import { cellKey } from "../lib/sudoku.ts";
 import type { Position } from "../lib/types.ts";
 
 export type { SavedBoard } from "../lib/board-engine.ts";
@@ -17,31 +22,10 @@ export function useSudoku(
     initState,
   );
 
-  const conflicts = useMemo(() => getConflicts(state.board), [state.board]);
-
-  const errors = useMemo(
-    () =>
-      state.solution
-        ? getErrors(state.board, state.solution)
-        : new Set<number>(),
+  const { conflicts, errors, remainingCounts, cellsRemaining } = useMemo(
+    () => projectBoard(state.board, state.solution),
     [state.board, state.solution],
   );
-
-  const { remainingCounts, cellsRemaining } = useMemo(() => {
-    const counts: Record<number, number> = {};
-    for (let d = 1; d <= 9; d++) counts[d] = 9;
-    let empty = 0;
-    for (const row of state.board) {
-      for (const cell of row) {
-        if (cell.value !== null && cell.value >= 1 && cell.value <= 9) {
-          counts[cell.value]!--;
-        } else {
-          empty++;
-        }
-      }
-    }
-    return { remainingCounts: counts, cellsRemaining: empty };
-  }, [state.board]);
 
   // Sensory feedback for errors and completion
   const errorFeedback = state.solution ? errors : conflicts;
