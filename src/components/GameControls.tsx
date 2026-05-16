@@ -1,6 +1,4 @@
 type GameControlsProps = {
-  notesMode: boolean;
-  onToggleNotes: () => void;
   onErase: () => void;
   onUndo: () => void;
   historyLength?: number | undefined;
@@ -8,8 +6,6 @@ type GameControlsProps = {
 };
 
 export function GameControls({
-  notesMode,
-  onToggleNotes,
   onErase,
   onUndo,
   historyLength,
@@ -21,19 +17,10 @@ export function GameControls({
         label="Undo"
         icon="↩"
         onClick={onUndo}
-        active={false}
         disabled={!historyLength || historyLength === 0}
       />
-      <ControlButton label="Erase" icon="⌫" onClick={onErase} active={false} />
-      <ControlButton
-        label="Notes"
-        icon="✏"
-        onClick={onToggleNotes}
-        active={notesMode}
-      />
-      {onHint && (
-        <ControlButton label="Hint" icon="💡" onClick={onHint} active={false} />
-      )}
+      <ControlButton label="Erase" icon="⌫" onClick={onErase} />
+      {onHint && <ControlButton label="Hint" icon="💡" onClick={onHint} />}
     </div>
   );
 }
@@ -42,13 +29,11 @@ function ControlButton({
   label,
   icon,
   onClick,
-  active,
   disabled,
 }: {
   label: string;
   icon: string;
   onClick: () => void;
-  active: boolean;
   disabled?: boolean | undefined;
 }) {
   return (
@@ -58,13 +43,10 @@ function ControlButton({
       className={`flex-1 flex flex-col items-center justify-center h-12 rounded-lg select-none touch-manipulation ${
         disabled
           ? "bg-bg-disabled text-text-disabled cursor-default"
-          : active
-            ? "bg-accent text-text-on-accent shadow-md press-spring"
-            : "bg-bg-raised text-text-secondary press-spring"
+          : "bg-bg-raised text-text-secondary press-spring"
       }`}
       onClick={onClick}
       aria-label={label}
-      aria-pressed={active}
     >
       <span className="text-lg leading-none">{icon}</span>
       <span className="text-[0.625rem] mt-0.5 leading-none">{label}</span>

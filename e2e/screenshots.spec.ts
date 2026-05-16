@@ -247,7 +247,9 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 		await enabledNumpad.nth(i % enabledCount).click();
 	}
 
-	await page.getByRole("button", { name: "Notes" }).click();
+	// Notes button was removed; keyboard 'N' still toggles notes mode and
+	// is the fastest way to switch for this fixture.
+	await page.keyboard.press("n");
 
 	const remainingEmpty = page.locator('button[aria-label*=", empty"]');
 	for (let i = 0; i < 6; i++) {

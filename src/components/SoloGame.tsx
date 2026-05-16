@@ -226,8 +226,6 @@ export function SoloGame({
             <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
           )}
           <GameControls
-            notesMode={game.notesMode}
-            onToggleNotes={game.toggleNotesMode}
             onErase={game.erase}
             onUndo={game.undo}
             historyLength={game.historyLength}

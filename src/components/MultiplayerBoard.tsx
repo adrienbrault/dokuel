@@ -203,14 +203,7 @@ export function MultiplayerBoard({
           animateReveal={!revealed}
         />
       }
-      controls={
-        <GameControls
-          notesMode={game.notesMode}
-          onToggleNotes={game.toggleNotesMode}
-          onErase={game.erase}
-          onUndo={game.undo}
-        />
-      }
+      controls={<GameControls onErase={game.erase} onUndo={game.undo} />}
       settingsExtra={
         <ToggleSwitch
           checked={showOpponentProgress}
