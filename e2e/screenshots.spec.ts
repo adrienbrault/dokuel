@@ -96,9 +96,7 @@ test("multiplayer lobby", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Create Game" }).click();
 	await page.getByRole("button", { name: "Easy" }).click();
-	// Lobby renders synchronously after difficulty pick; no network wait needed
-	// for the layout we're screenshotting.
-	await page.waitForTimeout(150);
+	await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
 	await page.screenshot({
 		path: screenshotPath("multiplayer-lobby", testInfo.project.name),
 	});
@@ -335,13 +333,12 @@ test("multiplayer - progress bars hidden", async ({ page }, testInfo) => {
 
 test("solo game - settings popover open", async ({ page }, testInfo) => {
 	await page.goto("/");
-	await page.waitForLoadState("networkidle");
-	await page.getByText("Start Solo").click();
-	await page.getByText("Easy").click();
-	await page.waitForTimeout(800);
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
 	await page.getByLabel("Settings").click();
-	await page.waitForTimeout(300);
+	await page.getByLabel("Close settings").waitFor();
 
 	await page.screenshot({
 		path: screenshotPath("solo-settings-popover", testInfo.project.name),

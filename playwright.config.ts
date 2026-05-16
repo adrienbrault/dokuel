@@ -5,6 +5,7 @@ export default defineConfig({
   outputDir: "./e2e/results",
   snapshotPathTemplate: "{testDir}/screenshots/{arg}{ext}",
   fullyParallel: true,
+  workers: 4,
   timeout: 8_000,
   expect: { timeout: 3_000 },
   use: {
