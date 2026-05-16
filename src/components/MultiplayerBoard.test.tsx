@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadGame } from "../lib/game-storage.ts";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 
 const SOLVED =
@@ -67,6 +68,36 @@ describe("MultiplayerBoard local autosave", () => {
     expect(
       screen.queryByLabelText(/Cell row 1 column 5, empty/),
     ).not.toBeNull();
+  });
+
+  it("restores the elapsed timer on remount", () => {
+    vi.useFakeTimers();
+    try {
+      const props = baseProps();
+      const { unmount } = render(<MultiplayerBoard {...props} />);
+
+      // Advance fake time so the Timer's setInterval ticks and updates
+      // timerSecondsRef via onTick.
+      act(() => {
+        vi.advanceTimersByTime(7000);
+      });
+
+      // Place a cell to trigger autosave (it watches game.board, not the
+      // timer ref).
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      fireEvent.click(screen.getAllByLabelText("5")[0]!);
+
+      const saved = loadGame(`mp_${props.roomId}_${props.puzzle.slice(0, 12)}`);
+      expect(saved?.timer).toBeGreaterThanOrEqual(7);
+
+      unmount();
+      render(<MultiplayerBoard {...props} />);
+
+      expect(screen.getByText(/^00:0[7-9]$/)).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("restores placed cell values on remount with same roomId and puzzle", () => {

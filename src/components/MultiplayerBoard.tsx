@@ -82,7 +82,8 @@ export function MultiplayerBoard({
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
-  const timerSecondsRef = useRef(0);
+  const initialTimerSeconds = saved?.timer ?? 0;
+  const timerSecondsRef = useRef(initialTimerSeconds);
   const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
   const showResult = useDelayedFlag(gameOver !== null, 300);
@@ -120,7 +121,7 @@ export function MultiplayerBoard({
       puzzle,
       values,
       notes,
-      timer: 0,
+      timer: timerSecondsRef.current,
       difficulty,
       assistLevel,
     });
@@ -156,6 +157,7 @@ export function MultiplayerBoard({
         <div className="flex flex-col items-center">
           <Timer
             running={!gameOver}
+            initialSeconds={initialTimerSeconds}
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
