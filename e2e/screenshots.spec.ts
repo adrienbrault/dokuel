@@ -149,7 +149,7 @@ test.describe("dark mode", () => {
 
 			const bars = document.createElement("div");
 			bars.className =
-				"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
+				"w-full max-w-[min(100vw-2rem,28rem)] lg:max-w-[min(36rem,calc(100dvh-18rem))] mb-3 flex flex-col gap-1.5 mx-auto";
 			bars.innerHTML = `
 				<div class="flex items-center gap-2">
 					<span class="text-xs text-text-secondary w-24 truncate">You</span>
@@ -295,7 +295,7 @@ test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
 
 		const bars = document.createElement("div");
 		bars.className =
-			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
+			"w-full max-w-[min(100vw-2rem,28rem)] lg:max-w-[min(36rem,calc(100dvh-18rem))] mb-3 flex flex-col gap-1.5 mx-auto";
 		bars.innerHTML = `
 			<div class="flex items-center gap-2">
 				<span class="text-xs text-text-secondary w-24 truncate">You</span>

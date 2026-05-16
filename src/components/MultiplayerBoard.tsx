@@ -151,7 +151,7 @@ export function MultiplayerBoard({
       }
       headerExtra={
         showOpponentProgress && opponentProgress ? (
-          <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
+          <div className="w-full max-w-[min(100vw-2rem,28rem)] lg:max-w-[min(36rem,calc(100dvh-18rem))] mb-3 flex flex-col gap-1.5">
             <ProgressBar label="You" percent={myPercent} color="bg-accent" />
             <ProgressBar
               label={
