@@ -24,11 +24,13 @@ class DemoBuilder {
   private _hasMutations = false;
   private _hasPlacements = false;
   private _restricts = new Map<number, Set<number>>();
+  private readonly _id: string;
+  private readonly _title: string;
 
-  constructor(
-    private readonly _id: string,
-    private readonly _title: string,
-  ) {}
+  constructor(id: string, title: string) {
+    this._id = id;
+    this._title = title;
+  }
 
   puzzle(puzzle: string): this {
     this._puzzle = puzzle;

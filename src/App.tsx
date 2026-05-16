@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
+import { GuidePage } from "./components/guides/GuidePage.tsx";
+import { GuidesScreen } from "./components/guides/GuidesScreen.tsx";
 import { JoinScreen } from "./components/JoinScreen.tsx";
 import { Landing } from "./components/Landing.tsx";
 import { MultiplayerScreen } from "./components/MultiplayerScreen.tsx";
@@ -9,6 +11,8 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
+import { findGuide, GUIDES } from "./lib/guides/index.ts";
+import type { TechniqueId } from "./lib/guides/types.ts";
 import { generateId } from "./lib/id.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
@@ -32,7 +36,8 @@ type Screen =
       difficulty: Difficulty | null;
     }
   | { name: "join" }
-  | { name: "stats" };
+  | { name: "stats" }
+  | { name: "guides"; guideId?: TechniqueId };
 
 const VALID_DIFFICULTIES = new Set<string>([
   "easy",
@@ -54,6 +59,8 @@ function screenToPath(screen: Screen): string {
       return "/join";
     case "stats":
       return "/stats";
+    case "guides":
+      return screen.guideId ? `/learn/${screen.guideId}` : "/learn";
     case "multiplayer":
       return `/${screen.roomId}`;
   }
@@ -66,6 +73,11 @@ function pathToScreen(pathname: string): Screen {
   if (path === "daily") return { name: "daily" };
   if (path === "join") return { name: "join" };
   if (path === "stats") return { name: "stats" };
+  if (path === "learn") return { name: "guides" };
+  if (path.startsWith("learn/")) {
+    const guideId = path.slice("learn/".length) as TechniqueId;
+    return { name: "guides", guideId };
+  }
 
   if (path.startsWith("solo/")) {
     const parts = path.slice(5).split("/");
@@ -240,6 +252,29 @@ function App() {
           onBack={() => navigate({ name: "landing" })}
         />
       );
+
+    case "guides": {
+      const guide = screen.guideId ? findGuide(screen.guideId) : null;
+      if (guide) {
+        return (
+          <div className="screen">
+            <GuidePage
+              guide={guide}
+              onBack={() => navigate({ name: "guides" })}
+            />
+          </div>
+        );
+      }
+      return (
+        <div className="screen">
+          <GuidesScreen
+            guides={GUIDES}
+            onSelect={(guideId) => navigate({ name: "guides", guideId })}
+            onBack={() => navigate({ name: "landing" })}
+          />
+        </div>
+      );
+    }
   }
 }
 
