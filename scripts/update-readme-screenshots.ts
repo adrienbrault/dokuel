@@ -37,13 +37,8 @@ const MATRIX_END = "<!-- screenshot-matrix:end -->";
 const DEVICE_ORDER = ["iPhone-SE", "iPhone-14", "iPad-Mini", "Desktop"];
 
 const HERO_SCENES: { scene: string; device: string; alt: string }[] = [
-	{ scene: "landing", device: "Desktop", alt: "Landing page" },
+	{ scene: "landing", device: "iPhone-14", alt: "Landing page" },
 	{ scene: "solo-game", device: "iPhone-14", alt: "Solo game" },
-	{
-		scene: "multiplayer-progress-bars-dark",
-		device: "Desktop",
-		alt: "Multiplayer with live opponent progress (dark mode)",
-	},
 	{
 		scene: "solo-game-dark",
 		device: "iPhone-14",
@@ -125,7 +120,7 @@ function renderHero(shots: Shot[]): string {
 		if (!present.has(key)) continue;
 		const file = `${scene}--${device}.png`;
 		cells.push(
-			`    <td align="center" valign="top"><img src="${url(file)}" alt="${alt}" width="180" /></td>`,
+			`    <td align="center" valign="top"><img src="${url(file)}" alt="${alt}" width="220" /></td>`,
 		);
 	}
 	return [
