@@ -7,10 +7,9 @@
 <!-- hero-screenshots:start -->
 <table align="center">
   <tr>
-    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/landing--Desktop.png" alt="Landing page" width="180" /></td>
-    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/solo-game--iPhone-14.png" alt="Solo game" width="180" /></td>
-    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/multiplayer-progress-bars-dark--Desktop.png" alt="Multiplayer with live opponent progress (dark mode)" width="180" /></td>
-    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/solo-game-dark--iPhone-14.png" alt="Solo game in dark mode" width="180" /></td>
+    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/landing--iPhone-14.png" alt="Landing page" width="220" /></td>
+    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/solo-game--iPhone-14.png" alt="Solo game" width="220" /></td>
+    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/solo-game-dark--iPhone-14.png" alt="Solo game in dark mode" width="220" /></td>
   </tr>
 </table>
 <!-- hero-screenshots:end -->
