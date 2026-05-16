@@ -4,15 +4,22 @@
  * a small set of agent-friendly summary images written to
  * `e2e/screenshots/combined/`. Two flavours:
  *
- *   device--<Device>.png   — every scene for one device, uniform aspect.
- *   feature--<group>.png   — related scenes × all devices, devices as rows.
+ *   device--<Device>--<part>.png  9 scenes for one device per sheet (3×3).
+ *                                 Each device is split into two thematic
+ *                                 halves so per-cell pixel budget stays
+ *                                 high enough for an agent to read text
+ *                                 and spot small layout issues after the
+ *                                 vision pipeline downscales the sheet.
+ *   feature--<group>.png          related scenes × all devices, devices
+ *                                 as rows. The dark-mode pairs are split
+ *                                 across two sheets for the same reason.
  *
  * The individual PNGs in `e2e/screenshots/` are left untouched. The
  * combined directory is gitignored alongside everything else under
  * `e2e/screenshots/`.
  */
 
-import { mkdirSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
 import {
@@ -29,28 +36,41 @@ const CELL_WIDTH = 320;
 const LABEL_HEIGHT = 24;
 const HEADER_HEIGHT = 32;
 const GUTTER = 8;
+const DEVICE_COLS = 3;
 const BG = { r: 26, g: 26, b: 26, alpha: 1 };
 const BG_HEX = "#1a1a1a";
 
-const SCENE_ORDER_PER_DEVICE: string[] = [
-	"landing",
-	"landing-dark",
-	"difficulty",
-	"difficulty-dark",
-	"daily-challenge",
-	"join-game",
-	"solo-game",
-	"solo-game-dark",
-	"solo-in-progress",
-	"solo-win-modal",
-	"solo-settings-popover",
-	"solo-numpad-left",
-	"solo-numpad-right",
-	"multiplayer-lobby",
-	"multiplayer-progress-bars",
-	"multiplayer-progress-bars-dark",
-	"multiplayer-progress-hidden",
-	"multiplayer-settings-toggle",
+const DEVICE_PARTS: { part: string; title: string; scenes: string[] }[] = [
+	{
+		part: "a",
+		title: "Menus & entry",
+		scenes: [
+			"landing",
+			"landing-dark",
+			"difficulty",
+			"difficulty-dark",
+			"daily-challenge",
+			"join-game",
+			"solo-game",
+			"solo-game-dark",
+			"multiplayer-lobby",
+		],
+	},
+	{
+		part: "b",
+		title: "Active gameplay",
+		scenes: [
+			"solo-in-progress",
+			"solo-win-modal",
+			"solo-settings-popover",
+			"solo-numpad-left",
+			"solo-numpad-right",
+			"multiplayer-progress-bars",
+			"multiplayer-progress-bars-dark",
+			"multiplayer-progress-hidden",
+			"multiplayer-settings-toggle",
+		],
+	},
 ];
 
 const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
@@ -94,13 +114,19 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
 		],
 	},
 	{
-		name: "dark-mode",
-		title: "Dark-mode pairs",
+		name: "dark-mode-a",
+		title: "Dark-mode pairs (landing & solo)",
 		scenes: [
 			"landing",
 			"landing-dark",
 			"solo-game",
 			"solo-game-dark",
+		],
+	},
+	{
+		name: "dark-mode-b",
+		title: "Dark-mode pairs (difficulty & multiplayer)",
+		scenes: [
 			"difficulty",
 			"difficulty-dark",
 			"multiplayer-progress-bars",
@@ -230,11 +256,12 @@ function shotIndex(shots: Shot[]): Map<string, Shot> {
 	return idx;
 }
 
-async function buildDeviceSheet(
+async function buildDevicePartSheet(
 	device: string,
+	part: { part: string; title: string; scenes: string[] },
 	idx: Map<string, Shot>,
 ): Promise<void> {
-	const scenes = SCENE_ORDER_PER_DEVICE.filter((scene) =>
+	const scenes = part.scenes.filter((scene) =>
 		idx.has(`${scene}--${device}`),
 	);
 	if (scenes.length === 0) return;
@@ -246,16 +273,14 @@ async function buildDeviceSheet(
 		cells.push(await buildCell(shot, sceneLabel(scene)));
 	}
 
-	// Lay out as 6 cols × N rows. Phones produce tall sheets; Desktop a short one.
-	const cols = 6;
 	const rows: Cell[][] = [];
-	for (let i = 0; i < cells.length; i += cols) {
-		rows.push(cells.slice(i, i + cols));
+	for (let i = 0; i < cells.length; i += DEVICE_COLS) {
+		rows.push(cells.slice(i, i + DEVICE_COLS));
 	}
 
 	await writeSheet(
-		`device--${device}.png`,
-		`Per-device · ${deviceLabel(device)}`,
+		`device--${device}--${part.part}.png`,
+		`Per-device · ${deviceLabel(device)} · ${part.title}`,
 		rows,
 	);
 }
@@ -292,6 +317,8 @@ async function main(): Promise<void> {
 	if (shots.length === 0) {
 		throw new Error("No screenshots found — nothing to combine.");
 	}
+	// Clean stale sheets so renamed/removed sheet definitions don't linger.
+	rmSync(COMBINED_DIR, { recursive: true, force: true });
 	mkdirSync(COMBINED_DIR, { recursive: true });
 
 	const idx = shotIndex(shots);
@@ -301,14 +328,17 @@ async function main(): Promise<void> {
 
 	const work: Promise<void>[] = [];
 	for (const device of devicesPresent) {
-		work.push(buildDeviceSheet(device, idx));
+		for (const part of DEVICE_PARTS) {
+			work.push(buildDevicePartSheet(device, part, idx));
+		}
 	}
 	for (const group of FEATURE_GROUPS) {
 		work.push(buildFeatureSheet(group, idx, devicesPresent));
 	}
 	await Promise.all(work);
 
-	const sheetCount = devicesPresent.length + FEATURE_GROUPS.length;
+	const sheetCount =
+		devicesPresent.length * DEVICE_PARTS.length + FEATURE_GROUPS.length;
 	console.log(
 		`Combined ${shots.length} screenshots into ${sheetCount} sheets at ${COMBINED_DIR}`,
 	);
