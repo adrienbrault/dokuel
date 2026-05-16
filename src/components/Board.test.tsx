@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 
@@ -105,5 +106,111 @@ describe("Board same-number row/col highlighting (full assist)", () => {
     // (3,7) shares box (1,2) with matching 5 at (4,6); not in row 4 or col 6
     const cell37 = screen.getByLabelText("Cell row 4 column 8, empty");
     expect(cell37.className).toContain("bg-cell-match-row-col");
+  });
+});
+
+describe("Board drag-select filters non-empty cells", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function findCell(row: number, col: number): HTMLElement {
+    return document.querySelector(
+      `[data-row="${row}"][data-col="${col}"]`,
+    ) as HTMLElement;
+  }
+
+  function mockElementFromPoint(cells: Array<{ row: number; col: number }>) {
+    // Map each successive (x, y) coordinate to the next cell in the list
+    let idx = 0;
+    const original = document.elementFromPoint;
+    document.elementFromPoint = () => {
+      const next = cells[Math.min(idx, cells.length - 1)]!;
+      idx += 1;
+      return findCell(next.row, next.col);
+    };
+    return () => {
+      document.elementFromPoint = original;
+    };
+  }
+
+  it("excludes given (non-empty) cells from drag-selection", () => {
+    // Row 0: (0,0)=5 given, (0,1)=empty, (0,2)=empty, (0,3)=7 given, (0,4)=empty
+    const board = makeBoard([
+      [0, 0, 5],
+      [0, 3, 7],
+    ]);
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        onSetSelectedCells={onSetSelectedCells}
+      />,
+    );
+
+    mockElementFromPoint([
+      { row: 0, col: 0 }, // pointerdown on given cell
+      { row: 0, col: 1 }, // empty
+      { row: 0, col: 2 }, // empty
+      { row: 0, col: 3 }, // given
+      { row: 0, col: 4 }, // empty
+      { row: 0, col: 4 }, // pointerup
+    ]);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, { clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(region, { clientX: 1, clientY: 0 });
+    fireEvent.pointerMove(region, { clientX: 2, clientY: 0 });
+    fireEvent.pointerMove(region, { clientX: 3, clientY: 0 });
+    fireEvent.pointerMove(region, { clientX: 4, clientY: 0 });
+    fireEvent.pointerUp(region, { clientX: 4, clientY: 0 });
+
+    expect(onSetSelectedCells).toHaveBeenCalled();
+    const lastCall = onSetSelectedCells.mock.calls.at(-1)!;
+    const selected = lastCall[0] as Set<number>;
+    expect(selected.has(cellKey(0, 0))).toBe(false);
+    expect(selected.has(cellKey(0, 3))).toBe(false);
+    expect(selected.has(cellKey(0, 1))).toBe(true);
+    expect(selected.has(cellKey(0, 2))).toBe(true);
+    expect(selected.has(cellKey(0, 4))).toBe(true);
+  });
+
+  it("does not fire multi-selection when drag only crosses given cells", () => {
+    // All cells in row 0 are given
+    const board = makeBoard([
+      [0, 0, 1],
+      [0, 1, 2],
+      [0, 2, 3],
+    ]);
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        onSetSelectedCells={onSetSelectedCells}
+      />,
+    );
+
+    mockElementFromPoint([
+      { row: 0, col: 0 },
+      { row: 0, col: 1 },
+      { row: 0, col: 2 },
+      { row: 0, col: 2 },
+    ]);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, { clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(region, { clientX: 1, clientY: 0 });
+    fireEvent.pointerMove(region, { clientX: 2, clientY: 0 });
+    fireEvent.pointerUp(region, { clientX: 2, clientY: 0 });
+
+    expect(onSetSelectedCells).not.toHaveBeenCalled();
   });
 });
