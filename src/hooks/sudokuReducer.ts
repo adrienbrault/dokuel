@@ -1,5 +1,10 @@
 import { findHint } from "../lib/hint-engine.ts";
-import { cellKey, parsePuzzle } from "../lib/sudoku.ts";
+import {
+  cellKey,
+  getConflicts,
+  isBoardComplete,
+  parsePuzzle,
+} from "../lib/sudoku.ts";
 import type {
   ActiveHint,
   Board,
@@ -7,7 +12,12 @@ import type {
   MoveAction,
   Position,
 } from "../lib/types.ts";
-import { cloneBoard, handleErase, handlePlaceNumber } from "./sudokuActions.ts";
+import {
+  clearPeerNotes,
+  cloneBoard,
+  handleErase,
+  handlePlaceNumber,
+} from "./sudokuActions.ts";
 
 export type State = {
   board: Board;
@@ -154,12 +164,34 @@ function dispatchAction(state: State, action: Action): State {
       const hint = findHint(state.board, state.solution, state.selectedCell);
       if (!hint) return state;
 
+      const { row, col } = hint.position;
+      const board = cloneBoard(state.board);
+      const cell = board[row]![col]!;
+      const previousNotes = new Set(cell.notes);
+      cell.value = hint.value;
+      cell.notes = new Set();
+      const clearedNotes = clearPeerNotes(board, row, col, hint.value);
+
+      const moveAction: MoveAction = {
+        type: "hint",
+        position: hint.position,
+        value: hint.value,
+        previousNotes,
+        clearedNotes,
+      };
+
+      const conflicts = getConflicts(board);
+      const complete = isBoardComplete(board, conflicts);
+
       return {
         ...state,
+        board,
+        status: complete ? "completed" : state.status,
         selectedCell: hint.position,
-        selectedCells: new Set([cellKey(hint.position.row, hint.position.col)]),
+        selectedCells: new Set([cellKey(row, col)]),
         activeHint: hint,
         hintsUsed: state.hintsUsed + 1,
+        history: [...state.history, moveAction],
       };
     }
 

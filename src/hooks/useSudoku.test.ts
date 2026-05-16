@@ -8,6 +8,23 @@ function setupHook(difficulty: "easy" | "medium" = "easy") {
   return renderHook(() => useSudoku(puzzle));
 }
 
+// Deterministic fixture: solved board with two cells removed so
+// hints can be applied without completing the board (which would
+// block undo).
+const SOLVED =
+  "534678912" +
+  "672195348" +
+  "198342567" +
+  "859761423" +
+  "426853791" +
+  "713924856" +
+  "961537284" +
+  "287419635" +
+  "345286179";
+// R0C0 (=5) and R0C5 (=8) blanked. Both are naked singles; R0C5 is a
+// row-peer of R0C0, so it can hold a note that hint placement must clear.
+const TWO_HOLE_PUZZLE = `${SOLVED.slice(0, 0)}.${SOLVED.slice(1, 5)}.${SOLVED.slice(6)}`;
+
 describe("useSudoku", () => {
   it("initializes board from puzzle", () => {
     const { result } = setupHook();
@@ -369,6 +386,74 @@ describe("useSudoku", () => {
     expect(
       result.current.board[emptyCell.row]![emptyCell.col]!.notes.has(2),
     ).toBe(true);
+  });
+
+  describe("hint", () => {
+    it("places the deduced value on the board", () => {
+      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
+
+      expect(result.current.board[0]![0]!.value).toBeNull();
+      act(() => result.current.hint());
+
+      expect(result.current.board[0]![0]!.value).toBe(5);
+    });
+
+    it("increments hintsUsed and selects the hinted cell", () => {
+      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
+
+      expect(result.current.hintsUsed).toBe(0);
+      act(() => result.current.hint());
+
+      expect(result.current.hintsUsed).toBe(1);
+      expect(result.current.selectedCell).toEqual({ row: 0, col: 0 });
+      expect(result.current.activeHint).not.toBeNull();
+    });
+
+    it("pushes a hint MoveAction so undo reverts it", () => {
+      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
+
+      const beforeLen = result.current.historyLength;
+      act(() => result.current.hint());
+      expect(result.current.historyLength).toBe(beforeLen + 1);
+      expect(result.current.board[0]![0]!.value).toBe(5);
+
+      act(() => result.current.undo());
+      expect(result.current.board[0]![0]!.value).toBeNull();
+      expect(result.current.hintsUsed).toBe(0);
+    });
+
+    it("clears peer notes for the placed value", () => {
+      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
+
+      // Put note 5 on R0C5 (a row-peer of R0C0). Hint will place 5 at
+      // R0C0 and should strip the note from R0C5.
+      act(() => result.current.toggleNotesMode());
+      act(() => result.current.selectCell(0, 5));
+      act(() => result.current.placeNumber(5));
+      expect(result.current.board[0]![5]!.notes.has(5)).toBe(true);
+
+      act(() => result.current.toggleNotesMode());
+      act(() => result.current.selectCell(0, 0));
+      act(() => result.current.hint());
+
+      expect(result.current.board[0]![0]!.value).toBe(5);
+      expect(result.current.board[0]![5]!.notes.has(5)).toBe(false);
+    });
+
+    it("undo restores peer notes cleared by the hint", () => {
+      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
+
+      act(() => result.current.toggleNotesMode());
+      act(() => result.current.selectCell(0, 5));
+      act(() => result.current.placeNumber(5));
+      act(() => result.current.toggleNotesMode());
+      act(() => result.current.selectCell(0, 0));
+      act(() => result.current.hint());
+      expect(result.current.board[0]![5]!.notes.has(5)).toBe(false);
+
+      act(() => result.current.undo());
+      expect(result.current.board[0]![5]!.notes.has(5)).toBe(true);
+    });
   });
 
   it("undo restores auto-cleared notes from peers", () => {

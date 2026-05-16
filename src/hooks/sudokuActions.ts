@@ -11,7 +11,7 @@ export function cloneBoard(board: Board): Board {
   );
 }
 
-function clearPeerNotes(
+export function clearPeerNotes(
   board: Board,
   row: number,
   col: number,
