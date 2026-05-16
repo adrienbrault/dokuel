@@ -12,14 +12,17 @@
  *   <!-- screenshot-matrix:start --> ... <!-- screenshot-matrix:end -->
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+	DEVICE_ORDER,
+	deviceLabel,
+	listShots,
+	sceneLabel,
+	type Shot,
+} from "./screenshot-meta.ts";
 
 const REPO_ROOT = join(import.meta.dirname, "..");
-
-// Where Playwright captures land locally + on the CI runner. Gitignored.
-const SCREENSHOTS_DIR =
-	process.env.SCREENSHOTS_DIR ?? join(REPO_ROOT, "e2e", "screenshots");
 
 // Public URL the PNGs are served from. The workflow pushes them to the
 // `gh-pages` branch; GitHub Pages serves it at this origin.
@@ -34,8 +37,6 @@ const HERO_END = "<!-- hero-screenshots:end -->";
 const MATRIX_START = "<!-- screenshot-matrix:start -->";
 const MATRIX_END = "<!-- screenshot-matrix:end -->";
 
-const DEVICE_ORDER = ["iPhone-SE", "iPhone-14", "iPad-Mini", "Desktop"];
-
 const HERO_SCENES: { scene: string; device: string; alt: string }[] = [
 	{ scene: "landing", device: "iPhone-14", alt: "Landing page" },
 	{ scene: "solo-game", device: "iPhone-14", alt: "Solo game" },
@@ -45,65 +46,6 @@ const HERO_SCENES: { scene: string; device: string; alt: string }[] = [
 		alt: "Solo game in dark mode",
 	},
 ];
-
-type Shot = { file: string; scene: string; device: string };
-
-function listShots(): Shot[] {
-	if (!existsSync(SCREENSHOTS_DIR)) {
-		throw new Error(
-			`No screenshots found at ${SCREENSHOTS_DIR}. Run 'bun run screenshots' first.`,
-		);
-	}
-	return readdirSync(SCREENSHOTS_DIR)
-		.filter((f) => f.endsWith(".png"))
-		.map((file) => {
-			const base = file.replace(/\.png$/, "");
-			const sepIdx = base.lastIndexOf("--");
-			if (sepIdx === -1) {
-				throw new Error(`Unexpected screenshot filename: ${file}`);
-			}
-			return {
-				file,
-				scene: base.slice(0, sepIdx),
-				device: base.slice(sepIdx + 2),
-			};
-		});
-}
-
-function titleCase(s: string): string {
-	return s
-		.split("-")
-		.map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
-		.join(" ");
-}
-
-function deviceLabel(d: string): string {
-	return d.replace(/-/g, " ");
-}
-
-function sceneLabel(scene: string): string {
-	const overrides: Record<string, string> = {
-		landing: "Landing",
-		"landing-dark": "Landing (dark)",
-		"solo-game": "Solo game",
-		"solo-game-dark": "Solo game (dark)",
-		"solo-numpad-left": "Solo · numpad left",
-		"solo-numpad-right": "Solo · numpad right",
-		"solo-in-progress": "Solo · in progress",
-		"solo-win-modal": "Solo · win modal",
-		"solo-settings-popover": "Solo · settings popover",
-		difficulty: "Difficulty picker",
-		"difficulty-dark": "Difficulty picker (dark)",
-		"daily-challenge": "Daily challenge",
-		"join-game": "Join game",
-		"multiplayer-lobby": "Multiplayer · lobby",
-		"multiplayer-progress-bars": "Multiplayer · progress bars",
-		"multiplayer-progress-bars-dark": "Multiplayer · progress bars (dark)",
-		"multiplayer-progress-hidden": "Multiplayer · progress hidden",
-		"multiplayer-settings-toggle": "Multiplayer · settings toggle",
-	};
-	return overrides[scene] ?? titleCase(scene);
-}
 
 function url(file: string): string {
 	return `${BASE_URL}/${file}`;
