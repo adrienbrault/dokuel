@@ -158,6 +158,7 @@ function App() {
             onCreate={() => navigate({ name: "difficulty", mode: "create" })}
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
+            onGuides={() => navigate({ name: "guides" })}
             onContinue={(gameKey, difficulty) => {
               gameIdRef.current++;
               navigate({
