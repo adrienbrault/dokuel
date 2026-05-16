@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { applyStepToBoard } from "../../lib/guides/apply-step.ts";
 import type { Demo } from "../../lib/guides/types.ts";
 import { Board } from "../Board.tsx";
+import { DemoOverlays } from "./DemoOverlays.tsx";
 
 const EMPTY_SET = new Set<number>();
 const DEFAULT_HOLD_MS = 2500;
@@ -44,7 +45,7 @@ export function TechniqueDemo({ demo }: TechniqueDemoProps) {
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      <div className="pointer-events-none">
+      <div className="relative w-full max-w-lg mx-auto pointer-events-none">
         <Board
           board={board}
           selectedCell={null}
@@ -52,6 +53,7 @@ export function TechniqueDemo({ demo }: TechniqueDemoProps) {
           hintCells={hintCells}
           onSelectCell={NOOP}
         />
+        <DemoOverlays overlays={step.overlays} />
       </div>
       <p
         className="text-sm text-text-secondary leading-relaxed text-center"
