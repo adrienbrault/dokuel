@@ -54,6 +54,11 @@ export function useYjsMultiplayer({
   const [gameOver, setGameOver] = useState<GameOverInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  // Latched true on first gameNumber > 0 and never cleared. Lets the UI
+  // keep rendering the board even if roomState or puzzle momentarily
+  // flicker (Yjs sync race, transient peer state), instead of bouncing
+  // back to the lobby/connecting screen and unmounting local state.
+  const [hasStartedGame, setHasStartedGame] = useState(false);
 
   const roomRef = useRef<P2PRoom | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
@@ -95,6 +100,7 @@ export function useYjsMultiplayer({
         setPuzzle(state.puzzle);
         setGameOver(null);
         setOpponentProgress(null);
+        setHasStartedGame(true);
       }
 
       // Detect winner
@@ -229,6 +235,7 @@ export function useYjsMultiplayer({
     opponentProgress,
     opponentDisconnected,
     gameOver,
+    hasStartedGame,
     error,
     sendStartGame,
     sendProgress,

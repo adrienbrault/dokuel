@@ -32,35 +32,11 @@ export function MultiplayerGame({
     return () => clearTimeout(id);
   }, [mp.error]);
 
-  if (!mp.roomState) {
-    return (
-      <div className="screen">
-        <p className="caption">Connecting...</p>
-      </div>
-    );
-  }
-
-  if (!mp.puzzle && mp.roomState.status === "lobby") {
-    return (
-      <div className="screen">
-        <Lobby
-          roomState={mp.roomState}
-          playerId={playerId}
-          onRename={(name) => {
-            if (onRename) onRename(name);
-            mp.updateName(name);
-          }}
-          onAssistLevelChange={mp.setAssistLevel}
-          onDifficultyChange={mp.setDifficulty}
-          onStart={mp.sendStartGame}
-          onBack={onBack}
-        />
-        {toast && <Toast message={toast} />}
-      </div>
-    );
-  }
-
-  if (mp.puzzle) {
+  // Once we've started a game and have a puzzle, keep the board mounted
+  // even if mp.roomState or mp.puzzle briefly flicker during Yjs sync —
+  // the local board state (cells, notes, progress) lives in
+  // MultiplayerBoard and would be wiped by an unmount.
+  if (mp.hasStartedGame && mp.puzzle) {
     return (
       <>
         <MultiplayerBoard
@@ -87,6 +63,34 @@ export function MultiplayerGame({
         )}
         {toast && <Toast message={toast} />}
       </>
+    );
+  }
+
+  if (!mp.roomState) {
+    return (
+      <div className="screen">
+        <p className="caption">Connecting...</p>
+      </div>
+    );
+  }
+
+  if (!mp.puzzle && mp.roomState.status === "lobby") {
+    return (
+      <div className="screen">
+        <Lobby
+          roomState={mp.roomState}
+          playerId={playerId}
+          onRename={(name) => {
+            if (onRename) onRename(name);
+            mp.updateName(name);
+          }}
+          onAssistLevelChange={mp.setAssistLevel}
+          onDifficultyChange={mp.setDifficulty}
+          onStart={mp.sendStartGame}
+          onBack={onBack}
+        />
+        {toast && <Toast message={toast} />}
+      </div>
     );
   }
 

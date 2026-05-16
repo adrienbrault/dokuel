@@ -110,6 +110,29 @@ describe("useYjsMultiplayer", () => {
     expect(doc.getMap("room").get("difficulty")).toBe("hard");
   });
 
+  it("hasStartedGame latches true once gameNumber goes above zero", () => {
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-latch",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+
+    expect(result.current.hasStartedGame).toBe(false);
+
+    const doc = mocks.lastDoc!;
+    const fakeRoom = { doc, roomId: "room-latch" };
+
+    act(() => {
+      joinRoom(fakeRoom, "p2", "Bob");
+      result.current.sendStartGame();
+    });
+
+    expect(result.current.hasStartedGame).toBe(true);
+  });
+
   it("sendRematch uses Yjs difficulty, not the local prop", () => {
     const { result } = renderHook(() =>
       useYjsMultiplayer({
