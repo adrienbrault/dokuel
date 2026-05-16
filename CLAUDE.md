@@ -225,10 +225,21 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 
 ### Commands
 ```bash
-bun run screenshots         # Run screenshot tests, saves PNGs to e2e/screenshots/
+bun run screenshots         # Capture PNGs + build combined sheets for agent review
+bun run screenshots:combine # Rebuild combined sheets from existing PNGs (no recapture)
 bun run screenshots:readme  # Re-capture + rewrite README screenshot sections
 bun run e2e                 # Run all Playwright tests
 ```
+
+### Agent-friendly contact sheets
+`bun run screenshots` writes 9 combined sheets under `e2e/screenshots/combined/`
+alongside the 72 individual PNGs. **Read these first** — they let you scan the
+whole app in a handful of images instead of opening 72 PNGs one at a time:
+
+- `device--<Device>.png` (×4) — every scene for one device in a 6×3 grid. Use when you want to see how one device renders across the whole app.
+- `feature--<group>.png` (×5) — related scenes across all 4 devices, devices as rows. Groups: `onboarding`, `solo`, `numpad`, `multiplayer`, `dark-mode`. Use when you want to compare a feature across viewports.
+
+Drill into the individual `e2e/screenshots/<scene>--<device>.png` files only when a sheet flags something worth a closer look. The combined directory is gitignored.
 
 ### README automation
 `.github/workflows/screenshots.yml` runs on every push to `main`:
