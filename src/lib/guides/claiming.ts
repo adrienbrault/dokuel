@@ -74,9 +74,15 @@ export const CLAIMING: Guide = {
       "Row 0 has claimed digit 5 inside the top-middle box. Which digit can be eliminated from the highlighted cell?",
     )
       .puzzle(PUZZLE)
-      .restrict([0, 3], [3, 5, 9])
-      .restrict([0, 4], [3, 5])
-      .restrict([0, 5], [5, 9])
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 5,
+        present: [
+          [0, 3],
+          [0, 4],
+          [0, 5],
+        ],
+      })
       .restrict([1, 4], [3, 5, 9])
       .eliminateAnswer([1, 4], [5])
       .explain(
@@ -88,9 +94,15 @@ export const CLAIMING: Guide = {
       "Column 4 has claimed digit 7 inside the center box. Which digit can be eliminated here?",
     )
       .puzzle(PUZZLE)
-      .restrict([3, 4], [2, 7])
-      .restrict([4, 4], [6, 7])
-      .restrict([5, 4], [2, 7, 9])
+      .lockDigit({
+        unit: { kind: "col", index: 4 },
+        digit: 7,
+        present: [
+          [3, 4],
+          [4, 4],
+          [5, 4],
+        ],
+      })
       .restrict([4, 3], [6, 7, 8])
       .eliminateAnswer([4, 3], [7])
       .explain(
@@ -102,9 +114,15 @@ export const CLAIMING: Guide = {
       "Row 7 has claimed digit 2 inside the bottom-middle box. Which digit can be eliminated here?",
     )
       .puzzle(PUZZLE)
-      .restrict([7, 3], [1, 2, 5])
-      .restrict([7, 4], [2, 5])
-      .restrict([7, 5], [1, 2])
+      .lockDigit({
+        unit: { kind: "row", index: 7 },
+        digit: 2,
+        present: [
+          [7, 3],
+          [7, 4],
+          [7, 5],
+        ],
+      })
       .restrict([6, 4], [2, 3, 9])
       .eliminateAnswer([6, 4], [2])
       .explain(

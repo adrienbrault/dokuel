@@ -77,14 +77,22 @@ export const X_WING: Guide = {
       "Tap the four cells that form the X-Wing on the digit 4.",
     )
       .puzzle(PUZZLE)
-      .restrict([2, 3], [4, 5])
-      .restrict([2, 7], [4, 6])
-      .restrict([6, 3], [4, 8])
-      .restrict([6, 7], [4, 9])
-      .restrict([0, 3], [1, 4])
-      .restrict([4, 3], [2, 4])
-      .restrict([0, 7], [3, 4])
-      .restrict([4, 7], [7, 4])
+      .lockDigit({
+        unit: { kind: "row", index: 2 },
+        digit: 4,
+        present: [
+          [2, 3],
+          [2, 7],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 6 },
+        digit: 4,
+        present: [
+          [6, 3],
+          [6, 7],
+        ],
+      })
       .selectCells([
         [2, 3],
         [2, 7],
@@ -92,7 +100,7 @@ export const X_WING: Guide = {
         [6, 7],
       ])
       .explain(
-        "Rows 2 and 6 each carry 4 only in columns 3 and 7 — those four cells lock 4 into two columns, an X-Wing. The extra 4s in column 3 and column 7 are the candidates the pattern eliminates.",
+        "Rows 2 and 6 each carry 4 only in columns 3 and 7 — those four cells lock 4 into two columns, an X-Wing.",
       )
       .build(),
     challenge(
@@ -100,12 +108,22 @@ export const X_WING: Guide = {
       "Tap the four cells that form the X-Wing on the digit 6.",
     )
       .puzzle(PUZZLE)
-      .restrict([1, 1], [6, 2])
-      .restrict([1, 8], [6, 9])
-      .restrict([7, 1], [6, 3])
-      .restrict([7, 8], [6, 5])
-      .restrict([3, 1], [6, 7])
-      .restrict([5, 8], [6, 4])
+      .lockDigit({
+        unit: { kind: "row", index: 1 },
+        digit: 6,
+        present: [
+          [1, 1],
+          [1, 8],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 7 },
+        digit: 6,
+        present: [
+          [7, 1],
+          [7, 8],
+        ],
+      })
       .selectCells([
         [1, 1],
         [1, 8],
@@ -113,7 +131,7 @@ export const X_WING: Guide = {
         [7, 8],
       ])
       .explain(
-        "Rows 1 and 7 hold 6 only in columns 1 and 8 — those four cells form the rectangle. The lone 6 in column 1 at (3,1) and the one in column 8 at (5,8) are what the pattern eliminates.",
+        "Rows 1 and 7 hold 6 only in columns 1 and 8 — those four cells form the rectangle.",
       )
       .build(),
     challenge(
@@ -121,12 +139,22 @@ export const X_WING: Guide = {
       "Tap the four cells that form the X-Wing on the digit 9.",
     )
       .puzzle(PUZZLE)
-      .restrict([0, 2], [9, 1])
-      .restrict([0, 5], [9, 3])
-      .restrict([4, 2], [9, 7])
-      .restrict([4, 5], [9, 8])
-      .restrict([2, 2], [9, 4])
-      .restrict([6, 5], [9, 2])
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 9,
+        present: [
+          [0, 2],
+          [0, 5],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 4 },
+        digit: 9,
+        present: [
+          [4, 2],
+          [4, 5],
+        ],
+      })
       .selectCells([
         [0, 2],
         [0, 5],
@@ -134,7 +162,7 @@ export const X_WING: Guide = {
         [4, 5],
       ])
       .explain(
-        "In rows 0 and 4 the digit 9 only fits in columns 2 and 5 — the four cells form the X-Wing. The extra 9 candidates further down columns 2 and 5 fall away.",
+        "In rows 0 and 4 the digit 9 only fits in columns 2 and 5 — the four cells form the X-Wing.",
       )
       .build(),
   ],

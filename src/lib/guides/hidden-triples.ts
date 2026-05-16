@@ -67,20 +67,40 @@ export const HIDDEN_TRIPLES: Guide = {
       "Three digits in row 0 only fit in the same three cells. Tap them.",
     )
       .puzzle(PUZZLE)
-      .restrict([0, 0], [1, 2, 5, 6, 8])
-      .restrict([0, 3], [1, 5, 8])
-      .restrict([0, 6], [1, 6, 8])
-      .restrict([0, 1], [3, 4, 7])
-      .restrict([0, 4], [3, 7])
-      .restrict([0, 7], [4, 7])
-      .restrict([0, 8], [3, 9])
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 2,
+        present: [
+          [0, 0],
+          [0, 3],
+          [0, 6],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 5,
+        present: [
+          [0, 0],
+          [0, 3],
+          [0, 6],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 6,
+        present: [
+          [0, 0],
+          [0, 3],
+          [0, 6],
+        ],
+      })
       .selectCells([
         [0, 0],
         [0, 3],
         [0, 6],
       ])
       .explain(
-        "Digits 2, 5, and 6 each only appear inside (0,0), (0,3), and (0,6). The trio is locked — strip the other candidates from each.",
+        "Digits 2, 5, and 6 each only appear inside (0,0), (0,3), and (0,6) — the trio is locked.",
       )
       .build(),
     challenge(
@@ -88,21 +108,40 @@ export const HIDDEN_TRIPLES: Guide = {
       "Three digits in column 2 only fit in the same three cells. Tap them.",
     )
       .puzzle(PUZZLE)
-      .restrict([1, 2], [3, 4, 5, 7, 9])
-      .restrict([4, 2], [3, 4, 7])
-      .restrict([6, 2], [3, 5, 9])
-      .restrict([0, 2], [1, 6, 8])
-      .restrict([2, 2], [1, 6])
-      .restrict([3, 2], [6, 8])
-      .restrict([7, 2], [1, 8])
-      .restrict([8, 2], [6, 8])
+      .lockDigit({
+        unit: { kind: "col", index: 2 },
+        digit: 3,
+        present: [
+          [1, 2],
+          [4, 2],
+          [6, 2],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "col", index: 2 },
+        digit: 5,
+        present: [
+          [1, 2],
+          [4, 2],
+          [6, 2],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "col", index: 2 },
+        digit: 9,
+        present: [
+          [1, 2],
+          [4, 2],
+          [6, 2],
+        ],
+      })
       .selectCells([
         [1, 2],
         [4, 2],
         [6, 2],
       ])
       .explain(
-        "Digits 3, 5, and 9 each appear only in (1,2), (4,2), and (6,2) across column 2 — the trio is locked. Strip 4 and 7 from the cells where they're noise.",
+        "Digits 3, 5, and 9 each appear only in (1,2), (4,2), and (6,2) across column 2 — the trio is locked.",
       )
       .build(),
     challenge(
@@ -110,22 +149,40 @@ export const HIDDEN_TRIPLES: Guide = {
       "Three digits inside the bottom-left box only fit in three cells. Tap them.",
     )
       .puzzle(PUZZLE)
-      .restrict([6, 0], [1, 2, 4, 5, 8])
-      .restrict([6, 1], [1, 2, 5, 8])
-      .restrict([7, 0], [1, 2, 4, 5])
-      .restrict([6, 2], [3, 6])
-      .restrict([7, 1], [3, 9])
-      .restrict([7, 2], [6, 7])
-      .restrict([8, 0], [6, 9])
-      .restrict([8, 1], [3, 7])
-      .restrict([8, 2], [6, 7])
+      .lockDigit({
+        unit: { kind: "box", index: 6 },
+        digit: 1,
+        present: [
+          [6, 0],
+          [6, 1],
+          [7, 0],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "box", index: 6 },
+        digit: 2,
+        present: [
+          [6, 0],
+          [6, 1],
+          [7, 0],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "box", index: 6 },
+        digit: 5,
+        present: [
+          [6, 0],
+          [6, 1],
+          [7, 0],
+        ],
+      })
       .selectCells([
         [6, 0],
         [6, 1],
         [7, 0],
       ])
       .explain(
-        "Digits 1, 2, and 5 each only fit in (6,0), (6,1), and (7,0) inside the box. The trio is locked — the cells' other candidates (4 and 8) drop away.",
+        "Digits 1, 2, and 5 each only fit in (6,0), (6,1), and (7,0) inside the bottom-left box — the trio is locked.",
       )
       .build(),
   ],

@@ -84,27 +84,49 @@ export const JELLYFISH: Guide = {
       "Tap the sixteen cells that form the Jellyfish on the digit 2.",
     )
       .puzzle(PUZZLE)
-      .restrict([0, 1], [2, 4])
-      .restrict([0, 3], [2, 5])
-      .restrict([0, 5], [2, 6])
-      .restrict([0, 7], [2, 8])
-      .restrict([2, 1], [2, 9])
-      .restrict([2, 3], [2, 3])
-      .restrict([2, 5], [2, 4])
-      .restrict([2, 7], [2, 7])
-      .restrict([5, 1], [2, 6])
-      .restrict([5, 3], [2, 8])
-      .restrict([5, 5], [2, 9])
-      .restrict([5, 7], [2, 4])
-      .restrict([7, 1], [2, 3])
-      .restrict([7, 3], [2, 6])
-      .restrict([7, 5], [2, 5])
-      .restrict([7, 7], [2, 8])
-      .restrict([3, 1], [2, 7])
-      .restrict([6, 5], [2, 9])
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 2,
+        present: [
+          [0, 1],
+          [0, 3],
+          [0, 5],
+          [0, 7],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 2 },
+        digit: 2,
+        present: [
+          [2, 1],
+          [2, 3],
+          [2, 5],
+          [2, 7],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 5 },
+        digit: 2,
+        present: [
+          [5, 1],
+          [5, 3],
+          [5, 5],
+          [5, 7],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 7 },
+        digit: 2,
+        present: [
+          [7, 1],
+          [7, 3],
+          [7, 5],
+          [7, 7],
+        ],
+      })
       .selectCells(FISH_CELLS)
       .explain(
-        "Rows 0, 2, 5, and 7 each fit 2 only in columns 1, 3, 5, and 7 — sixteen cells lock 2 into a 4×4 grid. The lone 2s in those columns elsewhere fall away.",
+        "Rows 0, 2, 5, and 7 each fit 2 only in columns 1, 3, 5, and 7 — sixteen cells lock 2 into a 4×4 grid.",
       )
       .build(),
     challenge(
@@ -112,23 +134,46 @@ export const JELLYFISH: Guide = {
       "Tap the sixteen cells that form the Jellyfish on the digit 8.",
     )
       .puzzle(PUZZLE)
-      .restrict([1, 0], [8, 1])
-      .restrict([1, 2], [8, 2])
-      .restrict([1, 4], [8, 3])
-      .restrict([1, 6], [8, 4])
-      .restrict([3, 0], [8, 5])
-      .restrict([3, 2], [8, 6])
-      .restrict([3, 4], [8, 7])
-      .restrict([3, 6], [8, 9])
-      .restrict([5, 0], [8, 1])
-      .restrict([5, 2], [8, 3])
-      .restrict([5, 4], [8, 5])
-      .restrict([5, 6], [8, 7])
-      .restrict([8, 0], [8, 2])
-      .restrict([8, 2], [8, 4])
-      .restrict([8, 4], [8, 6])
-      .restrict([8, 6], [8, 9])
-      .restrict([4, 4], [8, 1])
+      .lockDigit({
+        unit: { kind: "row", index: 1 },
+        digit: 8,
+        present: [
+          [1, 0],
+          [1, 2],
+          [1, 4],
+          [1, 6],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 3 },
+        digit: 8,
+        present: [
+          [3, 0],
+          [3, 2],
+          [3, 4],
+          [3, 6],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 5 },
+        digit: 8,
+        present: [
+          [5, 0],
+          [5, 2],
+          [5, 4],
+          [5, 6],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 8 },
+        digit: 8,
+        present: [
+          [8, 0],
+          [8, 2],
+          [8, 4],
+          [8, 6],
+        ],
+      })
       .selectCells([
         [1, 0],
         [1, 2],
@@ -156,22 +201,46 @@ export const JELLYFISH: Guide = {
       "Tap the sixteen cells that form the Jellyfish on the digit 6.",
     )
       .puzzle(PUZZLE)
-      .restrict([0, 0], [6, 1])
-      .restrict([0, 4], [6, 2])
-      .restrict([0, 6], [6, 3])
-      .restrict([0, 8], [6, 4])
-      .restrict([2, 0], [6, 5])
-      .restrict([2, 4], [6, 7])
-      .restrict([2, 6], [6, 8])
-      .restrict([2, 8], [6, 9])
-      .restrict([4, 0], [6, 1])
-      .restrict([4, 4], [6, 2])
-      .restrict([4, 6], [6, 3])
-      .restrict([4, 8], [6, 5])
-      .restrict([6, 0], [6, 7])
-      .restrict([6, 4], [6, 8])
-      .restrict([6, 6], [6, 9])
-      .restrict([6, 8], [6, 1])
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 6,
+        present: [
+          [0, 0],
+          [0, 4],
+          [0, 6],
+          [0, 8],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 2 },
+        digit: 6,
+        present: [
+          [2, 0],
+          [2, 4],
+          [2, 6],
+          [2, 8],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 4 },
+        digit: 6,
+        present: [
+          [4, 0],
+          [4, 4],
+          [4, 6],
+          [4, 8],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 6 },
+        digit: 6,
+        present: [
+          [6, 0],
+          [6, 4],
+          [6, 6],
+          [6, 8],
+        ],
+      })
       .selectCells([
         [0, 0],
         [0, 4],

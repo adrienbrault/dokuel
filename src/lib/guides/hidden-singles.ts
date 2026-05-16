@@ -70,9 +70,6 @@ export const HIDDEN_SINGLES: Guide = {
           ".........",
         ].join(""),
       )
-      .restrict([0, 0], [7, 8, 9])
-      .restrict([0, 3], [7, 8, 9])
-      .restrict([0, 7], [7, 8, 9])
       .selectCells([[0, 3]])
       .explain(
         "Columns 0 and 7 both already carry a 7, so the left and right empty cells in row 0 can't be 7 — only the middle one survives.",
@@ -115,13 +112,9 @@ export const HIDDEN_SINGLES: Guide = {
           ".8.......",
         ].join(""),
       )
-      .restrict([0, 0], [3, 8, 9])
-      .restrict([0, 2], [3, 8, 9])
-      .restrict([2, 0], [3, 5, 8])
-      .restrict([2, 2], [5, 8, 9])
       .selectCells([[0, 0]])
       .explain(
-        "Row 1 and row 2 each have an 8 (knocking out the bottom two rows of the box); column 1 and column 2 also each carry an 8 (knocking out the right two columns). Only the top-left corner of the box survives.",
+        "Row 1 and row 2 each have an 8 (knocking out the bottom two rows of the box); columns 1 and 2 also each carry an 8 (knocking out the right two columns). Only the top-left corner of the box survives.",
       )
       .build(),
   ],

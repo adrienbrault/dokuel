@@ -65,16 +65,28 @@ export const HIDDEN_PAIRS: Guide = {
       "Two digits in row 0 can only fit in the same two cells. Tap them.",
     )
       .puzzle(PUZZLE)
-      .restrict([0, 0], [1, 4, 5, 8])
-      .restrict([0, 1], [1, 4, 5, 8])
-      .restrict([0, 4], [1, 5])
-      .restrict([0, 8], [1, 5, 9])
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 4,
+        present: [
+          [0, 0],
+          [0, 1],
+        ],
+      })
+      .lockDigit({
+        unit: { kind: "row", index: 0 },
+        digit: 8,
+        present: [
+          [0, 0],
+          [0, 1],
+        ],
+      })
       .selectCells([
         [0, 0],
         [0, 1],
       ])
       .explain(
-        "Digits 4 and 8 only appear in (0,0) and (0,1) — they're a Hidden Pair. Their other candidates (1 and 5) can be stripped from those two cells.",
+        "Digits 4 and 8 only appear in (0,0) and (0,1) anywhere in row 0 — they're a Hidden Pair. Strip their other candidates from those two cells.",
       )
       .build(),
     challenge(
