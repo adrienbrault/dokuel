@@ -85,6 +85,17 @@ export function useSudoku(
 
   const dismissHint = useCallback(() => dispatch({ type: "DISMISS_HINT" }), []);
 
+  const reset = useCallback(
+    (nextPuzzle: string, nextSolution?: string, nextSaved?: SavedBoard) =>
+      dispatch({
+        type: "RESET",
+        puzzle: nextPuzzle,
+        solution: nextSolution,
+        savedBoard: nextSaved,
+      }),
+    [],
+  );
+
   return {
     board: state.board,
     puzzle,
@@ -109,5 +120,6 @@ export function useSudoku(
     toggleNotesMode,
     hint,
     dismissHint,
+    reset,
   };
 }
