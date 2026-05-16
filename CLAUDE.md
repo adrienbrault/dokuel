@@ -241,11 +241,13 @@ The README has `<!-- hero-screenshots:start/end -->` and `<!-- screenshot-matrix
 
 **One-time setup**: in repo settings, set GitHub Pages source to "GitHub Actions".
 
-### Speeding up the screenshot loop
-Playwright's `webServer` config has `reuseExistingServer: true`. If you'll
-run `bun run screenshots` more than once, start the dev server in a
-background shell first (`bun run dev &`) — that saves ~10s of cold
-dev-server boot off every subsequent run.
+### How it runs
+Tests run against a `vite preview` server (production build) on port 4173,
+not the dev server. The bundled output makes `page.goto` ~3.5x faster than
+serving 145 unbundled ES modules through Vite dev, cutting the run from
+~28s to ~19s. The `screenshots` and `e2e` scripts build first; Playwright
+boots `vite preview` automatically via `webServer` (`reuseExistingServer:
+true`, so a preview server you already have running is reused).
 
 ### Workflow for UI Changes
 1. **Before making changes**: run `bun run screenshots` and review the current state using the Read tool on the PNGs

@@ -4,18 +4,19 @@ export default defineConfig({
   testDir: "./e2e",
   outputDir: "./e2e/results",
   snapshotPathTemplate: "{testDir}/screenshots/{arg}{ext}",
+  globalSetup: "./e2e/check-build-fresh.ts",
   fullyParallel: true,
   workers: 4,
   timeout: 8_000,
   expect: { timeout: 3_000 },
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://localhost:4173",
     actionTimeout: 3_000,
     navigationTimeout: 5_000,
   },
   webServer: {
-    command: "bun run dev",
-    port: 5173,
+    command: "bunx vite preview --port 4173 --strictPort",
+    port: 4173,
     reuseExistingServer: true,
   },
   projects: [
