@@ -229,6 +229,12 @@ bun run screenshots   # Run screenshot tests, saves PNGs to e2e/screenshots/
 bun run e2e           # Run all Playwright tests
 ```
 
+### Speeding up the screenshot loop
+Playwright's `webServer` config has `reuseExistingServer: true`. If you'll
+run `bun run screenshots` more than once, start the dev server in a
+background shell first (`bun run dev &`) — that saves ~10s of cold
+dev-server boot off every subsequent run.
+
 ### Workflow for UI Changes
 1. **Before making changes**: run `bun run screenshots` and review the current state using the Read tool on the PNGs
 2. **After making changes**: run `bun run screenshots` again and review the new PNGs
