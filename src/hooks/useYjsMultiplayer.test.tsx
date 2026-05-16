@@ -4,6 +4,9 @@ import type * as Y from "yjs";
 
 const mocks = vi.hoisted(() => ({
   lastDoc: null as Y.Doc | null,
+  lastIdbName: null as string | null,
+  lastIdbDoc: null as Y.Doc | null,
+  idbDestroyed: false,
 }));
 
 vi.mock("y-webrtc", () => {
@@ -24,6 +27,20 @@ vi.mock("y-webrtc", () => {
     destroy() {}
   }
   return { WebrtcProvider: FakeWebrtcProvider };
+});
+
+vi.mock("y-indexeddb", () => {
+  class FakeIndexeddbPersistence {
+    constructor(name: string, doc: Y.Doc) {
+      mocks.lastIdbName = name;
+      mocks.lastIdbDoc = doc;
+      mocks.idbDestroyed = false;
+    }
+    destroy() {
+      mocks.idbDestroyed = true;
+    }
+  }
+  return { IndexeddbPersistence: FakeIndexeddbPersistence };
 });
 
 const { useYjsMultiplayer } = await import("./useYjsMultiplayer.ts");
@@ -108,6 +125,78 @@ describe("useYjsMultiplayer", () => {
     });
 
     expect(doc.getMap("room").get("difficulty")).toBe("hard");
+  });
+
+  it("persists the Yjs doc to IndexedDB under a per-room namespace", () => {
+    renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-idb",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+
+    expect(mocks.lastIdbName).toBe("dokuel_room-idb");
+    expect(mocks.lastIdbDoc).toBe(mocks.lastDoc);
+  });
+
+  it("destroys the IndexedDB persistence on unmount", () => {
+    const { unmount } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-idb-destroy",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+
+    expect(mocks.idbDestroyed).toBe(false);
+    unmount();
+    expect(mocks.idbDestroyed).toBe(true);
+  });
+
+  it("keeps the same Y.Doc when playerName changes", () => {
+    const { rerender } = renderHook(
+      ({ playerName }: { playerName: string }) =>
+        useYjsMultiplayer({
+          roomId: "room-rename",
+          playerId: "p1",
+          playerName,
+          difficulty: "easy",
+        }),
+      { initialProps: { playerName: "Alice" } },
+    );
+
+    const docBefore = mocks.lastDoc;
+    expect(docBefore).not.toBeNull();
+
+    rerender({ playerName: "Alice Renamed" });
+
+    expect(mocks.lastDoc).toBe(docBefore);
+  });
+
+  it("hasStartedGame latches true once gameNumber goes above zero", () => {
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-latch",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+
+    expect(result.current.hasStartedGame).toBe(false);
+
+    const doc = mocks.lastDoc!;
+    const fakeRoom = { doc, roomId: "room-latch" };
+
+    act(() => {
+      joinRoom(fakeRoom, "p2", "Bob");
+      result.current.sendStartGame();
+    });
+
+    expect(result.current.hasStartedGame).toBe(true);
   });
 
   it("sendRematch uses Yjs difficulty, not the local prop", () => {

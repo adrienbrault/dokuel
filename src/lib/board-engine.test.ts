@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { initState, projectBoard, serializeBoard } from "./board-engine.ts";
+import {
+  initState,
+  projectBoard,
+  reducer,
+  serializeBoard,
+} from "./board-engine.ts";
 import { cellKey } from "./sudoku.ts";
 
 describe("serializeBoard", () => {
@@ -26,6 +31,39 @@ describe("serializeBoard", () => {
     const board = initState({ puzzle }).board;
     const { values } = serializeBoard(board);
     expect(values).toBe(puzzle);
+  });
+});
+
+describe("RESET action", () => {
+  const puzzleA =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+  const puzzleB =
+    "..9748...7........2.1.9.....7...24..64.1.59.8..98...3.....8.3.2........6...1879..";
+
+  it("replaces the board with the new puzzle and clears history and selection", () => {
+    let state = initState({ puzzle: puzzleA });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    expect(state.history.length).toBe(1);
+    expect(state.selectedCell).not.toBeNull();
+
+    const next = reducer(state, {
+      type: "RESET",
+      puzzle: puzzleB,
+      solution: undefined,
+    });
+
+    expect(next.history).toEqual([]);
+    expect(next.selectedCell).toBeNull();
+    expect(next.selectedCells.size).toBe(0);
+    expect(next.status).toBe("playing");
+    // First cell of puzzleB is empty ('.'); first cell of puzzleA was '5'.
+    expect(next.board[0]![0]!.isGiven).toBe(false);
+    expect(next.board[0]![0]!.value).toBeNull();
   });
 });
 

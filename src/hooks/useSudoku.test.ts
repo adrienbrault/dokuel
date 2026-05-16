@@ -25,6 +25,26 @@ const SOLVED =
 // row-peer of R0C0, so it can hold a note that hint placement must clear.
 const TWO_HOLE_PUZZLE = `${SOLVED.slice(0, 0)}.${SOLVED.slice(1, 5)}.${SOLVED.slice(6)}`;
 
+describe("useSudoku reset", () => {
+  it("swaps the puzzle and clears history without remounting the hook", () => {
+    const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE));
+
+    act(() => result.current.selectCell(0, 0));
+    act(() => result.current.placeNumber(5));
+    expect(result.current.historyLength).toBe(1);
+
+    const nextPuzzle = `${SOLVED.slice(0, 9)}.${SOLVED.slice(10)}`;
+    act(() => result.current.reset(nextPuzzle, solvePuzzle(nextPuzzle)));
+
+    expect(result.current.historyLength).toBe(0);
+    expect(result.current.selectedCell).toBeNull();
+    expect(result.current.status).toBe("playing");
+    // (1,0) is the new puzzle's empty cell
+    expect(result.current.board[1]![0]!.isGiven).toBe(false);
+    expect(result.current.board[1]![0]!.value).toBeNull();
+  });
+});
+
 describe("useSudoku", () => {
   it("initializes board from puzzle", () => {
     const { result } = setupHook();

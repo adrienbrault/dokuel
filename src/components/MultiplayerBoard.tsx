@@ -3,9 +3,11 @@ import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
+import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
+import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
 import { solvePuzzle } from "../lib/sudoku.ts";
-import type { AssistLevel } from "../lib/types.ts";
+import type { AssistLevel, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
@@ -17,7 +19,14 @@ import { ToggleSwitch } from "./ToggleSwitch.tsx";
 const EMPTY_CONFLICTS = new Set<number>();
 
 export type MultiplayerBoardProps = {
+  roomId: string;
   puzzle: string;
+  /**
+   * Monotonic counter from the Yjs room; bumps on every new puzzle
+   * (start or rematch). Drives the in-place board reset that replaces
+   * the old `key={puzzle}` remount trick.
+   */
+  gameNumber: number;
   playerId: string;
   difficulty: import("../lib/types.ts").Difficulty;
   assistLevel?: AssistLevel;
@@ -34,7 +43,9 @@ export type MultiplayerBoardProps = {
 };
 
 export function MultiplayerBoard({
+  roomId,
   puzzle,
+  gameNumber,
   playerId,
   difficulty,
   assistLevel = "standard",
@@ -46,8 +57,28 @@ export function MultiplayerBoard({
   onRematch,
   onBack,
 }: MultiplayerBoardProps) {
+  // Scope the autosave key by room + puzzle so a rematch in the same room
+  // gets a fresh slate, and a different room never restores stale data.
+  const gameKey = useMemo(
+    () => `mp_${roomId}_${puzzle.slice(0, 12)}`,
+    [roomId, puzzle],
+  );
+  const saved = useMemo(() => loadGame(gameKey), [gameKey]);
+  const savedBoard = useMemo(
+    () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
+    [saved],
+  );
   const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
-  const game = useSudoku(puzzle, solution);
+  const game = useSudoku(puzzle, solution, savedBoard);
+  // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
+  // Reset the reducer in-place rather than remount the whole subtree:
+  // keeps the timer ref, num-pad position, and any other UI state alive.
+  const prevGameNumberRef = useRef(gameNumber);
+  useEffect(() => {
+    if (gameNumber === prevGameNumberRef.current) return;
+    prevGameNumberRef.current = gameNumber;
+    game.reset(puzzle, solution, savedBoard);
+  }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
@@ -78,6 +109,35 @@ export function MultiplayerBoard({
     if (game.status !== "completed") return;
     onComplete(puzzle);
   }, [game.status, onComplete, puzzle]);
+
+  // Autosave the local board so a transient unmount/remount or page
+  // refresh doesn't wipe in-flight progress. The Yjs doc only carries
+  // the puzzle + opponent progress; the filled cells live here.
+  useEffect(() => {
+    if (game.status === "completed" || gameOver) return;
+    const { values, notes } = serializeBoard(game.board as Cell[][]);
+    saveGame(gameKey, {
+      puzzle,
+      values,
+      notes,
+      timer: 0,
+      difficulty,
+      assistLevel,
+    });
+  }, [
+    game.board,
+    game.status,
+    gameOver,
+    gameKey,
+    puzzle,
+    difficulty,
+    assistLevel,
+  ]);
+
+  // Clear the save once the game ends so the next match starts clean.
+  useEffect(() => {
+    if (gameOver) deleteGame(gameKey);
+  }, [gameOver, gameKey]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {

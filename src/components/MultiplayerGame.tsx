@@ -32,6 +32,40 @@ export function MultiplayerGame({
     return () => clearTimeout(id);
   }, [mp.error]);
 
+  // Once we've started a game and have a puzzle, keep the board mounted
+  // even if mp.roomState or mp.puzzle briefly flicker during Yjs sync —
+  // the local board state (cells, notes, progress) lives in
+  // MultiplayerBoard and would be wiped by an unmount.
+  if (mp.hasStartedGame && mp.puzzle) {
+    return (
+      <>
+        <MultiplayerBoard
+          roomId={roomId}
+          puzzle={mp.puzzle}
+          gameNumber={mp.roomState?.gameNumber ?? 0}
+          playerId={playerId}
+          difficulty={mp.roomState?.difficulty ?? "medium"}
+          assistLevel={mp.roomState?.assistLevel ?? "standard"}
+          opponentProgress={mp.opponentProgress}
+          opponentDisconnected={mp.opponentDisconnected}
+          gameOver={mp.gameOver}
+          onProgress={mp.sendProgress}
+          onComplete={mp.sendComplete}
+          onRematch={mp.sendRematch}
+          onBack={onBack}
+        />
+        {!mp.connected && (
+          <DisconnectOverlay
+            onClaimWin={() => {
+              mp.sendComplete("");
+            }}
+          />
+        )}
+        {toast && <Toast message={toast} />}
+      </>
+    );
+  }
+
   if (!mp.roomState) {
     return (
       <div className="screen">
@@ -57,35 +91,6 @@ export function MultiplayerGame({
         />
         {toast && <Toast message={toast} />}
       </div>
-    );
-  }
-
-  if (mp.puzzle) {
-    return (
-      <>
-        <MultiplayerBoard
-          key={mp.puzzle}
-          puzzle={mp.puzzle}
-          playerId={playerId}
-          difficulty={mp.roomState?.difficulty ?? "medium"}
-          assistLevel={mp.roomState?.assistLevel ?? "standard"}
-          opponentProgress={mp.opponentProgress}
-          opponentDisconnected={mp.opponentDisconnected}
-          gameOver={mp.gameOver}
-          onProgress={mp.sendProgress}
-          onComplete={mp.sendComplete}
-          onRematch={mp.sendRematch}
-          onBack={onBack}
-        />
-        {!mp.connected && (
-          <DisconnectOverlay
-            onClaimWin={() => {
-              mp.sendComplete("");
-            }}
-          />
-        )}
-        {toast && <Toast message={toast} />}
-      </>
     );
   }
 

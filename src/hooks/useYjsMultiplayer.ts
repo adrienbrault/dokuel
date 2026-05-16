@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { IndexeddbPersistence } from "y-indexeddb";
 import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
@@ -54,6 +55,11 @@ export function useYjsMultiplayer({
   const [gameOver, setGameOver] = useState<GameOverInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  // Latched true on first gameNumber > 0 and never cleared. Lets the UI
+  // keep rendering the board even if roomState or puzzle momentarily
+  // flicker (Yjs sync race, transient peer state), instead of bouncing
+  // back to the lobby/connecting screen and unmounting local state.
+  const [hasStartedGame, setHasStartedGame] = useState(false);
 
   const roomRef = useRef<P2PRoom | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
@@ -66,6 +72,10 @@ export function useYjsMultiplayer({
 
   useEffect(() => {
     const doc = new Y.Doc();
+    // Persist the doc locally so a tab refresh, brief disconnect, or
+    // background tab eviction doesn't lose progress. The `dokuel_`
+    // prefix scopes our DBs apart from anything else on the origin.
+    const persistence = new IndexeddbPersistence(`dokuel_${roomId}`, doc);
     const provider = new WebrtcProvider(roomId, doc, {
       signaling: ["wss://signal.dokuel.com"],
     });
@@ -74,7 +84,7 @@ export function useYjsMultiplayer({
     roomRef.current = room;
     providerRef.current = provider;
 
-    joinRoom(room, playerId, playerName);
+    joinRoom(room, playerId, playerNameRef.current);
 
     // The host publishes their chosen difficulty so joiners see it
     // in the lobby before either player clicks Start. Joiners pass null
@@ -95,6 +105,7 @@ export function useYjsMultiplayer({
         setPuzzle(state.puzzle);
         setGameOver(null);
         setOpponentProgress(null);
+        setHasStartedGame(true);
       }
 
       // Detect winner
@@ -116,7 +127,7 @@ export function useYjsMultiplayer({
 
     // Track peer connections via awareness
     const awareness = provider.awareness;
-    announcePresence(awareness, playerId, playerName);
+    announcePresence(awareness, playerId, playerNameRef.current);
 
     const updatePresence = () => {
       const hasOpponent = presenceHasOpponent(
@@ -153,11 +164,16 @@ export function useYjsMultiplayer({
       provider.off("peers", onPeers);
       provider.disconnect();
       provider.destroy();
+      persistence.destroy();
       destroyRoom(room);
       roomRef.current = null;
       providerRef.current = null;
     };
-  }, [roomId, playerId, playerName]);
+    // playerName is intentionally excluded: it's read via playerNameRef
+    // inside the effect, and a rename should not tear down the Y.Doc and
+    // start a fresh signaling+IDB session. updateName below routes
+    // renames through Yjs without remounting.
+  }, [roomId, playerId]);
 
   const sendStartGame = useCallback(() => {
     const room = roomRef.current;
@@ -229,6 +245,7 @@ export function useYjsMultiplayer({
     opponentProgress,
     opponentDisconnected,
     gameOver,
+    hasStartedGame,
     error,
     sendStartGame,
     sendProgress,
