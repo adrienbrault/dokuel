@@ -100,6 +100,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html,
+body {
+  /* Stop iOS Safari from interpreting in-game drag gestures as
+   * pull-to-refresh and reloading the page mid-game. */
+  overscroll-behavior: none;
+}
+
 html {
   touch-action: manipulation;
 }
