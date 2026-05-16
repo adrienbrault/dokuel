@@ -84,7 +84,7 @@ export function useYjsMultiplayer({
     roomRef.current = room;
     providerRef.current = provider;
 
-    joinRoom(room, playerId, playerName);
+    joinRoom(room, playerId, playerNameRef.current);
 
     // The host publishes their chosen difficulty so joiners see it
     // in the lobby before either player clicks Start. Joiners pass null
@@ -127,7 +127,7 @@ export function useYjsMultiplayer({
 
     // Track peer connections via awareness
     const awareness = provider.awareness;
-    announcePresence(awareness, playerId, playerName);
+    announcePresence(awareness, playerId, playerNameRef.current);
 
     const updatePresence = () => {
       const hasOpponent = presenceHasOpponent(
@@ -169,7 +169,11 @@ export function useYjsMultiplayer({
       roomRef.current = null;
       providerRef.current = null;
     };
-  }, [roomId, playerId, playerName]);
+    // playerName is intentionally excluded: it's read via playerNameRef
+    // inside the effect, and a rename should not tear down the Y.Doc and
+    // start a fresh signaling+IDB session. updateName below routes
+    // renames through Yjs without remounting.
+  }, [roomId, playerId]);
 
   const sendStartGame = useCallback(() => {
     const room = roomRef.current;

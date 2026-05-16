@@ -156,6 +156,26 @@ describe("useYjsMultiplayer", () => {
     expect(mocks.idbDestroyed).toBe(true);
   });
 
+  it("keeps the same Y.Doc when playerName changes", () => {
+    const { rerender } = renderHook(
+      ({ playerName }: { playerName: string }) =>
+        useYjsMultiplayer({
+          roomId: "room-rename",
+          playerId: "p1",
+          playerName,
+          difficulty: "easy",
+        }),
+      { initialProps: { playerName: "Alice" } },
+    );
+
+    const docBefore = mocks.lastDoc;
+    expect(docBefore).not.toBeNull();
+
+    rerender({ playerName: "Alice Renamed" });
+
+    expect(mocks.lastDoc).toBe(docBefore);
+  });
+
   it("hasStartedGame latches true once gameNumber goes above zero", () => {
     const { result } = renderHook(() =>
       useYjsMultiplayer({
