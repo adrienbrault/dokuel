@@ -87,6 +87,12 @@ export function SoloGame({
     }
   };
 
+  const handleLongPressNumber = (n: number) => {
+    if (game.selectedCell || game.selectedCells.size > 0) {
+      game.placeNumber(n, assistLevel !== "paper", true);
+    }
+  };
+
   const handleBack = () => {
     if (
       game.status === "playing" &&
@@ -184,6 +190,7 @@ export function SoloGame({
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
           onNumber={handleNumber}
+          onLongPressNumber={handleLongPressNumber}
         />
       }
       board={

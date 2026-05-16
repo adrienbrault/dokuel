@@ -146,6 +146,12 @@ export function MultiplayerBoard({
     }
   };
 
+  const handleLongPressNumber = (n: number) => {
+    if (game.selectedCell || game.selectedCells.size > 0) {
+      game.placeNumber(n, assistLevel !== "paper", true);
+    }
+  };
+
   return (
     <GameLayout
       onBack={onBack}
@@ -182,6 +188,7 @@ export function MultiplayerBoard({
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
           onNumber={handleNumber}
+          onLongPressNumber={handleLongPressNumber}
         />
       }
       board={
