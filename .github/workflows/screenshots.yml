@@ -1,0 +1,67 @@
+name: Update README Screenshots
+
+on:
+  push:
+    branches: [main]
+    # Avoid retriggering on the workflow's own README commit.
+    paths-ignore:
+      - "README.md"
+      - ".github/workflows/screenshots.yml"
+  workflow_dispatch:
+
+# Cancel stale runs when several commits land in quick succession.
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Capture screenshots
+        run: bun run screenshots
+
+      # Force-push the PNG directory to the gh-pages branch as an orphan
+      # commit so that branch always has exactly one commit — no history
+      # growth, no binary blobs in main's pack files. Pages serves them
+      # at https://adrienbrault.github.io/dokuel/.
+      - name: Publish screenshots to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./e2e/screenshots
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: "github-actions[bot]"
+          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          commit_message: "screenshots: ${{ github.sha }}"
+
+      - name: Update README
+        run: bun run scripts/update-readme-screenshots.ts
+
+      - name: Commit README
+        env:
+          GH_ACTOR: "github-actions[bot]"
+        run: |
+          git config user.name "${GH_ACTOR}"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "README screenshot URLs unchanged."
+            exit 0
+          fi
+          git commit -m "chore(docs): refresh README screenshots
+
+Auto-generated from $GITHUB_SHA by .github/workflows/screenshots.yml."
+          git push
