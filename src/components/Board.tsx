@@ -1,5 +1,11 @@
 import type React from "react";
-import { type PointerEvent, useCallback, useRef } from "react";
+import {
+  type PointerEvent,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
@@ -165,89 +171,129 @@ export function Board({
     [onSetSelectedCells],
   );
 
+  // Snap the board to an integer-pixel size so every cell and every gap
+  // renders at exact device pixels. Sub-pixel cell widths cause adjacent
+  // gaps to anti-alias to different widths (some 1px, some 2px); flooring
+  // to an integer cell size makes that impossible.
+  // Total board = 9 cells + 6 thin gaps (1px) + 2 thick gaps (2px) + 2 outer
+  // pads (2px) = 9 * cellPx + 14.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [cellPx, setCellPx] = useState(32);
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      if (w === 0) return;
+      setCellPx(Math.max(20, Math.floor((w - 14) / 9)));
+    };
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const boxPx = cellPx * 3 + 2;
+  const boardPx = cellPx * 9 + 14;
+
   return (
     <div
-      className="grid grid-cols-3 gap-[2px] bg-board-border p-[2px] rounded-lg overflow-hidden w-full max-w-lg aspect-square shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
-      role="region"
-      aria-label="Sudoku board"
-      onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
-      onPointerMove={onSetSelectedCells ? handlePointerMove : undefined}
-      onPointerUp={onSetSelectedCells ? handlePointerUp : undefined}
-      onClickCapture={onSetSelectedCells ? handleClick : undefined}
+      ref={containerRef}
+      className="w-full max-w-lg aspect-square flex items-center justify-center"
     >
-      {Array.from({ length: 9 }, (_, boxIdx) => {
-        const boxRow = Math.floor(boxIdx / 3);
-        const boxCol = boxIdx % 3;
-        return (
-          <div
-            key={boxIdx}
-            className="grid grid-cols-3 gap-px bg-border-default"
-          >
-            {Array.from({ length: 9 }, (_, cellIdx) => {
-              const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
-              const colIdx = boxCol * 3 + (cellIdx % 3);
-              const cell = board[rowIdx]![colIdx]!;
-              const isSelected =
-                selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
-              const isHighlighted =
-                !isPaper &&
-                selectedCell !== null &&
-                (selectedCell.row === rowIdx ||
-                  selectedCell.col === colIdx ||
-                  (Math.floor(selectedCell.row / 3) ===
-                    Math.floor(rowIdx / 3) &&
-                    Math.floor(selectedCell.col / 3) ===
-                      Math.floor(colIdx / 3)));
-              const isSameNumber =
-                !isPaper &&
-                !isSelected &&
-                selectedValue !== null &&
-                cell.value !== null &&
-                cell.value === selectedValue;
-              const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
-              const isMultiSelected =
-                !isSelected &&
-                (selectedCells?.size ?? 0) > 1 &&
-                (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-              const isHintRelated =
-                !isSelected &&
-                (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-              const isSameNumberRowCol =
-                matchRowColSet !== null &&
-                !isSelected &&
-                !isSameNumber &&
-                (matchRowColSet.rows.has(rowIdx) ||
-                  matchRowColSet.cols.has(colIdx) ||
-                  matchRowColSet.boxes.has(
-                    Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
-                  ));
+      <div
+        style={{
+          width: boardPx,
+          height: boardPx,
+          gridTemplateColumns: `repeat(3, ${boxPx}px)`,
+          gridTemplateRows: `repeat(3, ${boxPx}px)`,
+        }}
+        className="grid gap-[2px] bg-board-border p-[2px] rounded-lg overflow-hidden shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        role="region"
+        aria-label="Sudoku board"
+        onPointerDown={onSetSelectedCells ? handlePointerDown : undefined}
+        onPointerMove={onSetSelectedCells ? handlePointerMove : undefined}
+        onPointerUp={onSetSelectedCells ? handlePointerUp : undefined}
+        onClickCapture={onSetSelectedCells ? handleClick : undefined}
+      >
+        {Array.from({ length: 9 }, (_, boxIdx) => {
+          const boxRow = Math.floor(boxIdx / 3);
+          const boxCol = boxIdx % 3;
+          return (
+            <div
+              key={boxIdx}
+              style={{
+                gridTemplateColumns: `repeat(3, ${cellPx}px)`,
+                gridTemplateRows: `repeat(3, ${cellPx}px)`,
+              }}
+              className="grid gap-px bg-border-default"
+            >
+              {Array.from({ length: 9 }, (_, cellIdx) => {
+                const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
+                const colIdx = boxCol * 3 + (cellIdx % 3);
+                const cell = board[rowIdx]![colIdx]!;
+                const isSelected =
+                  selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
+                const isHighlighted =
+                  !isPaper &&
+                  selectedCell !== null &&
+                  (selectedCell.row === rowIdx ||
+                    selectedCell.col === colIdx ||
+                    (Math.floor(selectedCell.row / 3) ===
+                      Math.floor(rowIdx / 3) &&
+                      Math.floor(selectedCell.col / 3) ===
+                        Math.floor(colIdx / 3)));
+                const isSameNumber =
+                  !isPaper &&
+                  !isSelected &&
+                  selectedValue !== null &&
+                  cell.value !== null &&
+                  cell.value === selectedValue;
+                const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
+                const isMultiSelected =
+                  !isSelected &&
+                  (selectedCells?.size ?? 0) > 1 &&
+                  (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+                const isHintRelated =
+                  !isSelected &&
+                  (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+                const isSameNumberRowCol =
+                  matchRowColSet !== null &&
+                  !isSelected &&
+                  !isSameNumber &&
+                  (matchRowColSet.rows.has(rowIdx) ||
+                    matchRowColSet.cols.has(colIdx) ||
+                    matchRowColSet.boxes.has(
+                      Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
+                    ));
 
-              return (
-                <Cell
-                  key={cellKey(rowIdx, colIdx)}
-                  cell={cell}
-                  row={rowIdx}
-                  col={colIdx}
-                  isSelected={isSelected}
-                  isMultiSelected={isMultiSelected}
-                  isHighlighted={isHighlighted && !isSelected}
-                  isSameNumber={isSameNumber}
-                  isConflict={isConflict}
-                  isHintRelated={isHintRelated}
-                  isSameNumberRowCol={isSameNumberRowCol}
-                  assistLevel={assistLevel}
-                  onSelect={onSelectCell}
-                  revealDelay={
-                    animateReveal && cell.isGiven
-                      ? (rowIdx * 9 + colIdx) * 6
-                      : undefined
-                  }
-                />
-              );
-            })}
-          </div>
-        );
-      })}
+                return (
+                  <Cell
+                    key={cellKey(rowIdx, colIdx)}
+                    cell={cell}
+                    row={rowIdx}
+                    col={colIdx}
+                    isSelected={isSelected}
+                    isMultiSelected={isMultiSelected}
+                    isHighlighted={isHighlighted && !isSelected}
+                    isSameNumber={isSameNumber}
+                    isConflict={isConflict}
+                    isHintRelated={isHintRelated}
+                    isSameNumberRowCol={isSameNumberRowCol}
+                    assistLevel={assistLevel}
+                    onSelect={onSelectCell}
+                    revealDelay={
+                      animateReveal && cell.isGiven
+                        ? (rowIdx * 9 + colIdx) * 6
+                        : undefined
+                    }
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
