@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import { generatePuzzle, solvePuzzle } from "./sudoku.ts";
-import type { AssistLevel, Difficulty, Player } from "./types.ts";
+import type { AssistLevel, Difficulty, Player, RoomState } from "./types.ts";
 
 const PLAYER_COLORS = [
   "#3B82F6", // blue
@@ -70,16 +70,18 @@ export function setDifficulty(room: P2PRoom, level: Difficulty): void {
   });
 }
 
-export function startGame(room: P2PRoom, difficulty: Difficulty): void {
-  const puzzle = generatePuzzle(difficulty);
+export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
+  const roomMap = room.doc.getMap("room");
+  const actualDifficulty =
+    difficulty ?? ((roomMap.get("difficulty") as Difficulty) || "medium");
+  const puzzle = generatePuzzle(actualDifficulty);
   const solution = solvePuzzle(puzzle);
   const clueCount = puzzle.split("").filter((c) => c !== ".").length;
 
   room.doc.transact(() => {
-    const roomMap = room.doc.getMap("room");
     roomMap.set("puzzle", puzzle);
     roomMap.set("solution", solution);
-    roomMap.set("difficulty", difficulty);
+    roomMap.set("difficulty", actualDifficulty);
     roomMap.set("status", "playing");
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
@@ -157,12 +159,62 @@ export function claimWinner(
   return true;
 }
 
-export function requestRematch(room: P2PRoom, difficulty: Difficulty): void {
+export function requestRematch(room: P2PRoom, difficulty?: Difficulty): void {
   startGame(room, difficulty);
 }
 
 export function getRoomStatus(room: P2PRoom): string {
   return room.doc.getMap("room").get("status") as string;
+}
+
+export function getHostId(room: P2PRoom): string {
+  return (room.doc.getMap("room").get("hostId") as string) || "";
+}
+
+/**
+ * Snapshot the room into a plain RoomState the React tree can render.
+ * Returns null when there is no joined player yet — callers treat that
+ * as "lobby has not started syncing."
+ */
+export function getRoomState(room: P2PRoom): RoomState | null {
+  const roomMap = room.doc.getMap("room");
+  const status = roomMap.get("status") as string | undefined;
+  if (!status) return null;
+
+  const players = getPlayers(room);
+  if (players.length === 0) return null;
+
+  return {
+    roomId: room.roomId,
+    status: status as RoomState["status"],
+    difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
+    assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
+    hostId: (roomMap.get("hostId") as string) || "",
+    players,
+    puzzle: (roomMap.get("puzzle") as string) || null,
+    winnerId: (roomMap.get("winnerId") as string) || null,
+    winnerName: (roomMap.get("winnerName") as string) || null,
+    gameNumber: (roomMap.get("gameNumber") as number) || 0,
+    events: [],
+  };
+}
+
+/**
+ * Subscribe to any change in the room or players maps. Returns an
+ * unsubscribe function that tears down both observers.
+ */
+export function observeRoomChanges(
+  room: P2PRoom,
+  callback: () => void,
+): () => void {
+  const roomMap = room.doc.getMap("room");
+  const playersMap = room.doc.getMap("players");
+  roomMap.observe(callback);
+  playersMap.observeDeep(callback);
+  return () => {
+    roomMap.unobserve(callback);
+    playersMap.unobserveDeep(callback);
+  };
 }
 
 export function getPlayers(room: P2PRoom): Player[] {

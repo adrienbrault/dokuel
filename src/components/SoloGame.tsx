@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
-import { useSudoku } from "../hooks/useSudoku.ts";
+import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
-import {
-  deleteGame,
-  loadGame,
-  type SavedGame,
-  saveGame,
-} from "../lib/game-storage.ts";
-import { getStatsForDifficulty, saveGameResult } from "../lib/stats.ts";
-import { cellKey, generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
+import { getStatsForDifficulty } from "../lib/stats.ts";
+import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
@@ -22,18 +17,6 @@ import { NumPad } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
-
-function boardToValues(board: { value: number | null }[][]): string {
-  return board
-    .flatMap((row) =>
-      row.map((c) => (c.value === null ? "." : String(c.value))),
-    )
-    .join("");
-}
-
-function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
-  return board.flatMap((row) => row.map((c) => Array.from(c.notes)));
-}
 
 type SoloGameProps = {
   difficulty: Difficulty;
@@ -58,29 +41,27 @@ export function SoloGame({
   onComplete,
   streakInfo,
 }: SoloGameProps) {
-  const saved = useMemo(() => (gameKey ? loadGame(gameKey) : null), [gameKey]);
+  const timerSecondsRef = useRef(0);
 
-  const puzzle = useMemo(() => {
-    if (saved?.puzzle) return saved.puzzle;
-    if (initialPuzzle) return initialPuzzle;
-    return generatePuzzle(difficulty);
-  }, [difficulty, initialPuzzle, saved]);
+  const { game, assistLevel, setAssistLevel, initialTimerSeconds } =
+    useResumableSudoku({
+      gameKey,
+      initialPuzzle,
+      difficulty,
+      initialAssistLevel,
+      getTimerSeconds: () => timerSecondsRef.current,
+      onComplete,
+    });
 
-  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
+  // Seed the ref so saves happening before the first onTick still capture the
+  // resumed timer value rather than zero.
+  if (timerSecondsRef.current === 0 && initialTimerSeconds > 0) {
+    timerSecondsRef.current = initialTimerSeconds;
+  }
 
-  const savedBoard = useMemo(
-    () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
-    [saved],
-  );
-
-  const game = useSudoku(puzzle, solution, savedBoard);
   const { position, setPosition } = useNumPadPosition();
-  const timerSecondsRef = useRef(saved?.timer ?? 0);
-  const [showResult, setShowResult] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const [assistLevel, setAssistLevel] = useState<AssistLevel>(
-    saved?.assistLevel ?? initialAssistLevel,
-  );
+  const revealed = useDelayedFlag(true, 600);
+  const showResult = useDelayedFlag(game.status === "completed", 300);
   const [paused, setPaused] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
@@ -92,34 +73,6 @@ export function SoloGame({
     [difficulty],
   );
   const personalBest = priorStats?.bestTime ?? null;
-
-  // Auto-save on every board change
-  useEffect(() => {
-    if (!gameKey || game.status === "completed") return;
-    const data: SavedGame = {
-      puzzle,
-      values: boardToValues(game.board),
-      notes: boardToNotes(game.board),
-      timer: timerSecondsRef.current,
-      difficulty,
-      assistLevel,
-    };
-    saveGame(gameKey, data);
-  }, [game.board, gameKey, puzzle, difficulty, assistLevel, game.status]);
-
-  useEffect(() => {
-    const id = setTimeout(() => setRevealed(true), 600);
-    return () => clearTimeout(id);
-  }, []);
-
-  useEffect(() => {
-    if (game.status !== "completed") return;
-    if (gameKey) deleteGame(gameKey);
-    saveGameResult(difficulty, timerSecondsRef.current, true, game.hintsUsed);
-    onComplete?.(timerSecondsRef.current);
-    const id = setTimeout(() => setShowResult(true), 300);
-    return () => clearTimeout(id);
-  }, [game.status, difficulty, gameKey, onComplete, game.hintsUsed]);
 
   const handleNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
@@ -192,7 +145,7 @@ export function SoloGame({
         >
           <Timer
             running={game.status === "playing" && !paused && revealed}
-            initialSeconds={saved?.timer}
+            initialSeconds={initialTimerSeconds}
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}

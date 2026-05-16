@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import { haptics } from "../lib/haptics.ts";
-import { sounds } from "../lib/sounds.ts";
+import { gameFeedback } from "../lib/game-feedback.ts";
 import { cellKey, getConflicts, getErrors } from "../lib/sudoku.ts";
 import type { Position } from "../lib/types.ts";
 import { initState, reducer, type SavedBoard } from "./sudokuReducer.ts";
@@ -44,21 +43,19 @@ export function useSudoku(
     return { remainingCounts: counts, cellsRemaining: empty };
   }, [state.board]);
 
-  // Haptic + sound feedback for errors and completion
+  // Sensory feedback for errors and completion
   const errorFeedback = state.solution ? errors : conflicts;
   const prevErrorSize = useRef(errorFeedback.size);
   useEffect(() => {
     if (errorFeedback.size > prevErrorSize.current) {
-      haptics.conflict();
-      sounds.conflict();
+      gameFeedback.onConflict();
     }
     prevErrorSize.current = errorFeedback.size;
   }, [errorFeedback]);
 
   useEffect(() => {
     if (state.status === "completed") {
-      haptics.success();
-      sounds.complete();
+      gameFeedback.onComplete();
     }
   }, [state.status]);
 
@@ -80,28 +77,25 @@ export function useSudoku(
 
   const placeNumber = useCallback(
     (value: number, autoEliminateNotes = true) => {
-      haptics.tap();
-      sounds.place();
+      gameFeedback.onPlace();
       dispatch({ type: "PLACE_NUMBER", value, autoEliminateNotes });
     },
     [],
   );
 
   const erase = useCallback(() => {
-    haptics.tap();
-    sounds.erase();
+    gameFeedback.onErase();
     dispatch({ type: "ERASE" });
   }, []);
   const undo = useCallback(() => dispatch({ type: "UNDO" }), []);
 
   const toggleNotesMode = useCallback(() => {
-    haptics.light();
-    sounds.note();
+    gameFeedback.onToggleNotes();
     dispatch({ type: "TOGGLE_NOTES" });
   }, []);
 
   const hint = useCallback(() => {
-    haptics.tap();
+    gameFeedback.onHint();
     dispatch({ type: "HINT" });
   }, []);
 
