@@ -263,6 +263,21 @@ body {
   animation: cell-reveal 0.15s ease-out both;
 }
 
+/* Bottom-up fill that signals "keep holding to add a note". Duration
+   matches NumPad's LONG_PRESS_MS; if one changes, change the other. */
+@keyframes longpress-fill {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.animate-longpress-fill {
+  animation: longpress-fill 400ms linear forwards;
+  transform-origin: bottom;
+}
+
 @keyframes emoji-bounce {
   0% {
     transform: scale(0.3) rotate(-15deg);

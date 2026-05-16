@@ -200,6 +200,35 @@ test("join game screen", async ({ page }, testInfo) => {
 
 // --- Game states ---
 
+test("solo game - long-press fill on digit", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	// Select an empty cell so the long-press target is meaningful
+	await page.locator('button[aria-label*=", empty"]').first().click();
+
+	// Press and hold a digit; screenshot mid-hold to show the fill overlay.
+	// Animations are disabled in this harness, so the overlay renders at
+	// its final scaleY(1) state — capturing "the visible affordance exists".
+	const digit = page
+		.locator(
+			'[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+		)
+		.first();
+	const box = await digit.boundingBox();
+	if (!box) throw new Error("digit not visible");
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.down();
+
+	await page.screenshot({
+		path: screenshotPath("solo-longpress-fill", testInfo.project.name),
+	});
+
+	await page.mouse.up();
+});
+
 test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();

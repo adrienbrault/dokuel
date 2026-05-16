@@ -1,8 +1,10 @@
-import { type PointerEvent, useCallback, useRef } from "react";
+import { type PointerEvent, useCallback, useRef, useState } from "react";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 
+// Must match the duration of `.animate-longpress-fill` in index.css —
+// the fill animation is the visible cue for this timer.
 const LONG_PRESS_MS = 400;
 
 type NumPadProps = {
@@ -26,6 +28,7 @@ export function NumPad({
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
 
+  const [pressingDigit, setPressingDigit] = useState<number | null>(null);
   const pressRef = useRef<{
     digit: number;
     timer: ReturnType<typeof setTimeout>;
@@ -39,6 +42,7 @@ export function NumPad({
       clearTimeout(pressRef.current.timer);
       pressRef.current = null;
     }
+    setPressingDigit(null);
   }, []);
 
   const handlePointerDown = useCallback(
@@ -50,10 +54,12 @@ export function NumPad({
       const timer = setTimeout(() => {
         firedRef.current = true;
         pressRef.current = null;
+        setPressingDigit(null);
         haptics.tap();
         onLongPressNumber(n);
       }, LONG_PRESS_MS);
       pressRef.current = { digit: n, timer };
+      setPressingDigit(n);
     },
     [onLongPressNumber, cancelPress],
   );
@@ -83,13 +89,14 @@ export function NumPad({
         const remaining = remainingCounts[n];
         const isComplete = remaining === 0;
         const isSelected = selectedValue === n;
+        const isPressing = pressingDigit === n;
 
         return (
           <button
             key={n}
             type="button"
             disabled={(showRemainingCounts || disableCompleted) && isComplete}
-            className={`flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
+            className={`relative overflow-hidden flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
             onPointerDown={onLongPressNumber ? handlePointerDown(n) : undefined}
             onPointerUp={onLongPressNumber ? cancelPress : undefined}
             onPointerLeave={onLongPressNumber ? cancelPress : undefined}
@@ -101,10 +108,17 @@ export function NumPad({
                 : `${n}${isSelected ? ", selected" : ""}`
             }
           >
-            <span className="text-lg leading-none">{n}</span>
+            {isPressing && (
+              <span
+                data-testid="longpress-progress"
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none animate-longpress-fill bg-amber-400/70 dark:bg-amber-300/60"
+              />
+            )}
+            <span className="relative text-lg leading-none">{n}</span>
             {showRemainingCounts && (
               <span
-                className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isSelected ? "text-text-on-accent/70" : "text-text-secondary"}`}
+                className={`relative text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isSelected ? "text-text-on-accent/70" : "text-text-secondary"}`}
               >
                 {remaining}
               </span>
