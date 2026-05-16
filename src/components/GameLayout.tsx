@@ -95,12 +95,18 @@ export function GameLayout({
           className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           <div
-            className={`flex justify-center lg:w-full lg:mx-0 ${
+            style={{
+              width:
+                position === "bottom"
+                  ? "calc(100% + 2rem)"
+                  : "calc(100% + 1rem)",
+            }}
+            className={`flex justify-center lg:!w-full lg:mx-0 ${
               position === "bottom"
-                ? "w-[calc(100%+2rem)] -mx-4"
+                ? "-mx-4"
                 : position === "left"
-                  ? "w-[calc(100%+1rem)] -mr-4"
-                  : "w-[calc(100%+1rem)] -ml-4"
+                  ? "-mr-4"
+                  : "-ml-4"
             }`}
           >
             {board}
