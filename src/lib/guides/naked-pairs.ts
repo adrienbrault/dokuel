@@ -1,5 +1,8 @@
 import { demo } from "./builders.ts";
+import { challenge } from "./challenge-builder.ts";
 import type { Guide } from "./types.ts";
+
+const EMPTY_PUZZLE = ".".repeat(81);
 
 const PUZZLE = [
   "..12.456.",
@@ -61,4 +64,48 @@ export const NAKED_PAIRS: Guide = {
     },
   ],
   demos: [NAKED_PAIR_DEMO],
+  challenges: [
+    challenge("np-c1", "Tap the two cells that form the Naked Pair in row 0.")
+      .puzzle(EMPTY_PUZZLE)
+      .restrict([0, 2], [3, 7])
+      .restrict([0, 5], [3, 7])
+      .selectCells([
+        [0, 2],
+        [0, 5],
+      ])
+      .explain(
+        "Both highlighted cells carry exactly {3, 7} — between them they must take 3 and 7, locking those digits out of every other cell in row 0.",
+      )
+      .build(),
+    challenge(
+      "np-c2",
+      "Tap the two cells that form the Naked Pair in column 3.",
+    )
+      .puzzle(EMPTY_PUZZLE)
+      .restrict([1, 3], [2, 5])
+      .restrict([6, 3], [2, 5])
+      .selectCells([
+        [1, 3],
+        [6, 3],
+      ])
+      .explain(
+        "Both cells in column 3 hold exactly {2, 5}. One must be 2 and the other 5 — neither digit can appear anywhere else in this column.",
+      )
+      .build(),
+    challenge(
+      "np-c3",
+      "Tap the two cells that form the Naked Pair in the center box.",
+    )
+      .puzzle(EMPTY_PUZZLE)
+      .restrict([3, 4], [4, 9])
+      .restrict([5, 4], [4, 9])
+      .selectCells([
+        [3, 4],
+        [5, 4],
+      ])
+      .explain(
+        "Both cells share exactly {4, 9}. Inside the center box, 4 and 9 are locked into these two cells — every other cell in the box can strip both digits from its notes.",
+      )
+      .build(),
+  ],
 };

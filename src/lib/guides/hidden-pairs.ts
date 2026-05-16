@@ -1,4 +1,5 @@
 import { demo } from "./builders.ts";
+import { challenge } from "./challenge-builder.ts";
 import type { Guide } from "./types.ts";
 
 const PUZZLE = ".".repeat(81);
@@ -58,4 +59,67 @@ export const HIDDEN_PAIRS: Guide = {
     },
   ],
   demos: [HIDDEN_PAIR_DEMO],
+  challenges: [
+    challenge(
+      "hp-c1",
+      "Two digits in row 0 can only fit in the same two cells. Tap them.",
+    )
+      .puzzle(PUZZLE)
+      .restrict([0, 0], [1, 4, 5, 8])
+      .restrict([0, 1], [1, 4, 5, 8])
+      .restrict([0, 4], [1, 5])
+      .restrict([0, 8], [1, 5, 9])
+      .selectCells([
+        [0, 0],
+        [0, 1],
+      ])
+      .explain(
+        "Digits 4 and 8 only appear in (0,0) and (0,1) — they're a Hidden Pair. Their other candidates (1 and 5) can be stripped from those two cells.",
+      )
+      .build(),
+    challenge(
+      "hp-c2",
+      "A Hidden Pair lives in column 5. Tap the two cells that hold it.",
+    )
+      .puzzle(PUZZLE)
+      .restrict([0, 5], [3, 8])
+      .restrict([1, 5], [4, 9])
+      .restrict([2, 5], [1, 2, 4, 7])
+      .restrict([3, 5], [6, 8])
+      .restrict([4, 5], [1, 6])
+      .restrict([5, 5], [1, 2, 4, 7])
+      .restrict([6, 5], [3, 8, 9])
+      .restrict([7, 5], [4, 6])
+      .restrict([8, 5], [1, 8, 9])
+      .selectCells([
+        [2, 5],
+        [5, 5],
+      ])
+      .explain(
+        "Walk column 5 by digit: only (2,5) and (5,5) hold 2, and the same two cells are the only spots for 7. {2, 7} is the Hidden Pair — strip 1 and 4 from both cells.",
+      )
+      .build(),
+    challenge(
+      "hp-c3",
+      "A Hidden Pair lives inside the top-right box. Tap the two cells.",
+    )
+      .puzzle(PUZZLE)
+      .restrict([0, 6], [4, 5, 9])
+      .restrict([0, 7], [4, 5, 9])
+      .restrict([0, 8], [2, 5, 6])
+      .restrict([1, 6], [2, 6, 7])
+      .restrict([1, 7], [2, 6, 7])
+      .restrict([1, 8], [2, 5, 6])
+      .restrict([2, 6], [3, 6, 8])
+      .restrict([2, 7], [2, 6])
+      .restrict([2, 8], [3, 5, 8])
+      .selectCells([
+        [0, 6],
+        [0, 7],
+      ])
+      .explain(
+        "Scan box 2 by digit: 4 only appears in (0,6) and (0,7); 9 only appears in the same two cells. Both digits are locked there — strip the 5 from each.",
+      )
+      .build(),
+  ],
 };
