@@ -46,7 +46,13 @@ export type Action =
   | { type: "UNDO" }
   | { type: "HINT" }
   | { type: "DISMISS_HINT" }
-  | { type: "TOGGLE_NOTES" };
+  | { type: "TOGGLE_NOTES" }
+  | {
+      type: "RESET";
+      puzzle: string;
+      solution?: string | undefined;
+      savedBoard?: SavedBoard | undefined;
+    };
 
 export type SavedBoard = {
   values: string;
@@ -400,6 +406,13 @@ function dispatchAction(state: State, action: Action): State {
 
     case "HINT":
       return handleHint(state);
+
+    case "RESET":
+      return initState({
+        puzzle: action.puzzle,
+        solution: action.solution,
+        savedBoard: action.savedBoard,
+      });
 
     default:
       return state;
