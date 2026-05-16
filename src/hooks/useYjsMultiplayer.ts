@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { IndexeddbPersistence } from "y-indexeddb";
 import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
@@ -71,6 +72,10 @@ export function useYjsMultiplayer({
 
   useEffect(() => {
     const doc = new Y.Doc();
+    // Persist the doc locally so a tab refresh, brief disconnect, or
+    // background tab eviction doesn't lose progress. The `dokuel_`
+    // prefix scopes our DBs apart from anything else on the origin.
+    const persistence = new IndexeddbPersistence(`dokuel_${roomId}`, doc);
     const provider = new WebrtcProvider(roomId, doc, {
       signaling: ["wss://signal.dokuel.com"],
     });
@@ -159,6 +164,7 @@ export function useYjsMultiplayer({
       provider.off("peers", onPeers);
       provider.disconnect();
       provider.destroy();
+      persistence.destroy();
       destroyRoom(room);
       roomRef.current = null;
       providerRef.current = null;
