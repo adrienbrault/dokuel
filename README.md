@@ -13,7 +13,7 @@
 </p>
 <!-- hero-screenshots:end -->
 
-> Screenshots are hosted on the `gh-pages` branch and regenerated on every push to `main` by `.github/workflows/screenshots.yml`. To refresh them locally run `bun run screenshots:readme`.
+> Screenshots are deployed to GitHub Pages on every push to `main` by `.github/workflows/screenshots.yml`. To refresh them locally run `bun run screenshots:readme`.
 
 ## Features
 
@@ -151,7 +151,7 @@ Both the frontend and signaling server deploy automatically on push to `main`.
 
 ## Screenshots
 
-Every scene captured across iPhone SE, iPhone 14, iPad Mini, and Desktop viewports. PNGs are served from the `gh-pages` branch via GitHub Pages — they never land in `main`'s history. Click any thumbnail for the full-size image.
+Every scene captured across iPhone SE, iPhone 14, iPad Mini, and Desktop viewports. PNGs are deployed to GitHub Pages by the screenshots workflow and never land in `main`'s history. Click any thumbnail for the full-size image.
 
 <!-- screenshot-matrix:start -->
 <details>
