@@ -386,3 +386,30 @@ test("multiplayer - settings with opponent bar toggle", async ({
 		),
 	});
 });
+
+test("guides list", async ({ page }, testInfo) => {
+	await page.goto("/learn");
+	await page.waitForSelector("text=Strategy Guides");
+	await page.screenshot({
+		path: screenshotPath("guides-list", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - naked singles", async ({ page }, testInfo) => {
+	await page.goto("/learn/naked-singles");
+	await page.waitForSelector("text=Naked Singles");
+	await page.screenshot({
+		path: screenshotPath("guide-naked-singles", testInfo.project.name),
+		fullPage: true,
+	});
+});
+
+test("guide detail - x-wing", async ({ page }, testInfo) => {
+	await page.goto("/learn/x-wing");
+	await page.waitForSelector("text=X-Wing");
+	await page.screenshot({
+		path: screenshotPath("guide-x-wing", testInfo.project.name),
+		fullPage: true,
+	});
+});
