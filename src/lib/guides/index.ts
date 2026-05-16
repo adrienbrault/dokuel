@@ -7,6 +7,7 @@ import { SCANNING } from "./scanning.ts";
 import { SWORDFISH } from "./swordfish.ts";
 import type { Guide } from "./types.ts";
 import { X_WING } from "./x-wing.ts";
+import { Y_WING } from "./y-wing.ts";
 
 export const GUIDES: Guide[] = [
   SCANNING,
@@ -17,6 +18,7 @@ export const GUIDES: Guide[] = [
   POINTING_PAIRS,
   X_WING,
   SWORDFISH,
+  Y_WING,
 ];
 
 export function findGuide(id: string): Guide | null {
