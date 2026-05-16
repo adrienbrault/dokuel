@@ -84,8 +84,8 @@ export function GameLayout({
         className={`
           flex gap-3 w-full justify-center flex-1
           lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
-          ${position === "left" ? "flex-row items-center max-w-lg mx-auto lg:max-w-4xl" : ""}
-          ${position === "right" ? "flex-row-reverse items-center max-w-lg mx-auto lg:max-w-4xl lg:flex-row" : ""}
+          ${position === "left" ? "flex-row items-center lg:max-w-4xl lg:mx-auto" : ""}
+          ${position === "right" ? "flex-row-reverse items-center lg:max-w-4xl lg:mx-auto lg:flex-row" : ""}
           ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-start" : ""}
         `}
       >
@@ -94,7 +94,23 @@ export function GameLayout({
         <div
           className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
-          {board}
+          <div
+            style={{
+              width:
+                position === "bottom"
+                  ? "calc(100% + 2rem)"
+                  : "calc(100% + 1rem)",
+            }}
+            className={`flex justify-center lg:!w-full lg:mx-0 ${
+              position === "bottom"
+                ? "-mx-4"
+                : position === "left"
+                  ? "-mr-4"
+                  : "-ml-4"
+            }`}
+          >
+            {board}
+          </div>
           <div className="flex flex-col items-center gap-3 w-full">
             {controls}
             {/* Mobile: show numpad at bottom if position=bottom */}
