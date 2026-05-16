@@ -115,16 +115,26 @@ function url(file: string): string {
 }
 
 function renderHero(shots: Shot[]): string {
+	// Use a <table> for the hero strip: GitHub's markdown parser otherwise
+	// often splits each <img> onto its own paragraph, stacking them
+	// vertically. Cells in a single <tr> are guaranteed side-by-side.
 	const present = new Set(shots.map((s) => `${s.scene}--${s.device}`));
-	const lines: string[] = ['<p align="center">'];
+	const cells: string[] = [];
 	for (const { scene, device, alt } of HERO_SCENES) {
 		const key = `${scene}--${device}`;
 		if (!present.has(key)) continue;
 		const file = `${scene}--${device}.png`;
-		lines.push(`  <img src="${url(file)}" alt="${alt}" width="240" />`);
+		cells.push(
+			`    <td align="center" valign="top"><img src="${url(file)}" alt="${alt}" width="180" /></td>`,
+		);
 	}
-	lines.push("</p>");
-	return lines.join("\n");
+	return [
+		'<table align="center">',
+		"  <tr>",
+		...cells,
+		"  </tr>",
+		"</table>",
+	].join("\n");
 }
 
 function renderMatrix(shots: Shot[]): string {

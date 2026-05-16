@@ -5,12 +5,14 @@
 **[Play now at dokuel.com](https://dokuel.com)**
 
 <!-- hero-screenshots:start -->
-<p align="center">
-  <img src="https://adrienbrault.github.io/dokuel/landing--Desktop.png" alt="Landing page" width="240" />
-  <img src="https://adrienbrault.github.io/dokuel/solo-game--iPhone-14.png" alt="Solo game" width="240" />
-  <img src="https://adrienbrault.github.io/dokuel/multiplayer-progress-bars-dark--Desktop.png" alt="Multiplayer with live opponent progress (dark mode)" width="240" />
-  <img src="https://adrienbrault.github.io/dokuel/solo-game-dark--iPhone-14.png" alt="Solo game in dark mode" width="240" />
-</p>
+<table align="center">
+  <tr>
+    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/landing--Desktop.png" alt="Landing page" width="180" /></td>
+    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/solo-game--iPhone-14.png" alt="Solo game" width="180" /></td>
+    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/multiplayer-progress-bars-dark--Desktop.png" alt="Multiplayer with live opponent progress (dark mode)" width="180" /></td>
+    <td align="center" valign="top"><img src="https://adrienbrault.github.io/dokuel/solo-game-dark--iPhone-14.png" alt="Solo game in dark mode" width="180" /></td>
+  </tr>
+</table>
 <!-- hero-screenshots:end -->
 
 > Screenshots are deployed to GitHub Pages on every push to `main` by `.github/workflows/screenshots.yml`. To refresh them locally run `bun run screenshots:readme`.
