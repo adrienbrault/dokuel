@@ -233,13 +233,13 @@ bun run e2e                 # Run all Playwright tests
 ### README automation
 `.github/workflows/screenshots.yml` runs on every push to `main`:
 1. Captures PNGs into the gitignored `e2e/screenshots/`.
-2. Force-publishes that directory to the `gh-pages` branch (orphan, single-commit history).
+2. Deploys that directory to GitHub Pages via the official `actions/upload-pages-artifact` + `actions/deploy-pages` actions — no branch involved.
 3. Regenerates the README screenshot sections from the captured PNGs, emitting absolute `https://adrienbrault.github.io/dokuel/...` URLs.
 4. Commits the README diff back to `main`.
 
 The README has `<!-- hero-screenshots:start/end -->` and `<!-- screenshot-matrix:start/end -->` markers — leave them in place; only the generator writes between them. The PNGs themselves never appear in any commit on `main`, keeping clones lean and PR diffs clean.
 
-**One-time setup**: in repo settings, enable GitHub Pages → source: `gh-pages` branch, `/ (root)`.
+**One-time setup**: in repo settings, set GitHub Pages source to "GitHub Actions".
 
 ### Speeding up the screenshot loop
 Playwright's `webServer` config has `reuseExistingServer: true`. If you'll
