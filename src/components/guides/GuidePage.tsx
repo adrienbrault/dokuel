@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useGuideProgress } from "../../hooks/useGuideProgress.ts";
 import type { Guide } from "../../lib/guides/types.ts";
+import { ChallengePanel } from "./ChallengePanel.tsx";
 import { TechniqueDemo } from "./TechniqueDemo.tsx";
 
 type GuidePageProps = {
@@ -41,6 +42,9 @@ export function GuidePage({ guide, onBack }: GuidePageProps) {
       {guide.demos.map((demo) => (
         <TechniqueDemo key={demo.id} demo={demo} />
       ))}
+      {guide.challenges && guide.challenges.length > 0 && (
+        <ChallengePanel challenges={guide.challenges} />
+      )}
     </div>
   );
 }
