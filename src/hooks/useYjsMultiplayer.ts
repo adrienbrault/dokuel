@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
+import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import {
+  announcePresence,
   claimWinner,
   createRoomFromDoc,
   destroyRoom,
@@ -12,14 +14,14 @@ import {
   joinRoom,
   observeRoomChanges,
   type P2PRoom,
+  presenceHasOpponent,
   requestRematch,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
   startGame,
   updatePlayerName,
   updateProgress,
-} from "../lib/p2p-room.ts";
-import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+} from "./p2p-room.ts";
 
 type UseYjsMultiplayerOptions = {
   roomId: string;
@@ -114,24 +116,15 @@ export function useYjsMultiplayer({
 
     // Track peer connections via awareness
     const awareness = provider.awareness;
-    awareness.setLocalStateField("user", {
-      id: playerId,
-      name: playerName,
-    });
+    announcePresence(awareness, playerId, playerName);
 
     const updatePresence = () => {
-      const states = awareness.getStates();
-      let hasOpponent = false;
-      for (const [clientId, state] of states) {
-        if (
-          clientId !== doc.clientID &&
-          state.user &&
-          state.user.id !== playerId
-        ) {
-          hasOpponent = true;
-          break;
-        }
-      }
+      const hasOpponent = presenceHasOpponent(
+        awareness,
+        doc.clientID,
+        playerId,
+        getPlayers(room).length,
+      );
       setOpponentDisconnected(!hasOpponent && getPlayers(room).length > 1);
     };
 
@@ -211,10 +204,7 @@ export function useYjsMultiplayer({
       // Update awareness too
       const provider = providerRef.current;
       if (provider) {
-        provider.awareness.setLocalStateField("user", {
-          id: playerId,
-          name: newName,
-        });
+        announcePresence(provider.awareness, playerId, newName);
       }
     },
     [playerId],

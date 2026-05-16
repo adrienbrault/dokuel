@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { serializeBoard } from "../lib/board-engine.ts";
 import {
   completeGame,
   type GameCompletionResult,
@@ -26,18 +27,6 @@ type UseResumableSudokuOptions = {
     | ((timeSeconds: number, result: GameCompletionResult) => void)
     | undefined;
 };
-
-function boardToValues(board: { value: number | null }[][]): string {
-  return board
-    .flatMap((row) =>
-      row.map((c) => (c.value === null ? "." : String(c.value))),
-    )
-    .join("");
-}
-
-function boardToNotes(board: { notes: Set<number> }[][]): number[][] {
-  return board.flatMap((row) => row.map((c) => Array.from(c.notes)));
-}
 
 /**
  * A Sudoku game that persists its in-progress state to localStorage,
@@ -81,10 +70,11 @@ export function useResumableSudoku({
   // Auto-save on every board / assist-level change while playing
   useEffect(() => {
     if (!gameKey || game.status === "completed") return;
+    const { values, notes } = serializeBoard(game.board as Cell[][]);
     const data: SavedGame = {
       puzzle,
-      values: boardToValues(game.board as Cell[][]),
-      notes: boardToNotes(game.board as Cell[][]),
+      values,
+      notes,
       timer: getTimerSeconds(),
       difficulty,
       assistLevel,

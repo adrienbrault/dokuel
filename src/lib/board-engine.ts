@@ -2,6 +2,7 @@ import { findHint } from "./hint-engine.ts";
 import {
   cellKey,
   getConflicts,
+  getErrors,
   isBoardComplete,
   parsePuzzle,
 } from "./sudoku.ts";
@@ -413,6 +414,59 @@ export function reducer(state: State, action: Action): State {
   if (action.type === "HINT" || action.type === "TOGGLE_NOTES") return next;
   if (next.activeHint === null) return next;
   return { ...next, activeHint: null };
+}
+
+export type BoardProjection = {
+  /** Cell keys (row*9+col) that participate in a row/col/box conflict. */
+  conflicts: Set<number>;
+  /** Cell keys whose user-entered value differs from the solution. Empty when no solution is supplied. */
+  errors: Set<number>;
+  /** How many times each digit 1–9 still needs to be placed. */
+  remainingCounts: Record<number, number>;
+  /** Empty cell count (0–81). */
+  cellsRemaining: number;
+};
+
+/**
+ * The single Board → read-only view function. Both React (useSudoku)
+ * and non-React callers (multiplayer progress reporting, future
+ * analytics) project a Board through this one seam so the derivation
+ * rules can't drift.
+ */
+export function projectBoard(
+  board: Board,
+  solution?: string | null,
+): BoardProjection {
+  const conflicts = getConflicts(board);
+  const errors = solution ? getErrors(board, solution) : new Set<number>();
+  const remainingCounts: Record<number, number> = {};
+  for (let d = 1; d <= 9; d++) remainingCounts[d] = 9;
+  let cellsRemaining = 0;
+  for (const row of board) {
+    for (const cell of row) {
+      if (cell.value !== null && cell.value >= 1 && cell.value <= 9) {
+        remainingCounts[cell.value]!--;
+      } else {
+        cellsRemaining++;
+      }
+    }
+  }
+  return { conflicts, errors, remainingCounts, cellsRemaining };
+}
+
+/**
+ * Inverse of the `savedBoard` half of {@link initState}: project a live
+ * Board back into the `SavedBoard` schema used by autosave. Pairing the
+ * two keeps the `Board ↔ SavedBoard` round-trip owned by one module.
+ */
+export function serializeBoard(board: Board): SavedBoard {
+  const values = board
+    .flatMap((row) =>
+      row.map((c) => (c.value === null ? "." : String(c.value))),
+    )
+    .join("");
+  const notes = board.flatMap((row) => row.map((c) => Array.from(c.notes)));
+  return { values, notes };
 }
 
 export function initState(args: {

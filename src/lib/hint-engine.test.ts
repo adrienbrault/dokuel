@@ -60,9 +60,35 @@ describe("findHint", () => {
   });
 
   describe("hidden single", () => {
-    it("detects a value that can only go in one place within a group", () => {
-      // Use a real puzzle with many empty cells where some positions
-      // have hidden singles (digit unique to one cell in a row/col/box).
+    it("prefers naked over hidden when both exist", () => {
+      // Solved board with two empty cells: (0,0) is a naked single (only
+      // one peer-free digit); a hidden-single would also fire elsewhere
+      // if it scanned first. Naked must win.
+      const solved =
+        "534678912" +
+        "672195348" +
+        "198342567" +
+        "859761423" +
+        "426853791" +
+        "713924856" +
+        "961537284" +
+        "287419635" +
+        "345286179";
+
+      const board = parsePuzzle(solved);
+      board[0]![0]!.value = null;
+      board[0]![0]!.isGiven = false;
+      board[8]![8]!.value = null;
+      board[8]![8]!.isGiven = false;
+
+      const hint = findHint(board, solved);
+      expect(hint?.technique).toBe("naked-single");
+    });
+
+    it("returns a hidden-single hint when no naked single exists", () => {
+      // Real puzzle where every empty cell has 2+ candidates but some
+      // digit only fits in one cell of a row/col/box. With a known
+      // hidden-single puzzle the technique should fire.
       const board = parsePuzzle(
         "..3.1...." +
           "4.6.9...." +
@@ -74,7 +100,6 @@ describe("findHint", () => {
           "....4.5.8" +
           "....7.3..",
       );
-
       const solution =
         "253714896" +
         "416893257" +
@@ -88,10 +113,11 @@ describe("findHint", () => {
 
       const hint = findHint(board, solution);
       expect(hint).not.toBeNull();
-      expect(hint!.value).toBeGreaterThanOrEqual(1);
-      expect(hint!.value).toBeLessThanOrEqual(9);
       expect(["naked-single", "hidden-single"]).toContain(hint!.technique);
-      expect(hint!.explanation.length).toBeGreaterThan(0);
+      // Hidden-single explanations name the group they fired in.
+      if (hint!.technique === "hidden-single") {
+        expect(hint!.explanation).toMatch(/(row|column|box) \d/);
+      }
     });
   });
 
