@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./e2e",
   outputDir: "./e2e/results",
   snapshotPathTemplate: "{testDir}/screenshots/{arg}{ext}",
+  globalSetup: "./e2e/check-build-fresh.ts",
   fullyParallel: true,
   workers: 4,
   timeout: 8_000,
