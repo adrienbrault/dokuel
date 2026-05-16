@@ -220,14 +220,26 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ### Setup
 - Playwright config: `playwright.config.ts`
 - Screenshot tests: `e2e/screenshots.spec.ts`
-- Output directory: `e2e/screenshots/` (gitignored)
+- Output directory: `e2e/screenshots/` (gitignored — PNGs never land in `main`)
 - Devices tested: iPhone SE, iPhone 14, iPad Mini, Desktop (1280x800)
 
 ### Commands
 ```bash
-bun run screenshots   # Run screenshot tests, saves PNGs to e2e/screenshots/
-bun run e2e           # Run all Playwright tests
+bun run screenshots         # Run screenshot tests, saves PNGs to e2e/screenshots/
+bun run screenshots:readme  # Re-capture + rewrite README screenshot sections
+bun run e2e                 # Run all Playwright tests
 ```
+
+### README automation
+`.github/workflows/screenshots.yml` runs on every push to `main`:
+1. Captures PNGs into the gitignored `e2e/screenshots/`.
+2. Force-publishes that directory to the `gh-pages` branch (orphan, single-commit history).
+3. Regenerates the README screenshot sections from the captured PNGs, emitting absolute `https://adrienbrault.github.io/dokuel/...` URLs.
+4. Commits the README diff back to `main`.
+
+The README has `<!-- hero-screenshots:start/end -->` and `<!-- screenshot-matrix:start/end -->` markers — leave them in place; only the generator writes between them. The PNGs themselves never appear in any commit on `main`, keeping clones lean and PR diffs clean.
+
+**One-time setup**: in repo settings, enable GitHub Pages → source: `gh-pages` branch, `/ (root)`.
 
 ### Speeding up the screenshot loop
 Playwright's `webServer` config has `reuseExistingServer: true`. If you'll

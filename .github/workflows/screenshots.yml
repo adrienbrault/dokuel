@@ -1,0 +1,65 @@
+name: Update README Screenshots
+
+on:
+  push:
+    branches: [main]
+    # Avoid retriggering on the workflow's own README commit.
+    paths-ignore:
+      - "README.md"
+      - ".github/workflows/screenshots.yml"
+  workflow_dispatch:
+
+# Cancel stale runs when several commits land in quick succession.
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Bot identity used by every git commit in this job. Git reads
+    # these env vars natively, so no per-step `git config` is needed.
+    # The 41898282 prefix is the numeric user-id of github-actions[bot];
+    # using it makes commits render with the bot's avatar.
+    env:
+      GIT_AUTHOR_NAME: github-actions[bot]
+      GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      GIT_COMMITTER_NAME: github-actions[bot]
+      GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run screenshots
+
+      # Replace the gh-pages branch with a fresh single-commit orphan
+      # history containing just the captured PNGs — no history growth,
+      # no third-party action.
+      - name: Publish screenshots to gh-pages
+        env:
+          REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        run: |
+          PUBLISH=$(mktemp -d)
+          cp e2e/screenshots/*.png "$PUBLISH/"
+          cd "$PUBLISH"
+          git init -q -b gh-pages
+          git add -A
+          git commit -q -m "screenshots: $GITHUB_SHA"
+          git push -q --force "$REMOTE" gh-pages
+
+      - name: Update README
+        run: bun run scripts/update-readme-screenshots.ts
+
+      - name: Commit README
+        run: |
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "README screenshot URLs unchanged."
+            exit 0
+          fi
+          git commit -q -m "chore(docs): refresh README screenshots from $GITHUB_SHA"
+          git push
