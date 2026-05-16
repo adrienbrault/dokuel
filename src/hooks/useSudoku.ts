@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { initState, reducer, type SavedBoard } from "../lib/board-engine.ts";
 import { gameFeedback } from "../lib/game-feedback.ts";
 import { cellKey, getConflicts, getErrors } from "../lib/sudoku.ts";
 import type { Position } from "../lib/types.ts";
-import { initState, reducer, type SavedBoard } from "./sudokuReducer.ts";
 
-export type { SavedBoard } from "./sudokuReducer.ts";
+export type { SavedBoard } from "../lib/board-engine.ts";
 
 export function useSudoku(
   puzzle: string,

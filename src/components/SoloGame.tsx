@@ -4,6 +4,7 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
+import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
@@ -24,9 +25,13 @@ type SoloGameProps = {
   assistLevel?: AssistLevel | undefined;
   initialPuzzle?: string | undefined;
   title?: string | undefined;
+  /** ISO date for daily challenges; drives streak via completeGame. */
+  dailyDate?: string | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
-  onComplete?: ((time: number) => void) | undefined;
+  onComplete?:
+    | ((time: number, result: GameCompletionResult) => void)
+    | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
 };
 
@@ -36,6 +41,7 @@ export function SoloGame({
   assistLevel: initialAssistLevel = "standard",
   initialPuzzle,
   title,
+  dailyDate,
   onBack,
   onRematch,
   onComplete,
@@ -50,6 +56,7 @@ export function SoloGame({
       difficulty,
       initialAssistLevel,
       getTimerSeconds: () => timerSecondsRef.current,
+      dailyDate,
       onComplete,
     });
 
