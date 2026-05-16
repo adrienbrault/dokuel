@@ -34,13 +34,19 @@ describe("demo() builder", () => {
     expect(result.initialCandidates.get(cellKey(0, 0))).toEqual(
       new Set([4, 7]),
     );
-    // Untouched cells still get the auto-computed full candidate set.
-    expect(result.initialCandidates.get(cellKey(0, 1))?.size).toBe(9);
+    // Untouched empty cells with full {1..9} auto-candidates are filtered out
+    // of initialCandidates (noise threshold).
+    expect(result.initialCandidates.has(cellKey(0, 1))).toBe(false);
   });
 
   it("place records the placement this step and strips the value from peers next step", () => {
     const result = demo("x", "Example")
       .puzzle(EMPTY_PUZZLE)
+      // Explicit restricts on the placed cell and one peer so the placement
+      // and elimination effects are observable (peers with auto size 9 are
+      // filtered out of initialCandidates by the noise threshold).
+      .restrict([0, 0], [5])
+      .restrict([0, 1], [5, 6, 7])
       .step("Place 5 at (0,0).")
       .place(0, 0, 5)
       .step("Next.")
@@ -54,7 +60,7 @@ describe("demo() builder", () => {
     expect(result.steps[0]!.placements?.get(cellKey(0, 0))).toBe(5);
     // Step 1 still has the placement (cumulative across steps).
     expect(result.steps[1]!.placements?.get(cellKey(0, 0))).toBe(5);
-    // Step 1's candidates for a peer cell (0,1) no longer include 5.
+    // Step 1's candidates for the restricted peer cell (0,1) no longer include 5.
     const peerCandidates =
       result.steps[1]!.candidates?.get(cellKey(0, 1)) ??
       result.initialCandidates.get(cellKey(0, 1));
@@ -64,6 +70,9 @@ describe("demo() builder", () => {
   it("eliminate paints an eliminate overlay this step and removes the digit from later steps", () => {
     const result = demo("x", "Example")
       .puzzle(EMPTY_PUZZLE)
+      // Explicit restrict so the target cell has visible candidates that the
+      // eliminate step can act on (auto size 9 would be filtered out).
+      .restrict([0, 3], [1, 4, 7])
       .step("Eliminate 4 from (0,3).")
       .eliminate([[0, 3]], [4])
       .step("Next.")
@@ -74,17 +83,16 @@ describe("demo() builder", () => {
       { kind: "eliminate", digits: [4] },
     ]);
     // Step 0's candidates for (0,3) still include 4 — the user sees the digit
-    // being struck out this step. (No override means inherit from initial,
-    // which on an empty puzzle is 1..9.)
+    // being struck out this step.
     const step0Candidates =
       result.steps[0]!.candidates?.get(cellKey(0, 3)) ??
       result.initialCandidates.get(cellKey(0, 3));
-    expect(step0Candidates).toEqual(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+    expect(step0Candidates).toEqual(new Set([1, 4, 7]));
     // Step 1 reflects the elimination — 4 is gone.
     const step1Candidates =
       result.steps[1]!.candidates?.get(cellKey(0, 3)) ??
       result.initialCandidates.get(cellKey(0, 3));
-    expect(step1Candidates).toEqual(new Set([1, 2, 3, 5, 6, 7, 8, 9]));
+    expect(step1Candidates).toEqual(new Set([1, 7]));
   });
 
   it("highlightRow / highlightCol / highlightBox add unit overlays to every cell in the unit", () => {

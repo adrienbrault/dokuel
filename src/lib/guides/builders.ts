@@ -125,13 +125,15 @@ class DemoBuilder {
     this._finalizeStep();
     const board = parsePuzzle(this._puzzle);
     const initialCandidates = new Map<number, Set<number>>();
+    // Only auto-include cells with constrained candidate sets — anything
+    // ≥5 candidates is noise that clutters the demo board.
     for (let row = 0; row < 9; row++) {
       for (let col = 0; col < 9; col++) {
         if (board[row]![col]!.value === null) {
-          initialCandidates.set(
-            cellKey(row, col),
-            candidatesAt(board, row, col),
-          );
+          const auto = candidatesAt(board, row, col);
+          if (auto.size <= AUTO_NOTES_THRESHOLD) {
+            initialCandidates.set(cellKey(row, col), auto);
+          }
         }
       }
     }
@@ -172,10 +174,10 @@ class DemoBuilder {
     for (let row = 0; row < 9; row++) {
       for (let col = 0; col < 9; col++) {
         if (board[row]![col]!.value === null) {
-          this._runningCandidates.set(
-            cellKey(row, col),
-            candidatesAt(board, row, col),
-          );
+          const auto = candidatesAt(board, row, col);
+          if (auto.size <= AUTO_NOTES_THRESHOLD) {
+            this._runningCandidates.set(cellKey(row, col), auto);
+          }
         }
       }
     }
@@ -220,3 +222,5 @@ class DemoBuilder {
 export function demo(id: string, title: string): DemoBuilder {
   return new DemoBuilder(id, title);
 }
+
+const AUTO_NOTES_THRESHOLD = 4;

@@ -10,6 +10,9 @@ function toPos(coord: CellCoord): Position {
 class ChallengeBuilder {
   private _puzzle: string = ".".repeat(81);
   private _restricts = new Map<number, Set<number>>();
+  /** Tracks which digits have been locked into each unit so subsequent
+   *  lockDigit calls produce noise that doesn't collide with prior locks. */
+  private _lockedPerUnit = new Map<string, Set<number>>();
   private _question: ChallengeQuestion | null = null;
   private _explanation = "";
   private readonly _id: string;
@@ -48,6 +51,11 @@ class ChallengeBuilder {
     digit: number;
     present: CellCoord[];
   }): this {
+    const unitKey = `${opts.unit.kind}-${opts.unit.index}`;
+    const lockedDigits = this._lockedPerUnit.get(unitKey) ?? new Set<number>();
+    lockedDigits.add(opts.digit);
+    this._lockedPerUnit.set(unitKey, lockedDigits);
+
     const presentKeys = new Set(
       opts.present.map((c) => {
         const p = toPos(c);
@@ -61,19 +69,20 @@ class ChallengeBuilder {
       if (board[row]![col]!.value !== null) continue;
       const key = cellKey(row, col);
       const isPresent = presentKeys.has(key);
-      const existing = this._restricts.get(key);
+      // Always regenerate noise that excludes every digit ever locked
+      // into this unit, so successive lockDigit calls produce clean,
+      // collision-free candidate sets.
+      const noise = pickNoiseExcluding([...lockedDigits], i, 2);
       if (isPresent) {
-        const noise = pickNoise(opts.digit, i, 2);
+        const existing = this._restricts.get(key);
         const next = existing
           ? new Set([...existing, opts.digit])
           : new Set([opts.digit, ...noise]);
         this._restricts.set(key, next);
       } else {
-        const noise = pickNoise(opts.digit, i, 2);
-        const next = existing
-          ? new Set([...existing].filter((d) => d !== opts.digit))
-          : new Set(noise);
-        this._restricts.set(key, next);
+        // Non-target cells: replace with fresh noise so we don't carry
+        // forward a locked digit from a prior call.
+        this._restricts.set(key, new Set(noise));
       }
     }
     return this;
@@ -111,13 +120,17 @@ class ChallengeBuilder {
     }
     const board = parsePuzzle(this._puzzle);
     const initialCandidates = new Map<number, Set<number>>();
+    // Only auto-include cells whose natural candidates are constrained
+    // enough to be visually useful. Cells with 5+ candidates from auto
+    // alone are noise and stay blank unless the author explicitly
+    // restricts them.
     for (let row = 0; row < 9; row++) {
       for (let col = 0; col < 9; col++) {
         if (board[row]![col]!.value === null) {
-          initialCandidates.set(
-            cellKey(row, col),
-            candidatesAt(board, row, col),
-          );
+          const auto = candidatesAt(board, row, col);
+          if (auto.size <= AUTO_NOTES_THRESHOLD) {
+            initialCandidates.set(cellKey(row, col), auto);
+          }
         }
       }
     }
@@ -135,19 +148,34 @@ class ChallengeBuilder {
   }
 }
 
+const AUTO_NOTES_THRESHOLD = 4;
+
 export function challenge(id: string, prompt: string): ChallengeBuilder {
   return new ChallengeBuilder(id, prompt);
 }
 
 const NOISE_POOL = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-function pickNoise(exclude: number, seed: number, count: number): number[] {
-  const pool = NOISE_POOL.filter((d) => d !== exclude);
+/**
+ * Pick noise digits avoiding `exclude`. Uses a small 3-digit palette
+ * cycled across cells so every noise digit appears in multiple cells
+ * within the same unit — keeps the noise from accidentally becoming a
+ * "hidden" digit that only shows up in target cells.
+ */
+function pickNoiseExcluding(
+  exclude: number[],
+  seed: number,
+  count: number,
+): number[] {
+  const excludeSet = new Set(exclude);
+  const pool = NOISE_POOL.filter((d) => !excludeSet.has(d));
+  const palette = pool.slice(0, Math.min(3, pool.length));
+  if (palette.length === 0) return [];
+  const startIdx = seed % palette.length;
   const result: number[] = [];
   for (let i = 0; i < count; i++) {
-    result.push(pool[(seed * 2 + i) % pool.length]!);
+    result.push(palette[(startIdx + i) % palette.length]!);
   }
-  // De-dup in case count > pool length (shouldn't happen here).
   return [...new Set(result)];
 }
 
