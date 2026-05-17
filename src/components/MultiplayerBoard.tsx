@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useDigitDrag } from "../hooks/useDigitDrag.ts";
+import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
-import { gameFeedback } from "../lib/game-feedback.ts";
 import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
 import { solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
@@ -172,24 +171,10 @@ export function MultiplayerBoard({
   };
 
   // Digit drag-and-drop: drop commits the value, mirroring solo play.
-  const isDroppable = (row: number, col: number) => {
-    const cell = game.board[row]?.[col];
-    if (!cell) return false;
-    return !cell.isGiven && cell.value === null;
-  };
-  const handleDigitDrop = (
-    digit: number,
-    _source: { kind: "numpad" } | { kind: "cell"; row: number; col: number },
-    target: { row: number; col: number },
-  ) => {
-    if (gameOver || game.status !== "playing") return;
-    gameFeedback.onPlace();
-    game.selectCell(target.row, target.col);
-    game.placeNumber(digit, assistLevel !== "paper", false);
-  };
-  const { state: dragState, start: startDrag } = useDigitDrag({
-    onDrop: handleDigitDrop,
-    isDroppable,
+  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
+    game,
+    disabled: !!gameOver || game.status !== "playing",
+    autoEliminateNotes: assistLevel !== "paper",
   });
 
   return (
@@ -230,16 +215,7 @@ export function MultiplayerBoard({
           onNumber={handleTapNote}
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
-          onStartDrag={({ digit, x, y, pointerId }) => {
-            if (gameOver || game.status !== "playing") return;
-            startDrag({
-              digit,
-              source: { kind: "numpad" },
-              x,
-              y,
-              pointerId,
-            });
-          }}
+          onStartDrag={startNumpadDrag}
         />
       }
       board={
@@ -255,16 +231,7 @@ export function MultiplayerBoard({
             animateReveal={!revealed}
             chargingDigit={chargingDigit}
             dragState={dragState}
-            onStartCellDrag={({ digit, from, x, y, pointerId }) => {
-              if (gameOver || game.status !== "playing") return;
-              startDrag({
-                digit,
-                source: { kind: "cell", row: from.row, col: from.col },
-                x,
-                y,
-                pointerId,
-              });
-            }}
+            onStartCellDrag={startCellDrag}
           />
           <DigitDragGhost state={dragState} />
         </>

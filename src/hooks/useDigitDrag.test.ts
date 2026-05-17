@@ -32,7 +32,8 @@ describe("useDigitDrag", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    document.elementFromPoint = (() => null) as typeof document.elementFromPoint;
+    document.elementFromPoint = (() =>
+      null) as typeof document.elementFromPoint;
   });
 
   it("starts with no active drag", () => {
@@ -219,9 +220,7 @@ describe("useDigitDrag", () => {
           clientY: 999,
         }),
       );
-      document.dispatchEvent(
-        pointerEvent("pointerup", { pointerId: 2 }),
-      );
+      document.dispatchEvent(pointerEvent("pointerup", { pointerId: 2 }));
     });
     // The drag should still be active because pointer 2 isn't ours
     expect(result.current.state).not.toBeNull();

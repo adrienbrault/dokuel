@@ -40,19 +40,17 @@ function cellFromPoint(x: number, y: number): Position | null {
 
 export function useDigitDrag({ onDrop, isDroppable }: Options) {
   const [state, setState] = useState<DigitDragState | null>(null);
-  const pointerIdRef = useRef<number | null>(null);
+  const [activePointerId, setActivePointerId] = useState<number | null>(null);
   // Keep the latest callbacks in refs so the document-level listeners we
   // bind on `start` always see fresh values without re-binding on every
   // render — the listeners' lifecycle is tied to the drag, not to React.
   const onDropRef = useRef(onDrop);
   const isDroppableRef = useRef(isDroppable);
-  useEffect(() => {
-    onDropRef.current = onDrop;
-    isDroppableRef.current = isDroppable;
-  });
+  onDropRef.current = onDrop;
+  isDroppableRef.current = isDroppable;
 
   const end = useCallback((commit: boolean) => {
-    pointerIdRef.current = null;
+    setActivePointerId(null);
     setState((current) => {
       if (current && commit && current.target && !current.invalidTarget) {
         onDropRef.current(current.digit, current.source, current.target);
@@ -62,8 +60,8 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
   }, []);
 
   useEffect(() => {
-    if (state === null) return;
-    const ownPointerId = pointerIdRef.current;
+    if (activePointerId === null) return;
+    const ownPointerId = activePointerId;
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== ownPointerId) return;
@@ -72,7 +70,8 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
       setState((prev) => {
         if (!prev) return prev;
         const invalid =
-          target !== null && !isDroppableRef.current(target.row, target.col, prev.digit);
+          target !== null &&
+          !isDroppableRef.current(target.row, target.col, prev.digit);
         return {
           ...prev,
           x: e.clientX,
@@ -107,14 +106,14 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
       document.removeEventListener("pointercancel", onCancel);
       document.removeEventListener("keydown", onKey);
     };
-  }, [state === null, end]);
+  }, [activePointerId, end]);
 
   const start = useCallback(
     ({ digit, source, x, y, pointerId }: StartParams) => {
-      pointerIdRef.current = pointerId;
       const target = cellFromPoint(x, y);
       const invalid =
-        target !== null && !isDroppableRef.current(target.row, target.col, digit);
+        target !== null &&
+        !isDroppableRef.current(target.row, target.col, digit);
       setState({
         digit,
         source,
@@ -123,6 +122,7 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
         target,
         invalidTarget: invalid,
       });
+      setActivePointerId(pointerId);
     },
     [],
   );
