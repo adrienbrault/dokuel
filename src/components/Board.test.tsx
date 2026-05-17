@@ -109,6 +109,66 @@ describe("Board same-number row/col highlighting (full assist)", () => {
   });
 });
 
+describe("Board highlightedDigit", () => {
+  it("highlights cells matching highlightedDigit when no cell selected", () => {
+    // Place 7s at (0,0), (3,3), (5,8); other cells empty
+    const board = makeBoard([
+      [0, 0, 7],
+      [3, 3, 7],
+      [5, 8, 7],
+      [4, 4, 2],
+    ]);
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        highlightedDigit={7}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText("Cell row 1 column 1, value 7").className,
+    ).toContain("bg-cell-same-number");
+    expect(
+      screen.getByLabelText("Cell row 4 column 4, value 7").className,
+    ).toContain("bg-cell-same-number");
+    expect(
+      screen.getByLabelText("Cell row 6 column 9, value 7").className,
+    ).toContain("bg-cell-same-number");
+    // Non-matching value cell does not get same-number bg
+    expect(
+      screen.getByLabelText("Cell row 5 column 5, value 2").className,
+    ).not.toContain("bg-cell-same-number");
+  });
+
+  it("ignores highlightedDigit when a cell is selected", () => {
+    // Selected cell at (0,0)=5, with 7s elsewhere and highlightedDigit=7
+    const board = makeBoard([
+      [0, 0, 5],
+      [3, 3, 7],
+    ]);
+
+    render(
+      <Board
+        board={board}
+        selectedCell={{ row: 0, col: 0 }}
+        highlightedDigit={7}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    // The 7 at (3,3) should NOT highlight as same-number because the
+    // selected cell's value (5) takes precedence
+    expect(
+      screen.getByLabelText("Cell row 4 column 4, value 7").className,
+    ).not.toContain("bg-cell-same-number");
+  });
+});
+
 describe("Board drag-select filters non-empty cells", () => {
   afterEach(() => {
     vi.restoreAllMocks();

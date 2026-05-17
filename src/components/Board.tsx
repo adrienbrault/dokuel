@@ -15,6 +15,14 @@ type BoardProps = {
   selectedCells?: Set<number> | undefined;
   conflicts: Set<number>;
   hintCells?: Set<number> | undefined;
+  /**
+   * When set and no cell is selected, drives same-number highlighting
+   * as if a cell containing this digit were selected. Lets the numpad
+   * act as a "filter chip" — tap a digit to spotlight every cell that
+   * holds it. Ignored while a cell is selected so the selection's own
+   * value takes precedence.
+   */
+  highlightedDigit?: number | null | undefined;
   onSelectCell: (row: number, col: number) => void;
   onSetSelectedCells?:
     | ((cells: Set<number>, primary: Position) => void)
@@ -53,6 +61,7 @@ export function Board({
   selectedCells,
   conflicts,
   hintCells,
+  highlightedDigit,
   onSelectCell,
   onSetSelectedCells,
   animateReveal,
@@ -66,12 +75,14 @@ export function Board({
   const selectedValue =
     selectedCell !== null
       ? board[selectedCell.row]![selectedCell.col]!.value
-      : null;
+      : (highlightedDigit ?? null);
 
   // In full assist mode, collect rows/cols/boxes of all cells matching selected
-  // value (excluding the selected cell itself) for cross-highlight
+  // value (excluding the selected cell itself) for cross-highlight. Only
+  // applies when a cell is actually selected — the digit-highlight path
+  // (no selection) reuses isSameNumber but skips the row/col/box halo.
   const matchRowColSet = (() => {
-    if (!isFull || selectedValue === null) return null;
+    if (!isFull || selectedValue === null || selectedCell === null) return null;
     const rows = new Set<number>();
     const cols = new Set<number>();
     const boxes = new Set<number>();
@@ -79,7 +90,7 @@ export function Board({
       for (let c = 0; c < 9; c++) {
         if (
           board[r]![c]!.value === selectedValue &&
-          !(selectedCell!.row === r && selectedCell!.col === c)
+          !(selectedCell.row === r && selectedCell.col === c)
         ) {
           rows.add(r);
           cols.add(c);
