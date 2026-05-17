@@ -263,6 +263,25 @@ body {
   animation: cell-reveal 0.15s ease-out both;
 }
 
+/* In-cell hold feedback: a centered glyph of the held digit grows
+   from note-size (≈40% of value-size) to value-size over the same
+   400ms hold threshold used by NumPad. Snaps away if the user
+   releases early; matches the value's natural size at the end so
+   there's no jump when the value actually commits. */
+@keyframes note-charge {
+  from {
+    transform: scale(0.4);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-note-charge {
+  animation: note-charge 400ms ease-out forwards;
+}
+
 /* Long-press feedback for committing a value. The button scales up
    past the finger so the user can SEE it growing, and a colored halo
    expands outward as a "charging" hint. Duration matches NumPad's

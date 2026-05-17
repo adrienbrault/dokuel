@@ -16,6 +16,12 @@ type CellProps = {
   assistLevel?: AssistLevel | undefined;
   onSelect: (row: number, col: number) => void;
   revealDelay?: number | undefined;
+  /**
+   * When set, render the digit as a centered overlay that animates
+   * from note-size to value-size over the long-press window — gives
+   * the user in-cell feedback that holding will commit the value.
+   */
+  chargingDigit?: number | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -32,6 +38,7 @@ export const Cell = memo(function Cell({
   assistLevel = "standard",
   onSelect,
   revealDelay,
+  chargingDigit,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -99,6 +106,15 @@ export const Cell = memo(function Cell({
           ))}
         </div>
       ) : null}
+      {cell.value === null && chargingDigit !== undefined && (
+        <span
+          data-testid="note-charge"
+          aria-hidden="true"
+          className="absolute inset-0 flex items-center justify-center text-[clamp(0.875rem,4vw,1.5rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
+        >
+          {chargingDigit}
+        </span>
+      )}
     </button>
   );
 });
