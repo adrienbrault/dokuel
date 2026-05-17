@@ -100,6 +100,31 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("flushes the timer to localStorage on pagehide so a crash mid-think loses at most a second", () => {
+    vi.useFakeTimers();
+    try {
+      const props = baseProps();
+      render(<MultiplayerBoard {...props} />);
+
+      // Tick the timer without ever touching the board so the regular
+      // board-change autosave never runs.
+      act(() => {
+        vi.advanceTimersByTime(12000);
+      });
+
+      const key = `mp_${props.roomId}_${props.puzzle.slice(0, 12)}`;
+      // The mount-time autosave fires before any tick, capturing timer: 0.
+      expect(loadGame(key)?.timer).toBe(0);
+
+      window.dispatchEvent(new Event("pagehide"));
+
+      const saved = loadGame(key);
+      expect(saved?.timer).toBeGreaterThanOrEqual(12);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("deselects the cell after a tap-only numpad note", () => {
     vi.useFakeTimers();
     try {

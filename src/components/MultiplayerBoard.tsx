@@ -116,7 +116,8 @@ export function MultiplayerBoard({
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
   // the puzzle + opponent progress; the filled cells live here.
-  useEffect(() => {
+  const flushSaveRef = useRef<() => void>(() => {});
+  flushSaveRef.current = () => {
     if (game.status === "completed" || gameOver) return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
     saveGame(gameKey, {
@@ -127,6 +128,10 @@ export function MultiplayerBoard({
       difficulty,
       assistLevel,
     });
+  };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps drive re-firing; the latest closure is read through the ref.
+  useEffect(() => {
+    flushSaveRef.current();
   }, [
     game.board,
     game.status,
@@ -136,6 +141,25 @@ export function MultiplayerBoard({
     difficulty,
     assistLevel,
   ]);
+
+  // The board-change autosave above runs only when game.board changes,
+  // so a long think with the timer ticking would not be persisted. iOS
+  // Safari can crash the WebContent process at any moment under memory
+  // pressure; pagehide and visibilitychange-to-hidden are our last
+  // chances to flush the latest state (especially the timer) before
+  // the tab is killed.
+  useEffect(() => {
+    const flush = () => flushSaveRef.current();
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
 
   // Clear the save once the game ends so the next match starts clean.
   useEffect(() => {
