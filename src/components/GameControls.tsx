@@ -1,3 +1,6 @@
+import { Eraser, Lightbulb, Undo2 } from "lucide-react";
+import type { ReactNode } from "react";
+
 type GameControlsProps = {
   onErase: () => void;
   onUndo: () => void;
@@ -12,44 +15,51 @@ export function GameControls({
   onHint,
 }: GameControlsProps) {
   return (
-    <div className="flex gap-1.5 sm:gap-3 w-full max-w-lg">
+    <div className="flex items-center justify-center gap-1">
       <ControlButton
         label="Undo"
-        icon="↩"
         onClick={onUndo}
         disabled={!historyLength || historyLength === 0}
-      />
-      <ControlButton label="Erase" icon="⌫" onClick={onErase} />
-      {onHint && <ControlButton label="Hint" icon="💡" onClick={onHint} />}
+      >
+        <Undo2 size={20} strokeWidth={2} aria-hidden="true" />
+      </ControlButton>
+      <ControlButton label="Erase" onClick={onErase}>
+        <Eraser size={20} strokeWidth={2} aria-hidden="true" />
+      </ControlButton>
+      {onHint && (
+        <ControlButton label="Hint" onClick={onHint}>
+          <Lightbulb size={20} strokeWidth={2} aria-hidden="true" />
+        </ControlButton>
+      )}
     </div>
   );
 }
 
 function ControlButton({
   label,
-  icon,
   onClick,
   disabled,
+  children,
 }: {
   label: string;
-  icon: string;
   onClick: () => void;
   disabled?: boolean | undefined;
+  children: ReactNode;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
-      className={`flex-1 flex flex-col items-center justify-center h-12 rounded-lg select-none touch-manipulation ${
+      className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1.5 rounded-lg select-none touch-manipulation transition-colors ${
         disabled
-          ? "bg-bg-disabled text-text-disabled cursor-default"
-          : "bg-bg-raised text-text-secondary press-spring"
+          ? "text-text-disabled cursor-default"
+          : "text-text-secondary hover:bg-bg-raised press-spring-soft"
       }`}
       onClick={onClick}
       aria-label={label}
     >
-      <span className="text-lg leading-none">{icon}</span>
-      <span className="text-[0.625rem] mt-0.5 leading-none">{label}</span>
+      <span aria-hidden="true">{children}</span>
+      <span className="text-[0.625rem] leading-none font-medium">{label}</span>
     </button>
   );
 }

@@ -21,6 +21,7 @@
     "screenshots:readme": "bun run screenshots && bun run scripts/update-readme-screenshots.ts"
   },
   "dependencies": {
+    "lucide-react": "^1.16.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "sudoku": "^0.0.3",
