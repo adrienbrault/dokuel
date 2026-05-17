@@ -61,7 +61,11 @@ export function NumPad({
   onStartDrag,
 }: NumPadProps) {
   const isGrid = layout === "grid";
-  const isVertical = !isGrid && (position === "left" || position === "right");
+  const isPositionedSide = position === "left" || position === "right";
+  const isVertical = !isGrid && isPositionedSide;
+  // Grid on a mobile side position needs smaller buttons or it crowds out
+  // the board. Bottom/desktop grids have room for a more generous size.
+  const isGridSide = isGrid && isPositionedSide;
 
   const pressRef = useRef<{
     digit: number;
@@ -177,12 +181,12 @@ export function NumPad({
 
   return (
     <div
-      className={`flex items-center gap-1 ${isGrid ? "flex-col w-44 lg:w-44" : isVertical ? "flex-col w-12 lg:flex-col lg:w-14" : "flex-col w-full max-w-lg lg:flex-col lg:w-14"}`}
+      className={`flex items-center gap-1 ${isGrid ? "flex-col w-fit" : isVertical ? "flex-col w-12 lg:flex-col lg:w-14" : "flex-col w-full max-w-lg lg:flex-col lg:w-14"}`}
     >
       {/* Horizontal one-liner: mobile bottom (room to fit) and grid layout (compact wrapper) */}
       {(!isVertical && !isGrid) || isGrid ? (
         <p
-          className={`text-[0.625rem] text-text-muted leading-tight select-none text-center ${isGrid ? "" : "lg:hidden"}`}
+          className={`text-[0.625rem] text-text-muted leading-tight select-none text-center ${isGrid ? "max-w-[8rem] lg:max-w-[10rem]" : "lg:hidden"}`}
           aria-hidden="true"
         >
           tap = note · hold = enter · drag = place
@@ -214,7 +218,7 @@ export function NumPad({
       <div
         className={
           isGrid
-            ? "grid grid-cols-3 gap-1 w-auto"
+            ? "grid grid-cols-3 gap-1"
             : `flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full max-w-lg lg:w-14"}`
         }
         role="group"
@@ -230,7 +234,7 @@ export function NumPad({
               key={n}
               type="button"
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold ${isGrid ? "h-14 w-14 lg:h-12 lg:w-14" : `lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"}`} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold ${isGrid ? `${isGridSide ? "h-10 w-10" : "h-12 w-12"} lg:h-12 lg:w-14` : `lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"}`} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
