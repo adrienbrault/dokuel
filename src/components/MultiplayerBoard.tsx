@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
@@ -143,9 +143,11 @@ export function MultiplayerBoard({
   // Touch numpad: tap is the cheap, frequent action (note); hold is the
   // deliberate commit (value). Keyboard digit (if focused) still follows
   // the in-reducer notesMode flag via useSudoku's default behavior.
+  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
   const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", true);
+      setChargingDigit(n);
     }
   };
 
@@ -153,6 +155,10 @@ export function MultiplayerBoard({
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", false);
     }
+  };
+
+  const handlePressEnd = () => {
+    setChargingDigit(null);
   };
 
   return (
@@ -192,6 +198,7 @@ export function MultiplayerBoard({
           disableCompleted={assistLevel !== "paper"}
           onNumber={handleTapNote}
           onLongPressNumber={handleHoldValue}
+          onPressEnd={handlePressEnd}
         />
       }
       board={
@@ -204,6 +211,7 @@ export function MultiplayerBoard({
           onSelectCell={game.selectCell}
           onSetSelectedCells={game.setSelectedCells}
           animateReveal={!revealed}
+          chargingDigit={chargingDigit}
         />
       }
       controls={<GameControls onErase={game.erase} onUndo={game.undo} />}

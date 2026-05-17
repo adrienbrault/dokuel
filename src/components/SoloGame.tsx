@@ -92,9 +92,11 @@ export function SoloGame({
   // Touch numpad: tap is the cheap, frequent action (note); hold is the
   // deliberate commit (value). The 400ms hold doubles as a guard against
   // accidental value placement.
+  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
   const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", true);
+      setChargingDigit(n);
     }
   };
 
@@ -102,6 +104,10 @@ export function SoloGame({
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", false);
     }
+  };
+
+  const handlePressEnd = () => {
+    setChargingDigit(null);
   };
 
   const handleBack = () => {
@@ -202,6 +208,7 @@ export function SoloGame({
           disableCompleted={assistLevel !== "paper"}
           onNumber={handleTapNote}
           onLongPressNumber={handleHoldValue}
+          onPressEnd={handlePressEnd}
         />
       }
       board={
@@ -216,6 +223,7 @@ export function SoloGame({
             onSelectCell={paused ? () => {} : game.selectCell}
             onSetSelectedCells={paused ? undefined : game.setSelectedCells}
             animateReveal={!revealed}
+            chargingDigit={paused ? null : chargingDigit}
           />
           {paused && (
             <button
