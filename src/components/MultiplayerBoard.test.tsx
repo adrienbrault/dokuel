@@ -101,26 +101,36 @@ describe("MultiplayerBoard local autosave", () => {
   });
 
   it("restores placed cell values on remount with same roomId and puzzle", () => {
-    const props = baseProps();
+    vi.useFakeTimers();
+    try {
+      const props = baseProps();
+      const { unmount } = render(<MultiplayerBoard {...props} />);
 
-    const { unmount } = render(<MultiplayerBoard {...props} />);
+      // (0,0) is empty in PUZZLE; correct solution value is 5.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      // Numpad tap is now "note"; long-press is what commits a value.
+      // MultiplayerBoard doesn't wire useKeyboard so we can't use the
+      // keyboard path here — simulate the hold gesture instead.
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
 
-    // (0,0) is empty in PUZZLE; correct solution value is 5.
-    const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
-    fireEvent.click(cell);
-    // GameLayout renders the NumPad twice (responsive: side/bottom). Either
-    // button dispatches the same action — pick the first.
-    fireEvent.click(screen.getAllByLabelText("5")[0]!);
+      expect(
+        screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+      ).not.toBeNull();
 
-    expect(
-      screen.queryByLabelText(/Cell row 1 column 1, value 5/),
-    ).not.toBeNull();
+      unmount();
+      render(<MultiplayerBoard {...props} />);
 
-    unmount();
-    render(<MultiplayerBoard {...props} />);
-
-    expect(
-      screen.queryByLabelText(/Cell row 1 column 1, value 5/),
-    ).not.toBeNull();
+      expect(
+        screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+      ).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

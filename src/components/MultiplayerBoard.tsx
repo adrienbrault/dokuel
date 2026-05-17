@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
@@ -140,10 +140,25 @@ export function MultiplayerBoard({
     if (gameOver) deleteGame(gameKey);
   }, [gameOver, gameKey]);
 
-  const handleNumber = (n: number) => {
+  // Touch numpad: tap is the cheap, frequent action (note); hold is the
+  // deliberate commit (value). Keyboard digit (if focused) still follows
+  // the in-reducer notesMode flag via useSudoku's default behavior.
+  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
+  const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper");
+      game.placeNumber(n, assistLevel !== "paper", true);
+      setChargingDigit(n);
     }
+  };
+
+  const handleHoldValue = (n: number) => {
+    if (game.selectedCell || game.selectedCells.size > 0) {
+      game.placeNumber(n, assistLevel !== "paper", false);
+    }
+  };
+
+  const handlePressEnd = () => {
+    setChargingDigit(null);
   };
 
   return (
@@ -181,7 +196,9 @@ export function MultiplayerBoard({
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onNumber={handleNumber}
+          onNumber={handleTapNote}
+          onLongPressNumber={handleHoldValue}
+          onPressEnd={handlePressEnd}
         />
       }
       board={
@@ -194,16 +211,10 @@ export function MultiplayerBoard({
           onSelectCell={game.selectCell}
           onSetSelectedCells={game.setSelectedCells}
           animateReveal={!revealed}
+          chargingDigit={chargingDigit}
         />
       }
-      controls={
-        <GameControls
-          notesMode={game.notesMode}
-          onToggleNotes={game.toggleNotesMode}
-          onErase={game.erase}
-          onUndo={game.undo}
-        />
-      }
+      controls={<GameControls onErase={game.erase} onUndo={game.undo} />}
       settingsExtra={
         <ToggleSwitch
           checked={showOpponentProgress}

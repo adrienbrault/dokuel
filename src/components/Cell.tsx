@@ -1,6 +1,12 @@
-import { memo } from "react";
+import { type CSSProperties, memo } from "react";
 import { DIGITS } from "../lib/constants.ts";
 import type { AssistLevel, Cell as CellType } from "../lib/types.ts";
+
+// Distance from the cell center to a note's sub-cell center, as a
+// percentage of the cell's own width. Centers of the 3x3 sub-cell grid
+// sit at 1/6, 1/2, and 5/6 of the cell width — so the offset from the
+// cell center for col 0 / 1 / 2 is -33.33% / 0% / +33.33%. Same for rows.
+const NOTE_OFFSETS = ["-33.333%", "0%", "33.333%"] as const;
 
 type CellProps = {
   cell: CellType;
@@ -16,6 +22,12 @@ type CellProps = {
   assistLevel?: AssistLevel | undefined;
   onSelect: (row: number, col: number) => void;
   revealDelay?: number | undefined;
+  /**
+   * When set, render the digit as a centered overlay that animates
+   * from note-size to value-size over the long-press window — gives
+   * the user in-cell feedback that holding will commit the value.
+   */
+  chargingDigit?: number | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -32,6 +44,7 @@ export const Cell = memo(function Cell({
   assistLevel = "standard",
   onSelect,
   revealDelay,
+  chargingDigit,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -94,11 +107,26 @@ export const Cell = memo(function Cell({
               key={n}
               className="flex items-center justify-center text-[clamp(0.703125rem,2.75vw,0.9375rem)] text-text-secondary font-medium leading-none"
             >
-              {cell.notes.has(n) ? n : ""}
+              {cell.notes.has(n) && chargingDigit !== n ? n : ""}
             </span>
           ))}
         </div>
       ) : null}
+      {cell.value === null && chargingDigit !== undefined && (
+        <span
+          data-testid="note-charge"
+          aria-hidden="true"
+          className="absolute inset-0 flex items-center justify-center text-[clamp(0.875rem,4vw,1.5rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
+          style={
+            {
+              "--charge-dx": NOTE_OFFSETS[(chargingDigit - 1) % 3]!,
+              "--charge-dy": NOTE_OFFSETS[Math.floor((chargingDigit - 1) / 3)]!,
+            } as CSSProperties
+          }
+        >
+          {chargingDigit}
+        </span>
+      )}
     </button>
   );
 });

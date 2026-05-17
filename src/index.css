@@ -263,6 +263,25 @@ body {
   animation: cell-reveal 0.15s ease-out both;
 }
 
+/* In-cell hold feedback: the just-placed note glyph grows from its
+   note-grid position (corner/edge/center based on digit) toward the
+   cell center at value-size over the same 400ms hold threshold used
+   by NumPad. --charge-dx / --charge-dy are the offset from cell
+   center to the digit's sub-cell center, supplied inline by Cell. */
+@keyframes note-charge {
+  from {
+    transform: translate(var(--charge-dx, 0%), var(--charge-dy, 0%)) scale(0.4);
+    opacity: 0.55;
+  }
+  to {
+    transform: translate(0%, 0%) scale(1);
+    opacity: 1;
+  }
+}
+.animate-note-charge {
+  animation: note-charge 400ms ease-out forwards;
+}
+
 @keyframes emoji-bounce {
   0% {
     transform: scale(0.3) rotate(-15deg);

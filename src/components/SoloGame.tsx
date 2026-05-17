@@ -81,10 +81,33 @@ export function SoloGame({
   );
   const personalBest = priorStats?.bestTime ?? null;
 
-  const handleNumber = (n: number) => {
+  // Keyboard digit follows the current notesMode flag (N toggles it),
+  // preserving the established "press N then 1" pencil-mark workflow.
+  const handleKeyboardNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper");
     }
+  };
+
+  // Touch numpad: tap is the cheap, frequent action (note); hold is the
+  // deliberate commit (value). The 400ms hold doubles as a guard against
+  // accidental value placement.
+  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
+  const handleTapNote = (n: number) => {
+    if (game.selectedCell || game.selectedCells.size > 0) {
+      game.placeNumber(n, assistLevel !== "paper", true);
+      setChargingDigit(n);
+    }
+  };
+
+  const handleHoldValue = (n: number) => {
+    if (game.selectedCell || game.selectedCells.size > 0) {
+      game.placeNumber(n, assistLevel !== "paper", false);
+    }
+  };
+
+  const handlePressEnd = () => {
+    setChargingDigit(null);
   };
 
   const handleBack = () => {
@@ -114,7 +137,7 @@ export function SoloGame({
     selectedCell: game.selectedCell,
     onSelectCell: game.selectCell,
     onDeselectCell: game.deselectCell,
-    onPlaceNumber: handleNumber,
+    onPlaceNumber: handleKeyboardNumber,
     onErase: game.erase,
     onUndo: game.undo,
     onToggleNotes: game.toggleNotesMode,
@@ -183,7 +206,9 @@ export function SoloGame({
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onNumber={handleNumber}
+          onNumber={handleTapNote}
+          onLongPressNumber={handleHoldValue}
+          onPressEnd={handlePressEnd}
         />
       }
       board={
@@ -198,6 +223,7 @@ export function SoloGame({
             onSelectCell={paused ? () => {} : game.selectCell}
             onSetSelectedCells={paused ? undefined : game.setSelectedCells}
             animateReveal={!revealed}
+            chargingDigit={paused ? null : chargingDigit}
           />
           {paused && (
             <button
@@ -219,8 +245,6 @@ export function SoloGame({
             <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
           )}
           <GameControls
-            notesMode={game.notesMode}
-            onToggleNotes={game.toggleNotesMode}
             onErase={game.erase}
             onUndo={game.undo}
             historyLength={game.historyLength}

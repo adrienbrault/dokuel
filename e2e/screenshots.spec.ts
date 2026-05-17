@@ -200,6 +200,36 @@ test("join game screen", async ({ page }, testInfo) => {
 
 // --- Game states ---
 
+test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	// Select an empty cell so the hold has a meaningful target
+	await page.locator('button[aria-label*=", empty"]').first().click();
+
+	// Hold a digit; screenshot mid-hold to show the in-cell charging
+	// glyph growing toward value-size. Animations are disabled here, so
+	// the overlay snaps to its end state — what matters is that the
+	// digit is visibly previewed in the cell before commit.
+	const digit = page
+		.locator(
+			'[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+		)
+		.first();
+	const box = await digit.boundingBox();
+	if (!box) throw new Error("digit not visible");
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.down();
+
+	await page.screenshot({
+		path: screenshotPath("solo-hold-charging", testInfo.project.name),
+	});
+
+	await page.mouse.up();
+});
+
 test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();
@@ -212,14 +242,15 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	);
 	const enabledCount = await enabledNumpad.count();
 
-	// Fill first few empty cells with values
+	// Fill first few empty cells with VALUES via keyboard (tap-on-numpad
+	// is now "note"; keyboard digit still follows notesMode, which is off,
+	// so it places a value).
 	for (let i = 0; i < 5; i++) {
 		await emptyCells.nth(0).click();
-		await enabledNumpad.nth(i % enabledCount).click();
+		await page.keyboard.press(String((i % 9) + 1));
 	}
 
-	await page.getByRole("button", { name: "Notes" }).click();
-
+	// Add notes to subsequent cells by tapping numpad digits — tap = note.
 	const remainingEmpty = page.locator('button[aria-label*=", empty"]');
 	for (let i = 0; i < 6; i++) {
 		const count = await enabledNumpad.count();

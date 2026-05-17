@@ -20,6 +20,11 @@ type BoardProps = {
     | undefined;
   animateReveal?: boolean;
   assistLevel?: AssistLevel;
+  /**
+   * The digit currently being long-pressed on the numpad — forwarded to
+   * the selected cell so the in-cell hold animation can play there.
+   */
+  chargingDigit?: number | null | undefined;
 };
 
 export function Board({
@@ -32,6 +37,7 @@ export function Board({
   onSetSelectedCells,
   animateReveal,
   assistLevel = "standard",
+  chargingDigit,
 }: BoardProps) {
   const isPaper = assistLevel === "paper";
   const isFull = assistLevel === "full";
@@ -191,6 +197,11 @@ export function Board({
                     revealDelay={
                       animateReveal && cell.isGiven
                         ? (rowIdx * 9 + colIdx) * 6
+                        : undefined
+                    }
+                    chargingDigit={
+                      isSelected && chargingDigit != null
+                        ? chargingDigit
                         : undefined
                     }
                   />
