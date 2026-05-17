@@ -133,6 +133,25 @@ test.describe("dark mode", () => {
 		});
 	});
 
+	test("solo game - cell selected with same number highlight (dark mode)", async ({
+		page,
+	}, testInfo) => {
+		await page.goto("/");
+		await page.getByRole("button", { name: "Start Solo" }).click();
+		await page.getByRole("button", { name: "Easy" }).click();
+		await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+		// Click on a filled cell so that:
+		// - That cell becomes selected (cell-selected bg)
+		// - Same-number cells get highlighted (cell-same-number bg)
+		// - Row/col/box cells get highlighted (cell-highlight bg)
+		await page.locator('button[aria-label*="value"]').first().click();
+
+		await page.screenshot({
+			path: screenshotPath("solo-cell-selected-dark", testInfo.project.name),
+		});
+	});
+
 	test("multiplayer - dual progress bars (dark mode)", async ({
 		page,
 	}, testInfo) => {
