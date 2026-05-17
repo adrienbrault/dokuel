@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
@@ -25,6 +26,25 @@ type BoardProps = {
    * the selected cell so the in-cell hold animation can play there.
    */
   chargingDigit?: number | null | undefined;
+  /**
+   * Optional digit-drag state. When non-null, cells render drop hints
+   * — empty cells pulse softly as candidates, the hovered target gets
+   * a stronger accent ring, and the source cell (if any) fades.
+   */
+  dragState?: DigitDragState | null | undefined;
+  /**
+   * Fires when a long-press on a filled cell becomes a digit drag.
+   * The Board passes this through to its useDragSelect hook.
+   */
+  onStartCellDrag?:
+    | ((args: {
+        digit: number;
+        from: Position;
+        x: number;
+        y: number;
+        pointerId: number;
+      }) => void)
+    | undefined;
 };
 
 export function Board({
@@ -38,6 +58,8 @@ export function Board({
   animateReveal,
   assistLevel = "standard",
   chargingDigit,
+  dragState,
+  onStartCellDrag,
 }: BoardProps) {
   const isPaper = assistLevel === "paper";
   const isFull = assistLevel === "full";
@@ -75,6 +97,7 @@ export function Board({
     selectedCell,
     selectedCells,
     onSetSelectedCells,
+    onStartCellDrag,
   });
 
   // Snap the board to an integer-pixel size so every cell and every gap
@@ -179,6 +202,26 @@ export function Board({
                       Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
                     ));
 
+                // Drag-related render flags
+                const isDragSource =
+                  dragState?.source.kind === "cell" &&
+                  dragState.source.row === rowIdx &&
+                  dragState.source.col === colIdx;
+                const isDropCandidate =
+                  dragState != null &&
+                  !cell.isGiven &&
+                  cell.value === null &&
+                  !isDragSource;
+                const isDropTarget =
+                  dragState?.target?.row === rowIdx &&
+                  dragState?.target?.col === colIdx;
+                const dropTargetState =
+                  isDropTarget && dragState
+                    ? dragState.invalidTarget
+                      ? "invalid"
+                      : "valid"
+                    : null;
+
                 return (
                   <Cell
                     key={cellKey(rowIdx, colIdx)}
@@ -204,6 +247,9 @@ export function Board({
                         ? chargingDigit
                         : undefined
                     }
+                    isDragSource={isDragSource}
+                    isDropCandidate={isDropCandidate}
+                    dropTargetState={dropTargetState}
                   />
                 );
               })}

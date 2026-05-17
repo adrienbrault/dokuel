@@ -4,6 +4,10 @@ import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 
 const LONG_PRESS_MS = 400;
+// Pointer must travel this far from the original button center before
+// we treat the gesture as a drag (rather than a finger that drifted
+// slightly during the tap/hold). Tuned to fingertip-sized slop.
+const DRAG_THRESHOLD_PX = 12;
 
 type NumPadProps = {
   position: NumPadPosition;
@@ -27,6 +31,20 @@ type NumPadProps = {
    * by the parent to clear "currently charging" UI state.
    */
   onPressEnd?: (() => void) | undefined;
+  /**
+   * Fires once the finger has slid off the button while pressed,
+   * handing control to the parent's drag-and-drop layer. The numpad
+   * cancels its own tap/hold UI but does not undo the instant note
+   * already placed — the user can undo or accept it as a side-effect.
+   */
+  onStartDrag?:
+    | ((args: {
+        digit: number;
+        x: number;
+        y: number;
+        pointerId: number;
+      }) => void)
+    | undefined;
 };
 
 export function NumPad({
@@ -38,12 +56,18 @@ export function NumPad({
   onNumber,
   onLongPressNumber,
   onPressEnd,
+  onStartDrag,
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
 
   const pressRef = useRef<{
     digit: number;
     timer: ReturnType<typeof setTimeout> | null;
+    originX: number;
+    originY: number;
+    pointerId: number;
+    button: HTMLButtonElement;
+    dragStarted: boolean;
   } | null>(null);
   // Suppress the synthetic click that follows pointerdown→pointerup so
   // onNumber doesn't double-fire. A fresh pointerdown clears it.
@@ -61,9 +85,21 @@ export function NumPad({
       if (e.pointerType === "mouse" && e.button !== 0) return;
       cancelTimer();
       pointerFiredRef.current = true;
-      onNumber(n); // instant
+      onNumber(n); // instant note placement
+      const btn = e.currentTarget;
+      const rect = btn.getBoundingClientRect();
+      const originX = rect.left + rect.width / 2;
+      const originY = rect.top + rect.height / 2;
       if (!onLongPressNumber) {
-        pressRef.current = { digit: n, timer: null };
+        pressRef.current = {
+          digit: n,
+          timer: null,
+          originX,
+          originY,
+          pointerId: e.pointerId,
+          button: btn,
+          dragStarted: false,
+        };
         return;
       }
       const timer = setTimeout(() => {
@@ -71,9 +107,50 @@ export function NumPad({
         haptics.tap();
         onLongPressNumber(n);
       }, LONG_PRESS_MS);
-      pressRef.current = { digit: n, timer };
+      pressRef.current = {
+        digit: n,
+        timer,
+        originX,
+        originY,
+        pointerId: e.pointerId,
+        button: btn,
+        dragStarted: false,
+      };
     },
     [onNumber, onLongPressNumber, cancelTimer],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: PointerEvent<HTMLButtonElement>) => {
+      const press = pressRef.current;
+      if (!press || press.dragStarted || !onStartDrag) return;
+      if (e.pointerId !== press.pointerId) return;
+      const dx = e.clientX - press.originX;
+      const dy = e.clientY - press.originY;
+      if (dx * dx + dy * dy < DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) return;
+      // Drag takes over: cancel hold timer + suppress the trailing click
+      // so the only side-effect is the instant note that already fired
+      // (which the user can undo if they didn't want it).
+      cancelTimer();
+      press.dragStarted = true;
+      pointerFiredRef.current = false; // ignore the click that follows
+      // Release pointer capture so the document-level drag listeners can
+      // see subsequent moves outside this button.
+      try {
+        press.button.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore — some browsers don't capture by default
+      }
+      haptics.tap();
+      onStartDrag({
+        digit: press.digit,
+        x: e.clientX,
+        y: e.clientY,
+        pointerId: e.pointerId,
+      });
+      onPressEnd?.();
+    },
+    [cancelTimer, onStartDrag, onPressEnd],
   );
 
   const handlePointerEnd = useCallback(() => {
@@ -105,7 +182,7 @@ export function NumPad({
           className="text-[0.625rem] text-text-muted leading-tight select-none lg:hidden"
           aria-hidden="true"
         >
-          tap = note · hold = enter
+          tap = note · hold = enter · drag = place
         </p>
       )}
       {/* Stacked variant: mobile side-positioned numpads, and always on desktop */}
@@ -123,6 +200,11 @@ export function NumPad({
         hold
         <br />
         enter
+        <br />· · ·
+        <br />
+        drag
+        <br />
+        place
       </p>
       <div
         className={`flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full max-w-lg lg:w-14"}`}
@@ -139,8 +221,9 @@ export function NumPad({
               key={n}
               type="button"
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
               onPointerDown={handlePointerDown(n)}
+              onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
               onPointerLeave={handlePointerEnd}
               onPointerCancel={handlePointerEnd}

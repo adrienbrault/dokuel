@@ -169,4 +169,84 @@ describe("NumPad", () => {
     );
     expect(screen.getByText(/tap = note · hold = enter/i)).toBeInTheDocument();
   });
+
+  it("starts a drag once the pointer slides past the drag threshold", () => {
+    const onStartDrag = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onLongPressNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Small drift — under threshold
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 4, clientY: 4 });
+    expect(onStartDrag).not.toHaveBeenCalled();
+    // Push past 12px threshold
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    expect(onStartDrag).toHaveBeenCalledTimes(1);
+    expect(onStartDrag).toHaveBeenCalledWith({
+      digit: 3,
+      x: 50,
+      y: 0,
+      pointerId: 1,
+    });
+  });
+
+  it("cancels the long-press timer once a drag begins", () => {
+    const onLongPressNumber = vi.fn();
+    const onStartDrag = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onLongPressNumber={onLongPressNumber}
+        onStartDrag={onStartDrag}
+      />,
+    );
+    const five = screen.getByRole("button", { name: /^5, / });
+    fireEvent.pointerDown(five, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(five, { pointerId: 1, clientX: 40, clientY: 0 });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(onLongPressNumber).not.toHaveBeenCalled();
+  });
+
+  it("only starts the drag once per press", () => {
+    const onStartDrag = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+      />,
+    );
+    const nine = screen.getByRole("button", { name: /^9, / });
+    fireEvent.pointerDown(nine, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(nine, { pointerId: 1, clientX: 50, clientY: 0 });
+    fireEvent.pointerMove(nine, { pointerId: 1, clientX: 100, clientY: 0 });
+    expect(onStartDrag).toHaveBeenCalledTimes(1);
+  });
 });

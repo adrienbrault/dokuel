@@ -28,6 +28,12 @@ type CellProps = {
    * the user in-cell feedback that holding will commit the value.
    */
   chargingDigit?: number | undefined;
+  /** True when this cell is the source of an in-flight digit drag. */
+  isDragSource?: boolean | undefined;
+  /** True when this cell is a valid drop target for the in-flight drag. */
+  isDropCandidate?: boolean | undefined;
+  /** "valid" or "invalid" while the pointer hovers this cell with a drag. */
+  dropTargetState?: "valid" | "invalid" | null | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -45,6 +51,9 @@ export const Cell = memo(function Cell({
   onSelect,
   revealDelay,
   chargingDigit,
+  isDragSource,
+  isDropCandidate,
+  dropTargetState,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -74,15 +83,15 @@ export const Cell = memo(function Cell({
     <button
       type="button"
       className={`
-				relative flex items-center justify-center
-				aspect-square w-full
-				${bgClass}
-				transition-colors duration-100
-				select-none touch-manipulation
-				outline-none focus-visible:ring-2 focus-visible:ring-accent
-				${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
-				${revealDelay !== undefined ? "animate-cell-reveal" : ""}
-			`}
+					relative flex items-center justify-center
+					aspect-square w-full
+					${bgClass}
+					transition-colors duration-100
+					select-none touch-manipulation
+					outline-none focus-visible:ring-2 focus-visible:ring-accent
+					${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
+					${revealDelay !== undefined ? "animate-cell-reveal" : ""}
+				`}
       style={
         revealDelay !== undefined
           ? { animationDelay: `${revealDelay}ms` }
@@ -90,6 +99,9 @@ export const Cell = memo(function Cell({
       }
       data-row={row}
       data-col={col}
+      data-drag-source={isDragSource ? "true" : undefined}
+      data-drop-candidate={isDropCandidate ? "true" : undefined}
+      data-drop-target={dropTargetState ?? undefined}
       onClick={() => onSelect(row, col)}
       aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
     >

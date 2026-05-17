@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
@@ -10,6 +11,7 @@ import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
+import { DigitDragGhost } from "./DigitDragGhost.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -120,6 +122,14 @@ export function SoloGame({
     holdFiredRef.current = false;
   };
 
+  // Digit drag: drop commits the value (the deliberate gesture earns
+  // the commit). Notes still come from tap-on-numpad.
+  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
+    game,
+    disabled: paused || game.status !== "playing",
+    autoEliminateNotes: assistLevel !== "paper",
+  });
+
   const handleBack = () => {
     if (
       game.status === "playing" &&
@@ -219,6 +229,7 @@ export function SoloGame({
           onNumber={handleTapNote}
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
+          onStartDrag={startNumpadDrag}
         />
       }
       board={
@@ -234,7 +245,10 @@ export function SoloGame({
             onSetSelectedCells={paused ? undefined : game.setSelectedCells}
             animateReveal={!revealed}
             chargingDigit={paused ? null : chargingDigit}
+            dragState={paused ? null : dragState}
+            onStartCellDrag={paused ? undefined : startCellDrag}
           />
+          <DigitDragGhost state={dragState} />
           {paused && (
             <button
               type="button"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
@@ -9,6 +10,7 @@ import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
 import { solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
+import { DigitDragGhost } from "./DigitDragGhost.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -168,6 +170,13 @@ export function MultiplayerBoard({
     holdFiredRef.current = false;
   };
 
+  // Digit drag-and-drop: drop commits the value, mirroring solo play.
+  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
+    game,
+    disabled: !!gameOver || game.status !== "playing",
+    autoEliminateNotes: assistLevel !== "paper",
+  });
+
   return (
     <GameLayout
       onBack={onBack}
@@ -206,20 +215,26 @@ export function MultiplayerBoard({
           onNumber={handleTapNote}
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
+          onStartDrag={startNumpadDrag}
         />
       }
       board={
-        <Board
-          board={game.board}
-          selectedCell={game.selectedCell}
-          selectedCells={game.selectedCells}
-          assistLevel={assistLevel}
-          conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
-          onSelectCell={game.selectCell}
-          onSetSelectedCells={game.setSelectedCells}
-          animateReveal={!revealed}
-          chargingDigit={chargingDigit}
-        />
+        <>
+          <Board
+            board={game.board}
+            selectedCell={game.selectedCell}
+            selectedCells={game.selectedCells}
+            assistLevel={assistLevel}
+            conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
+            onSelectCell={game.selectCell}
+            onSetSelectedCells={game.setSelectedCells}
+            animateReveal={!revealed}
+            chargingDigit={chargingDigit}
+            dragState={dragState}
+            onStartCellDrag={startCellDrag}
+          />
+          <DigitDragGhost state={dragState} />
+        </>
       }
       controls={<GameControls onErase={game.erase} onUndo={game.undo} />}
       settingsExtra={
