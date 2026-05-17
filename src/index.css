@@ -59,10 +59,10 @@
   --color-board-bg: oklch(0.2 0.008 80);
   --color-board-border: oklch(0.6 0.01 80);
   --color-cell-bg: oklch(0.18 0.006 80);
-  --color-cell-selected: oklch(0.28 0.05 168);
-  --color-cell-highlight: oklch(0.22 0.02 168);
-  --color-cell-same-number: oklch(0.26 0.05 168);
-  --color-cell-match-row-col: oklch(0.2 0.015 168);
+  --color-cell-selected: oklch(0.42 0.1 168);
+  --color-cell-highlight: oklch(0.27 0.03 168);
+  --color-cell-same-number: oklch(0.4 0.11 168);
+  --color-cell-match-row-col: oklch(0.24 0.025 168);
   --color-cell-given: oklch(0.78 0.005 80);
   --color-cell-user: oklch(0.7 0.13 168);
   --color-cell-conflict: oklch(0.7 0.18 25);
