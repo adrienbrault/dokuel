@@ -83,7 +83,7 @@ export const Cell = memo(function Cell({
       {cell.value ? (
         <span
           key={cell.value}
-          className={`text-[clamp(0.875rem,4vw,1.5rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
+          className={`text-[clamp(1.09375rem,5vw,1.875rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
         >
           {cell.value}
         </span>
@@ -92,7 +92,7 @@ export const Cell = memo(function Cell({
           {DIGITS.map((n) => (
             <span
               key={n}
-              className="flex items-center justify-center text-[clamp(0.5625rem,2.2vw,0.75rem)] text-text-secondary font-medium leading-none"
+              className="flex items-center justify-center text-[clamp(0.703125rem,2.75vw,0.9375rem)] text-text-secondary font-medium leading-none"
             >
               {cell.notes.has(n) ? n : ""}
             </span>
