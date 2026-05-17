@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useDigitDrag } from "../hooks/useDigitDrag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
+import { gameFeedback } from "../lib/game-feedback.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
+import { DigitDragGhost } from "./DigitDragGhost.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -120,6 +123,30 @@ export function SoloGame({
     holdFiredRef.current = false;
   };
 
+  // Digit drag: drop on a cell commits the value. Drag complements the
+  // tap-note / hold-value gestures; it doesn't replace them. The
+  // dropped digit always lands as a value (the deliberate gesture
+  // earns the commit) rather than a note.
+  const isDroppable = (row: number, col: number) => {
+    const cell = game.board[row]?.[col];
+    if (!cell) return false;
+    return !cell.isGiven && cell.value === null;
+  };
+  const handleDigitDrop = (
+    digit: number,
+    _source: { kind: "numpad" } | { kind: "cell"; row: number; col: number },
+    target: { row: number; col: number },
+  ) => {
+    if (game.status !== "playing" || paused) return;
+    gameFeedback.onPlace();
+    game.selectCell(target.row, target.col);
+    game.placeNumber(digit, assistLevel !== "paper", false);
+  };
+  const { state: dragState, start: startDrag } = useDigitDrag({
+    onDrop: handleDigitDrop,
+    isDroppable,
+  });
+
   const handleBack = () => {
     if (
       game.status === "playing" &&
@@ -219,6 +246,16 @@ export function SoloGame({
           onNumber={handleTapNote}
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
+          onStartDrag={({ digit, x, y, pointerId }) => {
+            if (paused || game.status !== "playing") return;
+            startDrag({
+              digit,
+              source: { kind: "numpad" },
+              x,
+              y,
+              pointerId,
+            });
+          }}
         />
       }
       board={
@@ -234,7 +271,23 @@ export function SoloGame({
             onSetSelectedCells={paused ? undefined : game.setSelectedCells}
             animateReveal={!revealed}
             chargingDigit={paused ? null : chargingDigit}
+            dragState={paused ? null : dragState}
+            onStartCellDrag={
+              paused
+                ? undefined
+                : ({ digit, from, x, y, pointerId }) => {
+                    if (game.status !== "playing") return;
+                    startDrag({
+                      digit,
+                      source: { kind: "cell", row: from.row, col: from.col },
+                      x,
+                      y,
+                      pointerId,
+                    });
+                  }
+            }
           />
+          <DigitDragGhost state={dragState} />
           {paused && (
             <button
               type="button"
