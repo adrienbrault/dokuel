@@ -219,6 +219,25 @@ test("join game screen", async ({ page }, testInfo) => {
 
 // --- Game states ---
 
+test("solo game - numpad digit highlight", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	// With no cell selected, tapping a digit on the numpad toggles a
+	// board-wide highlight of every cell holding that digit.
+	await page
+		.locator('[role="group"][aria-label="Number pad"]:visible')
+		.getByRole("button", { name: /^5(,|$)/ })
+		.first()
+		.click();
+
+	await page.screenshot({
+		path: screenshotPath("solo-digit-highlight", testInfo.project.name),
+	});
+});
+
 test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();
