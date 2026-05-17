@@ -7,7 +7,8 @@ import {
   useState,
 } from "react";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
-import type { NumPadPosition } from "../lib/types.ts";
+import type { NumPadLayout, NumPadPosition } from "../lib/types.ts";
+import { NumPadLayoutToggle } from "./NumPadLayoutToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 
 type GameLayoutProps = {
@@ -18,6 +19,8 @@ type GameLayoutProps = {
   controls: ReactNode;
   position: NumPadPosition;
   onPositionChange: (position: NumPadPosition) => void;
+  layout: NumPadLayout;
+  onLayoutChange: (layout: NumPadLayout) => void;
   title?: string | undefined;
   headerExtra?: ReactNode | undefined;
   footer?: ReactNode | undefined;
@@ -35,6 +38,8 @@ export function GameLayout({
   controls,
   position,
   onPositionChange,
+  layout,
+  onLayoutChange,
   title,
   headerExtra,
   footer,
@@ -74,6 +79,8 @@ export function GameLayout({
         <SettingsButton
           position={position}
           onPositionChange={onPositionChange}
+          layout={layout}
+          onLayoutChange={onLayoutChange}
           extra={settingsExtra}
         />
       </div>
@@ -136,10 +143,14 @@ export function GameLayout({
 function SettingsButton({
   position,
   onPositionChange,
+  layout,
+  onLayoutChange,
   extra,
 }: {
   position: NumPadPosition;
   onPositionChange: (position: NumPadPosition) => void;
+  layout: NumPadLayout;
+  onLayoutChange: (layout: NumPadLayout) => void;
   extra?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -170,9 +181,7 @@ function SettingsButton({
       {open && (
         <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-text-muted font-medium">
-              Numpad position
-            </p>
+            <p className="text-xs text-text-muted font-medium">Numpad</p>
             <button
               type="button"
               className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary transition-colors"
@@ -182,10 +191,13 @@ function SettingsButton({
               <X size={14} aria-hidden="true" />
             </button>
           </div>
-          <NumPadPositionToggle
-            position={position}
-            onChange={onPositionChange}
-          />
+          <div className="flex flex-col gap-2">
+            <NumPadPositionToggle
+              position={position}
+              onChange={onPositionChange}
+            />
+            <NumPadLayoutToggle layout={layout} onChange={onLayoutChange} />
+          </div>
           {extra && (
             <div className="mt-3 pt-3 border-t border-border-default">
               {extra}

@@ -3,6 +3,7 @@ import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
+import { useNumPadLayout } from "../hooks/useNumPadLayout.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
@@ -70,6 +71,7 @@ export function SoloGame({
   }
 
   const { position, setPosition } = useNumPadPosition();
+  const { layout, setLayout } = useNumPadLayout();
   const revealed = useDelayedFlag(true, 600);
   const showResult = useDelayedFlag(game.status === "completed", 300);
   const [paused, setPaused] = useState(false);
@@ -184,6 +186,8 @@ export function SoloGame({
       title={title}
       position={position}
       onPositionChange={setPosition}
+      layout={layout}
+      onLayoutChange={setLayout}
       onDeselectCell={game.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
@@ -223,6 +227,7 @@ export function SoloGame({
       numPad={
         <NumPad
           position={position}
+          layout={layout}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell

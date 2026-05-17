@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
+import { useNumPadLayout } from "../hooks/useNumPadLayout.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
@@ -83,6 +84,7 @@ export function MultiplayerBoard({
     game.reset(puzzle, solution, savedBoard);
   }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
+  const { layout, setLayout } = useNumPadLayout();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
   const initialTimerSeconds = saved?.timer ?? 0;
@@ -187,6 +189,8 @@ export function MultiplayerBoard({
       onBack={onBack}
       position={position}
       onPositionChange={setPosition}
+      layout={layout}
+      onLayoutChange={setLayout}
       onDeselectCell={game.deselectCell}
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
@@ -209,6 +213,7 @@ export function MultiplayerBoard({
       numPad={
         <NumPad
           position={position}
+          layout={layout}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell
