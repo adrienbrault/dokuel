@@ -116,7 +116,7 @@ export const Cell = memo(function Cell({
         <span
           data-testid="note-charge"
           aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center text-[clamp(0.875rem,4vw,1.5rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
+          className="absolute inset-0 flex items-center justify-center text-[clamp(1.09375rem,5vw,1.875rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
           style={
             {
               "--charge-dx": NOTE_OFFSETS[(chargingDigit - 1) % 3]!,
