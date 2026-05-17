@@ -229,7 +229,7 @@ export function MultiplayerBoard({
         />
       }
       board={
-        <>
+        <div className="relative aspect-square h-full max-h-full max-w-full mx-auto">
           <Board
             board={game.board}
             selectedCell={game.selectedCell}
@@ -245,7 +245,7 @@ export function MultiplayerBoard({
             onStartCellDrag={startCellDrag}
           />
           <DigitDragGhost state={dragState} />
-        </>
+        </div>
       }
       controls={<GameControls onErase={game.erase} onUndo={game.undo} />}
       settingsExtra={

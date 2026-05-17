@@ -243,7 +243,7 @@ export function SoloGame({
         />
       }
       board={
-        <div className="relative w-full">
+        <div className="relative aspect-square h-full max-h-full max-w-full mx-auto">
           <Board
             board={game.board}
             selectedCell={paused ? null : game.selectedCell}

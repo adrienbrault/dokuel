@@ -57,7 +57,7 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center h-dvh overflow-hidden bg-bg-primary py-4 px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
@@ -92,7 +92,7 @@ export function GameLayout({
           close to the thumbs; any slack opens up between header and board. */}
       <div
         className={`
-          flex gap-3 w-full justify-center flex-1
+          flex gap-3 w-full justify-center flex-1 min-h-0
           lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
           ${position === "left" ? "flex-row items-end lg:items-start lg:max-w-4xl lg:mx-auto" : ""}
           ${position === "right" ? "flex-row-reverse items-end lg:items-start lg:max-w-4xl lg:mx-auto lg:flex-row" : ""}
@@ -102,7 +102,7 @@ export function GameLayout({
         {/* Mobile: show numpad in position (left/right) */}
         <div className="lg:hidden">{position !== "bottom" && numPad}</div>
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-end lg:justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 w-full md:max-w-2xl lg:max-w-lg min-h-0 self-stretch ${position === "bottom" ? "flex-1 justify-end lg:justify-center" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           <div
             style={{
@@ -111,7 +111,7 @@ export function GameLayout({
                   ? "calc(100% + 2rem)"
                   : "calc(100% + 1rem)",
             }}
-            className={`flex justify-center lg:!w-full lg:mx-0 ${
+            className={`flex justify-center items-center flex-1 min-h-0 min-w-0 lg:!w-full lg:mx-0 ${
               position === "bottom"
                 ? "-mx-4"
                 : position === "left"
@@ -121,10 +121,10 @@ export function GameLayout({
           >
             {board}
           </div>
-          <div className="flex flex-col items-center gap-3 w-full">
+          <div className="flex flex-col items-center gap-3 w-full flex-shrink-0">
             {controls}
             {/* Mobile: show numpad at bottom if position=bottom */}
-            <div className="lg:hidden w-full">
+            <div className="lg:hidden w-full flex justify-center">
               {position === "bottom" && numPad}
             </div>
           </div>
