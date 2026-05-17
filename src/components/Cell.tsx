@@ -83,7 +83,7 @@ export const Cell = memo(function Cell({
       {cell.value ? (
         <span
           key={cell.value}
-          className={`text-[clamp(0.875rem,4vw,1.5rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
+          className={`text-[clamp(1.09375rem,5vw,1.875rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
         >
           {cell.value}
         </span>
