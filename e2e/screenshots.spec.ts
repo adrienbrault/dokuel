@@ -249,6 +249,127 @@ test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
 	await page.mouse.up();
 });
 
+test("solo game - drag from numpad mid-flight", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	// Find an empty cell roughly in the middle of the board to use as drop
+	// target. The ghost will be rendered hovering over it.
+	const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+	const cellBox = await emptyCell.boundingBox();
+	if (!cellBox) throw new Error("empty cell not visible");
+
+	// Grab the "5" digit from the numpad and drag it over the empty cell.
+	const digit = page.getByRole("button", { name: /^5(,|$)/ }).first();
+	const digitBox = await digit.boundingBox();
+	if (!digitBox) throw new Error("digit not visible");
+
+	await page.mouse.move(
+		digitBox.x + digitBox.width / 2,
+		digitBox.y + digitBox.height / 2,
+	);
+	await page.mouse.down();
+	// Push past the 12px slop threshold to convert press into drag —
+	// stay inside the button so the pointermove handler still fires
+	// before pointerleave kills the press.
+	await page.mouse.move(
+		digitBox.x + digitBox.width / 2 + 14,
+		digitBox.y + digitBox.height / 2,
+		{ steps: 3 },
+	);
+	// Hover over the target cell so it shows the valid-drop highlight
+	await page.mouse.move(
+		cellBox.x + cellBox.width / 2,
+		cellBox.y + cellBox.height / 2,
+		{ steps: 8 },
+	);
+
+	await page.screenshot({
+		path: screenshotPath("solo-drag-from-numpad", testInfo.project.name),
+	});
+
+	await page.mouse.up();
+});
+
+test("drag from numpad commits the digit on drop", async ({ page }) => {
+	await page.goto("/");
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+	const cellBox = await emptyCell.boundingBox();
+	if (!cellBox) throw new Error("empty cell not visible");
+
+	const digit = page.getByRole("button", { name: /^5(,|$)/ }).first();
+	const digitBox = await digit.boundingBox();
+	if (!digitBox) throw new Error("digit not visible");
+
+	await page.mouse.move(
+		digitBox.x + digitBox.width / 2,
+		digitBox.y + digitBox.height / 2,
+	);
+	await page.mouse.down();
+	await page.mouse.move(
+		digitBox.x + digitBox.width / 2 + 14,
+		digitBox.y + digitBox.height / 2,
+		{ steps: 3 },
+	);
+	await page.mouse.move(
+		cellBox.x + cellBox.width / 2,
+		cellBox.y + cellBox.height / 2,
+		{ steps: 8 },
+	);
+	await page.mouse.up();
+
+	// After dropping the 5 on the empty cell, it should now be a value-5 cell.
+	const droppedCell = page.locator('button[aria-label$="value 5"]');
+	const count = await droppedCell.count();
+	if (count === 0) throw new Error("drop did not commit a value");
+});
+
+test("solo game - drag from a filled cell", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	const sourceCell = page.locator('button[aria-label*=", value"]').first();
+	const sourceBox = await sourceCell.boundingBox();
+	if (!sourceBox) throw new Error("source cell not visible");
+
+	const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+	const emptyBox = await emptyCell.boundingBox();
+	if (!emptyBox) throw new Error("empty cell not visible");
+
+	// Press the source cell, wait past the 200ms hold timer, then move
+	// past the 12px threshold to convert the hold into a digit drag.
+	await page.mouse.move(
+		sourceBox.x + sourceBox.width / 2,
+		sourceBox.y + sourceBox.height / 2,
+	);
+	await page.mouse.down();
+	await page.waitForTimeout(250);
+	await page.mouse.move(
+		sourceBox.x + sourceBox.width / 2 + 18,
+		sourceBox.y + sourceBox.height / 2,
+		{ steps: 3 },
+	);
+	await page.mouse.move(
+		emptyBox.x + emptyBox.width / 2,
+		emptyBox.y + emptyBox.height / 2,
+		{ steps: 8 },
+	);
+
+	await page.screenshot({
+		path: screenshotPath("solo-drag-from-cell", testInfo.project.name),
+	});
+
+	await page.mouse.up();
+});
+
 test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();
