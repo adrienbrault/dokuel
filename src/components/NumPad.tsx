@@ -1,10 +1,8 @@
-import { type PointerEvent, useCallback, useRef, useState } from "react";
+import { type PointerEvent, useCallback, useRef } from "react";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 
-// Must match the duration of `.animate-longpress-charge` in index.css —
-// the scale-and-halo animation is the visible cue for this timer.
 const LONG_PRESS_MS = 400;
 
 type NumPadProps = {
@@ -13,10 +11,22 @@ type NumPadProps = {
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
   disableCompleted?: boolean | undefined;
-  /** Short tap on a digit. In Dokuel this writes a NOTE. */
+  /**
+   * Fires the moment a digit is pressed (pointerdown) so the cell can
+   * show an instant note. In Dokuel this writes a NOTE.
+   */
   onNumber: (n: number) => void;
-  /** Long press on a digit. In Dokuel this COMMITS a value. */
+  /**
+   * Fires after holding for LONG_PRESS_MS. In Dokuel this COMMITS a
+   * value (overwriting the just-placed note).
+   */
   onLongPressNumber?: ((n: number) => void) | undefined;
+  /**
+   * Fires on pointerup / cancel / leave — i.e. the press ended,
+   * regardless of whether it crossed the long-press threshold. Used
+   * by the parent to clear "currently charging" UI state.
+   */
+  onPressEnd?: (() => void) | undefined;
 };
 
 export function NumPad({
@@ -27,51 +37,59 @@ export function NumPad({
   disableCompleted = false,
   onNumber,
   onLongPressNumber,
+  onPressEnd,
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
 
-  const [pressingDigit, setPressingDigit] = useState<number | null>(null);
   const pressRef = useRef<{
     digit: number;
-    timer: ReturnType<typeof setTimeout>;
+    timer: ReturnType<typeof setTimeout> | null;
   } | null>(null);
-  // Carries "long-press just fired" across pointerup→click so we can
-  // suppress the synthetic click that would otherwise fire onNumber.
-  const firedRef = useRef(false);
+  // Suppress the synthetic click that follows pointerdown→pointerup so
+  // onNumber doesn't double-fire. A fresh pointerdown clears it.
+  const pointerFiredRef = useRef(false);
 
-  const cancelPress = useCallback(() => {
-    if (pressRef.current) {
+  const cancelTimer = useCallback(() => {
+    if (pressRef.current?.timer) {
       clearTimeout(pressRef.current.timer);
-      pressRef.current = null;
+      pressRef.current.timer = null;
     }
-    setPressingDigit(null);
   }, []);
 
   const handlePointerDown = useCallback(
     (n: number) => (e: PointerEvent<HTMLButtonElement>) => {
-      if (!onLongPressNumber) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
-      cancelPress();
-      firedRef.current = false;
+      cancelTimer();
+      pointerFiredRef.current = true;
+      onNumber(n); // instant
+      if (!onLongPressNumber) {
+        pressRef.current = { digit: n, timer: null };
+        return;
+      }
       const timer = setTimeout(() => {
-        firedRef.current = true;
-        pressRef.current = null;
-        setPressingDigit(null);
+        if (pressRef.current) pressRef.current.timer = null;
         haptics.tap();
         onLongPressNumber(n);
       }, LONG_PRESS_MS);
       pressRef.current = { digit: n, timer };
-      setPressingDigit(n);
     },
-    [onLongPressNumber, cancelPress],
+    [onNumber, onLongPressNumber, cancelTimer],
   );
+
+  const handlePointerEnd = useCallback(() => {
+    if (!pressRef.current) return;
+    cancelTimer();
+    pressRef.current = null;
+    onPressEnd?.();
+  }, [cancelTimer, onPressEnd]);
 
   const handleClick = useCallback(
     (n: number) => () => {
-      if (firedRef.current) {
-        firedRef.current = false;
+      if (pointerFiredRef.current) {
+        pointerFiredRef.current = false;
         return;
       }
+      // Keyboard/AT activation: no pointer events fired, so honor click.
       onNumber(n);
     },
     [onNumber],
@@ -115,20 +133,17 @@ export function NumPad({
           const remaining = remainingCounts[n];
           const isComplete = remaining === 0;
           const isSelected = selectedValue === n;
-          const isPressing = pressingDigit === n;
 
           return (
             <button
               key={n}
               type="button"
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isPressing ? "animate-longpress-charge" : ""} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
-              onPointerDown={
-                onLongPressNumber ? handlePointerDown(n) : undefined
-              }
-              onPointerUp={onLongPressNumber ? cancelPress : undefined}
-              onPointerLeave={onLongPressNumber ? cancelPress : undefined}
-              onPointerCancel={onLongPressNumber ? cancelPress : undefined}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-manipulation font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
+              onPointerDown={handlePointerDown(n)}
+              onPointerUp={handlePointerEnd}
+              onPointerLeave={handlePointerEnd}
+              onPointerCancel={handlePointerEnd}
               onClick={handleClick(n)}
               aria-label={
                 showRemainingCounts
