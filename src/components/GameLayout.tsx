@@ -79,20 +79,22 @@ export function GameLayout({
 
       {headerExtra}
 
-      {/* Main game area — mobile: respects position; desktop: always side-by-side */}
+      {/* Main game area — mobile: respects position; desktop: always side-by-side.
+          On mobile we align to the bottom so the grid + controls + numpad sit
+          close to the thumbs; any slack opens up between header and board. */}
       <div
         className={`
           flex gap-3 w-full justify-center flex-1
           lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
-          ${position === "left" ? "flex-row items-center lg:max-w-4xl lg:mx-auto" : ""}
-          ${position === "right" ? "flex-row-reverse items-center lg:max-w-4xl lg:mx-auto lg:flex-row" : ""}
+          ${position === "left" ? "flex-row items-end lg:items-start lg:max-w-4xl lg:mx-auto" : ""}
+          ${position === "right" ? "flex-row-reverse items-end lg:items-start lg:max-w-4xl lg:mx-auto lg:flex-row" : ""}
           ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-start" : ""}
         `}
       >
         {/* Mobile: show numpad in position (left/right) */}
         <div className="lg:hidden">{position !== "bottom" && numPad}</div>
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-end lg:justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           <div
             style={{
