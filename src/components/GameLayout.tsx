@@ -1,3 +1,4 @@
+import { Settings, X } from "lucide-react";
 import {
   type PointerEvent,
   type ReactNode,
@@ -164,19 +165,7 @@ function SettingsButton({
         aria-label="Settings"
         aria-expanded={open}
       >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            fillRule="evenodd"
-            d="M8.34 1.804A1 1 0 019.32 1h1.36a1 1 0 01.98.804l.295 1.473a7.04 7.04 0 011.2.694l1.42-.508a1 1 0 011.12.358l.68 1.178a1 1 0 01-.14 1.162l-1.126.965a7.09 7.09 0 010 1.388l1.125.965a1 1 0 01.141 1.162l-.68 1.178a1 1 0 01-1.12.358l-1.42-.508a7.04 7.04 0 01-1.2.694l-.294 1.473a1 1 0 01-.98.804H9.32a1 1 0 01-.98-.804l-.295-1.473a7.04 7.04 0 01-1.2-.694l-1.42.508a1 1 0 01-1.12-.358l-.68-1.178a1 1 0 01.14-1.162l1.126-.965a7.09 7.09 0 010-1.388l-1.125-.965a1 1 0 01-.141-1.162l.68-1.178a1 1 0 011.12-.358l1.42.508a7.04 7.04 0 011.2-.694l.294-1.473zM10 13a3 3 0 100-6 3 3 0 000 6z"
-            clipRule="evenodd"
-          />
-        </svg>
+        <Settings size={18} aria-hidden="true" />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
@@ -190,20 +179,7 @@ function SettingsButton({
               onClick={() => setOpen(false)}
               aria-label="Close settings"
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
           <NumPadPositionToggle
