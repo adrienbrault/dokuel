@@ -3,9 +3,16 @@ import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Position } from "../lib/types.ts";
 
 // Pointer must travel this far from the press origin before a press on
-// a filled cell converts into a digit drag. Small enough to feel
-// instant, large enough to not steal taps from finger twitches.
-const CELL_DRAG_THRESHOLD_PX = 6;
+// a filled cell converts into a digit drag. Sized above the typical
+// finger jitter on a tap (iOS uses ~10pt touch slop) so a quick tap with
+// a small wobble still registers as a tap, not a drag.
+const CELL_DRAG_THRESHOLD_PX = 12;
+
+// Press on a filled cell must also be held at least this long before it
+// can convert into a digit drag. Combined with the px threshold, this
+// makes a quick tap always a tap — even if the finger swiped — and
+// reserves the drag gesture for a deliberate hold-then-drag.
+const CELL_DRAG_HOLD_MS = 180;
 
 type Options = {
   board: BoardType;
@@ -40,6 +47,7 @@ type DragState = {
   // Press tracking for filled-cell drag
   originX: number;
   originY: number;
+  originTime: number;
   pointerId: number;
   source: { row: number; col: number; value: number } | null;
   cellDragStarted: boolean;
@@ -77,6 +85,12 @@ export function useDragSelect({
   const onPointerDown = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
       if (!onSetSelectedCells) return;
+      // iOS Safari skips synthesizing a click after a touch that moved
+      // significantly — true of every digit drag and multi-cell select.
+      // Without resetting here, the suppress flag set by that prior
+      // gesture lingers with no click to consume it and silently eats
+      // the user's next tap.
+      suppressClickRef.current = false;
       const pos = getCellFromPoint(e.clientX, e.clientY);
       if (!pos) return;
       const key = cellKey(pos.row, pos.col);
@@ -102,6 +116,7 @@ export function useDragSelect({
           shiftClick: true,
           originX: e.clientX,
           originY: e.clientY,
+          originTime: Date.now(),
           pointerId: e.pointerId,
           source: null,
           cellDragStarted: false,
@@ -117,6 +132,7 @@ export function useDragSelect({
         shiftClick: false,
         originX: e.clientX,
         originY: e.clientY,
+        originTime: Date.now(),
         pointerId: e.pointerId,
         source,
         cellDragStarted: false,
@@ -131,17 +147,26 @@ export function useDragSelect({
       if (!drag || !onSetSelectedCells) return;
       if (drag.cellDragStarted) return; // handed off to digit-drag layer
 
-      // Filled-cell drag handover: any movement beyond the small slop
-      // threshold converts the press into a digit drag. A pure tap (no
-      // movement) still falls through to the click handler that selects
-      // the cell.
+      // Filled-cell press: only two intents are possible — tap-to-select
+      // or drag-the-digit. Multi-select doesn't apply (the source cell
+      // isn't selectable). Activate the digit drag on the first of:
+      //   - pointer crossed into a different cell (clear swipe intent)
+      //   - held past the hold window AND moved past the slop threshold
+      //     (deliberate press-and-drag from rest)
+      // Either gate alone would steal taps: a quick tap can wobble past
+      // 12px, and a slow hold without drag intent could trigger on any
+      // micro-twitch the moment the threshold is met.
       if (drag.source && onStartCellDrag && e.pointerId === drag.pointerId) {
+        const pos = getCellFromPoint(e.clientX, e.clientY);
+        const crossedCell =
+          pos !== null && cellKey(pos.row, pos.col) !== drag.startKey;
         const dx = e.clientX - drag.originX;
         const dy = e.clientY - drag.originY;
-        if (
-          dx * dx + dy * dy >=
-          CELL_DRAG_THRESHOLD_PX * CELL_DRAG_THRESHOLD_PX
-        ) {
+        const elapsedMs = Date.now() - drag.originTime;
+        const heldAndMoved =
+          elapsedMs >= CELL_DRAG_HOLD_MS &&
+          dx * dx + dy * dy >= CELL_DRAG_THRESHOLD_PX * CELL_DRAG_THRESHOLD_PX;
+        if (crossedCell || heldAndMoved) {
           drag.cellDragStarted = true;
           // Suppress the trailing click so the drag doesn't also leave
           // a stale selection on the source cell.
@@ -153,8 +178,8 @@ export function useDragSelect({
             y: e.clientY,
             pointerId: e.pointerId,
           });
-          return;
         }
+        return;
       }
 
       const pos = getCellFromPoint(e.clientX, e.clientY);

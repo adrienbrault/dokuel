@@ -274,3 +274,216 @@ describe("Board drag-select filters non-empty cells", () => {
     expect(onSetSelectedCells).not.toHaveBeenCalled();
   });
 });
+
+describe("Board filled-cell drag gating", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  function findCell(row: number, col: number): HTMLElement {
+    return document.querySelector(
+      `[data-row="${row}"][data-col="${col}"]`,
+    ) as HTMLElement;
+  }
+
+  function mockElementFromPoint(cells: Array<{ row: number; col: number }>) {
+    let idx = 0;
+    const original = document.elementFromPoint;
+    document.elementFromPoint = () => {
+      const next = cells[Math.min(idx, cells.length - 1)]!;
+      idx += 1;
+      return findCell(next.row, next.col);
+    };
+    return () => {
+      document.elementFromPoint = original;
+    };
+  }
+
+  it("does not start cell drag on quick tap with finger wobble of a filled cell", () => {
+    // Real-world bug: a quick tap with ~7px finger wobble on a filled cell
+    // was tripping the cell-drag handover, suppressing the click and
+    // leaving the cell unselected.
+    const board = makeBoard([[0, 0, 5]]);
+    const onStartCellDrag = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        onSetSelectedCells={onSetSelectedCells}
+        onStartCellDrag={onStartCellDrag}
+      />,
+    );
+
+    mockElementFromPoint([
+      { row: 0, col: 0 },
+      { row: 0, col: 0 },
+      { row: 0, col: 0 },
+    ]);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    // 7px wobble — below the old 6px threshold's intent but above it numerically
+    fireEvent.pointerMove(region, {
+      clientX: 107,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(region, { clientX: 107, clientY: 100, pointerId: 1 });
+
+    expect(onStartCellDrag).not.toHaveBeenCalled();
+  });
+
+  it("starts cell drag immediately when a quick swipe crosses into a different cell", () => {
+    // The previous design rejected a hold-timer specifically because a
+    // quick digit-drag swipe felt laggy. Cell-crossing must still
+    // activate the drag without waiting on the hold window.
+    const board = makeBoard([[0, 0, 5]]);
+    const onStartCellDrag = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        onSetSelectedCells={onSetSelectedCells}
+        onStartCellDrag={onStartCellDrag}
+      />,
+    );
+
+    mockElementFromPoint([
+      { row: 0, col: 0 }, // pointerdown
+      { row: 0, col: 1 }, // pointermove crosses cells immediately
+    ]);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(region, {
+      clientX: 140,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    expect(onStartCellDrag).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts cell drag when the press is held long enough then moved", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const board = makeBoard([[0, 0, 5]]);
+    const onStartCellDrag = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        onSetSelectedCells={onSetSelectedCells}
+        onStartCellDrag={onStartCellDrag}
+      />,
+    );
+
+    mockElementFromPoint([
+      { row: 0, col: 0 },
+      { row: 0, col: 0 },
+    ]);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    vi.setSystemTime(250);
+    fireEvent.pointerMove(region, {
+      clientX: 120,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    expect(onStartCellDrag).toHaveBeenCalledTimes(1);
+    expect(onStartCellDrag.mock.calls[0]![0]).toMatchObject({
+      digit: 5,
+      from: { row: 0, col: 0 },
+    });
+  });
+
+  it("does not poison the next tap when a prior drag's trailing click was skipped", () => {
+    // iOS Safari does not synthesize a click event after a touch that
+    // moved significantly — true of every digit drag. The suppress-click
+    // flag set when the drag activated would then have no click to
+    // consume it, silently eating the user's next tap on a given cell.
+    const board = makeBoard([
+      [0, 0, 5],
+      [3, 3, 7],
+    ]);
+    const onSelectCell = vi.fn();
+    const onStartCellDrag = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={onSelectCell}
+        onSetSelectedCells={onSetSelectedCells}
+        onStartCellDrag={onStartCellDrag}
+      />,
+    );
+
+    mockElementFromPoint([
+      { row: 0, col: 0 }, // first gesture: pointerdown on filled cell
+      { row: 0, col: 1 }, // pointermove crosses cells -> activates drag
+      { row: 3, col: 3 }, // second gesture: pointerdown on the given cell tapped next
+    ]);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    // First gesture: digit drag (no trailing click, simulating iOS skip).
+    fireEvent.pointerDown(region, {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(region, {
+      clientX: 140,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(region, { clientX: 140, clientY: 100, pointerId: 1 });
+    expect(onStartCellDrag).toHaveBeenCalledTimes(1);
+
+    // Second gesture: a still tap on a different given cell. Both
+    // pointerdown and the synthesized click should flow through to the
+    // cell's onSelect.
+    fireEvent.pointerDown(region, {
+      clientX: 300,
+      clientY: 300,
+      pointerId: 2,
+    });
+    fireEvent.pointerUp(region, { clientX: 300, clientY: 300, pointerId: 2 });
+    const cell33 = document.querySelector(
+      '[data-row="3"][data-col="3"]',
+    ) as HTMLElement;
+    fireEvent.click(cell33);
+
+    expect(onSelectCell).toHaveBeenCalledWith(3, 3);
+  });
+});
