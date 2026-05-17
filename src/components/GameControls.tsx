@@ -1,3 +1,4 @@
+import { Eraser, Lightbulb, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 type GameControlsProps = {
@@ -20,14 +21,14 @@ export function GameControls({
         onClick={onUndo}
         disabled={!historyLength || historyLength === 0}
       >
-        <UndoIcon />
+        <Undo2 size={20} strokeWidth={2} aria-hidden="true" />
       </ControlButton>
       <ControlButton label="Erase" onClick={onErase}>
-        <EraseIcon />
+        <Eraser size={20} strokeWidth={2} aria-hidden="true" />
       </ControlButton>
       {onHint && (
         <ControlButton label="Hint" onClick={onHint}>
-          <HintIcon />
+          <Lightbulb size={20} strokeWidth={2} aria-hidden="true" />
         </ControlButton>
       )}
     </div>
@@ -60,64 +61,5 @@ function ControlButton({
       <span aria-hidden="true">{children}</span>
       <span className="text-[0.625rem] leading-none font-medium">{label}</span>
     </button>
-  );
-}
-
-function UndoIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 7v6h6" />
-      <path d="M3 13a9 9 0 1 0 3-7.7L3 8" />
-    </svg>
-  );
-}
-
-function EraseIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-      <line x1="18" y1="9" x2="12" y2="15" />
-      <line x1="12" y1="9" x2="18" y2="15" />
-    </svg>
-  );
-}
-
-function HintIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 18h6" />
-      <path d="M10 22h4" />
-      <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v.3h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" />
-    </svg>
   );
 }
