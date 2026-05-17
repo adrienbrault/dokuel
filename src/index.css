@@ -431,6 +431,82 @@ body {
   animation: fade-in 0.15s ease-out;
 }
 
+/* ─── Drag-and-drop digit ─── */
+
+/* The floating digit overlay: a quick pop-in on grab, then a gentle
+   pulse while the user is searching for a target. Pulse breathes via
+   a transform so it doesn't conflict with the tilt/lift on hover. */
+@keyframes digit-drag-ghost {
+  0% {
+    transform: translate(-50%, calc(-100% - 0.5rem)) scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translate(-50%, calc(-100% - 0.5rem)) scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, calc(-100% - 0.5rem)) scale(1);
+    opacity: 1;
+  }
+}
+.animate-digit-drag-ghost {
+  animation: digit-drag-ghost 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Empty cells in the board breathe softly while a drag is active so
+   the user sees where they CAN drop. Driven by [data-drop-candidate]
+   on the cell and toggled by the Board component. */
+@keyframes drop-candidate-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px oklch(0.52 0.12 168 / 0.18);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px oklch(0.52 0.12 168 / 0.42);
+  }
+}
+[data-drop-candidate="true"] {
+  animation: drop-candidate-pulse 1.4s ease-in-out infinite;
+}
+
+/* Hovered drop target — the cell pulses harder, with the accent ring
+   matching the ghost color so the connection is visually obvious. */
+@keyframes drop-target-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 3px oklch(0.52 0.12 168 / 0.65);
+  }
+  50% {
+    box-shadow: inset 0 0 0 3px oklch(0.52 0.12 168 / 1);
+  }
+}
+[data-drop-target="valid"] {
+  animation: drop-target-pulse 0.6s ease-in-out infinite;
+  background-color: var(--color-cell-selected);
+}
+[data-drop-target="invalid"] {
+  box-shadow: inset 0 0 0 3px oklch(0.6 0.2 25 / 0.7);
+  background-color: var(--color-cell-conflict-bg);
+}
+
+/* Source cell while it's being dragged from — fades the in-place
+   digit so the user understands the digit is "lifted". */
+@keyframes drop-source-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.3;
+  }
+}
+[data-drag-source="true"] {
+  animation: drop-source-fade 0.15s ease-out forwards;
+}
+
+/* Drop landing: the receiving cell's digit gets the existing
+   .animate-pop-in via the Cell render path; nothing extra needed. */
+
 /* ─── Design System: Component Classes ─── */
 
 /* Buttons */
