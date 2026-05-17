@@ -200,18 +200,19 @@ test("join game screen", async ({ page }, testInfo) => {
 
 // --- Game states ---
 
-test("solo game - long-press charge on digit", async ({ page }, testInfo) => {
+test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();
 	await page.getByRole("button", { name: "Easy" }).click();
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-	// Select an empty cell so the long-press has a meaningful target
+	// Select an empty cell so the hold has a meaningful target
 	await page.locator('button[aria-label*=", empty"]').first().click();
 
-	// Press and hold a digit; screenshot mid-hold to show the scale + halo.
-	// Animations are disabled in this harness, so the button renders at its
-	// final state — capturing that the affordance grows past finger size.
+	// Hold a digit; screenshot mid-hold to show the in-cell charging
+	// glyph growing toward value-size. Animations are disabled here, so
+	// the overlay snaps to its end state — what matters is that the
+	// digit is visibly previewed in the cell before commit.
 	const digit = page
 		.locator(
 			'[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
@@ -223,7 +224,7 @@ test("solo game - long-press charge on digit", async ({ page }, testInfo) => {
 	await page.mouse.down();
 
 	await page.screenshot({
-		path: screenshotPath("solo-longpress-charge", testInfo.project.name),
+		path: screenshotPath("solo-hold-charging", testInfo.project.name),
 	});
 
 	await page.mouse.up();

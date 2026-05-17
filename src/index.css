@@ -282,25 +282,6 @@ body {
   animation: note-charge 400ms ease-out forwards;
 }
 
-/* Long-press feedback for committing a value. The button scales up
-   past the finger so the user can SEE it growing, and a colored halo
-   expands outward as a "charging" hint. Duration matches NumPad's
-   LONG_PRESS_MS; if one changes, change the other. */
-@keyframes longpress-charge {
-  from {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 var(--color-accent);
-  }
-  to {
-    transform: scale(1.18);
-    box-shadow: 0 0 12px 4px var(--color-accent);
-  }
-}
-.animate-longpress-charge {
-  animation: longpress-charge 400ms ease-out forwards;
-  z-index: 10;
-}
-
 @keyframes emoji-bounce {
   0% {
     transform: scale(0.3) rotate(-15deg);
