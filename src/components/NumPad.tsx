@@ -177,12 +177,12 @@ export function NumPad({
 
   return (
     <div
-      className={`flex items-center gap-1 ${isGrid ? "flex-col w-auto" : isVertical ? "flex-col w-12" : "flex-col w-full max-w-lg"} ${isGrid ? "lg:flex-col lg:w-auto" : "lg:flex-col lg:w-14"}`}
+      className={`flex items-center gap-1 ${isGrid ? "flex-col w-44 lg:w-44" : isVertical ? "flex-col w-12 lg:flex-col lg:w-14" : "flex-col w-full max-w-lg lg:flex-col lg:w-14"}`}
     >
       {/* Horizontal one-liner: mobile bottom (room to fit) and grid layout (compact wrapper) */}
       {(!isVertical && !isGrid) || isGrid ? (
         <p
-          className={`text-[0.625rem] text-text-muted leading-tight select-none ${isGrid ? "" : "lg:hidden"}`}
+          className={`text-[0.625rem] text-text-muted leading-tight select-none text-center ${isGrid ? "" : "lg:hidden"}`}
           aria-hidden="true"
         >
           tap = note · hold = enter · drag = place
