@@ -344,18 +344,19 @@ test("solo game - drag from a filled cell", async ({ page }, testInfo) => {
 	const emptyBox = await emptyCell.boundingBox();
 	if (!emptyBox) throw new Error("empty cell not visible");
 
-	// Press the source cell, wait past the 200ms hold timer, then move
-	// past the 12px threshold to convert the hold into a digit drag.
+	// Press the source cell and move past the small slop threshold —
+	// any movement on a filled cell instantly converts into a digit
+	// drag (no hold required, since the cell already has a value to
+	// carry).
 	await page.mouse.move(
 		sourceBox.x + sourceBox.width / 2,
 		sourceBox.y + sourceBox.height / 2,
 	);
 	await page.mouse.down();
-	await page.waitForTimeout(250);
 	await page.mouse.move(
-		sourceBox.x + sourceBox.width / 2 + 18,
+		sourceBox.x + sourceBox.width / 2 + 10,
 		sourceBox.y + sourceBox.height / 2,
-		{ steps: 3 },
+		{ steps: 2 },
 	);
 	await page.mouse.move(
 		emptyBox.x + emptyBox.width / 2,
