@@ -144,21 +144,28 @@ export function MultiplayerBoard({
   // deliberate commit (value). Keyboard digit (if focused) still follows
   // the in-reducer notesMode flag via useSudoku's default behavior.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
+  // Defer note-deselect to press end so a tap+hold can still commit
+  // the digit on the originally selected cell.
+  const holdFiredRef = useRef(false);
   const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", true);
       setChargingDigit(n);
+      holdFiredRef.current = false;
     }
   };
 
   const handleHoldValue = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", false);
+      holdFiredRef.current = true;
     }
   };
 
   const handlePressEnd = () => {
     setChargingDigit(null);
+    if (!holdFiredRef.current) game.deselectCell();
+    holdFiredRef.current = false;
   };
 
   return (

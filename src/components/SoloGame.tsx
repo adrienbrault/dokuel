@@ -85,7 +85,9 @@ export function SoloGame({
   // preserving the established "press N then 1" pencil-mark workflow.
   const handleKeyboardNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
+      const wasNoteMode = game.notesMode;
       game.placeNumber(n, assistLevel !== "paper");
+      if (wasNoteMode) game.deselectCell();
     }
   };
 
@@ -93,21 +95,29 @@ export function SoloGame({
   // deliberate commit (value). The 400ms hold doubles as a guard against
   // accidental value placement.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
+  // Tracks whether the long-press digit fired during the current gesture.
+  // We defer the note-deselect to press end so a tap+hold can still land
+  // the digit on the originally selected cell.
+  const holdFiredRef = useRef(false);
   const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", true);
       setChargingDigit(n);
+      holdFiredRef.current = false;
     }
   };
 
   const handleHoldValue = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", false);
+      holdFiredRef.current = true;
     }
   };
 
   const handlePressEnd = () => {
     setChargingDigit(null);
+    if (!holdFiredRef.current) game.deselectCell();
+    holdFiredRef.current = false;
   };
 
   const handleBack = () => {
