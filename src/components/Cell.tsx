@@ -108,7 +108,7 @@ export const Cell = memo(function Cell({
       {cell.value ? (
         <span
           key={cell.value}
-          className={`text-[clamp(1.09375rem,5vw,1.875rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
+          className={`text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
         >
           {cell.value}
         </span>
@@ -117,7 +117,7 @@ export const Cell = memo(function Cell({
           {DIGITS.map((n) => (
             <span
               key={n}
-              className="flex items-center justify-center text-[clamp(0.703125rem,2.75vw,0.9375rem)] text-text-secondary font-medium leading-none"
+              className="flex items-center justify-center text-[clamp(0.80859375rem,3.1625vw,1.078125rem)] text-text-secondary font-medium leading-none"
             >
               {cell.notes.has(n) && chargingDigit !== n ? n : ""}
             </span>
@@ -128,7 +128,7 @@ export const Cell = memo(function Cell({
         <span
           data-testid="note-charge"
           aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center text-[clamp(1.09375rem,5vw,1.875rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
+          className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
           style={
             {
               "--charge-dx": NOTE_OFFSETS[(chargingDigit - 1) % 3]!,
