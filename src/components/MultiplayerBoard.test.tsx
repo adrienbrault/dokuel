@@ -100,6 +100,57 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("deselects the cell after a tap-only numpad note", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      // Selection styling is applied via the cell-selected-glow class
+      // (standard assist level uses the glow, paper uses a ring).
+      expect(cell.className).toContain("cell-selected-glow");
+
+      // Tap = note (instant on pointerdown). No hold timer expiration
+      // before release, so the long-press digit must not fire.
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      // Cell stays empty (note, not digit) and no longer carries selection.
+      expect(
+        screen.queryByLabelText(/Cell row 1 column 1, empty/),
+      ).not.toBeNull();
+      expect(cell.className).not.toContain("cell-selected-glow");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the cell selected after a tap+hold digit placement", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      // Digit landed and the cell remains selected so the player can
+      // keep working it (e.g. erase + retry without re-tapping).
+      const filledCell = screen.getByLabelText(/Cell row 1 column 1, value 5/);
+      expect(filledCell.className).toContain("cell-selected-glow");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores placed cell values on remount with same roomId and puzzle", () => {
     vi.useFakeTimers();
     try {
