@@ -267,19 +267,38 @@ body {
    note-grid position (corner/edge/center based on digit) toward the
    cell center at value-size over the same 400ms hold threshold used
    by NumPad. --charge-dx / --charge-dy are the offset from cell
-   center to the digit's sub-cell center, supplied inline by Cell. */
+   center to the digit's sub-cell center, supplied inline by Cell.
+
+   Timing curve: a long, slow build for ~60% of the duration (the
+   glyph creeps out of its corner, gathering tension), a fast snap to
+   an overshoot near the end (~15% of the duration), and a quick
+   settle to the final value size before the actual value commits.
+   Keyframe percentages do the work — animation-timing-function is
+   linear so the spacing dictates speed. */
 @keyframes note-charge {
-  from {
+  0% {
     transform: translate(var(--charge-dx, 0%), var(--charge-dy, 0%)) scale(0.4);
     opacity: 0.55;
   }
-  to {
+  60% {
+    transform: translate(
+        calc(var(--charge-dx, 0%) * 0.6),
+        calc(var(--charge-dy, 0%) * 0.6)
+      )
+      scale(0.6);
+    opacity: 0.75;
+  }
+  85% {
+    transform: translate(0%, 0%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
     transform: translate(0%, 0%) scale(1);
     opacity: 1;
   }
 }
 .animate-note-charge {
-  animation: note-charge 400ms ease-out forwards;
+  animation: note-charge 400ms linear forwards;
 }
 
 @keyframes emoji-bounce {
