@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
@@ -146,6 +147,8 @@ export function MultiplayerBoard({
   // deliberate commit (value). Keyboard digit (if focused) still follows
   // the in-reducer notesMode flag via useSudoku's default behavior.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
+  // With no cell selected, the numpad doubles as a filter chip.
+  const highlight = useDigitHighlight(game);
   // Defer note-deselect to press end so a tap+hold can still commit
   // the digit on the originally selected cell.
   const holdFiredRef = useRef(false);
@@ -154,6 +157,8 @@ export function MultiplayerBoard({
       game.placeNumber(n, assistLevel !== "paper", true);
       setChargingDigit(n);
       holdFiredRef.current = false;
+    } else {
+      highlight.toggle(n);
     }
   };
 
@@ -208,7 +213,7 @@ export function MultiplayerBoard({
           selectedValue={
             game.selectedCell
               ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
-              : null
+              : highlight.highlightedDigit
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
@@ -226,8 +231,9 @@ export function MultiplayerBoard({
             selectedCells={game.selectedCells}
             assistLevel={assistLevel}
             conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
-            onSelectCell={game.selectCell}
-            onSetSelectedCells={game.setSelectedCells}
+            highlightedDigit={highlight.highlightedDigit}
+            onSelectCell={highlight.selectCell}
+            onSetSelectedCells={highlight.setSelectedCells}
             animateReveal={!revealed}
             chargingDigit={chargingDigit}
             dragState={dragState}

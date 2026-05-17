@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
@@ -97,6 +98,8 @@ export function SoloGame({
   // deliberate commit (value). The 400ms hold doubles as a guard against
   // accidental value placement.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
+  // With no cell selected, the numpad doubles as a filter chip.
+  const highlight = useDigitHighlight(game);
   // Tracks whether the long-press digit fired during the current gesture.
   // We defer the note-deselect to press end so a tap+hold can still land
   // the digit on the originally selected cell.
@@ -106,6 +109,8 @@ export function SoloGame({
       game.placeNumber(n, assistLevel !== "paper", true);
       setChargingDigit(n);
       holdFiredRef.current = false;
+    } else {
+      highlight.toggle(n);
     }
   };
 
@@ -222,7 +227,7 @@ export function SoloGame({
           selectedValue={
             game.selectedCell
               ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
-              : null
+              : highlight.highlightedDigit
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
@@ -241,8 +246,9 @@ export function SoloGame({
             assistLevel={assistLevel}
             conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
             hintCells={hintCells}
-            onSelectCell={paused ? () => {} : game.selectCell}
-            onSetSelectedCells={paused ? undefined : game.setSelectedCells}
+            highlightedDigit={paused ? null : highlight.highlightedDigit}
+            onSelectCell={paused ? () => {} : highlight.selectCell}
+            onSetSelectedCells={paused ? undefined : highlight.setSelectedCells}
             animateReveal={!revealed}
             chargingDigit={paused ? null : chargingDigit}
             dragState={paused ? null : dragState}

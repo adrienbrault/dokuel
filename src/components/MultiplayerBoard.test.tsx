@@ -151,6 +151,82 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("toggles digit highlight when numpad is tapped with no cell selected", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      // No cell selected. Tap "7" on the numpad → cells with value 7
+      // should pick up the same-number background.
+      const seven = screen.getAllByLabelText("7")[0]!;
+      fireEvent.pointerDown(seven, { pointerType: "touch" });
+      fireEvent.pointerUp(seven, { pointerType: "touch" });
+
+      // (0,4) holds 7 in PUZZLE.
+      const cell04 = screen.getByLabelText("Cell row 1 column 5, value 7");
+      expect(cell04.className).toContain("bg-cell-same-number");
+
+      // Tap "7" again → toggles the highlight off.
+      fireEvent.pointerDown(seven, { pointerType: "touch" });
+      fireEvent.pointerUp(seven, { pointerType: "touch" });
+      const cell04After = screen.getByLabelText("Cell row 1 column 5, value 7");
+      expect(cell04After.className).not.toContain("bg-cell-same-number");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("switches highlight when a different digit is tapped", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      const seven = screen.getAllByLabelText("7")[0]!;
+      fireEvent.pointerDown(seven, { pointerType: "touch" });
+      fireEvent.pointerUp(seven, { pointerType: "touch" });
+
+      const eight = screen.getAllByLabelText("8")[0]!;
+      fireEvent.pointerDown(eight, { pointerType: "touch" });
+      fireEvent.pointerUp(eight, { pointerType: "touch" });
+
+      // 7 should no longer highlight; 8 should.
+      expect(
+        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+      ).not.toContain("bg-cell-same-number");
+      // (0,5)=8 in PUZZLE
+      expect(
+        screen.getByLabelText("Cell row 1 column 6, value 8").className,
+      ).toContain("bg-cell-same-number");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clears the digit highlight when a cell is selected", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      const seven = screen.getAllByLabelText("7")[0]!;
+      fireEvent.pointerDown(seven, { pointerType: "touch" });
+      fireEvent.pointerUp(seven, { pointerType: "touch" });
+      expect(
+        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+      ).toContain("bg-cell-same-number");
+
+      // Click an empty cell — selection clears the digit highlight so the
+      // selection's own value (or lack of one) drives the board again.
+      const empty = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(empty);
+
+      expect(
+        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+      ).not.toContain("bg-cell-same-number");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores placed cell values on remount with same roomId and puzzle", () => {
     vi.useFakeTimers();
     try {
