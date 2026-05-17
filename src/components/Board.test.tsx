@@ -364,4 +364,66 @@ describe("Board filled-cell drag gating", () => {
       from: { row: 0, col: 0 },
     });
   });
+
+  it("does not poison the next tap when a prior drag's trailing click was skipped", () => {
+    // iOS Safari does not synthesize a click event after a touch that
+    // moved significantly — true of every digit drag. The suppress-click
+    // flag set when the drag activated would then have no click to
+    // consume it, silently eating the user's next tap on a given cell.
+    const board = makeBoard([
+      [0, 0, 5],
+      [3, 3, 7],
+    ]);
+    const onSelectCell = vi.fn();
+    const onStartCellDrag = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={onSelectCell}
+        onSetSelectedCells={onSetSelectedCells}
+        onStartCellDrag={onStartCellDrag}
+      />,
+    );
+
+    mockElementFromPoint([
+      { row: 0, col: 0 }, // first gesture: pointerdown on filled cell
+      { row: 0, col: 1 }, // pointermove crosses cells -> activates drag
+      { row: 3, col: 3 }, // second gesture: pointerdown on the given cell tapped next
+    ]);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    // First gesture: digit drag (no trailing click, simulating iOS skip).
+    fireEvent.pointerDown(region, {
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(region, {
+      clientX: 140,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(region, { clientX: 140, clientY: 100, pointerId: 1 });
+    expect(onStartCellDrag).toHaveBeenCalledTimes(1);
+
+    // Second gesture: a still tap on a different given cell. Both
+    // pointerdown and the synthesized click should flow through to the
+    // cell's onSelect.
+    fireEvent.pointerDown(region, {
+      clientX: 300,
+      clientY: 300,
+      pointerId: 2,
+    });
+    fireEvent.pointerUp(region, { clientX: 300, clientY: 300, pointerId: 2 });
+    const cell33 = document.querySelector(
+      '[data-row="3"][data-col="3"]',
+    ) as HTMLElement;
+    fireEvent.click(cell33);
+
+    expect(onSelectCell).toHaveBeenCalledWith(3, 3);
+  });
 });

@@ -85,6 +85,12 @@ export function useDragSelect({
   const onPointerDown = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
       if (!onSetSelectedCells) return;
+      // iOS Safari skips synthesizing a click after a touch that moved
+      // significantly — true of every digit drag and multi-cell select.
+      // Without resetting here, the suppress flag set by that prior
+      // gesture lingers with no click to consume it and silently eats
+      // the user's next tap.
+      suppressClickRef.current = false;
       const pos = getCellFromPoint(e.clientX, e.clientY);
       if (!pos) return;
       const key = cellKey(pos.row, pos.col);
