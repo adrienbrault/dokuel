@@ -7,6 +7,10 @@ const mocks = vi.hoisted(() => ({
   lastIdbName: null as string | null,
   lastIdbDoc: null as Y.Doc | null,
   idbDestroyed: false,
+  lastProvider: null as {
+    connect: ReturnType<typeof vi.fn>;
+    disconnect: ReturnType<typeof vi.fn>;
+  } | null,
 }));
 
 vi.mock("y-webrtc", () => {
@@ -18,12 +22,14 @@ vi.mock("y-webrtc", () => {
       getStates: () => new Map(),
     };
     connected = false;
+    connect = vi.fn();
+    disconnect = vi.fn();
     constructor(_roomId: string, doc: Y.Doc) {
       mocks.lastDoc = doc;
+      mocks.lastProvider = this;
     }
     on() {}
     off() {}
-    disconnect() {}
     destroy() {}
   }
   return { WebrtcProvider: FakeWebrtcProvider };
@@ -197,6 +203,35 @@ describe("useYjsMultiplayer", () => {
     });
 
     expect(result.current.hasStartedGame).toBe(true);
+  });
+
+  it("disconnects the WebRTC provider when the tab is hidden", () => {
+    renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-visibility",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+
+    const provider = mocks.lastProvider!;
+    provider.disconnect.mockClear();
+    provider.connect.mockClear();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(provider.disconnect).toHaveBeenCalledOnce();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(provider.connect).toHaveBeenCalledOnce();
   });
 
   it("sendRematch uses Yjs difficulty, not the local prop", () => {

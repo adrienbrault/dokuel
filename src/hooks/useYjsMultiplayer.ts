@@ -153,6 +153,21 @@ export function useYjsMultiplayer({
     };
     provider.on("peers", onPeers);
 
+    // Drop WebRTC peer + signaling connections while the tab is hidden,
+    // restore them when it comes back. iOS Safari kills WebContent
+    // processes that hold WebRTC connections under memory pressure even
+    // briefly in the background; releasing them buys us headroom. Yjs
+    // doc + IndexedDB persistence stay alive in memory so reconnect
+    // re-syncs through the existing room.
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        provider.disconnect();
+      } else {
+        provider.connect();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     // Initial state
     setConnected(provider.connected);
     updateState();
@@ -162,6 +177,7 @@ export function useYjsMultiplayer({
       awareness.off("change", updatePresence);
       provider.off("status", onStatus);
       provider.off("peers", onPeers);
+      document.removeEventListener("visibilitychange", onVisibility);
       provider.disconnect();
       provider.destroy();
       persistence.destroy();
