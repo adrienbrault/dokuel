@@ -275,6 +275,117 @@ describe("Board drag-select filters non-empty cells", () => {
   });
 });
 
+describe("Board iOS back-swipe suppression", () => {
+  it("prevents default on touchstart so iOS Safari can't hijack edge drags as the back gesture", () => {
+    // touch-action: none isn't sufficient — iOS Safari's swipe-from-edge
+    // back gesture often ignores it. A non-passive touchstart listener
+    // calling preventDefault is the universally reliable block.
+    const board = makeBoard([[0, 0, 5]]);
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const event = new Event("touchstart", { bubbles: true, cancelable: true });
+    region.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("fires onSelectCell on a touch tap so taps still select after touchstart preventDefault", () => {
+    // preventDefault on touchstart also suppresses iOS's synthesized
+    // click, so the Cell.onClick path can't be relied on for touch
+    // taps. The drag-select hook fires selection from pointerup to
+    // cover this — only for pointerType "touch" to avoid double-firing
+    // alongside the desktop click event.
+    const board = makeBoard([[0, 0, 5]]);
+    const onSelectCell = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={onSelectCell}
+        onSetSelectedCells={onSetSelectedCells}
+      />,
+    );
+
+    const findCell = (row: number, col: number): HTMLElement =>
+      document.querySelector(
+        `[data-row="${row}"][data-col="${col}"]`,
+      ) as HTMLElement;
+    const original = document.elementFromPoint;
+    document.elementFromPoint = () => findCell(0, 0);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+    fireEvent.pointerUp(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+
+    document.elementFromPoint = original;
+    expect(onSelectCell).toHaveBeenCalledWith(0, 0);
+  });
+
+  it("does not double-fire onSelectCell from pointerup on a mouse click", () => {
+    // Desktop mouse already fires Cell.onClick from the synthesized
+    // click event — the pointerup path is only for touch where click
+    // is suppressed. Pointer type "mouse" must skip it.
+    const board = makeBoard([[0, 0, 5]]);
+    const onSelectCell = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={onSelectCell}
+        onSetSelectedCells={onSetSelectedCells}
+      />,
+    );
+
+    const findCell = (row: number, col: number): HTMLElement =>
+      document.querySelector(
+        `[data-row="${row}"][data-col="${col}"]`,
+      ) as HTMLElement;
+    const original = document.elementFromPoint;
+    document.elementFromPoint = () => findCell(0, 0);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+    fireEvent.pointerUp(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+
+    document.elementFromPoint = original;
+    expect(onSelectCell).not.toHaveBeenCalled();
+  });
+});
+
 describe("Board filled-cell drag gating", () => {
   afterEach(() => {
     vi.restoreAllMocks();
