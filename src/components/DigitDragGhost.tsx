@@ -18,17 +18,17 @@ export function DigitDragGhost({ state }: DigitDragGhostProps) {
   // gets its own highlight in Board/Cell; this is the pointer-side cue.
   const colorClass =
     dropState === "valid"
-      ? "bg-accent text-text-on-accent shadow-accent/40"
+      ? "bg-accent text-text-on-accent shadow-accent/60"
       : dropState === "invalid"
-        ? "bg-cell-conflict-bg text-cell-conflict shadow-cell-conflict/30"
-        : "bg-bg-overlay text-cell-user shadow-black/30";
+        ? "bg-cell-conflict-bg text-cell-conflict shadow-cell-conflict/50"
+        : "bg-bg-overlay text-cell-user shadow-black/50";
 
   return (
     <div
       data-testid="digit-drag-ghost"
       data-drop-state={dropState}
       aria-hidden="true"
-      className={`fixed z-50 pointer-events-none select-none flex items-center justify-center font-bold rounded-xl shadow-2xl animate-digit-drag-ghost ${colorClass}`}
+      className={`fixed z-50 pointer-events-none select-none flex items-center justify-center font-bold rounded-xl shadow-2xl drop-shadow-2xl animate-digit-drag-ghost ${colorClass}`}
       style={{
         left: state.x,
         top: state.y,

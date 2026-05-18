@@ -30,8 +30,6 @@ type CellProps = {
   chargingDigit?: number | undefined;
   /** True when this cell is the source of an in-flight digit drag. */
   isDragSource?: boolean | undefined;
-  /** True when this cell is a valid drop target for the in-flight drag. */
-  isDropCandidate?: boolean | undefined;
   /** "valid" or "invalid" while the pointer hovers this cell with a drag. */
   dropTargetState?: "valid" | "invalid" | null | undefined;
 };
@@ -52,7 +50,6 @@ export const Cell = memo(function Cell({
   revealDelay,
   chargingDigit,
   isDragSource,
-  isDropCandidate,
   dropTargetState,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
@@ -100,7 +97,6 @@ export const Cell = memo(function Cell({
       data-row={row}
       data-col={col}
       data-drag-source={isDragSource ? "true" : undefined}
-      data-drop-candidate={isDropCandidate ? "true" : undefined}
       data-drop-target={dropTargetState ?? undefined}
       onClick={() => onSelect(row, col)}
       aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
