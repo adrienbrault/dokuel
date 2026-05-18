@@ -110,6 +110,21 @@ body {
    * than flashing browser default white. Paired with <meta name="theme-color">
    * in index.html (kept in sync by useDarkMode for manual toggles). */
   background-color: var(--color-bg-primary);
+  /* Feel like a native game, not a web page: no accidental text
+   * selection when long-pressing or dragging cells, no iOS callout
+   * menu, no blue tap highlight. Inputs override this below so users
+   * can still edit/copy room codes and names. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
 }
 
 html {
