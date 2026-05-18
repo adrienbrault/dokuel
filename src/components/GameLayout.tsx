@@ -97,6 +97,9 @@ export function GameLayout({
         <div
           className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-end lg:justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
         >
+          <div className="flex flex-col items-center gap-3 w-full">
+            {controls}
+          </div>
           <div
             style={{
               width:
@@ -114,12 +117,9 @@ export function GameLayout({
           >
             {board}
           </div>
-          <div className="flex flex-col items-center gap-3 w-full">
-            {controls}
-            {/* Mobile: show numpad at bottom if position=bottom */}
-            <div className="lg:hidden w-full">
-              {position === "bottom" && numPad}
-            </div>
+          {/* Mobile: show numpad at bottom if position=bottom */}
+          <div className="lg:hidden w-full">
+            {position === "bottom" && numPad}
           </div>
         </div>
         {/* Desktop: always show numpad on the right */}
