@@ -227,6 +227,42 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("enables the undo button after a move and reverts the change on click", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      // Undo starts disabled — nothing in history yet.
+      const undo = screen.getByLabelText("Undo") as HTMLButtonElement;
+      expect(undo.disabled).toBe(true);
+
+      // Place a 5 in (0,0) via tap-and-hold.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+      expect(
+        screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+      ).not.toBeNull();
+
+      // After the move, undo must be clickable.
+      expect(
+        (screen.getByLabelText("Undo") as HTMLButtonElement).disabled,
+      ).toBe(false);
+
+      fireEvent.click(screen.getByLabelText("Undo"));
+      expect(
+        screen.queryByLabelText(/Cell row 1 column 1, empty/),
+      ).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores placed cell values on remount with same roomId and puzzle", () => {
     vi.useFakeTimers();
     try {
