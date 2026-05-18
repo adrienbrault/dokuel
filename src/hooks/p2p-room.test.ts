@@ -8,6 +8,7 @@ import {
   getPlayers,
   getRoomState,
   getRoomStatus,
+  initializeRoom,
   joinRoom,
   observeRoomChanges,
   type P2PRoom,
@@ -30,14 +31,26 @@ function createTestRoom(doc?: Y.Doc): P2PRoom {
 }
 
 describe("p2p-room", () => {
-  describe("joinRoom", () => {
-    it("sets first player as host", () => {
+  describe("initializeRoom", () => {
+    it("claims host for the creator", () => {
       const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
+      initializeRoom(room, "player1", "medium");
 
       expect(room.doc.getMap("room").get("hostId")).toBe("player1");
     });
 
+    it("is a no-op when the room is already initialized", () => {
+      const room = createTestRoom();
+      initializeRoom(room, "player1", "medium");
+      initializeRoom(room, "player2", "hard");
+
+      const roomMap = room.doc.getMap("room");
+      expect(roomMap.get("hostId")).toBe("player1");
+      expect(roomMap.get("difficulty")).toBe("medium");
+    });
+  });
+
+  describe("joinRoom", () => {
     it("assigns first player color blue", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
@@ -58,8 +71,12 @@ describe("p2p-room", () => {
       expect(p1.get("color")).not.toBe(p2.get("color"));
     });
 
-    it("does not overwrite host when second player joins", () => {
+    it("does not claim host on join", () => {
+      // Host is claimed only by initializeRoom (creator-only). joinRoom
+      // never writes hostId — see the deterministic race test below
+      // for why this matters.
       const room = createTestRoom();
+      initializeRoom(room, "player1", "medium");
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
 
@@ -102,21 +119,22 @@ describe("p2p-room", () => {
 
     it("does not transfer host status when a joiner mounts before sync", () => {
       // Simulates the real-world race: host shares a link, joiner opens
-      // it in a fresh tab with no IndexedDB, both peers run
-      // createRoomFromDoc + joinRoom on their own Y.Doc before WebRTC
-      // sync arrives. Under the old logic, both peers' joinRoom calls
-      // see an empty hostId locally and claim host — the joiner's
-      // concurrent write to hostId then wins via Yjs's last-writer-wins
-      // tiebreak (higher clientID wins concurrent writes), stealing
-      // host from the original creator. Force the joiner's clientID
-      // higher than the host's so the race resolves deterministically
-      // in favour of the wrong outcome under the old code.
+      // it in a fresh tab with no IndexedDB, both peers mount their
+      // own Y.Doc before WebRTC sync arrives. The creator calls
+      // initializeRoom (came in with a chosen difficulty); the joiner
+      // does not (came in via shared link, difficulty=null). Under
+      // the previous logic both peers wrote hostId from joinRoom and
+      // Yjs's last-writer-wins resolution handed host to the joiner
+      // when its clientID was higher. ClientIDs are forced here so
+      // that the race resolves deterministically in favour of the
+      // wrong outcome under the old code.
       const hostDoc = new Y.Doc();
       hostDoc.clientID = 1;
       const joinerDoc = new Y.Doc();
       joinerDoc.clientID = 2;
 
       const hostRoom = createRoomFromDoc(hostDoc, "test-room");
+      initializeRoom(hostRoom, "host", "medium");
       joinRoom(hostRoom, "host", "Alice");
 
       const joinerRoom = createRoomFromDoc(joinerDoc, "test-room");
@@ -185,6 +203,7 @@ describe("p2p-room", () => {
 
     it("increments gameNumber", () => {
       const room = createTestRoom();
+      initializeRoom(room, "player1", "medium");
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
 
@@ -322,15 +341,16 @@ describe("p2p-room", () => {
       expect(getRoomState(room)).toBeNull();
     });
 
-    it("returns null after createRoomFromDoc but before joinRoom", () => {
+    it("returns null after createRoomFromDoc but before initializeRoom", () => {
       const room = createTestRoom();
-      // status is initialised by createRoomFromDoc, but there are no players —
-      // a room state with no players is meaningless to the UI.
+      // createRoomFromDoc does not write anything to the doc — status
+      // is set by initializeRoom (creator) or by Yjs sync (joiner).
       expect(getRoomState(room)).toBeNull();
     });
 
-    it("returns a full snapshot after joinRoom", () => {
+    it("returns a full snapshot once the creator initializes and joins", () => {
       const room = createTestRoom();
+      initializeRoom(room, "player1", "medium");
       joinRoom(room, "player1", "Alice");
 
       const state = getRoomState(room);
@@ -379,8 +399,9 @@ describe("p2p-room", () => {
       expect(getHostId(room)).toBe("");
     });
 
-    it("returns the first joined player's id", () => {
+    it("returns the host claimed by initializeRoom", () => {
       const room = createTestRoom();
+      initializeRoom(room, "player1", "medium");
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
       expect(getHostId(room)).toBe("player1");

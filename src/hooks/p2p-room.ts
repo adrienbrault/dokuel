@@ -29,21 +29,44 @@ export type P2PRoom = {
 };
 
 export function createRoomFromDoc(doc: Y.Doc, roomId: string): P2PRoom {
-  const roomMap = doc.getMap("room");
-  if (!roomMap.has("status")) {
-    doc.transact(() => {
-      roomMap.set("status", "lobby");
-      roomMap.set("difficulty", "medium");
-      roomMap.set("assistLevel", "standard");
-      roomMap.set("hostId", "");
-      roomMap.set("puzzle", null);
-      roomMap.set("solution", null);
-      roomMap.set("winnerId", null);
-      roomMap.set("winnerName", null);
-      roomMap.set("gameNumber", 0);
-    });
-  }
   return { doc, roomId };
+}
+
+/**
+ * Initialize a freshly-created room with defaults and claim host.
+ * Only the player who created the room (came in from the create flow
+ * with a chosen difficulty) calls this. Joiners skip initialization
+ * and let Yjs sync deliver the room state.
+ *
+ * Initializing both peers concurrently would race: each fresh Y.Doc
+ * locally sees "no host set yet" before WebRTC has synced, both write
+ * `hostId`, and Yjs's last-writer-wins resolution can hand host to the
+ * wrong peer. Scoping the write to the creator keeps `hostId` a
+ * single-author field that no concurrent write ever fights with.
+ *
+ * No-op if the room is already initialized — either from local
+ * IndexedDB persistence on a refresh, or from a remote update that
+ * arrived first.
+ */
+export function initializeRoom(
+  room: P2PRoom,
+  hostId: string,
+  difficulty: Difficulty,
+): void {
+  const roomMap = room.doc.getMap("room");
+  if (roomMap.has("status")) return;
+
+  room.doc.transact(() => {
+    roomMap.set("status", "lobby");
+    roomMap.set("difficulty", difficulty);
+    roomMap.set("assistLevel", "standard");
+    roomMap.set("hostId", hostId);
+    roomMap.set("puzzle", null);
+    roomMap.set("solution", null);
+    roomMap.set("winnerId", null);
+    roomMap.set("winnerName", null);
+    roomMap.set("gameNumber", 0);
+  });
 }
 
 export function joinRoom(
@@ -64,11 +87,6 @@ export function joinRoom(
     playerMap.set("completionPercent", 0);
     playerMap.set("joinOrder", joinOrder);
     players.set(playerId, playerMap);
-
-    const roomMap = room.doc.getMap("room");
-    if (!roomMap.get("hostId")) {
-      roomMap.set("hostId", playerId);
-    }
   });
 }
 
