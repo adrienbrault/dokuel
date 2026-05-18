@@ -8,10 +8,10 @@ import {
   claimWinner,
   createRoomFromDoc,
   destroyRoom,
-  getHostId,
   getOpponentProgress,
   getPlayers,
   getRoomState,
+  initializeRoom,
   joinRoom,
   observeRoomChanges,
   type P2PRoom,
@@ -84,15 +84,18 @@ export function useYjsMultiplayer({
     roomRef.current = room;
     providerRef.current = provider;
 
-    joinRoom(room, playerId, playerNameRef.current);
-
-    // The host publishes their chosen difficulty so joiners see it
-    // in the lobby before either player clicks Start. Joiners pass null
-    // — they only learn the difficulty once Yjs syncs.
+    // The creator (came in from the create flow with a chosen
+    // difficulty) initializes the room and claims host. Joiners
+    // (difficulty=null, came via shared link) skip this and learn the
+    // host and difficulty from Yjs sync — otherwise both peers would
+    // race to write `hostId` on their own fresh Y.Doc and the joiner
+    // could win the CRDT tiebreak, stealing host.
     const initialDifficulty = initialDifficultyRef.current;
-    if (initialDifficulty && getHostId(room) === playerId) {
-      setRoomDifficulty(room, initialDifficulty);
+    if (initialDifficulty) {
+      initializeRoom(room, playerId, initialDifficulty);
     }
+
+    joinRoom(room, playerId, playerNameRef.current);
 
     const updateState = () => {
       const state = getRoomState(room);
