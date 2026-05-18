@@ -125,18 +125,21 @@ export function GameLayout({
           {layout === "grid" && position === "bottom" ? (
             <>
               {/* Mobile grid+bottom: controls and caption sit next to the 3x3
-                  grid to claw back vertical room. */}
+                  grid to claw back vertical room. The grid grows to fill the
+                  remaining width via flex-1 (capped inside NumPad). */}
               <div className="lg:hidden w-full flex flex-row items-center justify-center gap-4 flex-shrink-0">
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-2 flex-shrink-0">
                   {controls}
                   <p
-                    className="text-[0.625rem] text-text-muted leading-tight select-none text-center max-w-[10rem]"
+                    className="text-[0.625rem] text-text-muted leading-tight select-none text-center max-w-[8.75rem]"
                     aria-hidden="true"
                   >
                     {NUMPAD_CAPTION}
                   </p>
                 </div>
-                {numPad}
+                <div className="flex-1 min-w-0 flex justify-center">
+                  {numPad}
+                </div>
               </div>
               {/* Desktop: controls in column; the numpad still lives in the
                   desktop-right slot below. */}

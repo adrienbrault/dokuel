@@ -248,7 +248,13 @@ export function MultiplayerBoard({
           <DigitDragGhost state={dragState} />
         </div>
       }
-      controls={<GameControls onErase={game.erase} onUndo={game.undo} />}
+      controls={
+        <GameControls
+          onErase={game.erase}
+          onUndo={game.undo}
+          compact={layout === "grid" && position === "bottom"}
+        />
+      }
       settingsExtra={
         <ToggleSwitch
           checked={showOpponentProgress}

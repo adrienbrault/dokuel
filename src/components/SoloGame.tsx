@@ -265,6 +265,7 @@ export function SoloGame({
             onUndo={game.undo}
             historyLength={game.historyLength}
             onHint={game.hint}
+            compact={layout === "grid" && position === "bottom"}
           />
         </>
       }
