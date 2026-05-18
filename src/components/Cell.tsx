@@ -84,7 +84,7 @@ export const Cell = memo(function Cell({
 					aspect-square w-full
 					${bgClass}
 					transition-colors duration-100
-					select-none touch-manipulation
+					select-none touch-none
 					outline-none focus-visible:ring-2 focus-visible:ring-accent
 					${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
 					${revealDelay !== undefined ? "animate-cell-reveal" : ""}

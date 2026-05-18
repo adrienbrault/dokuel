@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { cellKey } from "../lib/sudoku.ts";
@@ -109,6 +109,7 @@ export function Board({
     selectedCells,
     onSetSelectedCells,
     onStartCellDrag,
+    onSelectCell,
   });
 
   // Snap the board to an integer-pixel size so every cell and every gap
@@ -136,12 +137,28 @@ export function Board({
   const boxPx = cellPx * 3 + 2;
   const boardPx = cellPx * 9 + 14;
 
+  // Block iOS Safari's swipe-from-edge back gesture for drags that
+  // originate inside the board. touch-action: none on the cell isn't
+  // reliable at the screen edge — Safari often ignores it for the
+  // system back-swipe. A non-passive touchstart preventDefault is the
+  // only block that works across iOS versions. React's onTouchStart is
+  // passive (preventDefault is a no-op), so we attach it natively.
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const handler = (e: TouchEvent) => e.preventDefault();
+    el.addEventListener("touchstart", handler, { passive: false });
+    return () => el.removeEventListener("touchstart", handler);
+  }, []);
+
   return (
     <div
       ref={containerRef}
       className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
     >
       <div
+        ref={gridRef}
         style={{
           width: boardPx,
           height: boardPx,

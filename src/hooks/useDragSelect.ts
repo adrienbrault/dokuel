@@ -36,6 +36,15 @@ type Options = {
         pointerId: number;
       }) => void)
     | undefined;
+  /**
+   * Tap-to-select for touch pointers. The Board blocks iOS Safari's
+   * edge back-swipe with a non-passive touchstart preventDefault, which
+   * also suppresses iOS's synthesized click — so the Cell's onClick
+   * path can't be relied on for touch taps. Selection from pointerup
+   * keeps the tap working on iOS without double-firing on desktop
+   * (where mouse pointerup is followed by a real click event).
+   */
+  onSelectCell?: ((row: number, col: number) => void) | undefined;
 };
 
 type DragState = {
@@ -73,6 +82,7 @@ export function useDragSelect({
   selectedCells,
   onSetSelectedCells,
   onStartCellDrag,
+  onSelectCell,
 }: Options) {
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
@@ -197,27 +207,36 @@ export function useDragSelect({
     [onSetSelectedCells, isEmptyCell, onStartCellDrag],
   );
 
-  const onPointerUp = useCallback(() => {
-    const drag = dragRef.current;
-    if (!drag) return;
-    if (drag.cellDragStarted) {
-      // The digit-drag layer owns the rest of this gesture.
-      dragRef.current = null;
-      return;
-    }
-    if (drag.shiftClick || (drag.moved && drag.cells.size > 1)) {
-      suppressClickRef.current = true;
-      if (
-        drag.moved &&
-        drag.cells.size > 1 &&
-        drag.primaryPos &&
-        onSetSelectedCells
-      ) {
-        onSetSelectedCells(drag.cells, drag.primaryPos);
+  const onPointerUp = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      if (drag.cellDragStarted) {
+        // The digit-drag layer owns the rest of this gesture.
+        dragRef.current = null;
+        return;
       }
-    }
-    dragRef.current = null;
-  }, [onSetSelectedCells]);
+      if (drag.shiftClick || (drag.moved && drag.cells.size > 1)) {
+        suppressClickRef.current = true;
+        if (
+          drag.moved &&
+          drag.cells.size > 1 &&
+          drag.primaryPos &&
+          onSetSelectedCells
+        ) {
+          onSetSelectedCells(drag.cells, drag.primaryPos);
+        }
+      } else if (e.pointerType === "touch" && onSelectCell) {
+        // iOS only: the Board's touchstart preventDefault eats the
+        // synthesized click that normally fires Cell.onClick. Restore
+        // tap-to-select here. Desktop mouse still goes through click.
+        const pos = getCellFromPoint(e.clientX, e.clientY);
+        if (pos) onSelectCell(pos.row, pos.col);
+      }
+      dragRef.current = null;
+    },
+    [onSetSelectedCells, onSelectCell],
+  );
 
   const onClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (suppressClickRef.current) {

@@ -115,6 +115,16 @@ describe("Cell chargingDigit", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("disables browser touch gestures on the cell so iOS doesn't hijack edge drags as back-swipe", () => {
+    // Per the Pointer Events spec, the effective touch-action for a touch
+    // is the intersection with scrollable ancestors only — the Board grid
+    // isn't scrollable, so its `touch-none` doesn't propagate down. The
+    // Cell itself must declare `touch-none`, otherwise iOS Safari treats
+    // a horizontal drag from a left-edge cell as the system back gesture.
+    render(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
+    expect(screen.getByRole("button").className).toContain("touch-none");
+  });
+
   it("hides the static note glyph for the digit being charged", () => {
     // Notes 1, 3, 5 in the cell; charging digit 3 — only 1 and 5
     // should remain visible in the notes grid (the 3 is being shown
