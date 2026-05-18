@@ -99,6 +99,35 @@ describe("p2p-room", () => {
       expect(players1).toHaveLength(2);
       expect(players2).toHaveLength(2);
     });
+
+    it("does not transfer host status when a joiner mounts before sync", () => {
+      // Simulates the real-world race: host shares a link, joiner opens
+      // it in a fresh tab with no IndexedDB, both peers run
+      // createRoomFromDoc + joinRoom on their own Y.Doc before WebRTC
+      // sync arrives. Under the old logic, both peers' joinRoom calls
+      // see an empty hostId locally and claim host — the joiner's
+      // concurrent write to hostId then wins via Yjs's last-writer-wins
+      // tiebreak (higher clientID wins concurrent writes), stealing
+      // host from the original creator. Force the joiner's clientID
+      // higher than the host's so the race resolves deterministically
+      // in favour of the wrong outcome under the old code.
+      const hostDoc = new Y.Doc();
+      hostDoc.clientID = 1;
+      const joinerDoc = new Y.Doc();
+      joinerDoc.clientID = 2;
+
+      const hostRoom = createRoomFromDoc(hostDoc, "test-room");
+      joinRoom(hostRoom, "host", "Alice");
+
+      const joinerRoom = createRoomFromDoc(joinerDoc, "test-room");
+      joinRoom(joinerRoom, "joiner", "Bob");
+
+      Y.applyUpdate(joinerDoc, Y.encodeStateAsUpdate(hostDoc));
+      Y.applyUpdate(hostDoc, Y.encodeStateAsUpdate(joinerDoc));
+
+      expect(hostRoom.doc.getMap("room").get("hostId")).toBe("host");
+      expect(joinerRoom.doc.getMap("room").get("hostId")).toBe("host");
+    });
   });
 
   describe("startGame", () => {
