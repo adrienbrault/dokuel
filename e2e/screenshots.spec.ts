@@ -83,6 +83,37 @@ test.describe("numpad positions right", () => {
 	});
 });
 
+test.describe("numpad layout grid - bottom", () => {
+	test.use({ storage: { "sudoku-numpad-layout": "grid" } });
+	test("solo game - numpad grid bottom", async ({ page }, testInfo) => {
+		await page.goto("/");
+		await page.getByRole("button", { name: "Start Solo" }).click();
+		await page.getByRole("button", { name: "Easy" }).click();
+		await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+		await page.screenshot({
+			path: screenshotPath("solo-numpad-grid-bottom", testInfo.project.name),
+		});
+	});
+});
+
+test.describe("numpad layout grid - right", () => {
+	test.use({
+		storage: {
+			"sudoku-numpad-layout": "grid",
+			"sudoku-numpad-position": "right",
+		},
+	});
+	test("solo game - numpad grid right", async ({ page }, testInfo) => {
+		await page.goto("/");
+		await page.getByRole("button", { name: "Start Solo" }).click();
+		await page.getByRole("button", { name: "Easy" }).click();
+		await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+		await page.screenshot({
+			path: screenshotPath("solo-numpad-grid-right", testInfo.project.name),
+		});
+	});
+});
+
 test("difficulty picker", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();

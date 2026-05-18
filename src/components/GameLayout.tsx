@@ -7,7 +7,9 @@ import {
   useState,
 } from "react";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
-import type { NumPadPosition } from "../lib/types.ts";
+import type { NumPadLayout, NumPadPosition } from "../lib/types.ts";
+import { NUMPAD_CAPTION } from "./NumPad.tsx";
+import { NumPadLayoutToggle } from "./NumPadLayoutToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 
 type GameLayoutProps = {
@@ -18,6 +20,8 @@ type GameLayoutProps = {
   controls: ReactNode;
   position: NumPadPosition;
   onPositionChange: (position: NumPadPosition) => void;
+  layout: NumPadLayout;
+  onLayoutChange: (layout: NumPadLayout) => void;
   title?: string | undefined;
   headerExtra?: ReactNode | undefined;
   footer?: ReactNode | undefined;
@@ -35,6 +39,8 @@ export function GameLayout({
   controls,
   position,
   onPositionChange,
+  layout,
+  onLayoutChange,
   title,
   headerExtra,
   footer,
@@ -52,7 +58,7 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center h-dvh overflow-hidden bg-bg-primary py-4 px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
@@ -74,6 +80,8 @@ export function GameLayout({
         <SettingsButton
           position={position}
           onPositionChange={onPositionChange}
+          layout={layout}
+          onLayoutChange={onLayoutChange}
           extra={settingsExtra}
         />
       </div>
@@ -85,7 +93,7 @@ export function GameLayout({
           close to the thumbs; any slack opens up between header and board. */}
       <div
         className={`
-          flex gap-3 w-full justify-center flex-1
+          flex gap-3 w-full justify-center flex-1 min-h-0
           lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
           ${position === "left" ? "flex-row items-end lg:items-start lg:max-w-4xl lg:mx-auto" : ""}
           ${position === "right" ? "flex-row-reverse items-end lg:items-start lg:max-w-4xl lg:mx-auto lg:flex-row" : ""}
@@ -95,7 +103,7 @@ export function GameLayout({
         {/* Mobile: show numpad in position (left/right) */}
         <div className="lg:hidden">{position !== "bottom" && numPad}</div>
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-end lg:justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 w-full md:max-w-2xl lg:max-w-lg min-h-0 self-stretch ${position === "bottom" ? "flex-1 justify-end lg:justify-center" : "flex-1 min-w-0"} ${boardClassName}`}
         >
           <div
             style={{
@@ -104,7 +112,7 @@ export function GameLayout({
                   ? "calc(100% + 2rem)"
                   : "calc(100% + 1rem)",
             }}
-            className={`flex justify-center lg:!w-full lg:mx-0 ${
+            className={`flex justify-center items-center flex-1 min-h-0 min-w-0 lg:!w-full lg:mx-0 ${
               position === "bottom"
                 ? "-mx-4"
                 : position === "left"
@@ -114,13 +122,37 @@ export function GameLayout({
           >
             {board}
           </div>
-          <div className="flex flex-col items-center gap-3 w-full">
-            {controls}
-            {/* Mobile: show numpad at bottom if position=bottom */}
-            <div className="lg:hidden w-full">
-              {position === "bottom" && numPad}
+          {layout === "grid" && position === "bottom" ? (
+            <>
+              {/* Mobile grid+bottom: controls and caption sit next to the 3x3
+                  grid to claw back vertical room. */}
+              <div className="lg:hidden w-full flex flex-row items-center justify-center gap-4 flex-shrink-0">
+                <div className="flex flex-col items-center gap-2">
+                  {controls}
+                  <p
+                    className="text-[0.625rem] text-text-muted leading-tight select-none text-center max-w-[10rem]"
+                    aria-hidden="true"
+                  >
+                    {NUMPAD_CAPTION}
+                  </p>
+                </div>
+                {numPad}
+              </div>
+              {/* Desktop: controls in column; the numpad still lives in the
+                  desktop-right slot below. */}
+              <div className="hidden lg:flex flex-col items-center gap-3 w-full flex-shrink-0">
+                {controls}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-3 w-full flex-shrink-0">
+              {controls}
+              {/* Mobile: show numpad at bottom if position=bottom */}
+              <div className="lg:hidden w-full flex justify-center">
+                {position === "bottom" && numPad}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {/* Desktop: always show numpad on the right */}
         <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
@@ -136,10 +168,14 @@ export function GameLayout({
 function SettingsButton({
   position,
   onPositionChange,
+  layout,
+  onLayoutChange,
   extra,
 }: {
   position: NumPadPosition;
   onPositionChange: (position: NumPadPosition) => void;
+  layout: NumPadLayout;
+  onLayoutChange: (layout: NumPadLayout) => void;
   extra?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -170,9 +206,7 @@ function SettingsButton({
       {open && (
         <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-text-muted font-medium">
-              Numpad position
-            </p>
+            <p className="text-xs text-text-muted font-medium">Numpad</p>
             <button
               type="button"
               className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary transition-colors"
@@ -182,10 +216,13 @@ function SettingsButton({
               <X size={14} aria-hidden="true" />
             </button>
           </div>
-          <NumPadPositionToggle
-            position={position}
-            onChange={onPositionChange}
-          />
+          <div className="flex flex-col gap-2">
+            <NumPadPositionToggle
+              position={position}
+              onChange={onPositionChange}
+            />
+            <NumPadLayoutToggle layout={layout} onChange={onLayoutChange} />
+          </div>
           {extra && (
             <div className="mt-3 pt-3 border-t border-border-default">
               {extra}

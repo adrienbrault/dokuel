@@ -228,6 +228,36 @@ describe("NumPad", () => {
     expect(onLongPressNumber).not.toHaveBeenCalled();
   });
 
+  it("renders the buttons inside a 3x3 grid container when layout=grid", () => {
+    render(
+      <NumPad
+        position="bottom"
+        layout="grid"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+      />,
+    );
+    const group = screen.getByRole("group", { name: "Number pad" });
+    expect(group.className).toMatch(/grid-cols-3/);
+    // Still renders all 9 digits with their handlers intact.
+    expect(screen.getAllByRole("button")).toHaveLength(9);
+  });
+
+  it("fires onNumber on pointerdown in grid layout", () => {
+    const onNumber = vi.fn();
+    render(
+      <NumPad
+        position="left"
+        layout="grid"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={onNumber}
+      />,
+    );
+    const seven = screen.getByRole("button", { name: /^7, / });
+    fireEvent.pointerDown(seven, { pointerType: "touch" });
+    expect(onNumber).toHaveBeenCalledWith(7);
+  });
+
   it("only starts the drag once per press", () => {
     const onStartDrag = vi.fn();
     render(

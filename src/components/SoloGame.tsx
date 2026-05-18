@@ -3,6 +3,7 @@ import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
+import { useNumPadLayout } from "../hooks/useNumPadLayout.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
@@ -18,9 +19,15 @@ import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad } from "./NumPad.tsx";
-import { Timer } from "./Timer.tsx";
+import { TimerButton } from "./TimerButton.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
+const NUMPAD_TIP =
+  "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it.";
+
+function fallbackStats(seconds: number) {
+  return { gamesPlayed: 0, bestTime: seconds, averageTime: seconds };
+}
 
 type SoloGameProps = {
   difficulty: Difficulty;
@@ -63,13 +70,13 @@ export function SoloGame({
       onComplete,
     });
 
-  // Seed the ref so saves happening before the first onTick still capture the
-  // resumed timer value rather than zero.
+  // Seed the ref so pre-onTick saves capture the resumed timer, not zero.
   if (timerSecondsRef.current === 0 && initialTimerSeconds > 0) {
     timerSecondsRef.current = initialTimerSeconds;
   }
 
   const { position, setPosition } = useNumPadPosition();
+  const { layout, setLayout } = useNumPadLayout();
   const revealed = useDelayedFlag(true, 600);
   const showResult = useDelayedFlag(game.status === "completed", 300);
   const [paused, setPaused] = useState(false);
@@ -77,15 +84,13 @@ export function SoloGame({
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
   );
 
-  // Capture PB before this game's result is saved
+  // Capture PB before this game's result is saved.
   const priorStats = useMemo(
     () => getStatsForDifficulty(difficulty),
     [difficulty],
   );
   const personalBest = priorStats?.bestTime ?? null;
 
-  // Keyboard digit follows the current notesMode flag (N toggles it),
-  // preserving the established "press N then 1" pencil-mark workflow.
   const handleKeyboardNumber = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       const wasNoteMode = game.notesMode;
@@ -94,15 +99,12 @@ export function SoloGame({
     }
   };
 
-  // Touch numpad: tap is the cheap, frequent action (note); hold is the
-  // deliberate commit (value). The 400ms hold doubles as a guard against
-  // accidental value placement.
+  // Tap = note (cheap); 400ms hold = commit (deliberate). With no cell
+  // selected, tap on numpad toggles a filter chip via useDigitHighlight.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  // With no cell selected, the numpad doubles as a filter chip.
   const highlight = useDigitHighlight(game);
-  // Tracks whether the long-press digit fired during the current gesture.
-  // We defer the note-deselect to press end so a tap+hold can still land
-  // the digit on the originally selected cell.
+  // Defer note-deselect to press end so tap+hold still lands on the
+  // originally selected cell.
   const holdFiredRef = useRef(false);
   const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
@@ -127,8 +129,7 @@ export function SoloGame({
     holdFiredRef.current = false;
   };
 
-  // Digit drag: drop commits the value (the deliberate gesture earns
-  // the commit). Notes still come from tap-on-numpad.
+  // Drag drop commits the value; notes still come from tap-on-numpad.
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
     game,
     disabled: paused || game.status !== "playing",
@@ -146,12 +147,9 @@ export function SoloGame({
     onBack();
   };
 
-  // Auto-pause when tab loses visibility
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.hidden && game.status === "playing") {
-        setPaused(true);
-      }
+      if (document.hidden && game.status === "playing") setPaused(true);
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () =>
@@ -184,45 +182,33 @@ export function SoloGame({
       title={title}
       position={position}
       onPositionChange={setPosition}
+      layout={layout}
+      onLayoutChange={setLayout}
       onDeselectCell={game.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       }
       timer={
-        <button
-          type="button"
-          className="flex flex-col items-center touch-manipulation"
-          onClick={() => {
+        <TimerButton
+          running={game.status === "playing" && !paused && revealed}
+          initialSeconds={initialTimerSeconds}
+          paused={paused}
+          cellsFilled={81 - game.cellsRemaining}
+          personalBest={personalBest}
+          onTogglePause={() => {
             if (game.status === "playing") setPaused((p) => !p);
           }}
-          aria-label={paused ? "Resume" : "Pause"}
-        >
-          <Timer
-            running={game.status === "playing" && !paused && revealed}
-            initialSeconds={initialTimerSeconds}
-            onTick={(s) => {
-              timerSecondsRef.current = s;
-            }}
-          />
-          <span className="text-xs text-text-muted font-mono tabular-nums">
-            {paused ? (
-              "Paused"
-            ) : (
-              <>
-                <span className="text-accent font-medium">
-                  {81 - game.cellsRemaining}
-                </span>
-                /81
-                {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
-              </>
-            )}
-          </span>
-        </button>
+          onTick={(s) => {
+            timerSecondsRef.current = s;
+          }}
+        />
       }
       numPad={
         <NumPad
           position={position}
+          layout={layout}
+          hideCaption={layout === "grid" && position === "bottom"}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell
@@ -238,7 +224,7 @@ export function SoloGame({
         />
       }
       board={
-        <div className="relative w-full">
+        <div className="relative aspect-square h-full max-h-full max-w-full mx-auto">
           <Board
             board={game.board}
             selectedCell={paused ? null : game.selectedCell}
@@ -291,13 +277,7 @@ export function SoloGame({
             difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}
-            stats={
-              priorStats ?? {
-                gamesPlayed: 0,
-                bestTime: timerSecondsRef.current,
-                averageTime: timerSecondsRef.current,
-              }
-            }
+            stats={priorStats ?? fallbackStats(timerSecondsRef.current)}
             isNewPB={
               game.hintsUsed === 0 &&
               (personalBest === null || timerSecondsRef.current < personalBest)
@@ -306,9 +286,7 @@ export function SoloGame({
             streakInfo={streakInfo}
             isDaily={!!streakInfo || !!title?.startsWith("Daily")}
             tip={
-              !tipDismissed && position === "bottom"
-                ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."
-                : undefined
+              !tipDismissed && position === "bottom" ? NUMPAD_TIP : undefined
             }
             onDismissTip={() => {
               setTipDismissed(true);

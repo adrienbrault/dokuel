@@ -123,9 +123,9 @@ export function Board({
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
-      const w = el.clientWidth;
-      if (w === 0) return;
-      setCellPx(Math.max(20, Math.floor((w - 14) / 9)));
+      const size = Math.min(el.clientWidth, el.clientHeight);
+      if (size === 0) return;
+      setCellPx(Math.max(14, Math.floor((size - 14) / 9)));
     };
     update();
     if (typeof ResizeObserver === "undefined") return;
@@ -139,7 +139,7 @@ export function Board({
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
+      className="w-full h-full flex items-center justify-center"
     >
       <div
         style={{
