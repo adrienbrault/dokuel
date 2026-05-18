@@ -9,6 +9,8 @@ const LONG_PRESS_MS = 400;
 // slightly during the tap/hold). Tuned to fingertip-sized slop.
 const DRAG_THRESHOLD_PX = 12;
 
+export const NUMPAD_CAPTION = "tap = note · hold = enter · drag = place";
+
 type NumPadProps = {
   position: NumPadPosition;
   layout?: NumPadLayout | undefined;
@@ -16,6 +18,12 @@ type NumPadProps = {
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
   disableCompleted?: boolean | undefined;
+  /**
+   * When true and layout=grid, the horizontal one-liner caption is
+   * suppressed — the parent layout renders it elsewhere (e.g. next to
+   * the controls) to save vertical space.
+   */
+  hideCaption?: boolean | undefined;
   /**
    * Fires the moment a digit is pressed (pointerdown) so the cell can
    * show an instant note. In Dokuel this writes a NOTE.
@@ -55,6 +63,7 @@ export function NumPad({
   selectedValue,
   showRemainingCounts = true,
   disableCompleted = false,
+  hideCaption = false,
   onNumber,
   onLongPressNumber,
   onPressEnd,
@@ -183,13 +192,15 @@ export function NumPad({
     <div
       className={`flex items-center gap-1 ${isGrid ? "flex-col w-fit" : isVertical ? "flex-col w-12 lg:flex-col lg:w-14" : "flex-col w-full max-w-lg lg:flex-col lg:w-14"}`}
     >
-      {/* Horizontal one-liner: mobile bottom (room to fit) and grid layout (compact wrapper) */}
+      {/* Horizontal one-liner: mobile bottom (room to fit) and grid layout (compact wrapper).
+          hideCaption=true means the parent layout renders this on mobile, so
+          we restrict the in-numpad caption to desktop in that case. */}
       {(!isVertical && !isGrid) || isGrid ? (
         <p
-          className={`text-[0.625rem] text-text-muted leading-tight select-none text-center ${isGrid ? "max-w-[8rem] lg:max-w-[10rem]" : "lg:hidden"}`}
+          className={`text-[0.625rem] text-text-muted leading-tight select-none text-center ${isGrid ? "max-w-[8rem] lg:max-w-[10rem]" : "lg:hidden"} ${hideCaption ? "hidden lg:block" : ""}`}
           aria-hidden="true"
         >
-          tap = note · hold = enter · drag = place
+          {NUMPAD_CAPTION}
         </p>
       ) : null}
       {/* Stacked variant: mobile side-positioned linear numpads, and desktop linear */}

@@ -208,6 +208,7 @@ export function SoloGame({
         <NumPad
           position={position}
           layout={layout}
+          hideCaption={layout === "grid" && position === "bottom"}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell

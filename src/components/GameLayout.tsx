@@ -8,6 +8,7 @@ import {
 } from "react";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import type { NumPadLayout, NumPadPosition } from "../lib/types.ts";
+import { NUMPAD_CAPTION } from "./NumPad.tsx";
 import { NumPadLayoutToggle } from "./NumPadLayoutToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 
@@ -121,13 +122,37 @@ export function GameLayout({
           >
             {board}
           </div>
-          <div className="flex flex-col items-center gap-3 w-full flex-shrink-0">
-            {controls}
-            {/* Mobile: show numpad at bottom if position=bottom */}
-            <div className="lg:hidden w-full flex justify-center">
-              {position === "bottom" && numPad}
+          {layout === "grid" && position === "bottom" ? (
+            <>
+              {/* Mobile grid+bottom: controls and caption sit next to the 3x3
+                  grid to claw back vertical room. */}
+              <div className="lg:hidden w-full flex flex-row items-center justify-center gap-4 flex-shrink-0">
+                <div className="flex flex-col items-center gap-2">
+                  {controls}
+                  <p
+                    className="text-[0.625rem] text-text-muted leading-tight select-none text-center max-w-[10rem]"
+                    aria-hidden="true"
+                  >
+                    {NUMPAD_CAPTION}
+                  </p>
+                </div>
+                {numPad}
+              </div>
+              {/* Desktop: controls in column; the numpad still lives in the
+                  desktop-right slot below. */}
+              <div className="hidden lg:flex flex-col items-center gap-3 w-full flex-shrink-0">
+                {controls}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-3 w-full flex-shrink-0">
+              {controls}
+              {/* Mobile: show numpad at bottom if position=bottom */}
+              <div className="lg:hidden w-full flex justify-center">
+                {position === "bottom" && numPad}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {/* Desktop: always show numpad on the right */}
         <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
