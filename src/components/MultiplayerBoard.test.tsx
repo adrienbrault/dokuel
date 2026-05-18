@@ -261,3 +261,127 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 });
+
+describe("MultiplayerBoard after opponent wins", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("lets the loser keep placing digits after the opponent wins", () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        ...baseProps(),
+        gameOver: { winnerId: "p2", winnerName: "Opponent" },
+      };
+      render(<MultiplayerBoard {...props} />);
+
+      // (0,0) is empty in PUZZLE; correct solution value is 5.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      // Loser can still commit values to their board.
+      expect(
+        screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+      ).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not show the result modal to the loser while they keep playing", () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        ...baseProps(),
+        gameOver: { winnerId: "p2", winnerName: "Opponent" },
+      };
+      render(<MultiplayerBoard {...props} />);
+
+      // Even after the delayed-flag window elapses, the loser sees no
+      // "Puzzle Complete!" modal — they are still mid-puzzle.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.queryByText(/Puzzle Complete!/)).toBeNull();
+      expect(screen.queryByText(/You Won!/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the loser's timer running after the opponent wins", () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        ...baseProps(),
+        gameOver: { winnerId: "p2", winnerName: "Opponent" },
+      };
+      render(<MultiplayerBoard {...props} />);
+
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      // Timer kept ticking past 0:00 — loser is still in their game.
+      expect(screen.getByText(/^00:0[4-9]$/)).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a banner with the winner's name while the loser keeps playing", () => {
+    const props = {
+      ...baseProps(),
+      gameOver: { winnerId: "p2", winnerName: "Alice" },
+    };
+    render(<MultiplayerBoard {...props} />);
+
+    expect(screen.queryByText(/Alice/)).not.toBeNull();
+    expect(screen.queryByText(/finished first/)).not.toBeNull();
+  });
+
+  it("preserves the loser's autosave so they can resume after a refresh", () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        ...baseProps(),
+        gameOver: { winnerId: "p2", winnerName: "Opponent" },
+      };
+      const { unmount } = render(<MultiplayerBoard {...props} />);
+
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      // Save should exist while the loser is still working on their board.
+      const key = `mp_${props.roomId}_${props.puzzle.slice(0, 12)}`;
+      expect(loadGame(key)).not.toBeNull();
+
+      unmount();
+      render(<MultiplayerBoard {...props} />);
+
+      // Their digit comes back after a remount.
+      expect(
+        screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+      ).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

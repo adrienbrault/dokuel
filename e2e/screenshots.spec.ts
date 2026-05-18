@@ -511,6 +511,38 @@ test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
 	});
 });
 
+test("multiplayer - opponent finished banner", async ({ page }, testInfo) => {
+	await page.goto("/");
+	await page.getByRole("button", { name: "Start Solo" }).click();
+	await page.getByRole("button", { name: "Easy" }).click();
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	await page.evaluate(() => {
+		const header = document.querySelector(
+			".flex.items-center.justify-between.w-full",
+		);
+		if (!header) return;
+
+		const banner = document.createElement("div");
+		banner.className =
+			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2 mx-auto";
+		banner.innerHTML = `
+			<div class="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
+				<span class="font-semibold text-text-primary">Alice</span>
+				finished first — keep going to complete your puzzle.
+			</div>
+		`;
+		header.after(banner);
+	});
+
+	await page.screenshot({
+		path: screenshotPath(
+			"multiplayer-opponent-finished-banner",
+			testInfo.project.name,
+		),
+	});
+});
+
 test("multiplayer - progress bars hidden", async ({ page }, testInfo) => {
 	await page.goto("/");
 	await page.getByRole("button", { name: "Start Solo" }).click();
