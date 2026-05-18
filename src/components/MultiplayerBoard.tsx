@@ -89,7 +89,11 @@ export function MultiplayerBoard({
   const timerSecondsRef = useRef(initialTimerSeconds);
   const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
-  const showResult = useDelayedFlag(gameOver !== null, 300);
+  // The loser keeps playing after the opponent wins; only show the result
+  // modal once they've actually finished their own board (or won themselves).
+  const iWon = gameOver?.winnerId === playerId;
+  const iFinished = iWon || game.status === "completed";
+  const showResult = useDelayedFlag(iFinished, 300);
 
   const myPercent = useMemo(() => {
     const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
@@ -118,7 +122,7 @@ export function MultiplayerBoard({
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
   // the puzzle + opponent progress; the filled cells live here.
   useEffect(() => {
-    if (game.status === "completed" || gameOver) return;
+    if (game.status === "completed") return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
     saveGame(gameKey, {
       puzzle,
@@ -128,20 +132,13 @@ export function MultiplayerBoard({
       difficulty,
       assistLevel,
     });
-  }, [
-    game.board,
-    game.status,
-    gameOver,
-    gameKey,
-    puzzle,
-    difficulty,
-    assistLevel,
-  ]);
+  }, [game.board, game.status, gameKey, puzzle, difficulty, assistLevel]);
 
-  // Clear the save once the game ends so the next match starts clean.
+  // Clear the save once this player finishes — keyed off local status so
+  // the loser's in-progress save survives the opponent's win.
   useEffect(() => {
-    if (gameOver) deleteGame(gameKey);
-  }, [gameOver, gameKey]);
+    if (game.status === "completed") deleteGame(gameKey);
+  }, [game.status, gameKey]);
 
   // Touch numpad: tap is the cheap, frequent action (note); hold is the
   // deliberate commit (value). Keyboard digit (if focused) still follows
@@ -176,9 +173,11 @@ export function MultiplayerBoard({
   };
 
   // Digit drag-and-drop: drop commits the value, mirroring solo play.
+  // Keyed off local status only — the loser keeps interacting until they
+  // finish their own board.
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
     game,
-    disabled: !!gameOver || game.status !== "playing",
+    disabled: game.status !== "playing",
     autoEliminateNotes: assistLevel !== "paper",
   });
 
@@ -192,7 +191,7 @@ export function MultiplayerBoard({
       timer={
         <div className="flex flex-col items-center">
           <Timer
-            running={!gameOver}
+            running={game.status === "playing"}
             initialSeconds={initialTimerSeconds}
             onTick={(s) => {
               timerSecondsRef.current = s;
@@ -257,7 +256,30 @@ export function MultiplayerBoard({
         />
       }
       headerExtra={
-        showOpponentProgress && opponentProgress ? (
+        gameOver && !iFinished ? (
+          <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2">
+            <div className="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
+              <span className="font-semibold text-text-primary">
+                {gameOver.winnerName}
+              </span>{" "}
+              finished first — keep going to complete your puzzle.
+            </div>
+            {showOpponentProgress && opponentProgress && (
+              <div className="flex flex-col gap-1.5">
+                <ProgressBar
+                  label="You"
+                  percent={myPercent}
+                  color="bg-accent"
+                />
+                <ProgressBar
+                  label="Opponent"
+                  percent={opponentProgress.completionPercent}
+                  color="bg-rose-400"
+                />
+              </div>
+            )}
+          </div>
+        ) : showOpponentProgress && opponentProgress ? (
           <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
             <ProgressBar label="You" percent={myPercent} color="bg-accent" />
             <ProgressBar
@@ -271,9 +293,9 @@ export function MultiplayerBoard({
         ) : undefined
       }
       footer={
-        showResult && gameOver ? (
+        showResult && gameOver && iFinished ? (
           <GameResult
-            isWinner={gameOver.winnerId === playerId}
+            isWinner={iWon}
             time={formatTime(timerSecondsRef.current)}
             difficulty={difficulty}
             isMultiplayer
