@@ -218,11 +218,6 @@ export function Board({
                   dragState?.source.kind === "cell" &&
                   dragState.source.row === rowIdx &&
                   dragState.source.col === colIdx;
-                const isDropCandidate =
-                  dragState != null &&
-                  !cell.isGiven &&
-                  cell.value === null &&
-                  !isDragSource;
                 const isDropTarget =
                   dragState?.target?.row === rowIdx &&
                   dragState?.target?.col === colIdx;
@@ -259,7 +254,6 @@ export function Board({
                         : undefined
                     }
                     isDragSource={isDragSource}
-                    isDropCandidate={isDropCandidate}
                     dropTargetState={dropTargetState}
                   />
                 );
