@@ -25,6 +25,18 @@ import type {
  * assert on observable state; they don't reach into internal helpers.
  */
 
+// Cap the undo log. A long game with many pencil-mark taps would
+// otherwise grow this unboundedly — each MoveAction carries previous
+// cell state and cleared notes (~hundreds of bytes), which adds up on
+// memory-constrained mobile browsers. 100 is well past any realistic
+// undo depth a player would actually use.
+const MAX_HISTORY = 100;
+
+function pushHistory(history: MoveAction[], action: MoveAction): MoveAction[] {
+  if (history.length < MAX_HISTORY) return [...history, action];
+  return [...history.slice(history.length - MAX_HISTORY + 1), action];
+}
+
 export type State = {
   board: Board;
   solution: string | null;
@@ -154,7 +166,7 @@ function handlePlaceNumber(
     return {
       ...state,
       board,
-      history: [...state.history, moveAction],
+      history: pushHistory(state.history, moveAction),
     };
   }
 
@@ -176,7 +188,7 @@ function handlePlaceNumber(
     return {
       ...state,
       board,
-      history: [...state.history, moveAction],
+      history: pushHistory(state.history, moveAction),
     };
   }
 
@@ -201,7 +213,7 @@ function handlePlaceNumber(
     ...state,
     board,
     status: complete ? "completed" : state.status,
-    history: [...state.history, moveAction],
+    history: pushHistory(state.history, moveAction),
   };
 }
 
@@ -238,7 +250,7 @@ function handleErase(state: State): State {
     return {
       ...state,
       board,
-      history: [...state.history, moveAction],
+      history: pushHistory(state.history, moveAction),
     };
   }
 
@@ -259,7 +271,7 @@ function handleErase(state: State): State {
   return {
     ...state,
     board,
-    history: [...state.history, moveAction],
+    history: pushHistory(state.history, moveAction),
   };
 }
 
@@ -367,7 +379,7 @@ function handleHint(state: State): State {
     selectedCells: new Set([cellKey(row, col)]),
     activeHint: hint,
     hintsUsed: state.hintsUsed + 1,
-    history: [...state.history, moveAction],
+    history: pushHistory(state.history, moveAction),
   };
 }
 
