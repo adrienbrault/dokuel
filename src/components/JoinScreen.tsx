@@ -1,3 +1,4 @@
+import { Hash } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function JoinScreen({
@@ -22,7 +23,18 @@ export function JoinScreen({
   return (
     <div className="screen">
       <form className="screen-content gap-6" onSubmit={handleSubmit}>
-        <h2 className="heading">Join Game</h2>
+        <div className="flex flex-col items-center gap-3">
+          <span
+            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-light text-accent"
+            aria-hidden="true"
+          >
+            <Hash size={28} />
+          </span>
+          <div className="flex flex-col items-center gap-1">
+            <h2 className="heading">Join Game</h2>
+            <p className="caption">Enter a friend's room code to duel.</p>
+          </div>
+        </div>
         <div className="flex flex-col items-center gap-2 w-full">
           <input
             ref={inputRef}
@@ -30,30 +42,32 @@ export function JoinScreen({
             placeholder="e.g. loud-duck-38"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="card w-full px-4 py-3 text-text-primary text-center text-lg font-mono"
+            className="input-field text-center text-lg font-mono"
           />
           <p className="text-xs text-text-muted">
             Ask the host for their room code
           </p>
         </div>
-        <button
-          type="submit"
-          disabled={!code.trim()}
-          className={`btn btn-lg w-full transition-colors ${
-            code.trim()
-              ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled border border-border-default cursor-not-allowed"
-          }`}
-        >
-          Join
-        </button>
-        <button
-          type="button"
-          className="btn-ghost mt-2 touch-manipulation"
-          onClick={onBack}
-        >
-          ← Back
-        </button>
+        <div className="flex flex-col gap-3 w-full">
+          <button
+            type="submit"
+            disabled={!code.trim()}
+            className={`btn btn-lg w-full ${
+              code.trim()
+                ? "btn-primary"
+                : "bg-bg-disabled text-text-disabled cursor-not-allowed"
+            }`}
+          >
+            Join Game
+          </button>
+          <button
+            type="button"
+            className="btn-ghost touch-manipulation"
+            onClick={onBack}
+          >
+            ← Back
+          </button>
+        </div>
       </form>
     </div>
   );
