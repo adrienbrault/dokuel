@@ -439,26 +439,42 @@ test("solo game - win modal", async ({ page }, testInfo) => {
 
 	await page.evaluate(() => {
 		const overlay = document.createElement("div");
-		overlay.className =
-			"fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6";
+		overlay.className = "modal-overlay p-6";
 		overlay.innerHTML = `
 			<div class="confetti-container">
 				<span></span><span></span><span></span><span></span><span></span>
 				<span></span><span></span><span></span><span></span><span></span>
 			</div>
-			<div class="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full relative">
-				<div class="flex flex-col items-center gap-2">
-					<span class="text-5xl animate-emoji-bounce">🎉</span>
-					<h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">You Won!</h2>
-					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Easy</span>
+			<div class="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
+				<div class="flex flex-col items-center gap-2.5">
+					<span class="flex items-center justify-center w-20 h-20 rounded-full bg-accent-light">
+						<span class="text-5xl">🎉</span>
+					</span>
+					<h2 class="heading">You Won!</h2>
+					<span class="text-xs font-semibold px-3 py-1 rounded-full bg-difficulty-easy-bg text-difficulty-easy-text">Easy</span>
 				</div>
-				<div class="flex flex-col items-center gap-1">
-					<span class="text-3xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100">03:42</span>
-					<span class="text-sm font-semibold text-green-600 dark:text-green-400">New Best!</span>
+				<div class="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
+					<span class="text-4xl font-mono font-bold tabular-nums text-text-primary">03:42</span>
+					<span class="flex items-center gap-1 text-sm font-semibold text-accent">⚡ New Personal Best!</span>
+				</div>
+				<div class="grid grid-cols-3 w-full rounded-2xl bg-bg-inset divide-x divide-border-default text-center">
+					<div class="flex flex-col items-center gap-0.5 py-3">
+						<span class="text-lg font-bold text-text-primary font-mono tabular-nums">12</span>
+						<span class="text-xs text-text-muted">Played</span>
+					</div>
+					<div class="flex flex-col items-center gap-0.5 py-3">
+						<span class="text-lg font-bold text-text-primary font-mono tabular-nums">03:42</span>
+						<span class="text-xs text-text-muted">Best</span>
+					</div>
+					<div class="flex flex-col items-center gap-0.5 py-3">
+						<span class="text-lg font-bold text-text-primary font-mono tabular-nums">05:10</span>
+						<span class="text-xs text-text-muted">Average</span>
+					</div>
 				</div>
 				<div class="flex flex-col gap-3 w-full">
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white select-none touch-manipulation">Play Again</button>
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 select-none touch-manipulation">New Game</button>
+					<button type="button" class="btn btn-primary w-full py-3 text-lg">Play Again</button>
+					<button type="button" class="btn btn-secondary w-full py-3 text-lg">New Game</button>
+					<button type="button" class="btn btn-ghost w-full py-2">Share Result</button>
 				</div>
 			</div>
 		`;
