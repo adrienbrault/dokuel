@@ -100,52 +100,42 @@ export function GameResult({
         </div>
       )}
       <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-5xl animate-emoji-bounce">
-            {isWinner ? "🎉" : "👏"}
+        <div className="flex flex-col items-center gap-2.5">
+          <span
+            className="flex items-center justify-center w-20 h-20 rounded-full bg-accent-light"
+            aria-hidden="true"
+          >
+            <span className="text-5xl animate-emoji-bounce">
+              {isWinner ? "🎉" : "👏"}
+            </span>
           </span>
           <h2 className="heading">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
           {difficulty && (
             <span
-              className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}
+              className={`text-xs font-semibold px-3 py-1 rounded-full ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}
             >
               {DIFFICULTY_LABELS[difficulty]}
             </span>
           )}
         </div>
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-3xl font-mono font-bold tabular-nums text-text-primary">
+        <div className="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
+          <span className="text-4xl font-mono font-bold tabular-nums text-text-primary">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
-            <span className="text-sm font-semibold text-accent">
-              New Personal Best!
+            <span className="flex items-center gap-1 text-sm font-semibold text-accent">
+              ⚡ New Personal Best!
             </span>
           )}
         </div>
 
         {stats && !isMultiplayer && (
-          <div className="grid grid-cols-3 gap-4 w-full text-center">
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {stats.gamesPlayed}
-              </div>
-              <div className="text-xs text-text-muted">Played</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {formatTime(stats.bestTime)}
-              </div>
-              <div className="text-xs text-text-muted">Best</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {formatTime(stats.averageTime)}
-              </div>
-              <div className="text-xs text-text-muted">Average</div>
-            </div>
+          <div className="grid grid-cols-3 w-full rounded-2xl bg-bg-inset divide-x divide-border-default text-center">
+            <Stat label="Played" value={stats.gamesPlayed} />
+            <Stat label="Best" value={formatTime(stats.bestTime)} />
+            <Stat label="Average" value={formatTime(stats.averageTime)} />
           </div>
         )}
 
@@ -198,6 +188,17 @@ export function GameResult({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 py-3">
+      <span className="text-lg font-bold text-text-primary font-mono tabular-nums">
+        {value}
+      </span>
+      <span className="text-xs text-text-muted">{label}</span>
     </div>
   );
 }
