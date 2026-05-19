@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SoloGame } from "./SoloGame.tsx";
 
@@ -24,6 +24,8 @@ describe("SoloGame numpad selection", () => {
   afterEach(() => {
     vi.useRealTimers();
     localStorage.clear();
+    document.elementFromPoint = (() =>
+      null) as typeof document.elementFromPoint;
   });
 
   it("keeps the tapped digit selected after the cell deselects", () => {
@@ -42,5 +44,42 @@ describe("SoloGame numpad selection", () => {
     // The cell deselects on release; the digit the note was placed for
     // should stay selected on the numpad.
     expect(seven.className).toContain("bg-accent");
+  });
+
+  it("highlights the skimmed digit on the board while a cell is selected", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    // Select an empty cell, then start skimming across the numpad.
+    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
+    const three = screen.getAllByRole("button", { name: "3" })[0]!;
+    const five = screen.getAllByRole("button", { name: "5" })[0]!;
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Pan along the numpad axis past the threshold to enter skim mode.
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    // The finger crosses into digit 5.
+    document.elementFromPoint = (() =>
+      five) as typeof document.elementFromPoint;
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          pointerId: 1,
+          clientX: 100,
+          clientY: 0,
+        }),
+      );
+    });
+
+    // The board's same-number highlight should follow the skimmed digit.
+    expect(
+      screen.getByLabelText("Cell row 2 column 6, value 5").className,
+    ).toContain("bg-cell-same-number");
   });
 });
