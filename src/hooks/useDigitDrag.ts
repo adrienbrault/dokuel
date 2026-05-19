@@ -5,6 +5,15 @@ export type DigitDragSource =
   | { kind: "numpad" }
   | { kind: "cell"; row: number; col: number };
 
+/**
+ * Which slot in the cell receives the dropped digit. The cell is split
+ * along its top-left → bottom-right diagonal: the top-right triangle
+ * commits a note, the bottom-left triangle commits the value. This
+ * lets a single drag gesture express both intents — the user aims for
+ * a zone instead of switching modes mid-drag.
+ */
+export type DigitDropMode = "value" | "note";
+
 export type DigitDragState = {
   digit: number;
   source: DigitDragSource;
@@ -12,6 +21,8 @@ export type DigitDragState = {
   y: number;
   target: Position | null;
   invalidTarget: boolean;
+  /** Which slot the current pointer position would land in. */
+  mode: DigitDropMode;
 };
 
 type StartParams = {
@@ -23,11 +34,18 @@ type StartParams = {
 };
 
 type Options = {
-  onDrop: (digit: number, source: DigitDragSource, target: Position) => void;
+  onDrop: (
+    digit: number,
+    source: DigitDragSource,
+    target: Position,
+    mode: DigitDropMode,
+  ) => void;
   isDroppable: (row: number, col: number, digit: number) => boolean;
 };
 
-function cellFromPoint(x: number, y: number): Position | null {
+type CellHit = { position: Position; mode: DigitDropMode };
+
+function cellHitFromPoint(x: number, y: number): CellHit | null {
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
   const btn = (el as HTMLElement).closest?.("[data-row]") as HTMLElement | null;
@@ -35,7 +53,19 @@ function cellFromPoint(x: number, y: number): Position | null {
   const row = Number(btn.dataset.row);
   const col = Number(btn.dataset.col);
   if (Number.isNaN(row) || Number.isNaN(col)) return null;
-  return { row, col };
+  return { position: { row, col }, mode: cellModeAt(btn, x, y) };
+}
+
+function cellModeAt(cell: HTMLElement, x: number, y: number): DigitDropMode {
+  const rect = cell.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return "value";
+  // Normalize to the unit square, then split on the top-left →
+  // bottom-right diagonal (localY = localX). Above the diagonal
+  // (localX > localY) is the top-right triangle → note. Below or on
+  // the diagonal is the bottom-left triangle → value (default).
+  const localX = (x - rect.left) / rect.width;
+  const localY = (y - rect.top) / rect.height;
+  return localX > localY ? "note" : "value";
 }
 
 export function useDigitDrag({ onDrop, isDroppable }: Options) {
@@ -53,7 +83,12 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
     setActivePointerId(null);
     setState((current) => {
       if (current && commit && current.target && !current.invalidTarget) {
-        onDropRef.current(current.digit, current.source, current.target);
+        onDropRef.current(
+          current.digit,
+          current.source,
+          current.target,
+          current.mode,
+        );
       }
       return null;
     });
@@ -66,18 +101,23 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== ownPointerId) return;
       e.preventDefault();
-      const target = cellFromPoint(e.clientX, e.clientY);
+      const hit = cellHitFromPoint(e.clientX, e.clientY);
       setState((prev) => {
         if (!prev) return prev;
         const invalid =
-          target !== null &&
-          !isDroppableRef.current(target.row, target.col, prev.digit);
+          hit !== null &&
+          !isDroppableRef.current(
+            hit.position.row,
+            hit.position.col,
+            prev.digit,
+          );
         return {
           ...prev,
           x: e.clientX,
           y: e.clientY,
-          target,
+          target: hit?.position ?? null,
           invalidTarget: invalid,
+          mode: hit?.mode ?? "value",
         };
       });
     };
@@ -110,17 +150,18 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
 
   const start = useCallback(
     ({ digit, source, x, y, pointerId }: StartParams) => {
-      const target = cellFromPoint(x, y);
+      const hit = cellHitFromPoint(x, y);
       const invalid =
-        target !== null &&
-        !isDroppableRef.current(target.row, target.col, digit);
+        hit !== null &&
+        !isDroppableRef.current(hit.position.row, hit.position.col, digit);
       setState({
         digit,
         source,
         x,
         y,
-        target,
+        target: hit?.position ?? null,
         invalidTarget: invalid,
+        mode: hit?.mode ?? "value",
       });
       setActivePointerId(pointerId);
     },

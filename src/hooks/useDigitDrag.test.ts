@@ -18,10 +18,31 @@ function mockElementFromPoint(getCell: (x: number, y: number) => HTMLElement) {
     getCell(x, y)) as typeof document.elementFromPoint;
 }
 
-function makeCellElement(row: number, col: number): HTMLElement {
+function makeCellElement(
+  row: number,
+  col: number,
+  rect: { left: number; top: number; width: number; height: number } = {
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100,
+  },
+): HTMLElement {
   const el = document.createElement("button");
   el.dataset.row = String(row);
   el.dataset.col = String(col);
+  el.getBoundingClientRect = () =>
+    ({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      x: rect.left,
+      y: rect.top,
+      toJSON: () => rect,
+    }) as DOMRect;
   return el;
 }
 
@@ -63,6 +84,7 @@ describe("useDigitDrag", () => {
       y: 200,
       target: null,
       invalidTarget: false,
+      mode: "value",
     });
   });
 
@@ -145,8 +167,86 @@ describe("useDigitDrag", () => {
       9,
       { kind: "numpad" },
       { row: 5, col: 6 },
+      "value",
     );
     expect(result.current.state).toBeNull();
+  });
+
+  it("computes 'note' mode when the pointer is in the top-right triangle of the cell", () => {
+    // Cell occupies (0,0)→(100,100). Point (80,20) sits well above the
+    // top-left → bottom-right diagonal, so it's in the note triangle.
+    mockElementFromPoint(() => makeCellElement(1, 2));
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start({
+        digit: 4,
+        source: { kind: "numpad" },
+        x: 0,
+        y: 0,
+        pointerId: 1,
+      });
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 80, clientY: 20 }),
+      );
+    });
+    expect(result.current.state?.mode).toBe("note");
+  });
+
+  it("computes 'value' mode when the pointer is in the bottom-left triangle of the cell", () => {
+    mockElementFromPoint(() => makeCellElement(1, 2));
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start({
+        digit: 4,
+        source: { kind: "numpad" },
+        x: 0,
+        y: 0,
+        pointerId: 1,
+      });
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 20, clientY: 80 }),
+      );
+    });
+    expect(result.current.state?.mode).toBe("value");
+  });
+
+  it("passes the resolved mode to onDrop on release", () => {
+    mockElementFromPoint(() => makeCellElement(3, 4));
+    const onDrop = vi.fn();
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop, isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start({
+        digit: 7,
+        source: { kind: "numpad" },
+        x: 0,
+        y: 0,
+        pointerId: 1,
+      });
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 90, clientY: 10 }),
+      );
+      document.dispatchEvent(
+        pointerEvent("pointerup", { clientX: 90, clientY: 10 }),
+      );
+    });
+    expect(onDrop).toHaveBeenCalledWith(
+      7,
+      { kind: "numpad" },
+      { row: 3, col: 4 },
+      "note",
+    );
   });
 
   it("cancels without onDrop when released outside a cell", () => {

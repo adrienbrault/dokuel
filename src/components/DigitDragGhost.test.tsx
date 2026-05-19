@@ -11,6 +11,7 @@ function makeState(overrides: Partial<DigitDragState> = {}): DigitDragState {
     y: 200,
     target: null,
     invalidTarget: false,
+    mode: "value",
     ...overrides,
   };
 }
