@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Position } from "../lib/types.ts";
 
+// Distance from the pointer to the ghost's visual center, in pixels.
+// The ghost is rendered above the finger so the digit stays visible on
+// touch; hit testing must use the same offset so the highlighted cell
+// matches the ghost's apparent location. Keep in sync with DigitDragGhost.
+export const DIGIT_DRAG_GHOST_LIFT_PX = 34;
+
 export type DigitDragSource =
   | { kind: "numpad" }
   | { kind: "cell"; row: number; col: number };
@@ -66,7 +72,10 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== ownPointerId) return;
       e.preventDefault();
-      const target = cellFromPoint(e.clientX, e.clientY);
+      const target = cellFromPoint(
+        e.clientX,
+        e.clientY - DIGIT_DRAG_GHOST_LIFT_PX,
+      );
       setState((prev) => {
         if (!prev) return prev;
         const invalid =
@@ -110,7 +119,7 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
 
   const start = useCallback(
     ({ digit, source, x, y, pointerId }: StartParams) => {
-      const target = cellFromPoint(x, y);
+      const target = cellFromPoint(x, y - DIGIT_DRAG_GHOST_LIFT_PX);
       const invalid =
         target !== null &&
         !isDroppableRef.current(target.row, target.col, digit);
