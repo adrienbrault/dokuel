@@ -72,4 +72,23 @@ describe("useDigitHighlight", () => {
     expect(result.current.highlightedDigit).toBeNull();
     expect(handlers.setSelectedCells).toHaveBeenCalledWith(cells, primary);
   });
+
+  it("setDigit sets the highlight directly without toggling on repeat", () => {
+    const { result } = renderHook(() => useDigitHighlight(makeHandlers()));
+
+    act(() => {
+      result.current.setDigit(4);
+    });
+    expect(result.current.highlightedDigit).toBe(4);
+
+    act(() => {
+      result.current.setDigit(4);
+    });
+    expect(result.current.highlightedDigit).toBe(4);
+
+    act(() => {
+      result.current.setDigit(8);
+    });
+    expect(result.current.highlightedDigit).toBe(8);
+  });
 });
