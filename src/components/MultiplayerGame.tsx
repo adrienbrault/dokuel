@@ -37,6 +37,7 @@ export function MultiplayerGame({
   // the local board state (cells, notes, progress) lives in
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
+    const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
     return (
       <>
         <MultiplayerBoard
@@ -46,6 +47,7 @@ export function MultiplayerGame({
           playerId={playerId}
           difficulty={mp.roomState?.difficulty ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
+          opponentName={opponent?.name ?? ""}
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}

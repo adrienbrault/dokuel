@@ -4,6 +4,7 @@ import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
+import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
@@ -15,6 +16,7 @@ import { DigitDragGhost } from "./DigitDragGhost.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
+import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
@@ -33,6 +35,9 @@ export type MultiplayerBoardProps = {
   playerId: string;
   difficulty: import("../lib/types.ts").Difficulty;
   assistLevel?: AssistLevel;
+  /** Resolved at render time from the room's player list. Empty string is
+   *  tolerated for the rare case of a winner-without-known-opponent. */
+  opponentName: string;
   opponentProgress: {
     cellsRemaining: number;
     completionPercent: number;
@@ -52,6 +57,7 @@ export function MultiplayerBoard({
   playerId,
   difficulty,
   assistLevel = "standard",
+  opponentName,
   opponentProgress,
   opponentDisconnected,
   gameOver,
@@ -139,6 +145,17 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (game.status === "completed") deleteGame(gameKey);
   }, [game.status, gameKey]);
+
+  useRecordMultiplayerMatch({
+    gameOver,
+    roomId,
+    gameNumber,
+    difficulty,
+    assistLevel,
+    playerId,
+    opponentName,
+    getTimeSeconds: () => timerSecondsRef.current,
+  });
 
   // Touch numpad: tap is the cheap, frequent action (note); hold is the
   // deliberate commit (value). Keyboard digit (if focused) still follows
@@ -257,41 +274,14 @@ export function MultiplayerBoard({
         />
       }
       headerExtra={
-        gameOver && !iFinished ? (
-          <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2">
-            <div className="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
-              <span className="font-semibold text-text-primary">
-                {gameOver.winnerName}
-              </span>{" "}
-              finished first — keep going to complete your puzzle.
-            </div>
-            {showOpponentProgress && opponentProgress && (
-              <div className="flex flex-col gap-1.5">
-                <ProgressBar
-                  label="You"
-                  percent={myPercent}
-                  color="bg-accent"
-                />
-                <ProgressBar
-                  label="Opponent"
-                  percent={opponentProgress.completionPercent}
-                  color="bg-rose-400"
-                />
-              </div>
-            )}
-          </div>
-        ) : showOpponentProgress && opponentProgress ? (
-          <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
-            <ProgressBar label="You" percent={myPercent} color="bg-accent" />
-            <ProgressBar
-              label={
-                opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
-              }
-              percent={opponentProgress.completionPercent}
-              color="bg-rose-400"
-            />
-          </div>
-        ) : undefined
+        <MultiplayerHeaderExtra
+          gameOver={gameOver}
+          iFinished={iFinished}
+          showOpponentProgress={showOpponentProgress}
+          opponentProgress={opponentProgress}
+          opponentDisconnected={opponentDisconnected}
+          myPercent={myPercent}
+        />
       }
       footer={
         showResult && gameOver && iFinished ? (
@@ -306,30 +296,5 @@ export function MultiplayerBoard({
         ) : undefined
       }
     />
-  );
-}
-
-function ProgressBar({
-  label,
-  percent,
-  color,
-}: {
-  label: string;
-  percent: number;
-  color: string;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-text-secondary w-24 truncate">{label}</span>
-      <div className="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-        <div
-          className={`h-full rounded-full ${color} transition-all duration-300`}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-      <span className="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">
-        {percent}%
-      </span>
-    </div>
   );
 }
