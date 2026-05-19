@@ -1,4 +1,4 @@
-import { Settings, X } from "lucide-react";
+import { ArrowLeft, Settings, X } from "lucide-react";
 import {
   type PointerEvent,
   type ReactNode,
@@ -65,10 +65,11 @@ export function GameLayout({
       >
         <button
           type="button"
-          className="btn-ghost touch-manipulation"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-bg-inset border border-border-default text-text-secondary hover:bg-bg-raised hover:text-text-primary press-spring-soft transition-colors touch-manipulation"
           onClick={onBack}
+          aria-label="Back"
         >
-          ← Back
+          <ArrowLeft size={18} aria-hidden="true" />
         </button>
         {timer}
         <SettingsButton
@@ -161,7 +162,11 @@ function SettingsButton({
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className="w-10 h-10 flex items-center justify-center rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
+        className={`w-10 h-10 flex items-center justify-center rounded-full border transition-colors press-spring-soft touch-manipulation ${
+          open
+            ? "bg-accent-light border-transparent text-accent"
+            : "bg-bg-inset border-border-default text-text-secondary hover:bg-bg-raised hover:text-text-primary"
+        }`}
         onClick={() => setOpen((v) => !v)}
         aria-label="Settings"
         aria-expanded={open}
@@ -169,7 +174,7 @@ function SettingsButton({
         <Settings size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
+        <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-text-muted font-medium">
               Numpad position
