@@ -28,7 +28,7 @@ type Options = {
 /**
  * Bundles the digit drag-and-drop wiring shared by SoloGame and
  * MultiplayerBoard. The drop zone within the cell decides intent:
- * top-right triangle commits a note, bottom-left commits the value.
+ * top-right triangle commits the value, bottom-left commits a note.
  * Start handlers gate themselves on the caller's disabled flag.
  */
 export function useGameDigitDrag({

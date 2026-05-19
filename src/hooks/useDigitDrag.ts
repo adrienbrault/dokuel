@@ -8,7 +8,7 @@ export type DigitDragSource =
 /**
  * Which slot in the cell receives the dropped digit. The cell is split
  * along its top-left → bottom-right diagonal: the top-right triangle
- * commits a note, the bottom-left triangle commits the value. This
+ * commits the value, the bottom-left triangle commits a note. This
  * lets a single drag gesture express both intents — the user aims for
  * a zone instead of switching modes mid-drag.
  */
@@ -72,11 +72,11 @@ function cellModeAt(cell: HTMLElement, x: number, y: number): DigitDropMode {
   if (rect.width <= 0 || rect.height <= 0) return "value";
   // Normalize to the unit square, then split on the top-left →
   // bottom-right diagonal (localY = localX). Above the diagonal
-  // (localX > localY) is the top-right triangle → note. Below or on
-  // the diagonal is the bottom-left triangle → value (default).
+  // (localX > localY) is the top-right triangle → value. Below or on
+  // the diagonal is the bottom-left triangle → note.
   const localX = (x - rect.left) / rect.width;
   const localY = (y - rect.top) / rect.height;
-  return localX > localY ? "note" : "value";
+  return localX > localY ? "value" : "note";
 }
 
 export function useDigitDrag({ onDrop, isDroppable }: Options) {

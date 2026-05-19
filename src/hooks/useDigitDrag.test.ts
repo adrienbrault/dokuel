@@ -155,15 +155,16 @@ describe("useDigitDrag", () => {
         pointerId: 1,
       });
     });
-    // Aim well inside the bottom-left triangle (value zone). The hit
-    // test lifts pointer Y by DRAG_GHOST_LIFT_PX (40), so clientY 120
-    // resolves to local Y 80 — comfortably below the diagonal.
+    // Aim well inside the top-right triangle (value zone). The hit
+    // test lifts pointer Y by DRAG_GHOST_LIFT_PX (40), so clientY 40
+    // resolves to local Y 0 — comfortably above the diagonal at
+    // localX 0.8.
     act(() => {
       document.dispatchEvent(
-        pointerEvent("pointermove", { clientX: 20, clientY: 120 }),
+        pointerEvent("pointermove", { clientX: 80, clientY: 40 }),
       );
       document.dispatchEvent(
-        pointerEvent("pointerup", { clientX: 20, clientY: 120 }),
+        pointerEvent("pointerup", { clientX: 80, clientY: 40 }),
       );
     });
     expect(onDrop).toHaveBeenCalledWith(
@@ -175,9 +176,9 @@ describe("useDigitDrag", () => {
     expect(result.current.state).toBeNull();
   });
 
-  it("computes 'note' mode when the pointer is in the top-right triangle of the cell", () => {
+  it("computes 'value' mode when the pointer is in the top-right triangle of the cell", () => {
     // Cell occupies (0,0)→(100,100). Point (80,20) sits well above the
-    // top-left → bottom-right diagonal, so it's in the note triangle.
+    // top-left → bottom-right diagonal, so it's in the value triangle.
     mockElementFromPoint(() => makeCellElement(1, 2));
     const { result } = renderHook(() =>
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
@@ -196,10 +197,10 @@ describe("useDigitDrag", () => {
         pointerEvent("pointermove", { clientX: 80, clientY: 20 }),
       );
     });
-    expect(result.current.state?.mode).toBe("note");
+    expect(result.current.state?.mode).toBe("value");
   });
 
-  it("computes 'value' mode when the pointer is in the bottom-left triangle of the cell", () => {
+  it("computes 'note' mode when the pointer is in the bottom-left triangle of the cell", () => {
     mockElementFromPoint(() => makeCellElement(1, 2));
     const { result } = renderHook(() =>
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
@@ -218,7 +219,7 @@ describe("useDigitDrag", () => {
         pointerEvent("pointermove", { clientX: 20, clientY: 80 }),
       );
     });
-    expect(result.current.state?.mode).toBe("value");
+    expect(result.current.state?.mode).toBe("note");
   });
 
   it("passes the resolved mode to onDrop on release", () => {
@@ -236,12 +237,13 @@ describe("useDigitDrag", () => {
         pointerId: 1,
       });
     });
+    // Pointer (10, 130) → after lift (10, 90): bottom-left triangle.
     act(() => {
       document.dispatchEvent(
-        pointerEvent("pointermove", { clientX: 90, clientY: 10 }),
+        pointerEvent("pointermove", { clientX: 10, clientY: 130 }),
       );
       document.dispatchEvent(
-        pointerEvent("pointerup", { clientX: 90, clientY: 10 }),
+        pointerEvent("pointerup", { clientX: 10, clientY: 130 }),
       );
     });
     expect(onDrop).toHaveBeenCalledWith(
