@@ -17,22 +17,23 @@
   --color-accent: oklch(0.52 0.12 168);
   --color-accent-light: oklch(0.92 0.04 168);
 
-  /* Semantic surfaces */
-  --color-bg-primary: oklch(0.99 0.004 80);
-  --color-bg-inset: oklch(0.96 0.006 80);
-  --color-bg-raised: oklch(0.95 0.008 80);
-  --color-bg-overlay: oklch(0.99 0.004 80);
+  /* Semantic surfaces — a deliberate elevation scale: inset (sunken) <
+     primary (page) < raised (cards/keys) < overlay (modals). */
+  --color-bg-primary: oklch(0.975 0.007 80);
+  --color-bg-inset: oklch(0.945 0.009 80);
+  --color-bg-raised: oklch(0.998 0.003 80);
+  --color-bg-overlay: oklch(0.999 0.002 80);
   --color-border-default: oklch(0.9 0.01 80);
 
   /* Semantic text */
-  --color-text-primary: oklch(0.18 0.01 80);
+  --color-text-primary: oklch(0.22 0.012 80);
   --color-text-secondary: oklch(0.45 0.01 80);
-  --color-text-muted: oklch(0.58 0.01 80);
+  --color-text-muted: oklch(0.585 0.011 80);
   --color-text-on-accent: oklch(0.99 0 0);
 
   /* Semantic interactive */
-  --color-bg-disabled: oklch(0.88 0.008 80);
-  --color-text-disabled: oklch(0.55 0.01 80);
+  --color-bg-disabled: oklch(0.93 0.007 80);
+  --color-text-disabled: oklch(0.68 0.008 80);
 
   /* Difficulty colors — dot indicators */
   --color-difficulty-easy: oklch(0.7 0.18 155);
@@ -70,20 +71,20 @@
   --color-accent-light: oklch(0.28 0.05 168);
 
   /* Semantic surfaces */
-  --color-bg-primary: oklch(0.14 0.008 80);
-  --color-bg-inset: oklch(0.16 0.008 80);
-  --color-bg-raised: oklch(0.21 0.008 80);
-  --color-bg-overlay: oklch(0.16 0.008 80);
+  --color-bg-primary: oklch(0.155 0.008 80);
+  --color-bg-inset: oklch(0.125 0.006 80);
+  --color-bg-raised: oklch(0.218 0.009 80);
+  --color-bg-overlay: oklch(0.235 0.01 80);
   --color-border-default: oklch(0.32 0.008 80);
 
   /* Semantic text */
-  --color-text-primary: oklch(0.78 0.005 80);
-  --color-text-secondary: oklch(0.7 0.008 80);
-  --color-text-muted: oklch(0.5 0.008 80);
+  --color-text-primary: oklch(0.92 0.006 80);
+  --color-text-secondary: oklch(0.72 0.008 80);
+  --color-text-muted: oklch(0.56 0.009 80);
 
   /* Semantic interactive */
-  --color-bg-disabled: oklch(0.25 0.008 80);
-  --color-text-disabled: oklch(0.45 0.008 80);
+  --color-bg-disabled: oklch(0.27 0.008 80);
+  --color-text-disabled: oklch(0.46 0.008 80);
 
   /* Difficulty colors — badge backgrounds */
   --color-difficulty-easy-bg: oklch(0.25 0.06 155);
@@ -490,15 +491,49 @@ body {
 /* Drop landing: the receiving cell's digit gets the existing
    .animate-pop-in via the Cell render path; nothing extra needed. */
 
+/* ─── Design System: Elevation ─── */
+
+/* Soft, warm-tinted shadow scale. Light mode leans on layered shadows
+   for depth; dark mode keeps them but relies more on raised surfaces +
+   hairline borders, since shadows barely register on near-black. */
+:root {
+  --shadow-sm: 0 1px 2px oklch(0.32 0.03 80 / 0.06);
+  --shadow-card:
+    0 1px 2px oklch(0.32 0.03 80 / 0.05), 0 6px 16px oklch(0.32 0.03 80 / 0.07);
+  --shadow-raised:
+    0 2px 4px oklch(0.32 0.03 80 / 0.05), 0 12px 28px oklch(0.32 0.03 80 / 0.1);
+  --shadow-modal:
+    0 8px 16px oklch(0.2 0.03 80 / 0.14), 0 28px 60px oklch(0.2 0.03 80 / 0.24);
+  --shadow-accent:
+    0 1px 2px oklch(0.52 0.12 168 / 0.24),
+    0 8px 20px oklch(0.52 0.12 168 / 0.34);
+  --shadow-accent-hover:
+    0 2px 6px oklch(0.52 0.12 168 / 0.3),
+    0 14px 30px oklch(0.52 0.12 168 / 0.44);
+}
+
+.dark {
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.5);
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.4), 0 6px 16px oklch(0 0 0 / 0.4);
+  --shadow-raised:
+    0 2px 6px oklch(0 0 0 / 0.5), 0 14px 30px oklch(0 0 0 / 0.55);
+  --shadow-modal: 0 18px 56px oklch(0 0 0 / 0.7);
+  --shadow-accent: 0 2px 10px oklch(0.52 0.14 168 / 0.5);
+  --shadow-accent-hover: 0 4px 18px oklch(0.52 0.14 168 / 0.62);
+}
+
 /* ─── Design System: Component Classes ─── */
 
 /* Buttons */
 .btn {
-  @apply rounded-xl font-semibold select-none touch-manipulation;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  @apply rounded-2xl font-semibold select-none touch-manipulation;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 @media (hover: hover) {
   .btn:hover {
@@ -509,47 +544,127 @@ body {
   @apply py-4 text-lg;
 }
 .btn-md {
-  @apply px-4 py-2 text-sm font-medium;
+  @apply px-4 py-2 text-sm font-semibold;
 }
 .btn-primary {
-  @apply bg-accent text-text-on-accent shadow-lg shadow-accent/20;
+  color: var(--color-text-on-accent);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(0.59 0.123 166),
+    oklch(0.475 0.113 170)
+  );
+  box-shadow:
+    var(--shadow-accent),
+    inset 0 1px 0 oklch(0.8 0.08 165 / 0.4);
+}
+.dark .btn-primary {
+  background-image: linear-gradient(
+    to bottom,
+    oklch(0.64 0.13 166),
+    oklch(0.52 0.12 170)
+  );
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    box-shadow:
+      var(--shadow-accent-hover),
+      inset 0 1px 0 oklch(0.8 0.08 165 / 0.4);
+  }
 }
 .btn-secondary {
-  @apply bg-bg-raised text-text-primary;
+  @apply text-text-primary;
+  background-color: var(--color-bg-raised);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-sm);
+}
+@media (hover: hover) {
+  .btn-secondary:hover {
+    box-shadow: var(--shadow-card);
+  }
 }
 .btn-ghost {
-  @apply text-sm text-text-muted;
+  @apply text-sm font-medium text-text-muted;
+  transition: color 0.15s ease;
+}
+@media (hover: hover) {
+  .btn-ghost:hover {
+    color: var(--color-text-secondary);
+  }
+}
+
+/* Numpad keys — share the button language: a raised resting key and a
+   gradient-filled active key, so a pressed/selected digit feels lifted. */
+.numpad-key {
+  background-color: var(--color-bg-raised);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-sm);
+}
+.numpad-key-active {
+  color: var(--color-text-on-accent);
+  background-image: linear-gradient(
+    to bottom,
+    oklch(0.59 0.123 166),
+    oklch(0.475 0.113 170)
+  );
+  box-shadow:
+    var(--shadow-accent),
+    inset 0 1px 0 oklch(0.8 0.08 165 / 0.4);
+}
+.dark .numpad-key-active {
+  background-image: linear-gradient(
+    to bottom,
+    oklch(0.64 0.13 166),
+    oklch(0.52 0.12 170)
+  );
 }
 
 /* Surfaces */
 .card {
-  @apply rounded-xl bg-bg-inset border border-border-default;
+  @apply rounded-2xl;
+  background-color: var(--color-bg-raised);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-card);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm;
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+  background-color: oklch(0.16 0.012 80 / 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   animation: modal-backdrop-in 0.2s ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-2xl p-8 shadow-2xl;
+  @apply flex flex-col items-center gap-6 rounded-3xl p-7;
+  background-color: var(--color-bg-overlay);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-modal);
   animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .screen {
-  @apply flex min-h-dvh items-center justify-center bg-bg-primary;
+  @apply flex min-h-dvh items-center justify-center;
+  background-color: var(--color-bg-primary);
+  background-image: radial-gradient(
+    118% 62% at 50% -12%,
+    oklch(0.52 0.12 168 / 0.07),
+    transparent 72%
+  );
   animation: screen-enter 0.2s ease-out;
 }
 .screen-content {
-  @apply flex flex-col items-center w-full max-w-sm px-6;
+  @apply flex flex-col items-center w-full max-w-sm px-6 py-8;
 }
 
 /* Typography */
 .heading-xl {
-  @apply text-5xl font-bold tracking-tight text-text-primary;
+  @apply text-5xl font-bold text-text-primary;
+  letter-spacing: -0.04em;
 }
 .heading {
   @apply text-2xl font-bold text-text-primary;
+  letter-spacing: -0.02em;
 }
 .label {
-  @apply text-xs font-medium text-text-muted uppercase tracking-wider;
+  @apply text-xs font-semibold text-text-muted uppercase;
+  letter-spacing: 0.09em;
 }
 .caption {
   @apply text-sm text-text-secondary;

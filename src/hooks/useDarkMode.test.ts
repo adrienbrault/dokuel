@@ -109,19 +109,19 @@ describe("useDarkMode", () => {
   it("sets a dark theme-color override when manually selecting dark", () => {
     localStorage.setItem("sudoku_theme", "dark");
     renderHook(() => useDarkMode());
-    expect(getOverrideThemeColor()).toBe("#0b0906");
+    expect(getOverrideThemeColor()).toBe("#0e0c08");
   });
 
   it("sets a light theme-color override when manually selecting light", () => {
     localStorage.setItem("sudoku_theme", "light");
     renderHook(() => useDarkMode());
-    expect(getOverrideThemeColor()).toBe("#fdfbf9");
+    expect(getOverrideThemeColor()).toBe("#f9f6f2");
   });
 
   it("removes the theme-color override when switching back to system", () => {
     const { result } = renderHook(() => useDarkMode());
     act(() => result.current.setTheme("dark"));
-    expect(getOverrideThemeColor()).toBe("#0b0906");
+    expect(getOverrideThemeColor()).toBe("#0e0c08");
     act(() => result.current.setTheme("system"));
     expect(getOverrideThemeColor()).toBeNull();
   });
