@@ -1,3 +1,4 @@
+import { Flame, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import {
   ASSIST_LEVEL_LABELS,
@@ -49,21 +50,17 @@ export function Stats({ onBack }: StatsProps) {
           </p>
         </div>
 
-        <div className="card p-4 w-full">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
-                {streak.currentStreak}
-              </div>
-              <div className="text-xs text-text-muted">Current Streak</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
-                {streak.longestStreak}
-              </div>
-              <div className="text-xs text-text-muted">Longest Streak</div>
-            </div>
-          </div>
+        <div className="card w-full grid grid-cols-2 divide-x divide-border-default">
+          <StreakStat
+            value={streak.currentStreak}
+            label="Current Streak"
+            icon={<Flame size={19} strokeWidth={2.4} aria-hidden="true" />}
+          />
+          <StreakStat
+            value={streak.longestStreak}
+            label="Longest Streak"
+            icon={<Trophy size={18} strokeWidth={2.2} aria-hidden="true" />}
+          />
         </div>
 
         <section aria-label="Solo" className="flex flex-col gap-3 w-full">
@@ -124,12 +121,34 @@ export function Stats({ onBack }: StatsProps) {
 
         <button
           type="button"
-          className="btn-ghost touch-manipulation"
+          className="btn btn-ghost touch-manipulation"
           onClick={onBack}
         >
           ← Back
         </button>
       </div>
+    </div>
+  );
+}
+
+function StreakStat({
+  value,
+  label,
+  icon,
+}: {
+  value: number;
+  label: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-5">
+      <span className="flex items-center gap-1.5 text-amber-500 dark:text-amber-400">
+        {icon}
+        <span className="text-3xl font-extrabold text-text-primary font-mono tabular-nums">
+          {value}
+        </span>
+      </span>
+      <span className="text-xs text-text-muted">{label}</span>
     </div>
   );
 }
