@@ -115,6 +115,44 @@ describe("useDigitHighlight", () => {
     expect(handlers.deselectCell).toHaveBeenCalled();
   });
 
+  it("endNumpadPress keeps an already-highlighted digit over the placed one", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    // A skim settled on 5; releasing on the originally-pressed 3 must
+    // not snap the highlight back.
+    act(() => {
+      result.current.skimToDigit(5);
+    });
+    act(() => {
+      result.current.endNumpadPress(3);
+    });
+    expect(result.current.highlightedDigit).toBe(5);
+  });
+
+  it("skimToDigit sets the highlight and deselects the cell", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.skimToDigit(6);
+    });
+    expect(result.current.highlightedDigit).toBe(6);
+    expect(handlers.deselectCell).toHaveBeenCalled();
+  });
+
+  it("skimToDigit replaces the active highlight on every call", () => {
+    const { result } = renderHook(() => useDigitHighlight(makeHandlers()));
+
+    act(() => {
+      result.current.skimToDigit(3);
+    });
+    act(() => {
+      result.current.skimToDigit(8);
+    });
+    expect(result.current.highlightedDigit).toBe(8);
+  });
+
   it("setDigit sets the highlight directly without toggling on repeat", () => {
     const { result } = renderHook(() => useDigitHighlight(makeHandlers()));
 

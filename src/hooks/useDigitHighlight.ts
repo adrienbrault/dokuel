@@ -52,13 +52,25 @@ export function useDigitHighlight({
     deselectCell();
   }, [deselectCell]);
 
-  // Ends a numpad press: deselects the active cell and, when the press
-  // placed a note for `placedDigit`, promotes that digit to the
-  // highlight so the numpad keeps showing it as selected. A null digit
-  // (a press that placed nothing) leaves the current highlight intact.
+  // Skim across the numpad: make `digit` the active highlight and drop
+  // any cell selection, so the board follows the finger instead of the
+  // selected cell's own value.
+  const skimToDigit = useCallback(
+    (digit: number) => {
+      setHighlightedDigit(digit);
+      deselectCell();
+    },
+    [deselectCell],
+  );
+
+  // Ends a numpad press: deselects the active cell and promotes the
+  // press's `placedDigit` to the highlight — but only when nothing is
+  // highlighted yet, so a skim that already settled on a digit keeps
+  // it. A null digit (a press that placed nothing) leaves the current
+  // highlight intact.
   const endNumpadPress = useCallback(
     (placedDigit: number | null) => {
-      if (placedDigit !== null) setHighlightedDigit(placedDigit);
+      setHighlightedDigit((prev) => prev ?? placedDigit);
       deselectCell();
     },
     [deselectCell],
@@ -71,6 +83,7 @@ export function useDigitHighlight({
     selectCell: wrappedSelectCell,
     setSelectedCells: wrappedSetSelectedCells,
     deselectCell: wrappedDeselectCell,
+    skimToDigit,
     endNumpadPress,
   };
 }

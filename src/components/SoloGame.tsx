@@ -234,7 +234,7 @@ export function SoloGame({
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
-          onSkimDigit={highlight.setDigit}
+          onSkimDigit={highlight.skimToDigit}
         />
       }
       board={
