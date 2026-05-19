@@ -7,14 +7,14 @@ export function DarkModeToggle({ isDark, onToggle }: DarkModeToggleProps) {
   return (
     <button
       type="button"
-      className="p-2 rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
+      className="w-10 h-10 flex items-center justify-center rounded-full bg-bg-inset border border-border-default text-text-secondary hover:bg-bg-raised hover:text-text-primary press-spring-soft transition-colors touch-manipulation"
       onClick={onToggle}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
       {isDark ? (
         <svg
-          width="24"
-          height="24"
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -36,8 +36,8 @@ export function DarkModeToggle({ isDark, onToggle }: DarkModeToggleProps) {
         </svg>
       ) : (
         <svg
-          width="24"
-          height="24"
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

@@ -1,3 +1,4 @@
+import { LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function JoinScreen({
@@ -22,20 +23,21 @@ export function JoinScreen({
   return (
     <div className="screen">
       <form className="screen-content gap-6" onSubmit={handleSubmit}>
-        <h2 className="heading">Join Game</h2>
-        <div className="flex flex-col items-center gap-2 w-full">
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="e.g. loud-duck-38"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            className="card w-full px-4 py-3 text-text-primary text-center text-lg font-mono"
-          />
-          <p className="text-xs text-text-muted">
-            Ask the host for their room code
-          </p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span className="icon-chip w-14 h-14">
+            <LogIn size={26} aria-hidden="true" />
+          </span>
+          <h2 className="heading">Join Game</h2>
+          <p className="caption">Enter the room code your friend shared.</p>
         </div>
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="loud-duck-38"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          className="card w-full px-4 py-4 text-text-primary text-center text-xl font-mono tracking-wide outline-none focus:border-accent transition-colors"
+        />
         <button
           type="submit"
           disabled={!code.trim()}
@@ -49,7 +51,7 @@ export function JoinScreen({
         </button>
         <button
           type="button"
-          className="btn-ghost mt-2 touch-manipulation"
+          className="btn-ghost touch-manipulation"
           onClick={onBack}
         >
           ← Back

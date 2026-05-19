@@ -22,6 +22,7 @@
   --color-bg-inset: oklch(0.96 0.006 80);
   --color-bg-raised: oklch(0.95 0.008 80);
   --color-bg-overlay: oklch(0.99 0.004 80);
+  --color-bg-card: oklch(0.995 0.003 80);
   --color-border-default: oklch(0.9 0.01 80);
 
   /* Semantic text */
@@ -73,7 +74,8 @@
   --color-bg-primary: oklch(0.14 0.008 80);
   --color-bg-inset: oklch(0.16 0.008 80);
   --color-bg-raised: oklch(0.21 0.008 80);
-  --color-bg-overlay: oklch(0.16 0.008 80);
+  --color-bg-overlay: oklch(0.18 0.009 80);
+  --color-bg-card: oklch(0.205 0.009 80);
   --color-border-default: oklch(0.32 0.008 80);
 
   /* Semantic text */
@@ -494,15 +496,18 @@ body {
 
 /* Buttons */
 .btn {
-  @apply rounded-xl font-semibold select-none touch-manipulation;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  @apply rounded-2xl font-semibold select-none touch-manipulation;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 @media (hover: hover) {
   .btn:hover {
-    transform: translateY(-1px);
+    transform: translateY(-1.5px);
   }
 }
 .btn-lg {
@@ -512,10 +517,24 @@ body {
   @apply px-4 py-2 text-sm font-medium;
 }
 .btn-primary {
-  @apply bg-accent text-text-on-accent shadow-lg shadow-accent/20;
+  @apply text-text-on-accent;
+  background-image: linear-gradient(
+    160deg,
+    oklch(0.58 0.13 173),
+    oklch(0.49 0.12 165)
+  );
+  box-shadow:
+    0 6px 18px -6px oklch(0.52 0.12 168 / 0.5),
+    0 2px 5px -2px oklch(0.52 0.12 168 / 0.4),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.2);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    filter: brightness(1.05);
+  }
 }
 .btn-secondary {
-  @apply bg-bg-raised text-text-primary;
+  @apply bg-bg-raised text-text-primary border border-border-default;
 }
 .btn-ghost {
   @apply text-sm text-text-muted;
@@ -523,22 +542,46 @@ body {
 
 /* Surfaces */
 .card {
-  @apply rounded-xl bg-bg-inset border border-border-default;
+  @apply rounded-2xl bg-bg-card border border-border-default;
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.04),
+    0 10px 24px -18px oklch(0 0 0 / 0.25);
+}
+.dark .card {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.4),
+    0 12px 26px -16px oklch(0 0 0 / 0.65);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm;
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
   animation: modal-backdrop-in 0.2s ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-2xl p-8 shadow-2xl;
+  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-3xl p-8 border border-border-default;
+  box-shadow:
+    0 4px 12px -4px oklch(0 0 0 / 0.12),
+    0 24px 48px -16px oklch(0 0 0 / 0.3);
   animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dark .modal-panel {
+  box-shadow: 0 24px 48px -12px oklch(0 0 0 / 0.8);
 }
 .screen {
   @apply flex min-h-dvh items-center justify-center bg-bg-primary;
+  background-image: radial-gradient(
+    ellipse 65% 45% at 50% -5%,
+    oklch(0.52 0.12 168 / 0.07),
+    transparent 70%
+  );
   animation: screen-enter 0.2s ease-out;
 }
 .screen-content {
-  @apply flex flex-col items-center w-full max-w-sm px-6;
+  @apply flex flex-col items-center w-full max-w-sm px-6 py-12;
+}
+
+/* Icon chip — rounded, accent-tinted container for a leading icon */
+.icon-chip {
+  @apply flex items-center justify-center shrink-0 rounded-xl bg-accent-light text-accent;
 }
 
 /* Typography */
@@ -546,10 +589,10 @@ body {
   @apply text-5xl font-bold tracking-tight text-text-primary;
 }
 .heading {
-  @apply text-2xl font-bold text-text-primary;
+  @apply text-2xl font-bold tracking-tight text-text-primary;
 }
 .label {
-  @apply text-xs font-medium text-text-muted uppercase tracking-wider;
+  @apply text-xs font-semibold text-text-muted uppercase tracking-wider;
 }
 .caption {
   @apply text-sm text-text-secondary;
