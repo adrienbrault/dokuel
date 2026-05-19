@@ -129,7 +129,11 @@
       }
     },
     {
-      "includes": ["src/lib/board-engine.ts"],
+      "includes": [
+        "src/lib/board-engine.ts",
+        "src/hooks/p2p-room.ts",
+        "src/hooks/useYjsMultiplayer.ts"
+      ],
       "linter": {
         "rules": {
           "nursery": {

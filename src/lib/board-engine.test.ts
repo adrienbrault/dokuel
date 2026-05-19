@@ -34,6 +34,27 @@ describe("serializeBoard", () => {
   });
 });
 
+describe("history bound", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("caps the undo history so long games don't grow it unboundedly", () => {
+    let state = initState({ puzzle });
+    // Drive 250 note-toggles in an empty cell. Without the cap, the
+    // history would be 250 entries; with it, it stays at 100.
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    for (let i = 0; i < 250; i++) {
+      state = reducer(state, {
+        type: "PLACE_NUMBER",
+        value: (i % 9) + 1,
+        autoEliminateNotes: false,
+        asNote: true,
+      });
+    }
+    expect(state.history.length).toBe(100);
+  });
+});
+
 describe("RESET action", () => {
   const puzzleA =
     "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";

@@ -6,6 +6,7 @@ import type {
   Player,
   RoomState,
 } from "../lib/types.ts";
+import type { MpSnapshot } from "./mp-snapshot.ts";
 
 /**
  * Internal to the multiplayer module. The only sanctioned production
@@ -275,6 +276,39 @@ export function getPlayers(room: P2PRoom): Player[] {
 
 export function destroyRoom(room: P2PRoom): void {
   room.doc.destroy();
+}
+
+/**
+ * Seed an empty Yjs room from a localStorage snapshot. Only writes
+ * keys that are still missing, so calling this after a partial IDB
+ * restore is safe — the peer's eventual sync will reconcile via CRDT.
+ * The caller decides when to invoke; typically only when the room has
+ * no started game in Yjs but a recent snapshot exists.
+ */
+export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
+  const roomMap = room.doc.getMap("room");
+  const playersMap = room.doc.getMap("players");
+  room.doc.transact(() => {
+    if (!roomMap.has("status")) roomMap.set("status", snap.status);
+    if (!roomMap.has("gameNumber")) roomMap.set("gameNumber", snap.gameNumber);
+    if (!roomMap.has("puzzle")) roomMap.set("puzzle", snap.puzzle);
+    if (!roomMap.has("difficulty")) roomMap.set("difficulty", snap.difficulty);
+    if (!roomMap.has("assistLevel"))
+      roomMap.set("assistLevel", snap.assistLevel);
+    if (!roomMap.has("hostId")) roomMap.set("hostId", snap.hostId);
+    if (!roomMap.has("winnerId")) roomMap.set("winnerId", snap.winnerId);
+    if (!roomMap.has("winnerName")) roomMap.set("winnerName", snap.winnerName);
+    snap.players.forEach((p, joinOrder) => {
+      if (playersMap.has(p.id)) return;
+      const pm = new Y.Map<unknown>();
+      pm.set("name", p.name);
+      pm.set("color", p.color);
+      pm.set("cellsRemaining", p.cellsRemaining);
+      pm.set("completionPercent", p.completionPercent);
+      pm.set("joinOrder", joinOrder);
+      playersMap.set(p.id, pm);
+    });
+  });
 }
 
 /**

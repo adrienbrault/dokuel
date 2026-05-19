@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
   claimWinner,
   createRoomFromDoc,
@@ -8,6 +9,7 @@ import {
   getPlayers,
   getRoomState,
   getRoomStatus,
+  hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
   observeRoomChanges,
@@ -463,6 +465,94 @@ describe("p2p-room", () => {
       requestRematch(room);
 
       expect(getRoomState(room)!.difficulty).toBe("hard");
+    });
+  });
+
+  describe("hydrateRoomFromSnapshot", () => {
+    function makeSnap(overrides: Partial<MpSnapshot> = {}): MpSnapshot {
+      return {
+        gameNumber: 2,
+        puzzle: ".".repeat(81),
+        status: "playing",
+        difficulty: "hard",
+        assistLevel: "standard",
+        hostId: "p1",
+        players: [
+          {
+            id: "p1",
+            name: "Alice",
+            color: "#3B82F6",
+            cellsRemaining: 40,
+            completionPercent: 50,
+          },
+          {
+            id: "p2",
+            name: "Bob",
+            color: "#EF4444",
+            cellsRemaining: 30,
+            completionPercent: 63,
+          },
+        ],
+        winnerId: null,
+        winnerName: null,
+        savedAt: Date.now(),
+        ...overrides,
+      };
+    }
+
+    it("seeds an empty room with all snapshot fields", () => {
+      const room: P2PRoom = { doc: new Y.Doc(), roomId: "test-room" };
+      const snap = makeSnap();
+
+      hydrateRoomFromSnapshot(room, snap);
+
+      const state = getRoomState(room);
+      expect(state).not.toBeNull();
+      expect(state?.status).toBe("playing");
+      expect(state?.gameNumber).toBe(2);
+      expect(state?.puzzle).toBe(snap.puzzle);
+      expect(state?.difficulty).toBe("hard");
+      expect(state?.hostId).toBe("p1");
+      expect(state?.players).toHaveLength(2);
+      expect(state?.players[0]?.cellsRemaining).toBe(40);
+      expect(state?.players[1]?.completionPercent).toBe(63);
+    });
+
+    it("does not clobber existing keys", () => {
+      const room = createTestRoom();
+      initializeRoom(room, "p1", "easy");
+      joinRoom(room, "p1", "Alice");
+      joinRoom(room, "p2", "Bob");
+      startGame(room);
+      const beforePuzzle = room.doc.getMap("room").get("puzzle");
+      const beforeGameNumber = room.doc.getMap("room").get("gameNumber");
+
+      hydrateRoomFromSnapshot(
+        room,
+        makeSnap({
+          puzzle: "1".padEnd(81, "."),
+          gameNumber: 999,
+          difficulty: "hard",
+        }),
+      );
+
+      expect(room.doc.getMap("room").get("puzzle")).toBe(beforePuzzle);
+      expect(room.doc.getMap("room").get("gameNumber")).toBe(beforeGameNumber);
+      expect(room.doc.getMap("room").get("difficulty")).toBe("easy");
+    });
+
+    it("skips players already present in the room", () => {
+      const room = createTestRoom();
+      joinRoom(room, "p1", "Alice");
+      const aliceMap = room.doc.getMap("players").get("p1") as Y.Map<unknown>;
+      aliceMap.set("cellsRemaining", 5);
+
+      hydrateRoomFromSnapshot(room, makeSnap());
+
+      expect(aliceMap.get("cellsRemaining")).toBe(5);
+      const players = getPlayers(room);
+      expect(players).toHaveLength(2);
+      expect(players.find((p) => p.id === "p2")?.cellsRemaining).toBe(30);
     });
   });
 });
