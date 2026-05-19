@@ -244,6 +244,69 @@ describe("NumPad", () => {
     expect(onStartDrag).toHaveBeenCalledTimes(1);
   });
 
+  function hasAccent(el: HTMLElement) {
+    return el.classList.contains("bg-accent");
+  }
+
+  it("transfers the press visual to the digit currently under the finger during skim", () => {
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        selectedValue={null}
+        onNumber={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    const five = screen.getByRole("button", { name: /^5, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // During press, the original digit reads as visually accented.
+    expect(hasAccent(three)).toBe(true);
+    expect(hasAccent(five)).toBe(false);
+
+    // Pan along-axis past threshold → skim mode
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    // Finger crosses into digit 5
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+    });
+    // The press visual must follow the finger — the original digit lets
+    // go, the new one picks up.
+    expect(hasAccent(three)).toBe(false);
+    expect(hasAccent(five)).toBe(true);
+  });
+
+  it("clears the press visual on release", () => {
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        selectedValue={null}
+        onNumber={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    expect(hasAccent(three)).toBe(true);
+    fireEvent.pointerUp(three, { pointerType: "touch", pointerId: 1 });
+    expect(hasAccent(three)).toBe(false);
+  });
+
   it("does not start a drag when the pan is along the numpad axis", () => {
     const onStartDrag = vi.fn();
     const onSkimDigit = vi.fn();

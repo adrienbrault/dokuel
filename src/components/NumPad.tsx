@@ -20,27 +20,15 @@ type NumPadProps = {
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
   disableCompleted?: boolean | undefined;
-  /**
-   * Fires the moment a digit is pressed (pointerdown) so the cell can
-   * show an instant note. In Dokuel this writes a NOTE.
-   */
+  /** Fires on pointerdown (instant note placement / highlight toggle). */
   onNumber: (n: number) => void;
-  /**
-   * Fires after holding for LONG_PRESS_MS. In Dokuel this COMMITS a
-   * value (overwriting the just-placed note).
-   */
+  /** Fires after LONG_PRESS_MS (commits a value over the just-placed note). */
   onLongPressNumber?: ((n: number) => void) | undefined;
-  /**
-   * Fires on pointerup / cancel / leave — i.e. the press ended,
-   * regardless of whether it crossed the long-press threshold. Used
-   * by the parent to clear "currently charging" UI state.
-   */
+  /** Fires when the press ends (pointerup/cancel/leave or post-drag/skim). */
   onPressEnd?: (() => void) | undefined;
   /**
    * Fires once the finger has slid PERPENDICULAR to the numpad axis,
-   * handing control to the parent's drag-and-drop layer. The numpad
-   * cancels its own tap/hold UI but does not undo the instant note
-   * already placed — the user can undo or accept it as a side-effect.
+   * handing control to the parent's drag-and-drop layer.
    */
   onStartDrag?:
     | ((args: {
@@ -50,11 +38,7 @@ type NumPadProps = {
         pointerId: number;
       }) => void)
     | undefined;
-  /**
-   * Fires when the finger pans ALONG the numpad axis and crosses into
-   * a different digit's button. Lets the parent live-update digit
-   * highlight as the user skims across the row without lifting.
-   */
+  /** Fires when an ALONG-axis skim crosses into another digit's button. */
   onSkimDigit?: ((n: number) => void) | undefined;
 };
 
@@ -85,8 +69,10 @@ export function NumPad({
   // onNumber doesn't double-fire. A fresh pointerdown clears it.
   const pointerFiredRef = useRef(false);
 
-  // Active skim gesture id. When set, the effect below attaches document-
-  // level listeners that track the finger as it crosses digit buttons.
+  // Visual press feedback (drives bg-accent without CSS :active, which
+  // sticks on touch devices after pointer-capture release).
+  const [pressedDigit, setPressedDigit] = useState<number | null>(null);
+  // Active skim gesture id; the effect below attaches doc listeners.
   const [skimPointerId, setSkimPointerId] = useState<number | null>(null);
   // Last digit the finger was over while skimming. Seeded to the originally
   // pressed digit so we don't re-fire onSkimDigit before the finger crosses
@@ -111,6 +97,7 @@ export function NumPad({
       if (e.pointerType === "mouse" && e.button !== 0) return;
       cancelTimer();
       pointerFiredRef.current = true;
+      setPressedDigit(n);
       onNumber(n); // instant note placement / highlight toggle
       const btn = e.currentTarget;
       const rect = btn.getBoundingClientRect();
@@ -146,23 +133,13 @@ export function NumPad({
       if (dx * dx + dy * dy < GESTURE_THRESHOLD_PX * GESTURE_THRESHOLD_PX)
         return;
 
-      // Classify the gesture by which axis dominates relative to the
-      // numpad's main axis (the axis digits are arranged along).
-      // Along-axis → skim through highlights. Perpendicular → drag-to-place.
-      const primaryDelta = isVertical ? Math.abs(dy) : Math.abs(dx);
-      const perpendicularDelta = isVertical ? Math.abs(dx) : Math.abs(dy);
-      const isAlongAxis = primaryDelta >= perpendicularDelta;
-      const mode: "skim" | "drag" | null = isAlongAxis
-        ? onSkimDigit
-          ? "skim"
-          : onStartDrag
-            ? "drag"
-            : null
-        : onStartDrag
-          ? "drag"
-          : onSkimDigit
-            ? "skim"
-            : null;
+      // Classify by which axis dominates relative to the numpad's main
+      // axis. Along-axis → skim highlights. Perpendicular → drag-to-place.
+      const along = isVertical ? Math.abs(dy) : Math.abs(dx);
+      const perp = isVertical ? Math.abs(dx) : Math.abs(dy);
+      const skim: "skim" | null = onSkimDigit ? "skim" : null;
+      const drag: "drag" | null = onStartDrag ? "drag" : null;
+      const mode = along >= perp ? (skim ?? drag) : (drag ?? skim);
       if (mode === null) return;
 
       cancelTimer();
@@ -178,6 +155,9 @@ export function NumPad({
       haptics.tap();
 
       if (mode === "drag") {
+        // Drag ghost shows what's being carried, so the numpad button
+        // shouldn't claim "pressed" anymore.
+        setPressedDigit(null);
         onStartDrag?.({
           digit: press.digit,
           x: e.clientX,
@@ -204,6 +184,7 @@ export function NumPad({
     }
     cancelTimer();
     pressRef.current = null;
+    setPressedDigit(null);
     onPressEnd?.();
   }, [cancelTimer, onPressEnd]);
 
@@ -229,6 +210,7 @@ export function NumPad({
       if (Number.isNaN(digit)) return;
       if (digit === skimDigitRef.current) return;
       skimDigitRef.current = digit;
+      setPressedDigit(digit);
       haptics.light();
       onSkimDigitRef.current?.(digit);
     };
@@ -237,6 +219,7 @@ export function NumPad({
       if (e.pointerId !== ownPointerId) return;
       setSkimPointerId(null);
       skimDigitRef.current = null;
+      setPressedDigit(null);
       onPressEndRef.current?.();
     };
 
@@ -277,24 +260,10 @@ export function NumPad({
       )}
       {/* Stacked variant: mobile side-positioned numpads, and always on desktop */}
       <p
-        className={`text-[0.625rem] text-text-muted leading-tight select-none text-center ${
-          isVertical ? "" : "hidden lg:block"
-        }`}
+        className={`text-[0.625rem] text-text-muted leading-tight select-none text-center whitespace-pre-line ${isVertical ? "" : "hidden lg:block"}`}
         aria-hidden="true"
       >
-        tap
-        <br />
-        note
-        <br />· · ·
-        <br />
-        hold
-        <br />
-        enter
-        <br />· · ·
-        <br />
-        drag
-        <br />
-        place
+        {"tap\nnote\n· · ·\nhold\nenter\n· · ·\ndrag\nplace"}
       </p>
       <div
         className={`flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full max-w-lg lg:w-14"}`}
@@ -305,6 +274,10 @@ export function NumPad({
           const remaining = remainingCounts[n];
           const isComplete = remaining === 0;
           const isSelected = selectedValue === n;
+          // Press state overrides selectedValue so the visual follows
+          // the finger across skim transitions.
+          const isAccented =
+            pressedDigit !== null ? pressedDigit === n : isSelected;
 
           return (
             <button
@@ -312,7 +285,7 @@ export function NumPad({
               type="button"
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
@@ -328,7 +301,7 @@ export function NumPad({
               <span className="text-lg leading-none">{n}</span>
               {showRemainingCounts && (
                 <span
-                  className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isSelected ? "text-text-on-accent/70" : "text-text-secondary"}`}
+                  className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
                 >
                   {remaining}
                 </span>
