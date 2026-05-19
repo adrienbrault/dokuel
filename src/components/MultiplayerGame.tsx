@@ -119,7 +119,7 @@ function DisconnectOverlay({ onClaimWin }: { onClaimWin: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-modal-backdrop">
-      <div className="bg-bg-overlay rounded-2xl px-8 py-6 shadow-2xl text-center animate-modal-content">
+      <div className="bg-bg-overlay border border-border-default rounded-3xl px-8 py-6 shadow-2xl text-center animate-modal-content">
         <p className="text-lg font-semibold text-text-primary">
           Opponent disconnected
         </p>
