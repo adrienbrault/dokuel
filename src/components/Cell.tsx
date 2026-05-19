@@ -32,6 +32,14 @@ type CellProps = {
   isDragSource?: boolean | undefined;
   /** "valid" or "invalid" while the pointer hovers this cell with a drag. */
   dropTargetState?: "valid" | "invalid" | null | undefined;
+  /**
+   * Which slot in this cell the drop will land in, when the cell is a
+   * valid drop target. Drives the diagonal preview split so the user
+   * sees a value-sized digit vs a note-sized digit before releasing.
+   */
+  dropMode?: "value" | "note" | undefined;
+  /** The digit currently being dragged — needed to render the drop preview. */
+  dropDigit?: number | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -51,6 +59,8 @@ export const Cell = memo(function Cell({
   chargingDigit,
   isDragSource,
   dropTargetState,
+  dropMode,
+  dropDigit,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -98,6 +108,9 @@ export const Cell = memo(function Cell({
       data-col={col}
       data-drag-source={isDragSource ? "true" : undefined}
       data-drop-target={dropTargetState ?? undefined}
+      data-drop-mode={
+        dropTargetState === "valid" ? (dropMode ?? undefined) : undefined
+      }
       onClick={() => onSelect(row, col)}
       aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
     >
@@ -120,6 +133,72 @@ export const Cell = memo(function Cell({
           ))}
         </div>
       ) : null}
+      {dropTargetState === "valid" && dropDigit !== undefined && (
+        <span
+          data-testid="drop-preview"
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+        >
+          {/* Two triangles meeting on the top-left → bottom-right
+              diagonal. The active half is tinted with the accent; the
+              inactive half stays nearly transparent so the user can
+              see at a glance which mode they're committing. */}
+          <span
+            className={`absolute inset-0 transition-colors ${
+              dropMode === "value"
+                ? "bg-accent/30"
+                : "bg-accent/8 dark:bg-accent/12"
+            }`}
+            style={{ clipPath: "polygon(0% 0%, 0% 100%, 100% 100%)" }}
+          />
+          <span
+            className={`absolute inset-0 transition-colors ${
+              dropMode === "note"
+                ? "bg-accent/30"
+                : "bg-accent/8 dark:bg-accent/12"
+            }`}
+            style={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 100%)" }}
+          />
+          {/* Hair-line diagonal divider so the split reads clearly
+              even when the two halves are similar shades — the
+              gradient is perpendicular to the top-left → bottom-right
+              diagonal so its midpoint draws a 1px line along it. */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to bottom left, transparent calc(50% - 0.5px), var(--color-accent) calc(50% - 0.5px), var(--color-accent) calc(50% + 0.5px), transparent calc(50% + 0.5px))",
+              opacity: 0.55,
+            }}
+          />
+          {/* Preview digit drawn where it would actually land: large
+              and centered for a value, small at the digit's note
+              sub-cell for a note. */}
+          {dropMode === "value" ? (
+            <span
+              data-testid="drop-preview-value"
+              className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] font-semibold text-cell-user leading-none opacity-75"
+            >
+              {dropDigit}
+            </span>
+          ) : (
+            <span
+              data-testid="drop-preview-note"
+              className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]"
+            >
+              {DIGITS.map((n) => (
+                <span
+                  key={n}
+                  className="flex items-center justify-center text-[clamp(0.80859375rem,3.1625vw,1.078125rem)] font-semibold text-cell-user leading-none opacity-90"
+                >
+                  {n === dropDigit ? dropDigit : ""}
+                </span>
+              ))}
+            </span>
+          )}
+        </span>
+      )}
       {cell.value === null && chargingDigit !== undefined && (
         <span
           data-testid="note-charge"

@@ -125,6 +125,60 @@ describe("Cell chargingDigit", () => {
     expect(screen.getByRole("button").className).toContain("touch-none");
   });
 
+  it("renders the value drop preview when hovering with value mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="value"
+        dropDigit={4}
+      />,
+    );
+    expect(screen.getByTestId("drop-preview-value")).toHaveTextContent("4");
+    expect(screen.queryByTestId("drop-preview-note")).toBeNull();
+  });
+
+  it("renders the note drop preview at the digit's sub-cell when hovering with note mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="note"
+        dropDigit={4}
+      />,
+    );
+    expect(screen.getByTestId("drop-preview-note")).toHaveTextContent("4");
+    expect(screen.queryByTestId("drop-preview-value")).toBeNull();
+  });
+
+  it("exposes the drop mode via a data attribute for CSS hooks", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="note"
+        dropDigit={7}
+      />,
+    );
+    expect(screen.getByRole("button").dataset.dropMode).toBe("note");
+  });
+
+  it("omits the drop preview on an invalid target", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="invalid"
+        dropMode="note"
+        dropDigit={7}
+      />,
+    );
+    expect(screen.queryByTestId("drop-preview")).toBeNull();
+  });
+
   it("hides the static note glyph for the digit being charged", () => {
     // Notes 1, 3, 5 in the cell; charging digit 3 — only 1 and 5
     // should remain visible in the notes grid (the 3 is being shown
