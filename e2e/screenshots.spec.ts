@@ -453,7 +453,7 @@ test("solo game - win modal", async ({ page }, testInfo) => {
 			<div class="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
 				<span class="h-1.5 w-10 -mt-2 rounded-full bg-border-default sm:hidden"></span>
 				<div class="flex flex-col items-center gap-2">
-					<span class="text-6xl animate-emoji-bounce">🎉</span>
+					<span class="text-5xl animate-emoji-bounce">🎉</span>
 					<h2 class="heading">You Won!</h2>
 					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-difficulty-easy-bg text-difficulty-easy-text">Easy</span>
 				</div>

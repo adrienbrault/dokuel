@@ -105,7 +105,7 @@ export function GameResult({
           aria-hidden="true"
         />
         <div className="flex flex-col items-center gap-2">
-          <span className="text-6xl animate-emoji-bounce">
+          <span className="text-5xl animate-emoji-bounce">
             {isWinner ? "🎉" : "👏"}
           </span>
           <h2 className="heading">

@@ -594,7 +594,7 @@ body {
   animation: modal-backdrop-in 0.2s ease-out;
 }
 .modal-panel {
-  @apply flex w-full flex-col items-center gap-6 rounded-t-3xl bg-bg-overlay p-7 shadow-2xl sm:w-auto sm:rounded-3xl;
+  @apply flex max-h-[92dvh] w-full flex-col items-center gap-6 overflow-y-auto rounded-t-3xl bg-bg-overlay p-6 shadow-2xl sm:w-auto sm:rounded-3xl;
   animation: sheet-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (min-width: 640px) {
