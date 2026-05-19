@@ -69,12 +69,12 @@ export function Lobby({
   }
 
   return (
-    <div className="screen-content gap-8">
-      <div className="flex flex-col items-center gap-2">
+    <div className="screen-content gap-7 py-10">
+      <div className="flex flex-col items-center gap-3">
         <h2 className="heading">Game Lobby</h2>
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-bg-raised cursor-pointer touch-manipulation press-spring-soft"
+          className="card flex items-center gap-2 px-4 py-2.5 cursor-pointer touch-manipulation press-spring-soft"
           onClick={async () => {
             await navigator.clipboard.writeText(roomState.roomId);
             setCodeCopied(true);
@@ -82,37 +82,52 @@ export function Lobby({
           }}
           title="Copy room code"
         >
-          <span className="caption">{codeCopied ? "Copied!" : "Room:"}</span>
-          <span className="font-mono font-semibold text-text-primary">
+          <span className="label">{codeCopied ? "Copied!" : "Room"}</span>
+          <span className="font-mono font-bold text-text-primary tracking-wide">
             {roomState.roomId}
           </span>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-text-muted"
+            aria-hidden="true"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
         </button>
         <button
           type="button"
-          className="btn btn-md btn-primary mt-1 shadow-sm shadow-accent/20"
+          className="btn btn-md btn-primary mt-0.5"
           onClick={handleShare}
         >
           {copied ? "Link Copied!" : "Share Invite Link"}
         </button>
-        <p className="caption mt-1">
+        <p className="caption">
           Difficulty:{" "}
-          <span className="font-medium text-text-primary capitalize">
+          <span className="font-semibold text-text-primary capitalize">
             {roomState.difficulty}
           </span>
         </p>
       </div>
 
       <div className="flex flex-col gap-3 w-full">
-        <h3 className="label tracking-wide">Players</h3>
+        <h3 className="label">Players</h3>
         {roomState.players.map((player) => {
           const isMe = player.id === playerId;
           return (
             <div
               key={player.id}
-              className="card flex items-center gap-3 px-4 py-3"
+              className="card flex items-center gap-3 px-4 py-3.5"
             >
               <div
-                className="w-3 h-3 rounded-full shrink-0"
+                className="w-3.5 h-3.5 rounded-full shrink-0 ring-2 ring-bg-raised"
                 style={{ backgroundColor: player.color }}
               />
               {isMe && editingName ? (
@@ -160,7 +175,7 @@ export function Lobby({
           );
         })}
         {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
+          <div className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-border-default animate-pulse">
             <span className="text-sm text-text-muted">
               Waiting for opponent
             </span>
@@ -203,10 +218,8 @@ export function Lobby({
         <button
           type="button"
           disabled={!canStart}
-          className={`btn btn-lg w-full transition-all duration-100 ${
-            canStart
-              ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled cursor-not-allowed"
+          className={`btn btn-lg w-full ${
+            canStart ? "btn-primary" : "bg-bg-disabled text-text-disabled"
           }`}
           onClick={onStart}
         >
@@ -214,7 +227,7 @@ export function Lobby({
         </button>
         <button
           type="button"
-          className="btn-ghost mt-2 touch-manipulation"
+          className="btn btn-ghost touch-manipulation"
           onClick={onBack}
         >
           ← Back
