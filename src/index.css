@@ -448,13 +448,12 @@ body {
 
 /* ─── Drag-and-drop digit ─── */
 
-/* Hovered drop target — a calm, static accent ring plus the
-   selected-cell wash. The two in-cell landing previews carry the
-   value/note distinction, so the cell frame just needs to say
-   "release here". No pulsing: a confident, steady highlight. */
+/* Hovered drop target — a calm, static accent ring. The cell's
+   background is left to the active-half band (rendered in Cell) so
+   the tinted half clearly reads as the zone the pointer is in;
+   washing the whole cell would flatten that contrast. */
 [data-drop-target="valid"] {
   box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / 0.55);
-  background-color: var(--color-cell-selected);
 }
 [data-drop-target="invalid"] {
   box-shadow: inset 0 0 0 3px oklch(0.6 0.2 25 / 0.7);

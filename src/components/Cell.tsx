@@ -140,6 +140,15 @@ export const Cell = memo(function Cell({
           ))}
         </div>
       ) : null}
+      {dropTargetState === "valid" && (
+        <span
+          data-testid="drop-zone"
+          data-mode={dropMode}
+          aria-hidden="true"
+          className="absolute inset-x-0 h-1/2 bg-accent/30 pointer-events-none animate-drop-preview"
+          style={{ top: dropMode === "value" ? "0%" : "50%" }}
+        />
+      )}
       {dropTargetState === "valid" && dropDigit !== undefined && (
         <span
           data-testid="drop-preview"

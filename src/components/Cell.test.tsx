@@ -154,6 +154,34 @@ describe("Cell chargingDigit", () => {
     expect(preview.style.height).toBe("100%");
   });
 
+  it("highlights the top half as the active zone in value mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="value"
+        dropDigit={6}
+      />,
+    );
+    const zone = screen.getByTestId("drop-zone");
+    expect(zone.style.top).toBe("0%");
+  });
+
+  it("highlights the bottom half as the active zone in note mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="note"
+        dropDigit={6}
+      />,
+    );
+    const zone = screen.getByTestId("drop-zone");
+    expect(zone.style.top).toBe("50%");
+  });
+
   it("morphs to the dragged digit's sub-cell in note mode", () => {
     // Digit 8 → note row 2, col 1 → left 33.33%, top 66.66%.
     render(
