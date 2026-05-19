@@ -194,3 +194,29 @@ describe("PLACE_NOTE_AT action", () => {
     expect(state.history).toHaveLength(0);
   });
 });
+
+describe("PLACE_NUMBER overwrite protection", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("does not overwrite a non-given cell that already holds a value", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    expect(state.board[0]![2]!.value).toBe(4);
+
+    const beforeSecond = state;
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 9,
+      autoEliminateNotes: false,
+    });
+    expect(state.board[0]![2]!.value).toBe(4);
+    expect(state).toBe(beforeSecond);
+    expect(state.history).toHaveLength(1);
+  });
+});
