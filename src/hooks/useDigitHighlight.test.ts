@@ -6,6 +6,7 @@ function makeHandlers() {
   return {
     selectCell: vi.fn(),
     setSelectedCells: vi.fn(),
+    deselectCell: vi.fn(),
   };
 }
 
@@ -71,6 +72,22 @@ describe("useDigitHighlight", () => {
     });
     expect(result.current.highlightedDigit).toBeNull();
     expect(handlers.setSelectedCells).toHaveBeenCalledWith(cells, primary);
+  });
+
+  it("clears the highlight when deselectCell is called and forwards the call", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.toggle(6);
+    });
+    expect(result.current.highlightedDigit).toBe(6);
+
+    act(() => {
+      result.current.deselectCell();
+    });
+    expect(result.current.highlightedDigit).toBeNull();
+    expect(handlers.deselectCell).toHaveBeenCalled();
   });
 
   it("setDigit sets the highlight directly without toggling on repeat", () => {
