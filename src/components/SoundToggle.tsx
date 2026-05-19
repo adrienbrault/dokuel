@@ -7,7 +7,7 @@ export function SoundToggle({ enabled, onToggle }: SoundToggleProps) {
   return (
     <button
       type="button"
-      className="p-2 rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
+      className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted hover:bg-bg-raised hover:text-text-secondary transition-colors touch-manipulation"
       onClick={onToggle}
       aria-label={enabled ? "Mute sounds" : "Enable sounds"}
     >
