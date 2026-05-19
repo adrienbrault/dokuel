@@ -173,9 +173,6 @@ function renderCombined(sheets: CombinedSheet[]): string {
 	});
 
 	return [
-		"<details>",
-		`<summary>All ${sheets.length} contact sheets (${deviceSheets.length} per-device · ${featureSheets.length} per-feature)</summary>`,
-		"",
 		"### Per-device",
 		"",
 		"Each device gets two sheets: menus & entry (landing, difficulty, daily challenge, join, solo entry, multiplayer lobby) and active gameplay (in-progress, win modal, settings popover, numpad variants, multiplayer progress).",
@@ -187,8 +184,6 @@ function renderCombined(sheets: CombinedSheet[]): string {
 		"Each feature sheet shows related scenes across all 4 devices (devices as rows).",
 		"",
 		featureBlocks.join("\n\n"),
-		"",
-		"</details>",
 	].join("\n");
 }
 
