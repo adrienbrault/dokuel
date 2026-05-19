@@ -614,11 +614,48 @@ test.describe("stats with multiplayer history", () => {
 	test.use({
 		storage: {
 			sudoku_stats: JSON.stringify([
-				{ difficulty: "easy", time: 180, date: "2026-05-12", won: true },
-				{ difficulty: "easy", time: 165, date: "2026-05-14", won: true },
-				{ difficulty: "medium", time: 320, date: "2026-05-15", won: true },
-				{ difficulty: "medium", time: 280, date: "2026-05-17", won: true },
-				{ difficulty: "hard", time: 540, date: "2026-05-18", won: true },
+				{
+					difficulty: "easy",
+					assistLevel: "paper",
+					time: 240,
+					date: "2026-05-10",
+					won: true,
+				},
+				{
+					difficulty: "easy",
+					assistLevel: "standard",
+					time: 180,
+					date: "2026-05-12",
+					won: true,
+				},
+				{
+					difficulty: "easy",
+					assistLevel: "standard",
+					time: 165,
+					date: "2026-05-14",
+					won: true,
+				},
+				{
+					difficulty: "medium",
+					assistLevel: "standard",
+					time: 320,
+					date: "2026-05-15",
+					won: true,
+				},
+				{
+					difficulty: "medium",
+					assistLevel: "full",
+					time: 280,
+					date: "2026-05-17",
+					won: true,
+				},
+				{
+					difficulty: "hard",
+					assistLevel: "full",
+					time: 540,
+					date: "2026-05-18",
+					won: true,
+				},
 			]),
 			sudoku_multiplayer_stats: JSON.stringify([
 				{
