@@ -101,7 +101,7 @@ export function GameResult({
       )}
       <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
         <div className="flex flex-col items-center gap-2">
-          <span className="text-5xl animate-emoji-bounce">
+          <span className="text-6xl animate-emoji-bounce">
             {isWinner ? "🎉" : "👏"}
           </span>
           <h2 className="heading">
@@ -115,37 +115,31 @@ export function GameResult({
             </span>
           )}
         </div>
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-3xl font-mono font-bold tabular-nums text-text-primary">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
-            <span className="text-sm font-semibold text-accent">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success/15 text-success text-xs font-bold">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
               New Personal Best!
             </span>
           )}
         </div>
 
         {stats && !isMultiplayer && (
-          <div className="grid grid-cols-3 gap-4 w-full text-center">
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {stats.gamesPlayed}
-              </div>
-              <div className="text-xs text-text-muted">Played</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {formatTime(stats.bestTime)}
-              </div>
-              <div className="text-xs text-text-muted">Best</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {formatTime(stats.averageTime)}
-              </div>
-              <div className="text-xs text-text-muted">Average</div>
-            </div>
+          <div className="grid grid-cols-3 gap-2 w-full">
+            <StatTile value={String(stats.gamesPlayed)} label="Played" />
+            <StatTile value={formatTime(stats.bestTime)} label="Best" />
+            <StatTile value={formatTime(stats.averageTime)} label="Average" />
           </div>
         )}
 
@@ -165,7 +159,7 @@ export function GameResult({
           {onRematch && (
             <button
               type="button"
-              className="btn btn-primary w-full py-3 text-lg"
+              className="btn btn-lg btn-primary w-full"
               onClick={onRematch}
             >
               {isMultiplayer ? "Rematch" : "Play Again"}
@@ -173,7 +167,7 @@ export function GameResult({
           )}
           <button
             type="button"
-            className="btn btn-secondary w-full py-3 text-lg"
+            className="btn btn-lg btn-secondary w-full"
             onClick={onNewGame}
           >
             New Game
@@ -181,7 +175,7 @@ export function GameResult({
           {!isMultiplayer && (
             <button
               type="button"
-              className="btn btn-ghost w-full py-2"
+              className="btn btn-ghost w-full py-1"
               onClick={handleShare}
             >
               {copied ? "Copied!" : "Share Result"}
@@ -198,6 +192,19 @@ export function GameResult({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function StatTile({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-inset py-3">
+      <span className="text-lg font-bold text-text-primary font-mono tabular-nums">
+        {value}
+      </span>
+      <span className="text-[0.6875rem] font-medium text-text-muted">
+        {label}
+      </span>
     </div>
   );
 }
