@@ -12,6 +12,7 @@ function makeState(overrides: Partial<DigitDragState> = {}): DigitDragState {
     target: null,
     invalidTarget: false,
     mode: "value",
+    lift: 0,
     ...overrides,
   };
 }
@@ -27,14 +28,23 @@ describe("DigitDragIndicator", () => {
     expect(getByTestId("digit-drag-indicator").textContent).toBe("5");
   });
 
-  it("tracks the pointer lifted 40px above the finger when in the 'free' pose", () => {
+  it("sits right at the cursor for a mouse drag (zero lift)", () => {
     const { getByTestId } = render(
-      <DigitDragIndicator state={makeState({ x: 200, y: 300 })} />,
+      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 0 })} />,
     );
     const el = getByTestId("digit-drag-indicator");
     expect(el.dataset.pose).toBe("free");
     expect(el.style.left).toBe("200px");
-    expect(el.style.top).toBe("260px");
+    expect(el.style.top).toBe("300px");
+  });
+
+  it("rides above the finger for a touch drag (non-zero lift)", () => {
+    const { getByTestId } = render(
+      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 36 })} />,
+    );
+    const el = getByTestId("digit-drag-indicator");
+    expect(el.style.left).toBe("200px");
+    expect(el.style.top).toBe("264px");
   });
 
   it("stays free-following but switches to the 'invalid' pose over a non-droppable cell", () => {
@@ -53,13 +63,12 @@ describe("DigitDragIndicator", () => {
     const el = getByTestId("digit-drag-indicator");
     expect(el.dataset.pose).toBe("invalid");
     expect(el.style.left).toBe("200px");
-    expect(el.style.top).toBe("260px");
+    expect(el.style.top).toBe("300px");
   });
 
-  it("stays in the 'free' pose over a valid target", () => {
-    // Over a valid cell, the indicator still follows the pointer
-    // instead of snapping into a slot — the cell's own halves
-    // communicate which mode is active.
+  it("hides itself over a valid target so the cell's previews lead", () => {
+    // Over a valid cell the cell draws its own two landing previews;
+    // the transit chip fades out to keep attention on one surface.
     const { getByTestId } = render(
       <DigitDragIndicator
         state={makeState({
@@ -72,8 +81,11 @@ describe("DigitDragIndicator", () => {
       />,
     );
     const el = getByTestId("digit-drag-indicator");
-    expect(el.dataset.pose).toBe("free");
+    expect(el.dataset.pose).toBe("hidden");
+    expect(el.style.opacity).toBe("0");
+    // Still positioned at the pointer so it fades in place when the
+    // pointer leaves the cell.
     expect(el.style.left).toBe("150px");
-    expect(el.style.top).toBe("210px");
+    expect(el.style.top).toBe("250px");
   });
 });

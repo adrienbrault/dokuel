@@ -34,6 +34,7 @@ type Options = {
         x: number;
         y: number;
         pointerId: number;
+        pointerType: string;
       }) => void)
     | undefined;
   /**
@@ -187,6 +188,7 @@ export function useDragSelect({
             x: e.clientX,
             y: e.clientY,
             pointerId: e.pointerId,
+            pointerType: e.pointerType,
           });
         }
         return;

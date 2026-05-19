@@ -208,16 +208,27 @@ describe("NumPad", () => {
       clientY: 0,
     });
     // Small drift — under threshold
-    fireEvent.pointerMove(three, { pointerId: 1, clientX: 4, clientY: 4 });
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 4,
+      clientY: 4,
+    });
     expect(onStartDrag).not.toHaveBeenCalled();
     // Vertical pan past threshold on a horizontal numpad → drag
-    fireEvent.pointerMove(three, { pointerId: 1, clientX: 0, clientY: 50 });
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 50,
+    });
     expect(onStartDrag).toHaveBeenCalledTimes(1);
     expect(onStartDrag).toHaveBeenCalledWith({
       digit: 3,
       x: 0,
       y: 50,
       pointerId: 1,
+      pointerType: "touch",
     });
     expect(onSkimDigit).not.toHaveBeenCalled();
   });
@@ -240,7 +251,12 @@ describe("NumPad", () => {
       clientX: 0,
       clientY: 0,
     });
-    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 50,
+      clientY: 0,
+    });
     expect(onStartDrag).toHaveBeenCalledTimes(1);
   });
 

@@ -125,28 +125,51 @@ describe("Cell chargingDigit", () => {
     expect(screen.getByRole("button").className).toContain("touch-none");
   });
 
-  it("renders the diagonal split preview on a valid drop target", () => {
+  it("draws the dragged digit as the landing preview on a valid target", () => {
     render(
       <Cell
         {...defaultProps()}
         cell={makeCell()}
         dropTargetState="valid"
         dropMode="value"
+        dropDigit={6}
       />,
     );
-    expect(screen.getByTestId("drop-preview")).toBeInTheDocument();
+    expect(screen.getByTestId("drop-preview")).toHaveTextContent("6");
   });
 
-  it("exposes the drop mode via a data attribute for CSS hooks", () => {
+  it("fills the cell in value mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="value"
+        dropDigit={6}
+      />,
+    );
+    const preview = screen.getByTestId("drop-preview");
+    expect(preview.dataset.mode).toBe("value");
+    expect(preview.style.width).toBe("100%");
+    expect(preview.style.height).toBe("100%");
+  });
+
+  it("morphs to the dragged digit's sub-cell in note mode", () => {
+    // Digit 8 → note row 2, col 1 → left 33.33%, top 66.66%.
     render(
       <Cell
         {...defaultProps()}
         cell={makeCell()}
         dropTargetState="valid"
         dropMode="note"
+        dropDigit={8}
       />,
     );
-    expect(screen.getByRole("button").dataset.dropMode).toBe("note");
+    const preview = screen.getByTestId("drop-preview");
+    expect(preview.dataset.mode).toBe("note");
+    expect(preview.style.left).toContain("33.3");
+    expect(preview.style.top).toContain("66.6");
+    expect(preview.style.width).toContain("33.3");
   });
 
   it("omits the drop preview on an invalid target", () => {
@@ -156,6 +179,7 @@ describe("Cell chargingDigit", () => {
         cell={makeCell()}
         dropTargetState="invalid"
         dropMode="note"
+        dropDigit={6}
       />,
     );
     expect(screen.queryByTestId("drop-preview")).toBeNull();

@@ -1,6 +1,5 @@
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 
-const POINTER_LIFT_PX = 40;
 const CHIP_SIZE_PX = 34;
 
 type Props = {
@@ -8,20 +7,27 @@ type Props = {
 };
 
 /**
- * The dragged digit, rendered as a small chip that always tracks the
- * pointer in real-time, lifted a fixed offset above it so the user's
- * finger doesn't occlude the cell it's aiming at. The chip itself
- * encodes only the validity of the current drop: green when the
- * pointer is over a droppable cell (or empty space), red when over a
- * cell that can't accept the digit. Which half of the cell the drop
- * lands in is communicated by the cell's own radial-glow halves, not
- * by snapping the chip into a slot — the indicator stays a cursor.
+ * The dragged digit, rendered as a small chip that tracks the pointer
+ * in real-time. On touch it's lifted clear of the fingertip (so the
+ * finger doesn't occlude the cell being aimed at); on mouse/pen the
+ * lift is zero and the chip sits right at the cursor.
+ *
+ * The chip is a transit cursor, not a preview. Once the pointer is
+ * over a valid cell, that cell draws its own two landing previews —
+ * so the chip fades out to keep attention on a single surface. It
+ * stays visible (green) while in transit over empty space, and turns
+ * red over a cell that can't accept the digit.
  */
 export function DigitDragIndicator({ state }: Props) {
   if (!state) return null;
 
   const isInvalid = state.target !== null && state.invalidTarget;
-  const pose: "free" | "invalid" = isInvalid ? "invalid" : "free";
+  const isOverValid = state.target !== null && !state.invalidTarget;
+  const pose: "free" | "invalid" | "hidden" = isInvalid
+    ? "invalid"
+    : isOverValid
+      ? "hidden"
+      : "free";
 
   return (
     <div
@@ -35,12 +41,14 @@ export function DigitDragIndicator({ state }: Props) {
       }`}
       style={{
         left: state.x,
-        top: state.y - POINTER_LIFT_PX,
+        top: state.y - state.lift,
         width: CHIP_SIZE_PX,
         height: CHIP_SIZE_PX,
         fontSize: CHIP_SIZE_PX * 0.62,
-        transform: "translate(-50%, -50%)",
-        transition: "background-color 0.12s ease, color 0.12s ease",
+        opacity: pose === "hidden" ? 0 : 1,
+        transform: `translate(-50%, -50%) scale(${pose === "hidden" ? 0.6 : 1})`,
+        transition:
+          "opacity 0.15s ease, transform 0.15s ease, background-color 0.12s ease, color 0.12s ease",
         lineHeight: 1,
       }}
     >

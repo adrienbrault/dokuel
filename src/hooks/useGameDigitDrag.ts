@@ -63,7 +63,13 @@ export function useGameDigitDrag({
   const { state: dragState, start } = useDigitDrag({ onDrop, isDroppable });
 
   const startNumpadDrag = useCallback(
-    (args: { digit: number; x: number; y: number; pointerId: number }) => {
+    (args: {
+      digit: number;
+      x: number;
+      y: number;
+      pointerId: number;
+      pointerType: string;
+    }) => {
       if (disabled) return;
       start({ ...args, source: { kind: "numpad" } });
     },
@@ -77,6 +83,7 @@ export function useGameDigitDrag({
       x: number;
       y: number;
       pointerId: number;
+      pointerType: string;
     }) => {
       if (disabled) return;
       start({
@@ -85,6 +92,7 @@ export function useGameDigitDrag({
         x: args.x,
         y: args.y,
         pointerId: args.pointerId,
+        pointerType: args.pointerType,
       });
     },
     [disabled, start],

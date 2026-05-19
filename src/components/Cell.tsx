@@ -2,12 +2,11 @@ import { type CSSProperties, memo } from "react";
 import { DIGITS } from "../lib/constants.ts";
 import type { AssistLevel, Cell as CellType } from "../lib/types.ts";
 
-// Radial accent glow used to highlight either half of a hovered drop
-// target. The blob peaks at the half's center and fades to nothing
-// before reaching the cell edges, so the highlight feels soft and
-// the zone boundary at the cell's midline reads naturally.
-const HALF_GLOW =
-  "radial-gradient(ellipse at center, var(--color-accent) 0%, transparent 75%)";
+// Note sub-cell positions. The 3×3 sub-grid means digit n lands at
+// row = floor((n-1)/3), col = (n-1) % 3. Used by the in-cell drop
+// preview so the note ghost sits exactly where the placed note
+// would render.
+const NOTE_GRID_FRACTION = 100 / 3;
 
 // Distance from the cell center to a note's sub-cell center, as a
 // percentage of the cell's own width. Centers of the 3x3 sub-cell grid
@@ -41,10 +40,13 @@ type CellProps = {
   dropTargetState?: "valid" | "invalid" | null | undefined;
   /**
    * Which slot in this cell the drop will land in, when the cell is a
-   * valid drop target. Drives the diagonal tint so the user sees
-   * which half is the active landing zone before releasing.
+   * valid drop target. Drives which of the two landing previews
+   * brightens — the user sees both possible outcomes at once, with
+   * the active one emphasized.
    */
   dropMode?: "value" | "note" | undefined;
+  /** The digit currently being dragged — drawn in both preview slots. */
+  dropDigit?: number | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -65,6 +67,7 @@ export const Cell = memo(function Cell({
   isDragSource,
   dropTargetState,
   dropMode,
+  dropDigit,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -137,31 +140,35 @@ export const Cell = memo(function Cell({
           ))}
         </div>
       ) : null}
-      {dropTargetState === "valid" && (
+      {dropTargetState === "valid" && dropDigit !== undefined && (
         <span
           data-testid="drop-preview"
+          data-mode={dropMode}
           aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
+          className="absolute flex items-center justify-center font-bold leading-none text-accent pointer-events-none animate-drop-preview"
+          style={
+            dropMode === "value"
+              ? {
+                  // Value pose: fills the cell, value-sized glyph.
+                  left: "0%",
+                  top: "0%",
+                  width: "100%",
+                  height: "100%",
+                  fontSize: "clamp(1.2578125rem, 5.75vw, 2.15625rem)",
+                }
+              : {
+                  // Note pose: the digit's own sub-cell, note-sized
+                  // glyph. Crossing the cell's midline morphs the
+                  // single preview between these two poses.
+                  left: `${((dropDigit - 1) % 3) * NOTE_GRID_FRACTION}%`,
+                  top: `${Math.floor((dropDigit - 1) / 3) * NOTE_GRID_FRACTION}%`,
+                  width: `${NOTE_GRID_FRACTION}%`,
+                  height: `${NOTE_GRID_FRACTION}%`,
+                  fontSize: "clamp(0.80859375rem, 3.1625vw, 1.078125rem)",
+                }
+          }
         >
-          {/* Top half: value zone. Soft radial glow that brightens
-              when the pointer is in the upper half. */}
-          <span
-            data-testid="drop-preview-value-half"
-            className="absolute inset-x-0 top-0 h-1/2 transition-opacity duration-150"
-            style={{
-              background: HALF_GLOW,
-              opacity: dropMode === "value" ? 0.55 : 0.12,
-            }}
-          />
-          {/* Bottom half: note zone. Same glow, mirrored. */}
-          <span
-            data-testid="drop-preview-note-half"
-            className="absolute inset-x-0 bottom-0 h-1/2 transition-opacity duration-150"
-            style={{
-              background: HALF_GLOW,
-              opacity: dropMode === "note" ? 0.55 : 0.12,
-            }}
-          />
+          {dropDigit}
         </span>
       )}
       {cell.value === null && chargingDigit !== undefined && (

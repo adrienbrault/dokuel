@@ -448,27 +448,30 @@ body {
 
 /* ─── Drag-and-drop digit ─── */
 
-/* Hovered drop target — the cell pulses harder so the user sees
-   the digit will land there. The in-cell diagonal preview supplies
-   the value/note distinction. */
-@keyframes drop-target-pulse {
-  0%,
-  100% {
-    box-shadow: inset 0 0 0 3px oklch(0.52 0.12 168 / 0.65);
-  }
-  50% {
-    box-shadow: inset 0 0 0 3px oklch(0.52 0.12 168 / 1);
-  }
-}
+/* Hovered drop target — a calm, static accent ring plus the
+   selected-cell wash. The two in-cell landing previews carry the
+   value/note distinction, so the cell frame just needs to say
+   "release here". No pulsing: a confident, steady highlight. */
 [data-drop-target="valid"] {
-  animation: drop-target-pulse 0.6s ease-in-out infinite;
-  /* The diagonal split overlay supplies the active-half tint — keep
-     the base bg neutral so the half-tints actually read as two
-     distinct zones instead of stacking on a green field. */
+  box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / 0.55);
+  background-color: var(--color-cell-selected);
 }
 [data-drop-target="invalid"] {
   box-shadow: inset 0 0 0 3px oklch(0.6 0.2 25 / 0.7);
   background-color: var(--color-cell-conflict-bg);
+}
+
+/* The single landing preview morphs between its value pose (fills
+   the cell) and its note pose (the digit's own sub-cell) as the
+   pointer crosses the cell's midline — one digit gliding and
+   resizing, so the user sees the exact outcome of releasing now. */
+.animate-drop-preview {
+  transition:
+    left 0.19s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.19s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.19s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.19s cubic-bezier(0.22, 1, 0.36, 1),
+    font-size 0.19s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Source cell while it's being dragged from — fades the in-place

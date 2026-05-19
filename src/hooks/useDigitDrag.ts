@@ -22,6 +22,11 @@ export type DigitDragState = {
   invalidTarget: boolean;
   /** Which slot the current pointer position would land in. */
   mode: DigitDropMode;
+  /**
+   * Hit-test/chip offset above the pointer, in CSS pixels. Non-zero
+   * only for touch — see liftForPointerType.
+   */
+  lift: number;
 };
 
 type StartParams = {
@@ -30,6 +35,8 @@ type StartParams = {
   x: number;
   y: number;
   pointerId: number;
+  /** From PointerEvent.pointerType — "touch" | "mouse" | "pen". */
+  pointerType: string;
 };
 
 type Options = {
@@ -45,17 +52,25 @@ type Options = {
 type CellHit = { position: Position; mode: DigitDropMode };
 
 /**
- * How far (in CSS pixels) above the pointer we hit-test. On touch
- * devices the finger occludes the cell directly underneath; lifting
- * the hit point keeps the highlighted cell — and its diagonal drop
- * preview — visible above the user's hand. The lift is small enough
- * that a quick mouse drag still feels natural.
+ * How far (in CSS pixels) above a touch point we hit-test. A
+ * fingertip occludes the cell directly underneath it, so the hit
+ * point — and the chip — are lifted clear of the hand. Mouse and
+ * pen are precise pointers that don't occlude anything, so they get
+ * no lift: the cell under the cursor is the target.
  */
-const POINTER_LIFT_PX = 40;
+const TOUCH_POINTER_LIFT_PX = 36;
 
-function cellHitFromPoint(pointerX: number, pointerY: number): CellHit | null {
+export function liftForPointerType(pointerType: string): number {
+  return pointerType === "touch" ? TOUCH_POINTER_LIFT_PX : 0;
+}
+
+function cellHitFromPoint(
+  pointerX: number,
+  pointerY: number,
+  lift: number,
+): CellHit | null {
   const x = pointerX;
-  const y = pointerY - POINTER_LIFT_PX;
+  const y = pointerY - lift;
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
   const btn = (el as HTMLElement).closest?.("[data-row]") as HTMLElement | null;
@@ -110,9 +125,9 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== ownPointerId) return;
       e.preventDefault();
-      const hit = cellHitFromPoint(e.clientX, e.clientY);
       setState((prev) => {
         if (!prev) return prev;
+        const hit = cellHitFromPoint(e.clientX, e.clientY, prev.lift);
         const invalid =
           hit !== null &&
           !isDroppableRef.current(
@@ -158,8 +173,9 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
   }, [activePointerId, end]);
 
   const start = useCallback(
-    ({ digit, source, x, y, pointerId }: StartParams) => {
-      const hit = cellHitFromPoint(x, y);
+    ({ digit, source, x, y, pointerId, pointerType }: StartParams) => {
+      const lift = liftForPointerType(pointerType);
+      const hit = cellHitFromPoint(x, y, lift);
       const invalid =
         hit !== null &&
         !isDroppableRef.current(hit.position.row, hit.position.col, digit);
@@ -171,6 +187,7 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
         target: hit?.position ?? null,
         invalidTarget: invalid,
         mode: hit?.mode ?? "value",
+        lift,
       });
       setActivePointerId(pointerId);
     },
