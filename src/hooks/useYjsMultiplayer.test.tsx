@@ -463,4 +463,127 @@ describe("useYjsMultiplayer", () => {
       expect(result.current.opponentDisconnected).toBe(false);
     });
   });
+
+  describe("localStorage snapshot fallback", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it("hydrates from snapshot when IndexedDB returns no started game", async () => {
+      localStorage.setItem(
+        "dokuel_mp_snap_room-hydrate",
+        JSON.stringify({
+          gameNumber: 4,
+          puzzle: ".".repeat(81),
+          status: "playing",
+          difficulty: "hard",
+          assistLevel: "standard",
+          hostId: "p1",
+          players: [
+            {
+              id: "p1",
+              name: "Alice",
+              color: "#3B82F6",
+              cellsRemaining: 30,
+              completionPercent: 63,
+            },
+            {
+              id: "p2",
+              name: "Bob",
+              color: "#EF4444",
+              cellsRemaining: 25,
+              completionPercent: 69,
+            },
+          ],
+          winnerId: null,
+          winnerName: null,
+          savedAt: Date.now(),
+        }),
+      );
+
+      const { result } = renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-hydrate",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: null,
+        }),
+      );
+
+      await flushSync();
+
+      expect(result.current.hasStartedGame).toBe(true);
+      expect(result.current.puzzle).toBe(".".repeat(81));
+      expect(result.current.roomState?.gameNumber).toBe(4);
+      expect(result.current.roomState?.difficulty).toBe("hard");
+    });
+
+    it("does not hydrate when IndexedDB already has a started game", async () => {
+      const seedDoc = new Doc();
+      const seedRoom = { doc: seedDoc, roomId: "room-no-hydrate" };
+      initializeRoom(seedRoom, "p1", "medium");
+      joinRoom(seedRoom, "p1", "Alice");
+      joinRoom(seedRoom, "p2", "Bob");
+      for (let i = 0; i < 7; i++) startGame(seedRoom);
+      mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+
+      localStorage.setItem(
+        "dokuel_mp_snap_room-no-hydrate",
+        JSON.stringify({
+          gameNumber: 2,
+          puzzle: "1".padEnd(81, "."),
+          status: "playing",
+          difficulty: "easy",
+          assistLevel: "standard",
+          hostId: "p1",
+          players: [],
+          winnerId: null,
+          winnerName: null,
+          savedAt: Date.now(),
+        }),
+      );
+
+      const { result } = renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-no-hydrate",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: null,
+        }),
+      );
+
+      await flushSync();
+
+      expect(result.current.roomState?.gameNumber).toBe(7);
+      expect(result.current.roomState?.difficulty).not.toBe("easy");
+    });
+
+    it("writes a snapshot to localStorage on pagehide", async () => {
+      const { result } = renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-pagehide",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await flushSync();
+      const doc = mocks.lastDoc!;
+      const fakeRoom = { doc, roomId: "room-pagehide" };
+      act(() => {
+        joinRoom(fakeRoom, "p2", "Bob");
+        result.current.sendStartGame();
+      });
+
+      expect(localStorage.getItem("dokuel_mp_snap_room-pagehide")).toBeNull();
+      act(() => {
+        window.dispatchEvent(new Event("pagehide"));
+      });
+      const raw = localStorage.getItem("dokuel_mp_snap_room-pagehide");
+      expect(raw).not.toBeNull();
+      const snap = JSON.parse(raw!);
+      expect(snap.gameNumber).toBeGreaterThan(0);
+      expect(snap.players).toHaveLength(2);
+    });
+  });
 });

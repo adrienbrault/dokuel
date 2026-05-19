@@ -3,6 +3,7 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import { clearSnapshot, loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
 import {
   announcePresence,
   claimWinner,
@@ -11,6 +12,7 @@ import {
   getOpponentProgress,
   getPlayers,
   getRoomState,
+  hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
   observeRoomChanges,
@@ -106,6 +108,7 @@ export function useYjsMultiplayer({
           winnerId: state.winnerId,
           winnerName: state.winnerName,
         });
+        clearSnapshot(roomId);
       }
 
       // Update opponent progress
@@ -147,6 +150,14 @@ export function useYjsMultiplayer({
 
     setConnected(provider.connected);
 
+    // Synchronous localStorage mirror. y-indexeddb writes are async
+    // and iOS Safari doesn't always flush them before killing a
+    // backgrounded tab — saveSnapshot survives that.
+    const persistSnapshot = () => {
+      const state = getRoomState(room);
+      if (state) saveSnapshot(roomId, state);
+    };
+
     // Release WebRTC peer connections + signaling sockets while the
     // tab is backgrounded: iOS Safari kills tabs under memory pressure
     // and RTCPeerConnections are the dominant cost here. Y.Doc and
@@ -155,6 +166,7 @@ export function useYjsMultiplayer({
     let hideTimer: ReturnType<typeof setTimeout> | null = null;
     const handleVisibility = () => {
       if (document.hidden) {
+        persistSnapshot();
         if (hideTimer === null) {
           hideTimer = setTimeout(() => {
             provider.disconnect();
@@ -174,6 +186,7 @@ export function useYjsMultiplayer({
       updatePresence();
     };
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", persistSnapshot);
 
     // Defer the writes until y-indexeddb has loaded any persisted
     // state. Writing before sync would seed clock-0 ops (initializeRoom
@@ -186,6 +199,15 @@ export function useYjsMultiplayer({
     let cancelled = false;
     void persistence.whenSynced.then(() => {
       if (cancelled) return;
+
+      // If IDB came back without a started game but localStorage has
+      // a recent snapshot, hydrate from it. CRDT merge will reconcile
+      // with whatever the peer eventually sends.
+      const yjs = getRoomState(room);
+      if (!yjs || yjs.gameNumber === 0) {
+        const snap = loadSnapshot(roomId);
+        if (snap) hydrateRoomFromSnapshot(room, snap);
+      }
 
       // The creator (came in from the create flow with a chosen
       // difficulty) initializes the room and claims host. Joiners
@@ -204,6 +226,7 @@ export function useYjsMultiplayer({
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", persistSnapshot);
       if (hideTimer !== null) {
         clearTimeout(hideTimer);
         hideTimer = null;
