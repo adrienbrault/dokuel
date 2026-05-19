@@ -104,15 +104,15 @@ export function GameLayout({
             style={{
               width:
                 position === "bottom"
-                  ? "calc(100% + 2rem)"
-                  : "calc(100% + 1rem)",
+                  ? "calc(100% + 1rem)"
+                  : "calc(100% + 0.5rem)",
             }}
             className={`flex justify-center lg:!w-full lg:mx-0 ${
               position === "bottom"
-                ? "-mx-4"
+                ? "-mx-2"
                 : position === "left"
-                  ? "-mr-4"
-                  : "-ml-4"
+                  ? "-mr-2"
+                  : "-ml-2"
             }`}
           >
             {board}
