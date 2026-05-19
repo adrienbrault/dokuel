@@ -20,7 +20,7 @@ export function MultiplayerHeaderExtra({
   if (gameOver && !iFinished) {
     return (
       <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2">
-        <div className="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
+        <div className="px-3.5 py-2.5 rounded-xl bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
           <span className="font-semibold text-text-primary">
             {gameOver.winnerName}
           </span>{" "}
