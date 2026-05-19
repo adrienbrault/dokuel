@@ -1,6 +1,12 @@
 import { type CSSProperties, memo } from "react";
+import { VALUE_ZONE_FRACTION } from "../hooks/useDigitDrag.ts";
 import { DIGITS } from "../lib/constants.ts";
 import type { AssistLevel, Cell as CellType } from "../lib/types.ts";
+
+// Inset percentage that frames the inner value square. The Cell
+// renders the overlay with these margins so the visible boundary
+// matches useDigitDrag's hit test exactly.
+const VALUE_ZONE_INSET_PCT = `${((1 - VALUE_ZONE_FRACTION) / 2) * 100}%`;
 
 // Distance from the cell center to a note's sub-cell center, as a
 // percentage of the cell's own width. Centers of the 3x3 sub-cell grid
@@ -136,39 +142,29 @@ export const Cell = memo(function Cell({
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
         >
-          {/* Two triangles meeting on the top-left → bottom-right
-              diagonal. The active half is tinted with the accent; the
-              inactive half stays nearly transparent so the user can
-              see at a glance which mode they're committing.
-              Bottom-left triangle commits a note, top-right commits
-              the value. */}
+          {/* Outer ring: the note zone. Brightens when the pointer
+              is anywhere outside the centered inner square. */}
           <span
             className={`absolute inset-0 transition-colors ${
               dropMode === "note"
                 ? "bg-accent/30"
                 : "bg-accent/8 dark:bg-accent/12"
             }`}
-            style={{ clipPath: "polygon(0% 0%, 0% 100%, 100% 100%)" }}
           />
+          {/* Inner square: the value zone. Brightens when the
+              pointer is inside it. The border outlines the boundary
+              so the user sees the split even before they cross it. */}
           <span
-            className={`absolute inset-0 transition-colors ${
+            className={`absolute transition-colors rounded-sm border-2 ${
               dropMode === "value"
-                ? "bg-accent/30"
-                : "bg-accent/8 dark:bg-accent/12"
+                ? "bg-accent/40 border-accent/70"
+                : "bg-accent/5 dark:bg-accent/10 border-accent/35"
             }`}
-            style={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 100%)" }}
-          />
-          {/* Hair-line diagonal divider so the split reads clearly
-              even when the two halves are similar shades — the
-              gradient is perpendicular to the top-left → bottom-right
-              diagonal so its midpoint draws a 1px line along it. */}
-          <span
-            aria-hidden="true"
-            className="absolute inset-0"
             style={{
-              background:
-                "linear-gradient(to bottom left, transparent calc(50% - 0.5px), var(--color-accent) calc(50% - 0.5px), var(--color-accent) calc(50% + 0.5px), transparent calc(50% + 0.5px))",
-              opacity: 0.55,
+              left: VALUE_ZONE_INSET_PCT,
+              right: VALUE_ZONE_INSET_PCT,
+              top: VALUE_ZONE_INSET_PCT,
+              bottom: VALUE_ZONE_INSET_PCT,
             }}
           />
         </span>

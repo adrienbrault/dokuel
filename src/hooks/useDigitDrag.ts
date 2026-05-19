@@ -7,10 +7,10 @@ export type DigitDragSource =
 
 /**
  * Which slot in the cell receives the dropped digit. The cell is split
- * along its top-left → bottom-right diagonal: the top-right triangle
- * commits the value, the bottom-left triangle commits a note. This
- * lets a single drag gesture express both intents — the user aims for
- * a zone instead of switching modes mid-drag.
+ * into an inner square (value zone) wrapped by an outer ring (note
+ * zone): aiming for the center commits the value, peripheral aim
+ * lands a note. The single drag gesture expresses both intents
+ * without switching modes.
  */
 export type DigitDropMode = "value" | "note";
 
@@ -67,16 +67,27 @@ function cellHitFromPoint(pointerX: number, pointerY: number): CellHit | null {
   return { position: { row, col }, mode: cellModeAt(btn, x, y) };
 }
 
+/**
+ * Side length of the centered "value" square, as a fraction of the
+ * cell. The Cell component renders an inset overlay with the same
+ * margin so the visible zone boundary lines up with the hit test.
+ */
+export const VALUE_ZONE_FRACTION = 0.55;
+
 function cellModeAt(cell: HTMLElement, x: number, y: number): DigitDropMode {
   const rect = cell.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return "value";
-  // Normalize to the unit square, then split on the top-left →
-  // bottom-right diagonal (localY = localX). Above the diagonal
-  // (localX > localY) is the top-right triangle → value. Below or on
-  // the diagonal is the bottom-left triangle → note.
+  // Square-within-a-square split: aim for the centered inner square
+  // (VALUE_ZONE_FRACTION on a side) to commit the value, anywhere
+  // else in the cell to commit a note. Notes occupy the outer ring,
+  // so the peripheral aim that's easy to slip into still does
+  // something useful instead of misfiring as a value.
   const localX = (x - rect.left) / rect.width;
   const localY = (y - rect.top) / rect.height;
-  return localX > localY ? "value" : "note";
+  const half = VALUE_ZONE_FRACTION / 2;
+  const inInner =
+    Math.abs(localX - 0.5) < half && Math.abs(localY - 0.5) < half;
+  return inInner ? "value" : "note";
 }
 
 export function useDigitDrag({ onDrop, isDroppable }: Options) {
