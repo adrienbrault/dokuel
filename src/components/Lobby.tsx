@@ -1,3 +1,4 @@
+import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
@@ -69,12 +70,14 @@ export function Lobby({
   }
 
   return (
-    <div className="screen-content gap-8">
-      <div className="flex flex-col items-center gap-2">
-        <h2 className="heading">Game Lobby</h2>
+    <div className="screen-content gap-6">
+      <h2 className="heading">Game Lobby</h2>
+
+      <div className="card flex w-full flex-col items-center gap-3 p-5">
+        <span className="label">Room Code</span>
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-bg-raised cursor-pointer touch-manipulation press-spring-soft"
+          className="press-spring-soft flex items-center gap-2 rounded-xl px-2 py-1 touch-manipulation"
           onClick={async () => {
             await navigator.clipboard.writeText(roomState.roomId);
             setCodeCopied(true);
@@ -82,28 +85,32 @@ export function Lobby({
           }}
           title="Copy room code"
         >
-          <span className="caption">{codeCopied ? "Copied!" : "Room:"}</span>
-          <span className="font-mono font-semibold text-text-primary">
+          <span className="font-mono text-2xl font-bold tracking-wide text-text-primary">
             {roomState.roomId}
           </span>
+          {codeCopied ? (
+            <Check size={16} className="text-accent" aria-hidden="true" />
+          ) : (
+            <Copy size={16} className="text-text-muted" aria-hidden="true" />
+          )}
         </button>
         <button
           type="button"
-          className="btn btn-md btn-primary mt-1 shadow-sm shadow-accent/20"
+          className="btn btn-primary btn-md w-full"
           onClick={handleShare}
         >
           {copied ? "Link Copied!" : "Share Invite Link"}
         </button>
-        <p className="caption mt-1">
+        <p className="caption">
           Difficulty:{" "}
-          <span className="font-medium text-text-primary capitalize">
+          <span className="font-semibold text-text-primary capitalize">
             {roomState.difficulty}
           </span>
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 w-full">
-        <h3 className="label tracking-wide">Players</h3>
+      <div className="flex flex-col gap-2.5 w-full">
+        <span className="label">Players</span>
         {roomState.players.map((player) => {
           const isMe = player.id === playerId;
           return (
@@ -111,10 +118,13 @@ export function Lobby({
               key={player.id}
               className="card flex items-center gap-3 px-4 py-3"
             >
-              <div
-                className="w-3 h-3 rounded-full shrink-0"
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                 style={{ backgroundColor: player.color }}
-              />
+                aria-hidden="true"
+              >
+                {player.name.charAt(0).toUpperCase()}
+              </span>
               {isMe && editingName ? (
                 <input
                   ref={inputRef}
@@ -144,7 +154,7 @@ export function Lobby({
               {isMe && !editingName && (
                 <button
                   type="button"
-                  className="text-xs text-text-muted hover:text-accent shrink-0 touch-manipulation"
+                  className="text-xs font-medium text-text-muted hover:text-accent shrink-0 touch-manipulation"
                   onClick={() => startEditing(player.name)}
                   title="Edit name"
                 >
@@ -152,7 +162,7 @@ export function Lobby({
                 </button>
               )}
               {player.id === roomState.hostId && (
-                <span className="text-xs text-text-muted shrink-0 ml-auto">
+                <span className="text-[0.625rem] font-semibold uppercase tracking-wide text-accent bg-accent/10 rounded-full px-2 py-0.5 shrink-0 ml-auto">
                   Host
                 </span>
               )}
@@ -160,21 +170,21 @@ export function Lobby({
           );
         })}
         {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
+          <div className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-border-default">
             <span className="text-sm text-text-muted">
               Waiting for opponent
             </span>
-            <span className="flex gap-0.5" aria-hidden="true">
+            <span className="flex gap-1" aria-hidden="true">
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
                 style={{ animationDelay: "0ms" }}
               />
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
                 style={{ animationDelay: "150ms" }}
               />
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
                 style={{ animationDelay: "300ms" }}
               />
             </span>
@@ -183,27 +193,33 @@ export function Lobby({
       </div>
 
       {isHost && onDifficultyChange && (
-        <SlidingRadioGroup
-          options={DIFFICULTY_OPTIONS}
-          value={roomState.difficulty}
-          onChange={onDifficultyChange}
-          name="room-difficulty"
-          ariaLabel="Difficulty"
-        />
+        <div className="flex w-full flex-col gap-2">
+          <span className="label">Difficulty</span>
+          <SlidingRadioGroup
+            options={DIFFICULTY_OPTIONS}
+            value={roomState.difficulty}
+            onChange={onDifficultyChange}
+            name="room-difficulty"
+            ariaLabel="Difficulty"
+          />
+        </div>
       )}
 
       {onAssistLevelChange && (
-        <AssistLevelPicker
-          value={roomState.assistLevel}
-          onChange={onAssistLevelChange}
-        />
+        <div className="flex w-full flex-col gap-2">
+          <span className="label">Assist</span>
+          <AssistLevelPicker
+            value={roomState.assistLevel}
+            onChange={onAssistLevelChange}
+          />
+        </div>
       )}
 
       <div className="flex flex-col gap-3 w-full">
         <button
           type="button"
           disabled={!canStart}
-          className={`btn btn-lg w-full transition-all duration-100 ${
+          className={`btn btn-lg w-full ${
             canStart
               ? "btn-primary"
               : "bg-bg-disabled text-text-disabled cursor-not-allowed"
@@ -214,7 +230,7 @@ export function Lobby({
         </button>
         <button
           type="button"
-          className="btn-ghost mt-2 touch-manipulation"
+          className="btn-ghost touch-manipulation"
           onClick={onBack}
         >
           ← Back
