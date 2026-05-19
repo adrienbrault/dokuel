@@ -4,7 +4,7 @@ import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 const POINTER_LIFT_PX = 40;
 const FREE_SIZE_PX = 28;
 
-type Pose = "intro" | "free" | "value" | "note";
+type Pose = "intro" | "free" | "invalid" | "value" | "note";
 
 type Placement = {
   cx: number;
@@ -46,7 +46,14 @@ function computePlacement(state: DigitDragState, intro: boolean): Placement {
     }
   }
 
-  if (!state.target || state.invalidTarget) return free;
+  // Over a cell that can't accept the drop (already has a value):
+  // keep the chip free-floating at the pointer but signal "no"
+  // through the invalid pose, which the renderer paints red.
+  if (state.target && state.invalidTarget) {
+    return { ...free, pose: "invalid" };
+  }
+
+  if (!state.target) return free;
 
   const rect = getCellRect(state.target.row, state.target.col);
   if (!rect) return free;
@@ -112,18 +119,19 @@ export function DigitDragIndicator({ state }: Props) {
   if (!state) return null;
 
   const p = computePlacement(state, intro);
-  const isChip = p.pose === "free";
+  const chipClass =
+    p.pose === "free"
+      ? "bg-accent text-text-on-accent shadow-lg shadow-accent/40"
+      : p.pose === "invalid"
+        ? "bg-cell-conflict-bg text-cell-conflict shadow-lg shadow-cell-conflict/40"
+        : "bg-transparent text-cell-user";
 
   return (
     <div
       data-testid="digit-drag-indicator"
       data-pose={p.pose}
       aria-hidden="true"
-      className={`fixed z-50 pointer-events-none select-none flex items-center justify-center font-bold rounded-md ${
-        isChip
-          ? "bg-accent text-text-on-accent shadow-lg shadow-accent/40"
-          : "bg-transparent text-cell-user"
-      }`}
+      className={`fixed z-50 pointer-events-none select-none flex items-center justify-center font-bold rounded-md ${chipClass}`}
       style={{
         left: p.cx,
         top: p.cy,

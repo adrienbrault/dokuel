@@ -130,7 +130,10 @@ describe("DigitDragIndicator", () => {
     expect(el.style.width).toBe("30px");
   });
 
-  it("falls back to 'free' pose over an invalid target", () => {
+  it("switches to the 'invalid' pose over a non-droppable cell", () => {
+    // Over a cell that already has a value, the indicator stays free
+    // (no snap into the cell) but the renderer paints it red so the
+    // visual matches the cell's invalid ring.
     mountCell(1, 2, { left: 50, top: 50, width: 60, height: 60 });
     const { getByTestId } = render(
       <DigitDragIndicator
@@ -143,6 +146,9 @@ describe("DigitDragIndicator", () => {
       />,
     );
     const el = getByTestId("digit-drag-indicator");
-    expect(el.dataset.pose).toBe("free");
+    expect(el.dataset.pose).toBe("invalid");
+    // Still tracks the pointer (lifted by 40px), not the cell.
+    expect(el.style.left).toBe("200px");
+    expect(el.style.top).toBe("260px");
   });
 });
