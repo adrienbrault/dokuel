@@ -6,11 +6,10 @@ export type DigitDragSource =
   | { kind: "cell"; row: number; col: number };
 
 /**
- * Which slot in the cell receives the dropped digit. The cell is split
- * into an inner square (value zone) wrapped by an outer ring (note
- * zone): aiming for the center commits the value, peripheral aim
- * lands a note. The single drag gesture expresses both intents
- * without switching modes.
+ * Which slot in the cell receives the dropped digit. The cell is
+ * split horizontally: aim for the top half to commit the value, the
+ * bottom half to add a note. A single drag gesture expresses both
+ * intents without switching modes mid-drag.
  */
 export type DigitDropMode = "value" | "note";
 
@@ -67,27 +66,15 @@ function cellHitFromPoint(pointerX: number, pointerY: number): CellHit | null {
   return { position: { row, col }, mode: cellModeAt(btn, x, y) };
 }
 
-/**
- * Side length of the centered "value" square, as a fraction of the
- * cell. The Cell component renders an inset overlay with the same
- * margin so the visible zone boundary lines up with the hit test.
- */
-export const VALUE_ZONE_FRACTION = 0.55;
-
-function cellModeAt(cell: HTMLElement, x: number, y: number): DigitDropMode {
+function cellModeAt(cell: HTMLElement, _x: number, y: number): DigitDropMode {
   const rect = cell.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return "value";
-  // Square-within-a-square split: aim for the centered inner square
-  // (VALUE_ZONE_FRACTION on a side) to commit the value, anywhere
-  // else in the cell to commit a note. Notes occupy the outer ring,
-  // so the peripheral aim that's easy to slip into still does
-  // something useful instead of misfiring as a value.
-  const localX = (x - rect.left) / rect.width;
+  if (rect.height <= 0) return "value";
+  // Horizontal split at the cell's midline: the upper half is the
+  // value zone, the lower half is the note zone. Top sits closer to
+  // where the pointer enters from above on a numpad drag, which
+  // matches the dominant "commit the digit" intent.
   const localY = (y - rect.top) / rect.height;
-  const half = VALUE_ZONE_FRACTION / 2;
-  const inInner =
-    Math.abs(localX - 0.5) < half && Math.abs(localY - 0.5) < half;
-  return inInner ? "value" : "note";
+  return localY < 0.5 ? "value" : "note";
 }
 
 export function useDigitDrag({ onDrop, isDroppable }: Options) {

@@ -155,14 +155,14 @@ describe("useDigitDrag", () => {
         pointerId: 1,
       });
     });
-    // Aim for the cell center (value zone). The hit test lifts
-    // pointer Y by 40px, so clientY 90 resolves to local Y 50.
+    // Aim for the top half (value zone). The hit test lifts
+    // pointer Y by 40px, so clientY 60 resolves to local Y 20.
     act(() => {
       document.dispatchEvent(
-        pointerEvent("pointermove", { clientX: 50, clientY: 90 }),
+        pointerEvent("pointermove", { clientX: 50, clientY: 60 }),
       );
       document.dispatchEvent(
-        pointerEvent("pointerup", { clientX: 50, clientY: 90 }),
+        pointerEvent("pointerup", { clientX: 50, clientY: 60 }),
       );
     });
     expect(onDrop).toHaveBeenCalledWith(
@@ -174,10 +174,9 @@ describe("useDigitDrag", () => {
     expect(result.current.state).toBeNull();
   });
 
-  it("computes 'value' mode when the pointer is inside the cell's inner square", () => {
-    // Cell occupies (0,0)→(100,100). Pointer (50, 90) becomes local
-    // (50, 50) after the 40px hit-test lift — dead center of the
-    // value zone.
+  it("computes 'value' mode when the pointer is in the top half of the cell", () => {
+    // Cell occupies (0,0)→(100,100). Pointer (50, 60) lifts to
+    // local Y 20 — well above the horizontal midline.
     mockElementFromPoint(() => makeCellElement(1, 2));
     const { result } = renderHook(() =>
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
@@ -193,15 +192,15 @@ describe("useDigitDrag", () => {
     });
     act(() => {
       document.dispatchEvent(
-        pointerEvent("pointermove", { clientX: 50, clientY: 90 }),
+        pointerEvent("pointermove", { clientX: 50, clientY: 60 }),
       );
     });
     expect(result.current.state?.mode).toBe("value");
   });
 
-  it("computes 'note' mode when the pointer is in the outer ring of the cell", () => {
-    // Pointer (10, 50) becomes local (10, 10) — well outside the
-    // inner value square at the cell's top-left corner.
+  it("computes 'note' mode when the pointer is in the bottom half of the cell", () => {
+    // Pointer (50, 130) lifts to local Y 90 — well below the
+    // horizontal midline.
     mockElementFromPoint(() => makeCellElement(1, 2));
     const { result } = renderHook(() =>
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
@@ -217,7 +216,7 @@ describe("useDigitDrag", () => {
     });
     act(() => {
       document.dispatchEvent(
-        pointerEvent("pointermove", { clientX: 10, clientY: 50 }),
+        pointerEvent("pointermove", { clientX: 50, clientY: 130 }),
       );
     });
     expect(result.current.state?.mode).toBe("note");
@@ -238,8 +237,8 @@ describe("useDigitDrag", () => {
         pointerId: 1,
       });
     });
-    // Pointer (10, 130) → after lift (10, 90): outside the inner
-    // value square → note zone.
+    // Pointer (10, 130) → after lift (10, 90): below the midline →
+    // note zone.
     act(() => {
       document.dispatchEvent(
         pointerEvent("pointermove", { clientX: 10, clientY: 130 }),

@@ -1,12 +1,13 @@
 import { type CSSProperties, memo } from "react";
-import { VALUE_ZONE_FRACTION } from "../hooks/useDigitDrag.ts";
 import { DIGITS } from "../lib/constants.ts";
 import type { AssistLevel, Cell as CellType } from "../lib/types.ts";
 
-// Inset percentage that frames the inner value square. The Cell
-// renders the overlay with these margins so the visible boundary
-// matches useDigitDrag's hit test exactly.
-const VALUE_ZONE_INSET_PCT = `${((1 - VALUE_ZONE_FRACTION) / 2) * 100}%`;
+// Radial accent glow used to highlight either half of a hovered drop
+// target. The blob peaks at the half's center and fades to nothing
+// before reaching the cell edges, so the highlight feels soft and
+// the zone boundary at the cell's midline reads naturally.
+const HALF_GLOW =
+  "radial-gradient(ellipse at center, var(--color-accent) 0%, transparent 75%)";
 
 // Distance from the cell center to a note's sub-cell center, as a
 // percentage of the cell's own width. Centers of the 3x3 sub-cell grid
@@ -142,29 +143,23 @@ export const Cell = memo(function Cell({
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
         >
-          {/* Outer ring: the note zone. Brightens when the pointer
-              is anywhere outside the centered inner square. */}
+          {/* Top half: value zone. Soft radial glow that brightens
+              when the pointer is in the upper half. */}
           <span
-            className={`absolute inset-0 transition-colors ${
-              dropMode === "note"
-                ? "bg-accent/30"
-                : "bg-accent/8 dark:bg-accent/12"
-            }`}
-          />
-          {/* Inner square: the value zone. Brightens when the
-              pointer is inside it. The border outlines the boundary
-              so the user sees the split even before they cross it. */}
-          <span
-            className={`absolute transition-colors rounded-sm border-2 ${
-              dropMode === "value"
-                ? "bg-accent/40 border-accent/70"
-                : "bg-accent/5 dark:bg-accent/10 border-accent/35"
-            }`}
+            data-testid="drop-preview-value-half"
+            className="absolute inset-x-0 top-0 h-1/2 transition-opacity duration-150"
             style={{
-              left: VALUE_ZONE_INSET_PCT,
-              right: VALUE_ZONE_INSET_PCT,
-              top: VALUE_ZONE_INSET_PCT,
-              bottom: VALUE_ZONE_INSET_PCT,
+              background: HALF_GLOW,
+              opacity: dropMode === "value" ? 0.55 : 0.12,
+            }}
+          />
+          {/* Bottom half: note zone. Same glow, mirrored. */}
+          <span
+            data-testid="drop-preview-note-half"
+            className="absolute inset-x-0 bottom-0 h-1/2 transition-opacity duration-150"
+            style={{
+              background: HALF_GLOW,
+              opacity: dropMode === "note" ? 0.55 : 0.12,
             }}
           />
         </span>
