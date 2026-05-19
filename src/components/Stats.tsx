@@ -1,3 +1,4 @@
+import { Flame, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import {
   ASSIST_LEVEL_LABELS,
@@ -49,21 +50,17 @@ export function Stats({ onBack }: StatsProps) {
           </p>
         </div>
 
-        <div className="card p-4 w-full">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
-                {streak.currentStreak}
-              </div>
-              <div className="text-xs text-text-muted">Current Streak</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
-                {streak.longestStreak}
-              </div>
-              <div className="text-xs text-text-muted">Longest Streak</div>
-            </div>
-          </div>
+        <div className="card grid grid-cols-2 w-full divide-x divide-border-default">
+          <StreakCell
+            icon={<Flame size={20} className="text-orange-500" />}
+            value={streak.currentStreak}
+            label="Current Streak"
+          />
+          <StreakCell
+            icon={<Trophy size={20} className="text-amber-500" />}
+            value={streak.longestStreak}
+            label="Longest Streak"
+          />
         </div>
 
         <section aria-label="Solo" className="flex flex-col gap-3 w-full">
@@ -130,6 +127,26 @@ export function Stats({ onBack }: StatsProps) {
           ← Back
         </button>
       </div>
+    </div>
+  );
+}
+
+function StreakCell({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-5">
+      <span aria-hidden="true">{icon}</span>
+      <span className="text-3xl font-extrabold font-mono tabular-nums text-text-primary">
+        {value}
+      </span>
+      <span className="text-xs text-text-muted">{label}</span>
     </div>
   );
 }
