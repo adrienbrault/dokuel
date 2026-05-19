@@ -77,12 +77,13 @@ export function Board({
       ? board[selectedCell.row]![selectedCell.col]!.value
       : (highlightedDigit ?? null);
 
-  // In full assist mode, collect rows/cols/boxes of all cells matching selected
-  // value (excluding the selected cell itself) for cross-highlight. Only
-  // applies when a cell is actually selected — the digit-highlight path
-  // (no selection) reuses isSameNumber but skips the row/col/box halo.
+  // In full assist mode, collect rows/cols/boxes of all cells matching the
+  // active value (the selected cell's value, or the numpad-highlighted digit)
+  // for the "where this digit can't go" cross-highlight. The selected cell
+  // itself is excluded so its own row/col/box don't double-up over the
+  // selection halo.
   const matchRowColSet = (() => {
-    if (!isFull || selectedValue === null || selectedCell === null) return null;
+    if (!isFull || selectedValue === null) return null;
     const rows = new Set<number>();
     const cols = new Set<number>();
     const boxes = new Set<number>();
@@ -90,7 +91,7 @@ export function Board({
       for (let c = 0; c < 9; c++) {
         if (
           board[r]![c]!.value === selectedValue &&
-          !(selectedCell.row === r && selectedCell.col === c)
+          !(selectedCell?.row === r && selectedCell?.col === c)
         ) {
           rows.add(r);
           cols.add(c);
