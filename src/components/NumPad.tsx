@@ -219,9 +219,12 @@ export function NumPad({
       const btn = el
         ? ((el as HTMLElement).closest?.(
             "[data-numpad-digit]",
-          ) as HTMLElement | null)
+          ) as HTMLButtonElement | null)
         : null;
-      if (!btn) return;
+      // Skip disabled (completed) digits — they're visually hidden, so
+      // briefly highlighting them as the finger drifts over their slot
+      // would surprise the user.
+      if (!btn || btn.disabled) return;
       const digit = Number(btn.dataset.numpadDigit);
       if (Number.isNaN(digit)) return;
       if (digit === skimDigitRef.current) return;

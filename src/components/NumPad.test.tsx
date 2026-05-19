@@ -365,6 +365,40 @@ describe("NumPad", () => {
     expect(onPressEnd).toHaveBeenCalled();
   });
 
+  it("does not fire onSkimDigit when the finger drifts over a disabled (completed) digit", () => {
+    const onSkimDigit = vi.fn();
+    // 5 is complete (0 remaining) so its button will be disabled.
+    const remaining = { ...ZERO_REMAINING, 5: 0 };
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={remaining}
+        onNumber={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    // The completed 5 is visually invisible but still present in the DOM.
+    const five = document.querySelector(
+      '[data-numpad-digit="5"]',
+    ) as HTMLButtonElement;
+    expect(five.disabled).toBe(true);
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+    });
+    expect(onSkimDigit).not.toHaveBeenCalled();
+  });
+
   it("classifies along-axis as the Y axis when the numpad is vertical", () => {
     const onStartDrag = vi.fn();
     const onSkimDigit = vi.fn();
