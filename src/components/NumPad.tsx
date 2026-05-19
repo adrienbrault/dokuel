@@ -247,7 +247,7 @@ export function NumPad({
 
   return (
     <div
-      className={`flex items-center gap-1 ${isVertical ? "flex-col w-12" : "flex-col w-full max-w-lg"} lg:flex-col lg:w-14`}
+      className={`flex items-center gap-1 ${isVertical ? "flex-col w-12" : "flex-col w-full"} lg:flex-col lg:w-14`}
     >
       {/* Horizontal one-liner: only on mobile bottom position (room to fit) */}
       {!isVertical && (
@@ -266,7 +266,7 @@ export function NumPad({
         {"tap\nnote\n· · ·\nhold\nenter\n· · ·\ndrag\nplace"}
       </p>
       <div
-        className={`flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full max-w-lg lg:w-14"}`}
+        className={`flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full lg:w-14"}`}
         role="group"
         aria-label="Number pad"
       >
@@ -285,7 +285,7 @@ export function NumPad({
               type="button"
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}

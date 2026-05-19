@@ -117,8 +117,9 @@ export function GameLayout({
           >
             {board}
           </div>
-          {/* Mobile: show numpad at bottom if position=bottom */}
-          <div className="lg:hidden w-full">
+          {/* Mobile: show numpad at bottom if position=bottom.
+              Widened to match the board so the digit row spans the grid. */}
+          <div className="lg:hidden flex justify-center -mx-2 w-[calc(100%+1rem)]">
             {position === "bottom" && numPad}
           </div>
         </div>
