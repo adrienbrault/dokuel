@@ -261,7 +261,7 @@ describe("NumPad", () => {
   });
 
   function hasAccent(el: HTMLElement) {
-    return el.classList.contains("bg-accent");
+    return el.classList.contains("numpad-key-active");
   }
 
   it("transfers the press visual to the digit currently under the finger during skim", () => {
