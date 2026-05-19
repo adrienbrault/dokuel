@@ -142,10 +142,12 @@ export const Cell = memo(function Cell({
           {/* Two triangles meeting on the top-left → bottom-right
               diagonal. The active half is tinted with the accent; the
               inactive half stays nearly transparent so the user can
-              see at a glance which mode they're committing. */}
+              see at a glance which mode they're committing.
+              Bottom-left triangle commits a note, top-right commits
+              the value. */}
           <span
             className={`absolute inset-0 transition-colors ${
-              dropMode === "value"
+              dropMode === "note"
                 ? "bg-accent/30"
                 : "bg-accent/8 dark:bg-accent/12"
             }`}
@@ -153,7 +155,7 @@ export const Cell = memo(function Cell({
           />
           <span
             className={`absolute inset-0 transition-colors ${
-              dropMode === "note"
+              dropMode === "value"
                 ? "bg-accent/30"
                 : "bg-accent/8 dark:bg-accent/12"
             }`}
