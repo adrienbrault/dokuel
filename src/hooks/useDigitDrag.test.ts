@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useDigitDrag } from "./useDigitDrag.ts";
+import { DIGIT_DRAG_GHOST_LIFT_PX, useDigitDrag } from "./useDigitDrag.ts";
 
 function pointerEvent(type: string, init: Partial<PointerEvent> = {}) {
   return new PointerEvent(type, {
@@ -247,6 +247,37 @@ describe("useDigitDrag", () => {
     });
     expect(onDrop).not.toHaveBeenCalled();
     expect(result.current.state).toBeNull();
+  });
+
+  it("hit-tests at the visual ghost position, lifted above the pointer", () => {
+    // The drag ghost is rendered above the finger so the digit isn't hidden
+    // under the touch. Hit testing must use the ghost's visible position,
+    // otherwise the highlighted cell mismatches where the digit appears.
+    const elementFromPoint = vi.fn(
+      (_x: number, _y: number) => makeCellElement(0, 0) as unknown as Element,
+    );
+    document.elementFromPoint =
+      elementFromPoint as typeof document.elementFromPoint;
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start({
+        digit: 5,
+        source: { kind: "numpad" },
+        x: 0,
+        y: 0,
+        pointerId: 1,
+      });
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 100, clientY: 200 }),
+      );
+    });
+    const lastCall = elementFromPoint.mock.calls.at(-1);
+    expect(lastCall?.[0]).toBe(100);
+    expect(lastCall?.[1]).toBe(200 - DIGIT_DRAG_GHOST_LIFT_PX);
   });
 
   it("cancels when Escape is pressed", () => {

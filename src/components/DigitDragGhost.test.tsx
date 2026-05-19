@@ -1,6 +1,9 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { DigitDragState } from "../hooks/useDigitDrag.ts";
+import {
+  DIGIT_DRAG_GHOST_LIFT_PX,
+  type DigitDragState,
+} from "../hooks/useDigitDrag.ts";
 import { DigitDragGhost } from "./DigitDragGhost.tsx";
 
 function makeState(overrides: Partial<DigitDragState> = {}): DigitDragState {
@@ -21,13 +24,13 @@ describe("DigitDragGhost", () => {
     expect(getByTestId("digit-drag-ghost").textContent).toBe("5");
   });
 
-  it("positions itself at the pointer", () => {
+  it("positions itself lifted above the pointer", () => {
     const { getByTestId } = render(
       <DigitDragGhost state={makeState({ x: 123, y: 456 })} />,
     );
     const ghost = getByTestId("digit-drag-ghost");
     expect(ghost.style.left).toBe("123px");
-    expect(ghost.style.top).toBe("456px");
+    expect(ghost.style.top).toBe(`${456 - DIGIT_DRAG_GHOST_LIFT_PX}px`);
   });
 
   it("signals a valid drop target with a data attribute", () => {
