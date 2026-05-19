@@ -440,25 +440,33 @@ test("solo game - win modal", async ({ page }, testInfo) => {
 	await page.evaluate(() => {
 		const overlay = document.createElement("div");
 		overlay.className =
-			"fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6";
+			"fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-md p-6";
 		overlay.innerHTML = `
 			<div class="confetti-container">
 				<span></span><span></span><span></span><span></span><span></span>
 				<span></span><span></span><span></span><span></span><span></span>
 			</div>
-			<div class="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full relative">
+			<div class="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
 				<div class="flex flex-col items-center gap-2">
-					<span class="text-5xl animate-emoji-bounce">🎉</span>
-					<h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">You Won!</h2>
-					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Easy</span>
+					<span class="text-6xl animate-emoji-bounce">🎉</span>
+					<h2 class="heading text-3xl">You Won!</h2>
+					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-difficulty-easy-bg text-difficulty-easy-text">Easy</span>
 				</div>
-				<div class="flex flex-col items-center gap-1">
-					<span class="text-3xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100">03:42</span>
-					<span class="text-sm font-semibold text-green-600 dark:text-green-400">New Best!</span>
+				<div class="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset border border-border-default py-4">
+					<span class="text-4xl font-mono font-extrabold tabular-nums text-text-primary">03:42</span>
+					<span class="flex items-center gap-1 text-sm font-bold text-accent">
+						<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+						New Personal Best!
+					</span>
 				</div>
-				<div class="flex flex-col gap-3 w-full">
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white select-none touch-manipulation">Play Again</button>
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 select-none touch-manipulation">New Game</button>
+				<div class="grid grid-cols-3 gap-2 w-full text-center">
+					<div class="rounded-xl bg-bg-raised py-2.5"><div class="text-lg font-bold text-text-primary font-mono tabular-nums">3</div><div class="text-xs text-text-muted">Played</div></div>
+					<div class="rounded-xl bg-bg-raised py-2.5"><div class="text-lg font-bold text-text-primary font-mono tabular-nums">03:42</div><div class="text-xs text-text-muted">Best</div></div>
+					<div class="rounded-xl bg-bg-raised py-2.5"><div class="text-lg font-bold text-text-primary font-mono tabular-nums">04:18</div><div class="text-xs text-text-muted">Average</div></div>
+				</div>
+				<div class="flex flex-col gap-2.5 w-full">
+					<button type="button" class="btn btn-primary w-full py-3.5 text-lg">Play Again</button>
+					<button type="button" class="btn btn-secondary w-full py-3.5 text-lg">New Game</button>
 				</div>
 			</div>
 		`;
@@ -488,19 +496,19 @@ test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
 		bars.className =
 			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
 		bars.innerHTML = `
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">You</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
+			<div class="flex items-center gap-2.5">
+				<span class="text-xs font-medium text-text-secondary w-20 truncate">You</span>
+				<div class="flex-1 h-2.5 rounded-full bg-bg-inset border border-border-default overflow-hidden">
 					<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
 				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
+				<span class="text-xs font-semibold text-text-secondary font-mono tabular-nums w-9 text-right">42%</span>
 			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
+			<div class="flex items-center gap-2.5">
+				<span class="text-xs font-medium text-text-secondary w-20 truncate">Opponent</span>
+				<div class="flex-1 h-2.5 rounded-full bg-bg-inset border border-border-default overflow-hidden">
 					<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
 				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
+				<span class="text-xs font-semibold text-text-secondary font-mono tabular-nums w-9 text-right">67%</span>
 			</div>
 		`;
 		header.after(bars);
