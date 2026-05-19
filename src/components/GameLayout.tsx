@@ -1,4 +1,4 @@
-import { Settings, X } from "lucide-react";
+import { ChevronLeft, Settings, X } from "lucide-react";
 import {
   type PointerEvent,
   type ReactNode,
@@ -52,11 +52,13 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center min-h-dvh py-4 px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
-        <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
+        <p className="text-sm font-semibold text-text-secondary mb-2 tracking-tight">
+          {title}
+        </p>
       )}
 
       {/* Header */}
@@ -65,10 +67,11 @@ export function GameLayout({
       >
         <button
           type="button"
-          className="btn-ghost touch-manipulation"
+          className="btn-icon"
           onClick={onBack}
+          aria-label="Back"
         >
-          ← Back
+          <ChevronLeft size={20} aria-hidden="true" />
         </button>
         {timer}
         <SettingsButton
@@ -160,7 +163,7 @@ function SettingsButton({
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className="w-10 h-10 flex items-center justify-center rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
+        className="btn-icon"
         onClick={() => setOpen((v) => !v)}
         aria-label="Settings"
         aria-expanded={open}
@@ -168,18 +171,16 @@ function SettingsButton({
         <Settings size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-xl shadow-lg p-3 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-text-muted font-medium">
-              Numpad position
-            </p>
+        <div className="absolute right-0 top-full mt-2 bg-bg-overlay border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-80 max-w-[calc(100vw-2rem)]">
+          <div className="flex items-center justify-between mb-3">
+            <p className="label">Settings</p>
             <button
               type="button"
-              className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary transition-colors"
+              className="w-7 h-7 -mr-1 -mt-1 flex items-center justify-center rounded-full text-text-muted hover:bg-bg-raised hover:text-text-primary transition-colors"
               onClick={() => setOpen(false)}
               aria-label="Close settings"
             >
-              <X size={14} aria-hidden="true" />
+              <X size={15} aria-hidden="true" />
             </button>
           </div>
           <NumPadPositionToggle
@@ -192,10 +193,8 @@ function SettingsButton({
             </div>
           )}
           <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
-            <p className="text-xs text-text-muted mb-2 font-medium">
-              Keyboard shortcuts
-            </p>
-            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+            <p className="label mb-2">Keyboard shortcuts</p>
+            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
               {KEYBOARD_SHORTCUTS.map((s) => (
                 <Shortcut key={s.label} keys={s.keys} label={s.label} />
               ))}
@@ -210,10 +209,10 @@ function SettingsButton({
 function Shortcut({ keys, label }: { keys: string; label: string }) {
   return (
     <>
-      <kbd className="font-mono text-text-primary bg-bg-raised px-1 rounded text-center">
+      <kbd className="font-mono text-text-primary bg-bg-raised border border-border-default px-1.5 py-0.5 rounded-md text-center text-[0.6875rem]">
         {keys}
       </kbd>
-      <span className="text-text-muted">{label}</span>
+      <span className="text-text-muted self-center">{label}</span>
     </>
   );
 }
