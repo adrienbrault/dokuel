@@ -183,7 +183,7 @@ export function SoloGame({
       title={title}
       position={position}
       onPositionChange={setPosition}
-      onDeselectCell={game.deselectCell}
+      onDeselectCell={highlight.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
