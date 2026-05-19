@@ -122,7 +122,7 @@ export function SoloGame({
 
   const handlePressEnd = () => {
     setChargingDigit(null);
-    if (!holdFiredRef.current) game.deselectCell();
+    if (!holdFiredRef.current) highlight.endNumpadPress(chargingDigit);
     holdFiredRef.current = false;
   };
 
@@ -234,7 +234,7 @@ export function SoloGame({
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
-          onSkimDigit={highlight.setDigit}
+          onSkimDigit={highlight.skimToDigit}
         />
       }
       board={
