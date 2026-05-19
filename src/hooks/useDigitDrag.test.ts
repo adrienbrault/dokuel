@@ -155,12 +155,15 @@ describe("useDigitDrag", () => {
         pointerId: 1,
       });
     });
+    // Aim well inside the bottom-left triangle (value zone). The hit
+    // test lifts pointer Y by DRAG_GHOST_LIFT_PX (40), so clientY 120
+    // resolves to local Y 80 — comfortably below the diagonal.
     act(() => {
       document.dispatchEvent(
-        pointerEvent("pointermove", { clientX: 50, clientY: 60 }),
+        pointerEvent("pointermove", { clientX: 20, clientY: 120 }),
       );
       document.dispatchEvent(
-        pointerEvent("pointerup", { clientX: 50, clientY: 60 }),
+        pointerEvent("pointerup", { clientX: 20, clientY: 120 }),
       );
     });
     expect(onDrop).toHaveBeenCalledWith(

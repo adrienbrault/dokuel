@@ -22,13 +22,17 @@ describe("DigitDragGhost", () => {
     expect(getByTestId("digit-drag-ghost").textContent).toBe("5");
   });
 
-  it("positions itself at the pointer", () => {
+  it("positions itself lifted above the pointer so the cell under the ghost is visible", () => {
+    // The hit test in useDigitDrag offsets the pointer Y by the same
+    // amount — both ends agree on where the ghost is anchored so the
+    // highlighted cell is the one the user can actually see.
     const { getByTestId } = render(
       <DigitDragGhost state={makeState({ x: 123, y: 456 })} />,
     );
     const ghost = getByTestId("digit-drag-ghost");
     expect(ghost.style.left).toBe("123px");
-    expect(ghost.style.top).toBe("456px");
+    // 456 - DRAG_GHOST_LIFT_PX (40) = 416
+    expect(ghost.style.top).toBe("416px");
   });
 
   it("signals a valid drop target with a data attribute", () => {
