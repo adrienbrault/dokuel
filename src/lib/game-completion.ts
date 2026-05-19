@@ -1,12 +1,14 @@
 import { type DailyStreak, recordDailyCompletion } from "./daily-streak.ts";
 import { deleteGame } from "./game-storage.ts";
 import { saveGameResult } from "./stats.ts";
-import type { Difficulty } from "./types.ts";
+import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type GameCompletionContext = {
   /** Per-active-game autosave key; cleared on completion when present. */
   gameKey?: string | undefined;
   difficulty: Difficulty;
+  /** Assist mode the game was completed under; recorded with the result. */
+  assistLevel: AssistLevel;
   /** Final timer value in seconds. */
   timeSeconds: number;
   hintsUsed: number;
@@ -30,7 +32,13 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
   if (ctx.gameKey) {
     deleteGame(ctx.gameKey);
   }
-  saveGameResult(ctx.difficulty, ctx.timeSeconds, true, ctx.hintsUsed);
+  saveGameResult(
+    ctx.difficulty,
+    ctx.assistLevel,
+    ctx.timeSeconds,
+    true,
+    ctx.hintsUsed,
+  );
   if (ctx.dailyDate) {
     return { streak: recordDailyCompletion(ctx.dailyDate) };
   }

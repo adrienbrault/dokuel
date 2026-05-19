@@ -1,7 +1,8 @@
-import type { Difficulty } from "./types.ts";
+import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type GameStats = {
   difficulty: Difficulty;
+  assistLevel: AssistLevel;
   time: number;
   date: string;
   won: boolean;
@@ -13,7 +14,14 @@ const STORAGE_KEY = "sudoku_stats";
 export function getStats(): GameStats[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as GameStats[];
+    // Entries saved before assist-level tracking default to "standard",
+    // the only mode the game offered at the time.
+    return parsed.map((s) => ({
+      ...s,
+      assistLevel: s.assistLevel ?? "standard",
+    }));
   } catch {
     return [];
   }
@@ -21,6 +29,7 @@ export function getStats(): GameStats[] {
 
 export function saveGameResult(
   difficulty: Difficulty,
+  assistLevel: AssistLevel,
   time: number,
   won: boolean,
   hintsUsed?: number,
@@ -28,6 +37,7 @@ export function saveGameResult(
   const stats = getStats();
   stats.push({
     difficulty,
+    assistLevel,
     time,
     date: new Date().toISOString().slice(0, 10),
     won,

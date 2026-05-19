@@ -21,6 +21,7 @@ describe("completeGame", () => {
     completeGame({
       gameKey: "active-easy",
       difficulty: "easy",
+      assistLevel: "standard",
       timeSeconds: 60,
       hintsUsed: 0,
     });
@@ -31,6 +32,7 @@ describe("completeGame", () => {
   it("records a per-difficulty stats entry with timer and hint count", () => {
     completeGame({
       difficulty: "hard",
+      assistLevel: "standard",
       timeSeconds: 300,
       hintsUsed: 2,
     });
@@ -45,6 +47,7 @@ describe("completeGame", () => {
   it("returns no streak when dailyDate is omitted", () => {
     const result = completeGame({
       difficulty: "medium",
+      assistLevel: "standard",
       timeSeconds: 100,
       hintsUsed: 0,
     });
@@ -57,6 +60,7 @@ describe("completeGame", () => {
 
     const result = completeGame({
       difficulty: "medium",
+      assistLevel: "standard",
       timeSeconds: 100,
       hintsUsed: 0,
       dailyDate: date,
@@ -72,6 +76,7 @@ describe("completeGame", () => {
     expect(() =>
       completeGame({
         difficulty: "easy",
+        assistLevel: "standard",
         timeSeconds: 30,
         hintsUsed: 0,
       }),

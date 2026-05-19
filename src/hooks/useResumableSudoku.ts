@@ -97,6 +97,7 @@ export function useResumableSudoku({
     const result = completeGame({
       gameKey,
       difficulty,
+      assistLevel,
       timeSeconds: seconds,
       hintsUsed: game.hintsUsed,
       dailyDate,
@@ -105,6 +106,7 @@ export function useResumableSudoku({
   }, [
     game.status,
     difficulty,
+    assistLevel,
     gameKey,
     game.hintsUsed,
     dailyDate,
