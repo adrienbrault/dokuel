@@ -1,4 +1,6 @@
+import { ChevronRight } from "lucide-react";
 import { useAssistLevel } from "../hooks/useAssistLevel.ts";
+import { DIFFICULTY_BADGE_CLASSES } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 
@@ -11,31 +13,31 @@ const DIFFICULTIES: {
   value: Difficulty;
   label: string;
   description: string;
-  color: string;
+  level: number;
 }[] = [
   {
     value: "easy",
     label: "Easy",
     description: "Great for warming up",
-    color: "bg-difficulty-easy",
+    level: 1,
   },
   {
     value: "medium",
     label: "Medium",
     description: "A fair challenge",
-    color: "bg-difficulty-medium",
+    level: 2,
   },
   {
     value: "hard",
     label: "Hard",
     description: "For experienced players",
-    color: "bg-difficulty-hard",
+    level: 3,
   },
   {
     value: "expert",
     label: "Expert",
     description: "The ultimate test",
-    color: "bg-difficulty-expert",
+    level: 4,
   },
 ];
 
@@ -44,34 +46,62 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
 
   return (
     <div className="screen-content gap-6">
-      <h2 className="heading">Choose Difficulty</h2>
-      <div className="flex flex-col gap-3 w-full">
+      <div className="flex flex-col items-center gap-1">
+        <h2 className="heading">Choose Difficulty</h2>
+        <p className="caption">How tough should the puzzle be?</p>
+      </div>
+      <div className="flex flex-col gap-2.5 w-full">
         {DIFFICULTIES.map((d) => (
           <button
             key={d.value}
             type="button"
-            className="card flex flex-col items-start gap-0.5 w-full px-5 py-4 press-spring-soft select-none touch-manipulation hover:bg-bg-raised focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none transition-colors"
+            className="card flex items-center gap-3.5 w-full px-4 py-3.5 press-spring-soft select-none touch-manipulation hover:bg-bg-raised focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none transition-colors"
             onClick={() => onSelect(d.value, assistLevel)}
           >
-            <span className="flex items-center gap-2 text-lg font-semibold text-text-primary">
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${d.color}`}
-                aria-hidden="true"
-              />
-              {d.label}
+            <span
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${DIFFICULTY_BADGE_CLASSES[d.value]}`}
+            >
+              <DifficultyBars level={d.level} />
             </span>
-            <span className="caption">{d.description}</span>
+            <span className="flex flex-col items-start min-w-0 flex-1">
+              <span className="text-base font-bold text-text-primary">
+                {d.label}
+              </span>
+              <span className="text-xs text-text-muted">{d.description}</span>
+            </span>
+            <ChevronRight
+              size={18}
+              className="text-text-muted shrink-0"
+              aria-hidden="true"
+            />
           </button>
         ))}
       </div>
-      <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+      <div className="flex flex-col gap-2 w-full">
+        <span className="label px-1">Assistance</span>
+        <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+      </div>
       <button
         type="button"
-        className="btn-ghost mt-2 touch-manipulation"
+        className="btn-ghost mt-1 touch-manipulation"
         onClick={onBack}
       >
         ← Back
       </button>
     </div>
+  );
+}
+
+function DifficultyBars({ level }: { level: number }) {
+  return (
+    <span className="flex items-end gap-[3px] h-4" aria-hidden="true">
+      {[1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className={`w-1 rounded-[2px] ${i <= level ? "bg-current" : "bg-current opacity-25"}`}
+          style={{ height: `${i * 22 + 12}%` }}
+        />
+      ))}
+    </span>
   );
 }
