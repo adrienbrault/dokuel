@@ -609,3 +609,84 @@ test("multiplayer - settings with opponent bar toggle", async ({
 		),
 	});
 });
+
+test.describe("stats with multiplayer history", () => {
+	test.use({
+		storage: {
+			sudoku_stats: JSON.stringify([
+				{ difficulty: "easy", time: 180, date: "2026-05-12", won: true },
+				{ difficulty: "easy", time: 165, date: "2026-05-14", won: true },
+				{ difficulty: "medium", time: 320, date: "2026-05-15", won: true },
+				{ difficulty: "medium", time: 280, date: "2026-05-17", won: true },
+				{ difficulty: "hard", time: 540, date: "2026-05-18", won: true },
+			]),
+			sudoku_multiplayer_stats: JSON.stringify([
+				{
+					difficulty: "easy",
+					assistLevel: "standard",
+					time: 240,
+					date: "2026-05-11",
+					timestamp: 1_715_400_000_000,
+					won: true,
+					opponentName: "Clever Fox",
+					roomId: "room-1",
+					gameNumber: 1,
+				},
+				{
+					difficulty: "medium",
+					assistLevel: "standard",
+					time: 360,
+					date: "2026-05-13",
+					timestamp: 1_715_600_000_000,
+					won: false,
+					opponentName: "Brave Otter",
+					roomId: "room-2",
+					gameNumber: 1,
+				},
+				{
+					difficulty: "medium",
+					assistLevel: "standard",
+					time: 295,
+					date: "2026-05-16",
+					timestamp: 1_715_900_000_000,
+					won: true,
+					opponentName: "Brave Otter",
+					roomId: "room-2",
+					gameNumber: 2,
+				},
+				{
+					difficulty: "hard",
+					assistLevel: "full",
+					time: 480,
+					date: "2026-05-18",
+					timestamp: 1_716_100_000_000,
+					won: true,
+					opponentName: "Swift Hawk",
+					roomId: "room-3",
+					gameNumber: 1,
+				},
+				{
+					difficulty: "hard",
+					assistLevel: "standard",
+					time: 510,
+					date: "2026-05-19",
+					timestamp: 1_716_200_000_000,
+					won: false,
+					opponentName: "Lucky Bear",
+					roomId: "room-4",
+					gameNumber: 1,
+				},
+			]),
+		},
+	});
+
+	test("stats page with multiplayer", async ({ page }, testInfo) => {
+		await page.goto("/");
+		await page.getByRole("button", { name: /view stats/i }).click();
+		await page.getByRole("heading", { name: "Stats" }).waitFor();
+		await page.screenshot({
+			path: screenshotPath("stats-multiplayer", testInfo.project.name),
+			fullPage: true,
+		});
+	});
+});
