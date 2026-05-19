@@ -5,10 +5,10 @@ type NumPadPositionToggleProps = {
   onChange: (position: NumPadPosition) => void;
 };
 
-const OPTIONS: { value: NumPadPosition; label: string }[] = [
-  { value: "left", label: "←" },
-  { value: "bottom", label: "↓" },
-  { value: "right", label: "→" },
+const OPTIONS: { value: NumPadPosition; label: string; glyph: string }[] = [
+  { value: "left", label: "Left", glyph: "←" },
+  { value: "bottom", label: "Bottom", glyph: "↓" },
+  { value: "right", label: "Right", glyph: "→" },
 ];
 
 export function NumPadPositionToggle({
@@ -16,32 +16,34 @@ export function NumPadPositionToggle({
   onChange,
 }: NumPadPositionToggleProps) {
   return (
-    <div className="flex items-center gap-1.5" title="Number pad position">
-      <span className="text-[10px] font-medium text-text-muted uppercase tracking-wide">
-        Pad
-      </span>
+    <div className="flex flex-col gap-2">
+      <span className="label">Numpad position</span>
       <div
-        className="flex gap-1 bg-bg-raised rounded-lg p-1"
+        className="flex gap-1 bg-bg-inset rounded-xl p-1"
         role="radiogroup"
         aria-label="Number pad position"
       >
-        {OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            role="radio"
-            aria-checked={position === opt.value}
-            className={`w-8 h-8 rounded-md flex items-center justify-center text-sm transition-all duration-150 select-none ${
-              position === opt.value
-                ? "bg-bg-overlay shadow-sm text-accent font-bold"
-                : "text-text-muted"
-            }`}
-            onClick={() => onChange(opt.value)}
-            aria-label={`Pad ${opt.value}`}
-          >
-            {opt.label}
-          </button>
-        ))}
+        {OPTIONS.map((opt) => {
+          const active = position === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              className={`flex flex-1 items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-semibold transition-all duration-150 select-none touch-manipulation ${
+                active
+                  ? "bg-accent text-text-on-accent shadow-sm"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+              onClick={() => onChange(opt.value)}
+              aria-label={`Pad ${opt.value}`}
+            >
+              <span aria-hidden="true">{opt.glyph}</span>
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

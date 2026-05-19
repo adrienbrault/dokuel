@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { Lobby } from "./Lobby.tsx";
@@ -71,7 +72,14 @@ export function MultiplayerGame({
   if (!mp.roomState) {
     return (
       <div className="screen">
-        <p className="caption">Connecting...</p>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2
+            size={28}
+            className="text-accent animate-spin"
+            aria-hidden="true"
+          />
+          <p className="caption">Connecting…</p>
+        </div>
       </div>
     );
   }
@@ -118,9 +126,9 @@ function DisconnectOverlay({ onClaimWin }: { onClaimWin: () => void }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-modal-backdrop">
-      <div className="bg-bg-overlay rounded-2xl px-8 py-6 shadow-2xl text-center animate-modal-content">
-        <p className="text-lg font-semibold text-text-primary">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 backdrop-blur-md animate-modal-backdrop p-6">
+      <div className="bg-bg-overlay border border-border-default rounded-3xl px-8 py-7 shadow-2xl text-center animate-modal-content">
+        <p className="text-lg font-bold text-text-primary">
           Opponent disconnected
         </p>
         {seconds > 0 ? (

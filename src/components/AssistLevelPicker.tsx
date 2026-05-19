@@ -3,7 +3,7 @@ import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 
 const OPTIONS: { value: AssistLevel; label: string; description: string }[] = [
   { value: "paper", label: "Paper", description: "No hints" },
-  { value: "standard", label: "Standard", description: "Auto-clear notes" },
+  { value: "standard", label: "Standard", description: "Auto-clear" },
   { value: "full", label: "Full", description: "Counts + more" },
 ];
 
