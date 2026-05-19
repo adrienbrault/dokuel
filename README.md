@@ -155,9 +155,6 @@ Both the frontend and signaling server deploy automatically on push to `main`.
 Every scene captured across iPhone SE, iPhone 14, iPad Mini, and Desktop viewports. PNGs are deployed to GitHub Pages by the screenshots workflow and never land in `main`'s history. Click any thumbnail for the full-size image.
 
 <!-- screenshot-matrix:start -->
-<details>
-<summary>All 14 contact sheets (8 per-device · 6 per-feature)</summary>
-
 ### Per-device
 
 Each device gets two sheets: menus & entry (landing, difficulty, daily challenge, join, solo entry, multiplayer lobby) and active gameplay (in-progress, win modal, settings popover, numpad variants, multiplayer progress).
@@ -221,8 +218,6 @@ Each feature sheet shows related scenes across all 4 devices (devices as rows).
 #### Dark-mode pairs (difficulty & multiplayer)
 
 <a href="https://adrienbrault.github.io/dokuel/combined/feature--dark-mode-b.png"><img src="https://adrienbrault.github.io/dokuel/combined/feature--dark-mode-b.png" width="800" alt="Dark-mode pairs (difficulty & multiplayer)" /></a>
-
-</details>
 <!-- screenshot-matrix:end -->
 
 ## License
