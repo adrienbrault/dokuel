@@ -220,6 +220,7 @@ export function MultiplayerBoard({
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
+          onSkimDigit={highlight.setDigit}
         />
       }
       board={

@@ -22,6 +22,10 @@ export function useDigitHighlight({ selectCell, setSelectedCells }: Handlers) {
     setHighlightedDigit((prev) => (prev === n ? null : n));
   }, []);
 
+  const setDigit = useCallback((n: number) => {
+    setHighlightedDigit(n);
+  }, []);
+
   const wrappedSelectCell = useCallback(
     (row: number, col: number) => {
       setHighlightedDigit(null);
@@ -41,6 +45,7 @@ export function useDigitHighlight({ selectCell, setSelectedCells }: Handlers) {
   return {
     highlightedDigit,
     toggle,
+    setDigit,
     selectCell: wrappedSelectCell,
     setSelectedCells: wrappedSetSelectedCells,
   };

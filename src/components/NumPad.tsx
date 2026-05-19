@@ -1,13 +1,18 @@
-import { type PointerEvent, useCallback, useRef } from "react";
+import {
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 
 const LONG_PRESS_MS = 400;
 // Pointer must travel this far from the original button center before
-// we treat the gesture as a drag (rather than a finger that drifted
-// slightly during the tap/hold). Tuned to fingertip-sized slop.
-const DRAG_THRESHOLD_PX = 12;
+// we classify the gesture (skim vs. drag). Tuned to fingertip-sized slop.
+const GESTURE_THRESHOLD_PX = 12;
 
 type NumPadProps = {
   position: NumPadPosition;
@@ -15,27 +20,15 @@ type NumPadProps = {
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
   disableCompleted?: boolean | undefined;
-  /**
-   * Fires the moment a digit is pressed (pointerdown) so the cell can
-   * show an instant note. In Dokuel this writes a NOTE.
-   */
+  /** Fires on pointerdown (instant note placement / highlight toggle). */
   onNumber: (n: number) => void;
-  /**
-   * Fires after holding for LONG_PRESS_MS. In Dokuel this COMMITS a
-   * value (overwriting the just-placed note).
-   */
+  /** Fires after LONG_PRESS_MS (commits a value over the just-placed note). */
   onLongPressNumber?: ((n: number) => void) | undefined;
-  /**
-   * Fires on pointerup / cancel / leave — i.e. the press ended,
-   * regardless of whether it crossed the long-press threshold. Used
-   * by the parent to clear "currently charging" UI state.
-   */
+  /** Fires when the press ends (pointerup/cancel/leave or post-drag/skim). */
   onPressEnd?: (() => void) | undefined;
   /**
-   * Fires once the finger has slid off the button while pressed,
-   * handing control to the parent's drag-and-drop layer. The numpad
-   * cancels its own tap/hold UI but does not undo the instant note
-   * already placed — the user can undo or accept it as a side-effect.
+   * Fires once the finger has slid PERPENDICULAR to the numpad axis,
+   * handing control to the parent's drag-and-drop layer.
    */
   onStartDrag?:
     | ((args: {
@@ -45,6 +38,8 @@ type NumPadProps = {
         pointerId: number;
       }) => void)
     | undefined;
+  /** Fires when an ALONG-axis skim crosses into another digit's button. */
+  onSkimDigit?: ((n: number) => void) | undefined;
 };
 
 export function NumPad({
@@ -57,6 +52,7 @@ export function NumPad({
   onLongPressNumber,
   onPressEnd,
   onStartDrag,
+  onSkimDigit,
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
 
@@ -67,11 +63,27 @@ export function NumPad({
     originY: number;
     pointerId: number;
     button: HTMLButtonElement;
-    dragStarted: boolean;
+    gestureMode: "none" | "drag" | "skim";
   } | null>(null);
   // Suppress the synthetic click that follows pointerdown→pointerup so
   // onNumber doesn't double-fire. A fresh pointerdown clears it.
   const pointerFiredRef = useRef(false);
+
+  // Visual press feedback (drives bg-accent without CSS :active, which
+  // sticks on touch devices after pointer-capture release).
+  const [pressedDigit, setPressedDigit] = useState<number | null>(null);
+  // Active skim gesture id; the effect below attaches doc listeners.
+  const [skimPointerId, setSkimPointerId] = useState<number | null>(null);
+  // Last digit the finger was over while skimming. Seeded to the originally
+  // pressed digit so we don't re-fire onSkimDigit before the finger crosses
+  // into a different button.
+  const skimDigitRef = useRef<number | null>(null);
+  // Keep the latest callbacks fresh for the document listeners without
+  // re-binding them every render.
+  const onSkimDigitRef = useRef(onSkimDigit);
+  const onPressEndRef = useRef(onPressEnd);
+  onSkimDigitRef.current = onSkimDigit;
+  onPressEndRef.current = onPressEnd;
 
   const cancelTimer = useCallback(() => {
     if (pressRef.current?.timer) {
@@ -85,28 +97,19 @@ export function NumPad({
       if (e.pointerType === "mouse" && e.button !== 0) return;
       cancelTimer();
       pointerFiredRef.current = true;
-      onNumber(n); // instant note placement
+      setPressedDigit(n);
+      onNumber(n); // instant note placement / highlight toggle
       const btn = e.currentTarget;
       const rect = btn.getBoundingClientRect();
       const originX = rect.left + rect.width / 2;
       const originY = rect.top + rect.height / 2;
-      if (!onLongPressNumber) {
-        pressRef.current = {
-          digit: n,
-          timer: null,
-          originX,
-          originY,
-          pointerId: e.pointerId,
-          button: btn,
-          dragStarted: false,
-        };
-        return;
-      }
-      const timer = setTimeout(() => {
-        if (pressRef.current) pressRef.current.timer = null;
-        haptics.tap();
-        onLongPressNumber(n);
-      }, LONG_PRESS_MS);
+      const timer = onLongPressNumber
+        ? setTimeout(() => {
+            if (pressRef.current) pressRef.current.timer = null;
+            haptics.tap();
+            onLongPressNumber(n);
+          }, LONG_PRESS_MS)
+        : null;
       pressRef.current = {
         digit: n,
         timer,
@@ -114,7 +117,7 @@ export function NumPad({
         originY,
         pointerId: e.pointerId,
         button: btn,
-        dragStarted: false,
+        gestureMode: "none",
       };
     },
     [onNumber, onLongPressNumber, cancelTimer],
@@ -123,42 +126,112 @@ export function NumPad({
   const handlePointerMove = useCallback(
     (e: PointerEvent<HTMLButtonElement>) => {
       const press = pressRef.current;
-      if (!press || press.dragStarted || !onStartDrag) return;
+      if (!press || press.gestureMode !== "none") return;
       if (e.pointerId !== press.pointerId) return;
       const dx = e.clientX - press.originX;
       const dy = e.clientY - press.originY;
-      if (dx * dx + dy * dy < DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) return;
-      // Drag takes over: cancel hold timer + suppress the trailing click
-      // so the only side-effect is the instant note that already fired
-      // (which the user can undo if they didn't want it).
+      if (dx * dx + dy * dy < GESTURE_THRESHOLD_PX * GESTURE_THRESHOLD_PX)
+        return;
+
+      // Classify by which axis dominates relative to the numpad's main
+      // axis. Along-axis → skim highlights. Perpendicular → drag-to-place.
+      const along = isVertical ? Math.abs(dy) : Math.abs(dx);
+      const perp = isVertical ? Math.abs(dx) : Math.abs(dy);
+      const skim: "skim" | null = onSkimDigit ? "skim" : null;
+      const drag: "drag" | null = onStartDrag ? "drag" : null;
+      const mode = along >= perp ? (skim ?? drag) : (drag ?? skim);
+      if (mode === null) return;
+
       cancelTimer();
-      press.dragStarted = true;
-      pointerFiredRef.current = false; // ignore the click that follows
-      // Release pointer capture so the document-level drag listeners can
-      // see subsequent moves outside this button.
+      press.gestureMode = mode;
+      pointerFiredRef.current = false; // suppress the click that follows
+      // Release pointer capture so document-level listeners can see moves
+      // outside this button.
       try {
         press.button.releasePointerCapture(e.pointerId);
       } catch {
         // ignore — some browsers don't capture by default
       }
       haptics.tap();
-      onStartDrag({
-        digit: press.digit,
-        x: e.clientX,
-        y: e.clientY,
-        pointerId: e.pointerId,
-      });
-      onPressEnd?.();
+
+      if (mode === "drag") {
+        // Drag ghost shows what's being carried, so the numpad button
+        // shouldn't claim "pressed" anymore.
+        setPressedDigit(null);
+        onStartDrag?.({
+          digit: press.digit,
+          x: e.clientX,
+          y: e.clientY,
+          pointerId: e.pointerId,
+        });
+        onPressEnd?.();
+      } else {
+        skimDigitRef.current = press.digit;
+        setSkimPointerId(e.pointerId);
+      }
     },
-    [cancelTimer, onStartDrag, onPressEnd],
+    [isVertical, onSkimDigit, onStartDrag, cancelTimer, onPressEnd],
   );
 
   const handlePointerEnd = useCallback(() => {
-    if (!pressRef.current) return;
+    const press = pressRef.current;
+    if (!press) return;
+    if (press.gestureMode === "skim") {
+      // The skim effect's document listeners own end-of-gesture cleanup
+      // (including onPressEnd). Just detach this button-scoped state.
+      pressRef.current = null;
+      return;
+    }
     cancelTimer();
     pressRef.current = null;
+    setPressedDigit(null);
     onPressEnd?.();
   }, [cancelTimer, onPressEnd]);
+
+  // Skim mode: track the finger as it crosses into other digit buttons.
+  useEffect(() => {
+    if (skimPointerId === null) return;
+    const ownPointerId = skimPointerId;
+
+    const onMove = (e: globalThis.PointerEvent) => {
+      if (e.pointerId !== ownPointerId) return;
+      e.preventDefault();
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const btn = el
+        ? ((el as HTMLElement).closest?.(
+            "[data-numpad-digit]",
+          ) as HTMLButtonElement | null)
+        : null;
+      // Skip disabled (completed) digits — they're visually hidden, so
+      // briefly highlighting them as the finger drifts over their slot
+      // would surprise the user.
+      if (!btn || btn.disabled) return;
+      const digit = Number(btn.dataset.numpadDigit);
+      if (Number.isNaN(digit)) return;
+      if (digit === skimDigitRef.current) return;
+      skimDigitRef.current = digit;
+      setPressedDigit(digit);
+      haptics.light();
+      onSkimDigitRef.current?.(digit);
+    };
+
+    const end = (e: globalThis.PointerEvent) => {
+      if (e.pointerId !== ownPointerId) return;
+      setSkimPointerId(null);
+      skimDigitRef.current = null;
+      setPressedDigit(null);
+      onPressEndRef.current?.();
+    };
+
+    document.addEventListener("pointermove", onMove, { passive: false });
+    document.addEventListener("pointerup", end);
+    document.addEventListener("pointercancel", end);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", end);
+      document.removeEventListener("pointercancel", end);
+    };
+  }, [skimPointerId]);
 
   const handleClick = useCallback(
     (n: number) => () => {
@@ -187,24 +260,10 @@ export function NumPad({
       )}
       {/* Stacked variant: mobile side-positioned numpads, and always on desktop */}
       <p
-        className={`text-[0.625rem] text-text-muted leading-tight select-none text-center ${
-          isVertical ? "" : "hidden lg:block"
-        }`}
+        className={`text-[0.625rem] text-text-muted leading-tight select-none text-center whitespace-pre-line ${isVertical ? "" : "hidden lg:block"}`}
         aria-hidden="true"
       >
-        tap
-        <br />
-        note
-        <br />· · ·
-        <br />
-        hold
-        <br />
-        enter
-        <br />· · ·
-        <br />
-        drag
-        <br />
-        place
+        {"tap\nnote\n· · ·\nhold\nenter\n· · ·\ndrag\nplace"}
       </p>
       <div
         className={`flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full max-w-lg lg:w-14"}`}
@@ -215,13 +274,18 @@ export function NumPad({
           const remaining = remainingCounts[n];
           const isComplete = remaining === 0;
           const isSelected = selectedValue === n;
+          // Press state overrides selectedValue so the visual follows
+          // the finger across skim transitions.
+          const isAccented =
+            pressedDigit !== null ? pressedDigit === n : isSelected;
 
           return (
             <button
               key={n}
               type="button"
+              data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isSelected ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary active:bg-accent active:text-text-on-accent active:shadow-md"}`}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1 max-w-14"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
@@ -237,7 +301,7 @@ export function NumPad({
               <span className="text-lg leading-none">{n}</span>
               {showRemainingCounts && (
                 <span
-                  className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isSelected ? "text-text-on-accent/70" : "text-text-secondary"}`}
+                  className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
                 >
                   {remaining}
                 </span>

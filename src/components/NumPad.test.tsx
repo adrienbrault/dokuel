@@ -4,12 +4,29 @@ import { NumPad } from "./NumPad.tsx";
 
 const ZERO_REMAINING = { 1: 9, 2: 9, 3: 9, 4: 9, 5: 9, 6: 9, 7: 9, 8: 9, 9: 9 };
 
+function mockElementFromPoint(el: HTMLElement | null) {
+  document.elementFromPoint = (() => el) as typeof document.elementFromPoint;
+}
+
+function docPointer(type: string, init: Partial<PointerEvent> = {}) {
+  return new PointerEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    pointerId: 1,
+    clientX: 0,
+    clientY: 0,
+    ...init,
+  });
+}
+
 describe("NumPad", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
   afterEach(() => {
     vi.useRealTimers();
+    document.elementFromPoint = (() =>
+      null) as typeof document.elementFromPoint;
   });
 
   it("fires onNumber on pointerdown (instant note feedback)", () => {
@@ -170,7 +187,42 @@ describe("NumPad", () => {
     expect(screen.getByText(/tap = note · hold = enter/i)).toBeInTheDocument();
   });
 
-  it("starts a drag once the pointer slides past the drag threshold", () => {
+  it("starts a drag when the pan is perpendicular to the numpad axis", () => {
+    const onStartDrag = vi.fn();
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onLongPressNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Small drift — under threshold
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 4, clientY: 4 });
+    expect(onStartDrag).not.toHaveBeenCalled();
+    // Vertical pan past threshold on a horizontal numpad → drag
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 0, clientY: 50 });
+    expect(onStartDrag).toHaveBeenCalledTimes(1);
+    expect(onStartDrag).toHaveBeenCalledWith({
+      digit: 3,
+      x: 0,
+      y: 50,
+      pointerId: 1,
+    });
+    expect(onSkimDigit).not.toHaveBeenCalled();
+  });
+
+  it("falls back to drag for any direction when no skim handler is wired", () => {
     const onStartDrag = vi.fn();
     render(
       <NumPad
@@ -188,18 +240,251 @@ describe("NumPad", () => {
       clientX: 0,
       clientY: 0,
     });
-    // Small drift — under threshold
-    fireEvent.pointerMove(three, { pointerId: 1, clientX: 4, clientY: 4 });
-    expect(onStartDrag).not.toHaveBeenCalled();
-    // Push past 12px threshold
     fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
     expect(onStartDrag).toHaveBeenCalledTimes(1);
-    expect(onStartDrag).toHaveBeenCalledWith({
-      digit: 3,
-      x: 50,
-      y: 0,
+  });
+
+  function hasAccent(el: HTMLElement) {
+    return el.classList.contains("bg-accent");
+  }
+
+  it("transfers the press visual to the digit currently under the finger during skim", () => {
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        selectedValue={null}
+        onNumber={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    const five = screen.getByRole("button", { name: /^5, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
       pointerId: 1,
+      clientX: 0,
+      clientY: 0,
     });
+    // During press, the original digit reads as visually accented.
+    expect(hasAccent(three)).toBe(true);
+    expect(hasAccent(five)).toBe(false);
+
+    // Pan along-axis past threshold → skim mode
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    // Finger crosses into digit 5
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+    });
+    // The press visual must follow the finger — the original digit lets
+    // go, the new one picks up.
+    expect(hasAccent(three)).toBe(false);
+    expect(hasAccent(five)).toBe(true);
+  });
+
+  it("clears the press visual on release", () => {
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        selectedValue={null}
+        onNumber={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    expect(hasAccent(three)).toBe(true);
+    fireEvent.pointerUp(three, { pointerType: "touch", pointerId: 1 });
+    expect(hasAccent(three)).toBe(false);
+  });
+
+  it("does not start a drag when the pan is along the numpad axis", () => {
+    const onStartDrag = vi.fn();
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onLongPressNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Horizontal pan past threshold on a horizontal numpad → skim, not drag
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    expect(onStartDrag).not.toHaveBeenCalled();
+  });
+
+  it("fires onSkimDigit when the finger crosses into a different digit", () => {
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onLongPressNumber={vi.fn()}
+        onStartDrag={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    const five = screen.getByRole("button", { name: /^5, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Cross the threshold along the axis → skim mode armed
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    // Still on the original digit — no transition yet
+    expect(onSkimDigit).not.toHaveBeenCalled();
+
+    // Finger now over digit 5
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+    });
+    expect(onSkimDigit).toHaveBeenCalledTimes(1);
+    expect(onSkimDigit).toHaveBeenCalledWith(5);
+  });
+
+  it("does not refire onSkimDigit for the same digit on every move", () => {
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    const five = screen.getByRole("button", { name: /^5, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 110, clientY: 0 }),
+      );
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 120, clientY: 0 }),
+      );
+    });
+    expect(onSkimDigit).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires onPressEnd when a skim gesture is released", () => {
+    const onPressEnd = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onPressEnd={onPressEnd}
+        onSkimDigit={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    // Skim mode is active; the document handles the release.
+    act(() => {
+      document.dispatchEvent(docPointer("pointerup", { pointerId: 1 }));
+    });
+    expect(onPressEnd).toHaveBeenCalled();
+  });
+
+  it("does not fire onSkimDigit when the finger drifts over a disabled (completed) digit", () => {
+    const onSkimDigit = vi.fn();
+    // 5 is complete (0 remaining) so its button will be disabled.
+    const remaining = { ...ZERO_REMAINING, 5: 0 };
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={remaining}
+        onNumber={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    // The completed 5 is visually invisible but still present in the DOM.
+    const five = document.querySelector(
+      '[data-numpad-digit="5"]',
+    ) as HTMLButtonElement;
+    expect(five.disabled).toBe(true);
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 50, clientY: 0 });
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+    });
+    expect(onSkimDigit).not.toHaveBeenCalled();
+  });
+
+  it("classifies along-axis as the Y axis when the numpad is vertical", () => {
+    const onStartDrag = vi.fn();
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="right"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Vertical pan = along-axis for a vertical numpad → no drag
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 0, clientY: 50 });
+    expect(onStartDrag).not.toHaveBeenCalled();
+    expect(onSkimDigit).not.toHaveBeenCalled(); // still on original digit
   });
 
   it("cancels the long-press timer once a drag begins", () => {

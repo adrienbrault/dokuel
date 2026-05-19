@@ -96,13 +96,12 @@ export function SoloGame({
 
   // Touch numpad: tap is the cheap, frequent action (note); hold is the
   // deliberate commit (value). The 400ms hold doubles as a guard against
-  // accidental value placement.
+  // accidental value placement. With no cell selected, the numpad
+  // doubles as a filter chip and pan-along-axis skims highlights.
+  // holdFiredRef defers the note-deselect to press end so a tap+hold
+  // can still land the digit on the originally selected cell.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  // With no cell selected, the numpad doubles as a filter chip.
   const highlight = useDigitHighlight(game);
-  // Tracks whether the long-press digit fired during the current gesture.
-  // We defer the note-deselect to press end so a tap+hold can still land
-  // the digit on the originally selected cell.
   const holdFiredRef = useRef(false);
   const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
@@ -235,6 +234,7 @@ export function SoloGame({
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
+          onSkimDigit={highlight.setDigit}
         />
       }
       board={
