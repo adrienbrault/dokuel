@@ -90,6 +90,31 @@ describe("useDigitHighlight", () => {
     expect(handlers.deselectCell).toHaveBeenCalled();
   });
 
+  it("endNumpadPress promotes the placed digit to the highlight and deselects", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.endNumpadPress(7);
+    });
+    expect(result.current.highlightedDigit).toBe(7);
+    expect(handlers.deselectCell).toHaveBeenCalled();
+  });
+
+  it("endNumpadPress with no placed digit deselects but keeps the highlight", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.toggle(4);
+    });
+    act(() => {
+      result.current.endNumpadPress(null);
+    });
+    expect(result.current.highlightedDigit).toBe(4);
+    expect(handlers.deselectCell).toHaveBeenCalled();
+  });
+
   it("setDigit sets the highlight directly without toggling on repeat", () => {
     const { result } = renderHook(() => useDigitHighlight(makeHandlers()));
 

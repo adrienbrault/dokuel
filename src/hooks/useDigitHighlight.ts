@@ -52,6 +52,18 @@ export function useDigitHighlight({
     deselectCell();
   }, [deselectCell]);
 
+  // Ends a numpad press: deselects the active cell and, when the press
+  // placed a note for `placedDigit`, promotes that digit to the
+  // highlight so the numpad keeps showing it as selected. A null digit
+  // (a press that placed nothing) leaves the current highlight intact.
+  const endNumpadPress = useCallback(
+    (placedDigit: number | null) => {
+      if (placedDigit !== null) setHighlightedDigit(placedDigit);
+      deselectCell();
+    },
+    [deselectCell],
+  );
+
   return {
     highlightedDigit,
     toggle,
@@ -59,5 +71,6 @@ export function useDigitHighlight({
     selectCell: wrappedSelectCell,
     setSelectedCells: wrappedSetSelectedCells,
     deselectCell: wrappedDeselectCell,
+    endNumpadPress,
   };
 }
