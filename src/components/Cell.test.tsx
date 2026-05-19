@@ -125,32 +125,16 @@ describe("Cell chargingDigit", () => {
     expect(screen.getByRole("button").className).toContain("touch-none");
   });
 
-  it("renders the value drop preview when hovering with value mode", () => {
+  it("renders the diagonal split preview on a valid drop target", () => {
     render(
       <Cell
         {...defaultProps()}
         cell={makeCell()}
         dropTargetState="valid"
         dropMode="value"
-        dropDigit={4}
       />,
     );
-    expect(screen.getByTestId("drop-preview-value")).toHaveTextContent("4");
-    expect(screen.queryByTestId("drop-preview-note")).toBeNull();
-  });
-
-  it("renders the note drop preview at the digit's sub-cell when hovering with note mode", () => {
-    render(
-      <Cell
-        {...defaultProps()}
-        cell={makeCell()}
-        dropTargetState="valid"
-        dropMode="note"
-        dropDigit={4}
-      />,
-    );
-    expect(screen.getByTestId("drop-preview-note")).toHaveTextContent("4");
-    expect(screen.queryByTestId("drop-preview-value")).toBeNull();
+    expect(screen.getByTestId("drop-preview")).toBeInTheDocument();
   });
 
   it("exposes the drop mode via a data attribute for CSS hooks", () => {
@@ -160,7 +144,6 @@ describe("Cell chargingDigit", () => {
         cell={makeCell()}
         dropTargetState="valid"
         dropMode="note"
-        dropDigit={7}
       />,
     );
     expect(screen.getByRole("button").dataset.dropMode).toBe("note");
@@ -173,7 +156,6 @@ describe("Cell chargingDigit", () => {
         cell={makeCell()}
         dropTargetState="invalid"
         dropMode="note"
-        dropDigit={7}
       />,
     );
     expect(screen.queryByTestId("drop-preview")).toBeNull();

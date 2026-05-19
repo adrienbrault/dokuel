@@ -12,6 +12,7 @@ import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
+import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -253,6 +254,7 @@ export function SoloGame({
             dragState={paused ? null : dragState}
             onStartCellDrag={paused ? undefined : startCellDrag}
           />
+          <DigitDragIndicator state={paused ? null : dragState} />
           {paused && (
             <button
               type="button"

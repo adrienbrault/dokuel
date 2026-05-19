@@ -34,12 +34,10 @@ type CellProps = {
   dropTargetState?: "valid" | "invalid" | null | undefined;
   /**
    * Which slot in this cell the drop will land in, when the cell is a
-   * valid drop target. Drives the diagonal preview split so the user
-   * sees a value-sized digit vs a note-sized digit before releasing.
+   * valid drop target. Drives the diagonal tint so the user sees
+   * which half is the active landing zone before releasing.
    */
   dropMode?: "value" | "note" | undefined;
-  /** The digit currently being dragged — needed to render the drop preview. */
-  dropDigit?: number | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -60,7 +58,6 @@ export const Cell = memo(function Cell({
   isDragSource,
   dropTargetState,
   dropMode,
-  dropDigit,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -133,7 +130,7 @@ export const Cell = memo(function Cell({
           ))}
         </div>
       ) : null}
-      {dropTargetState === "valid" && dropDigit !== undefined && (
+      {dropTargetState === "valid" && (
         <span
           data-testid="drop-preview"
           aria-hidden="true"
@@ -174,31 +171,6 @@ export const Cell = memo(function Cell({
               opacity: 0.55,
             }}
           />
-          {/* Preview digit drawn where it would actually land: large
-              and centered for a value, small at the digit's note
-              sub-cell for a note. */}
-          {dropMode === "value" ? (
-            <span
-              data-testid="drop-preview-value"
-              className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] font-semibold text-cell-user leading-none opacity-75"
-            >
-              {dropDigit}
-            </span>
-          ) : (
-            <span
-              data-testid="drop-preview-note"
-              className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]"
-            >
-              {DIGITS.map((n) => (
-                <span
-                  key={n}
-                  className="flex items-center justify-center text-[clamp(0.80859375rem,3.1625vw,1.078125rem)] font-semibold text-cell-user leading-none opacity-90"
-                >
-                  {n === dropDigit ? dropDigit : ""}
-                </span>
-              ))}
-            </span>
-          )}
         </span>
       )}
       {cell.value === null && chargingDigit !== undefined && (
