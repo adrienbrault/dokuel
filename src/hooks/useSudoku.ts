@@ -67,6 +67,13 @@ export function useSudoku(
     [],
   );
 
+  // Toggle a note at an explicit cell without selecting it — the drag
+  // layer drops notes this way so the board highlight stays put.
+  const placeNoteAt = useCallback((row: number, col: number, value: number) => {
+    gameFeedback.onPlace();
+    dispatch({ type: "PLACE_NOTE_AT", row, col, value });
+  }, []);
+
   const erase = useCallback(() => {
     gameFeedback.onErase();
     dispatch({ type: "ERASE" });
@@ -114,6 +121,7 @@ export function useSudoku(
     deselectCell,
     setSelectedCells,
     placeNumber,
+    placeNoteAt,
     erase,
     undo,
     activeHint: state.activeHint,

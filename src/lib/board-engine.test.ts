@@ -129,3 +129,68 @@ describe("projectBoard", () => {
     expect(errors.has(cellKey(0, 2))).toBe(true);
   });
 });
+
+describe("PLACE_NOTE_AT action", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("toggles a note at an explicit cell with no cell selected", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, {
+      type: "PLACE_NOTE_AT",
+      row: 0,
+      col: 2,
+      value: 4,
+    });
+    expect(state.board[0]![2]!.notes.has(4)).toBe(true);
+  });
+
+  it("leaves the selection untouched", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 4, col: 4 });
+    state = reducer(state, {
+      type: "PLACE_NOTE_AT",
+      row: 0,
+      col: 2,
+      value: 7,
+    });
+    expect(state.selectedCell).toEqual({ row: 4, col: 4 });
+    expect(state.selectedCells).toEqual(new Set([cellKey(4, 4)]));
+  });
+
+  it("removes the note when the same value is placed twice", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 4 });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 4 });
+    expect(state.board[0]![2]!.notes.has(4)).toBe(false);
+  });
+
+  it("ignores given cells", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 0, value: 4 });
+    expect(state.board[0]![0]!.notes.size).toBe(0);
+    expect(state.history).toHaveLength(0);
+  });
+
+  it("ignores cells that already hold a value", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 9 });
+    expect(state.board[0]![2]!.notes.size).toBe(0);
+    expect(state.board[0]![2]!.value).toBe(4);
+  });
+
+  it("records history so the note can be undone", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 4 });
+    expect(state.history).toHaveLength(1);
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.notes.has(4)).toBe(false);
+    expect(state.history).toHaveLength(0);
+  });
+});
