@@ -145,7 +145,7 @@ export const Cell = memo(function Cell({
           data-testid="drop-zone"
           data-mode={dropMode}
           aria-hidden="true"
-          className="absolute inset-x-0 h-1/2 bg-accent/30 pointer-events-none animate-drop-preview"
+          className="absolute inset-x-0 h-1/2 bg-accent/15 pointer-events-none animate-drop-preview"
           style={{ top: dropMode === "value" ? "0%" : "50%" }}
         />
       )}
