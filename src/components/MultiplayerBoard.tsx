@@ -8,6 +8,7 @@ import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
 import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
+import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
 import { solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
@@ -33,6 +34,9 @@ export type MultiplayerBoardProps = {
   playerId: string;
   difficulty: import("../lib/types.ts").Difficulty;
   assistLevel?: AssistLevel;
+  /** Resolved at render time from the room's player list. Empty string is
+   *  tolerated for the rare case of a winner-without-known-opponent. */
+  opponentName: string;
   opponentProgress: {
     cellsRemaining: number;
     completionPercent: number;
@@ -52,6 +56,7 @@ export function MultiplayerBoard({
   playerId,
   difficulty,
   assistLevel = "standard",
+  opponentName,
   opponentProgress,
   opponentDisconnected,
   gameOver,
@@ -139,6 +144,36 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (game.status === "completed") deleteGame(gameKey);
   }, [game.status, gameKey]);
+
+  // Persist the match outcome to the multiplayer history exactly once.
+  // The store dedups on (roomId, gameNumber); the ref guards the common
+  // case of re-renders within a single mount.
+  const savedResultRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!gameOver) return;
+    const key = `${roomId}:${gameNumber}`;
+    if (savedResultRef.current === key) return;
+    savedResultRef.current = key;
+    saveMultiplayerGameResult({
+      difficulty,
+      assistLevel,
+      time: timerSecondsRef.current,
+      date: new Date().toISOString().slice(0, 10),
+      timestamp: Date.now(),
+      won: gameOver.winnerId === playerId,
+      opponentName: opponentName || gameOver.winnerName,
+      roomId,
+      gameNumber,
+    });
+  }, [
+    gameOver,
+    roomId,
+    gameNumber,
+    difficulty,
+    assistLevel,
+    playerId,
+    opponentName,
+  ]);
 
   // Touch numpad: tap is the cheap, frequent action (note); hold is the
   // deliberate commit (value). Keyboard digit (if focused) still follows

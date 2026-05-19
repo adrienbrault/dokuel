@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadGame } from "../lib/game-storage.ts";
+import { getMultiplayerStats } from "../lib/multiplayer-stats.ts";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 
 const SOLVED =
@@ -28,6 +29,7 @@ function baseProps() {
     gameNumber: 1,
     playerId: "p1",
     difficulty: "easy" as const,
+    opponentName: "Brave Otter",
     opponentProgress: null,
     opponentDisconnected: false,
     gameOver: null,
@@ -385,6 +387,48 @@ describe("MultiplayerBoard after opponent wins", () => {
 
     expect(screen.queryByText(/Alice/)).not.toBeNull();
     expect(screen.queryByText(/finished first/)).not.toBeNull();
+  });
+
+  it("records a loss with opponent name when the opponent wins", () => {
+    const props = {
+      ...baseProps(),
+      gameOver: { winnerId: "p2", winnerName: "Brave Otter" },
+    };
+    render(<MultiplayerBoard {...props} />);
+
+    const all = getMultiplayerStats();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({
+      difficulty: "easy",
+      won: false,
+      opponentName: "Brave Otter",
+      roomId: "room-abc",
+      gameNumber: 1,
+    });
+  });
+
+  it("records a win when this player is the winner", () => {
+    const props = {
+      ...baseProps(),
+      gameOver: { winnerId: "p1", winnerName: "Me" },
+    };
+    render(<MultiplayerBoard {...props} />);
+
+    const all = getMultiplayerStats();
+    expect(all).toHaveLength(1);
+    expect(all[0]?.won).toBe(true);
+  });
+
+  it("does not record a duplicate record on remount for the same gameNumber", () => {
+    const props = {
+      ...baseProps(),
+      gameOver: { winnerId: "p2", winnerName: "Brave Otter" },
+    };
+    const { unmount } = render(<MultiplayerBoard {...props} />);
+    unmount();
+    render(<MultiplayerBoard {...props} />);
+
+    expect(getMultiplayerStats()).toHaveLength(1);
   });
 
   it("preserves the loser's autosave so they can resume after a refresh", () => {
