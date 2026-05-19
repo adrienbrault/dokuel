@@ -77,10 +77,10 @@ export function SoloGame({
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
   );
 
-  // Capture PB before this game's result is saved
+  // Capture PB for this difficulty + assist mode, before this result saves.
   const priorStats = useMemo(
-    () => getStatsForDifficulty(difficulty),
-    [difficulty],
+    () => getStatsForDifficulty(difficulty, assistLevel),
+    [difficulty, assistLevel],
   );
   const personalBest = priorStats?.bestTime ?? null;
 
