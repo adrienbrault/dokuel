@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { getStats, getStatsForDifficulty, saveGameResult } from "./stats.ts";
+import {
+  getStats,
+  getStatsByAssistLevel,
+  getStatsForDifficulty,
+  saveGameResult,
+} from "./stats.ts";
 
 describe("stats", () => {
   beforeEach(() => {
@@ -98,6 +103,51 @@ describe("stats", () => {
       const result = getStatsForDifficulty("easy");
       expect(result?.gamesPlayed).toBe(1);
       expect(result?.bestTime).toBe(100);
+    });
+
+    it("filters by assist level when one is given", () => {
+      saveGameResult("easy", "paper", 500, true);
+      saveGameResult("easy", "standard", 100, true);
+      saveGameResult("easy", "standard", 200, true);
+      const result = getStatsForDifficulty("easy", "standard");
+      expect(result).toEqual({
+        gamesPlayed: 2,
+        bestTime: 100,
+        averageTime: 150,
+      });
+    });
+  });
+
+  describe("getStatsByAssistLevel", () => {
+    it("returns an empty array when no wins exist for the difficulty", () => {
+      saveGameResult("hard", "standard", 100, false);
+      expect(getStatsByAssistLevel("hard")).toEqual([]);
+    });
+
+    it("returns one entry per played mode in paper/standard/full order", () => {
+      saveGameResult("medium", "full", 90, true);
+      saveGameResult("medium", "paper", 400, true);
+      const levels = getStatsByAssistLevel("medium").map((s) => s.assistLevel);
+      expect(levels).toEqual(["paper", "full"]);
+    });
+
+    it("computes best and average independently per mode", () => {
+      saveGameResult("easy", "paper", 300, true);
+      saveGameResult("easy", "paper", 500, true);
+      saveGameResult("easy", "standard", 100, true);
+      const byLevel = getStatsByAssistLevel("easy");
+      expect(byLevel.find((s) => s.assistLevel === "paper")).toEqual({
+        assistLevel: "paper",
+        gamesPlayed: 2,
+        bestTime: 300,
+        averageTime: 400,
+      });
+      expect(byLevel.find((s) => s.assistLevel === "standard")).toEqual({
+        assistLevel: "standard",
+        gamesPlayed: 1,
+        bestTime: 100,
+        averageTime: 100,
+      });
     });
   });
 });
