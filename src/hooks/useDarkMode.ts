@@ -9,8 +9,8 @@ function getSystemPreference(): boolean {
 // Hex matches --color-bg-primary from src/index.css. Kept in sync manually
 // because <meta name="theme-color"> needs a parseable color, and JSDOM's
 // getComputedStyle does not convert oklch for us to read at runtime.
-const THEME_COLOR_LIGHT = "#fdfbf9";
-const THEME_COLOR_DARK = "#0b0906";
+const THEME_COLOR_LIGHT = "#f9f6f2";
+const THEME_COLOR_DARK = "#0e0c08";
 
 function syncThemeColorMeta(theme: Theme, isDark: boolean) {
   // System mode is handled by the media-query <meta> tags in index.html.

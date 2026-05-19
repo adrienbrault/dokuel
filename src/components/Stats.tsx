@@ -1,3 +1,4 @@
+import { Flame } from "lucide-react";
 import { useMemo } from "react";
 import {
   ASSIST_LEVEL_LABELS,
@@ -26,6 +27,13 @@ type StatsProps = {
 
 const RECENT_MATCHES_LIMIT = 10;
 
+const DIFFICULTY_DOT: Record<Difficulty, string> = {
+  easy: "bg-difficulty-easy",
+  medium: "bg-difficulty-medium",
+  hard: "bg-difficulty-hard",
+  expert: "bg-difficulty-expert",
+};
+
 export function Stats({ onBack }: StatsProps) {
   const allStats = useMemo(() => getStats(), []);
   const streak = useMemo(() => getDailyStreak(), []);
@@ -41,36 +49,46 @@ export function Stats({ onBack }: StatsProps) {
 
   return (
     <div className="screen">
-      <div className="screen-content gap-8">
+      <div className="screen-content gap-7">
         <div className="flex flex-col items-center gap-1">
           <h2 className="heading">Stats</h2>
-          <p className="text-sm text-text-muted">
+          <p className="caption">
             {totalGames} {totalGames === 1 ? "game" : "games"} played
           </p>
         </div>
 
-        <div className="card p-4 w-full">
+        <div
+          className="w-full rounded-2xl p-5 text-white"
+          style={{
+            backgroundImage:
+              "linear-gradient(135deg, oklch(0.59 0.123 166), oklch(0.47 0.12 172))",
+            boxShadow: "var(--shadow-accent)",
+          }}
+        >
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
+              <div className="flex items-center justify-center gap-1.5 text-3xl font-bold tabular-nums">
+                <Flame size={22} aria-hidden="true" className="text-white/85" />
                 {streak.currentStreak}
               </div>
-              <div className="text-xs text-text-muted">Current Streak</div>
+              <div className="mt-0.5 text-xs font-medium text-white/75">
+                Current Streak
+              </div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
+              <div className="text-3xl font-bold tabular-nums">
                 {streak.longestStreak}
               </div>
-              <div className="text-xs text-text-muted">Longest Streak</div>
+              <div className="mt-0.5 text-xs font-medium text-white/75">
+                Longest Streak
+              </div>
             </div>
           </div>
         </div>
 
         <section aria-label="Solo" className="flex flex-col gap-3 w-full">
-          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-            Solo
-          </h3>
-          <div className="flex flex-col gap-4 w-full">
+          <h3 className="label">Solo</h3>
+          <div className="flex flex-col gap-3 w-full">
             {DIFFICULTIES.map((diff) => (
               <DifficultyStats key={diff} difficulty={diff} />
             ))}
@@ -81,11 +99,9 @@ export function Stats({ onBack }: StatsProps) {
           aria-label="Multiplayer"
           className="flex flex-col gap-3 w-full"
         >
-          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-            Multiplayer
-          </h3>
+          <h3 className="label">Multiplayer</h3>
           {mpSummary.played === 0 ? (
-            <div className="card p-4 w-full">
+            <div className="card p-5 w-full">
               <p className="text-sm text-text-muted text-center">
                 No multiplayer games yet
               </p>
@@ -105,10 +121,8 @@ export function Stats({ onBack }: StatsProps) {
               </div>
               {mpRecent.length > 0 && (
                 <div className="flex flex-col gap-2 w-full mt-2">
-                  <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-                    Recent matches
-                  </h4>
-                  <ul className="card divide-y divide-border-default w-full">
+                  <h4 className="label">Recent matches</h4>
+                  <ul className="card divide-y divide-border-default w-full overflow-hidden">
                     {mpRecent.map((m) => (
                       <RecentMatchRow
                         key={`${m.roomId}-${m.gameNumber}`}
@@ -144,13 +158,19 @@ function DifficultyStats({ difficulty }: { difficulty: Difficulty }) {
   return (
     <div className="card p-4 w-full">
       <div className="flex items-center justify-between mb-3">
-        <span
-          className={`text-sm font-semibold ${DIFFICULTY_TEXT_COLORS[difficulty]}`}
-        >
-          {DIFFICULTY_LABELS[difficulty]}
+        <span className="flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${DIFFICULTY_DOT[difficulty]}`}
+            aria-hidden="true"
+          />
+          <span
+            className={`text-sm font-bold ${DIFFICULTY_TEXT_COLORS[difficulty]}`}
+          >
+            {DIFFICULTY_LABELS[difficulty]}
+          </span>
         </span>
         {totalWins > 0 && (
-          <span className="text-xs text-text-muted">
+          <span className="text-xs font-medium text-text-muted">
             {totalWins} {totalWins === 1 ? "win" : "wins"}
           </span>
         )}
@@ -162,7 +182,7 @@ function DifficultyStats({ difficulty }: { difficulty: Difficulty }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-text-muted text-center">No games yet</p>
+        <p className="text-sm text-text-muted text-center py-1">No games yet</p>
       )}
     </div>
   );
@@ -190,7 +210,7 @@ function AssistModeRow({ stats }: { stats: AssistLevelStats }) {
 function ModeStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-base font-bold text-text-primary font-mono tabular-nums">
+      <div className="text-base font-bold text-text-primary tabular-nums">
         {value}
       </div>
       <div className="text-[10px] text-text-muted uppercase tracking-wide">
@@ -232,7 +252,7 @@ function SummaryStat({
 }) {
   return (
     <div>
-      <div className="text-xl font-bold text-text-primary font-mono tabular-nums">
+      <div className="text-xl font-bold text-text-primary tabular-nums">
         {value}
       </div>
       <div className="text-[10px] text-text-muted uppercase tracking-wide">
@@ -256,12 +276,18 @@ function MultiplayerDifficultyStats({
   return (
     <div className="card p-4 w-full">
       <div className="flex items-center justify-between mb-3">
-        <span
-          className={`text-sm font-semibold ${DIFFICULTY_TEXT_COLORS[difficulty]}`}
-        >
-          {DIFFICULTY_LABELS[difficulty]}
+        <span className="flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${DIFFICULTY_DOT[difficulty]}`}
+            aria-hidden="true"
+          />
+          <span
+            className={`text-sm font-bold ${DIFFICULTY_TEXT_COLORS[difficulty]}`}
+          >
+            {DIFFICULTY_LABELS[difficulty]}
+          </span>
         </span>
-        <span className="text-xs text-text-muted">
+        <span className="text-xs font-medium text-text-muted">
           {stats.wins}W · {stats.losses}L
         </span>
       </div>
@@ -287,23 +313,35 @@ function RecentMatchRow({ match }: { match: MultiplayerGameRecord }) {
     ? "text-emerald-600 dark:text-emerald-400"
     : "text-rose-600 dark:text-rose-400";
   return (
-    <li className="flex items-center justify-between gap-3 px-4 py-2.5">
-      <div className="flex flex-col min-w-0">
-        <span className="text-sm text-text-primary truncate">
-          vs {match.opponentName || "Opponent"}
+    <li className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+            match.won
+              ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+              : "bg-rose-500/12 text-rose-600 dark:text-rose-400"
+          }`}
+          aria-hidden="true"
+        >
+          {match.won ? "W" : "L"}
         </span>
-        <span className="text-[11px] text-text-muted">
-          {formatShortDate(match.date)} ·{" "}
-          <span className={DIFFICULTY_TEXT_COLORS[match.difficulty]}>
-            {DIFFICULTY_LABELS[match.difficulty]}
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium text-text-primary truncate">
+            vs {match.opponentName || "Opponent"}
           </span>
-        </span>
+          <span className="text-[11px] text-text-muted">
+            {formatShortDate(match.date)} ·{" "}
+            <span className={DIFFICULTY_TEXT_COLORS[match.difficulty]}>
+              {DIFFICULTY_LABELS[match.difficulty]}
+            </span>
+          </span>
+        </div>
       </div>
       <div className="flex flex-col items-end shrink-0">
-        <span className={`text-sm font-semibold ${outcomeColor}`}>
+        <span className={`text-sm font-bold ${outcomeColor}`}>
           {match.won ? "Won" : "Lost"}
         </span>
-        <span className="text-[11px] text-text-muted font-mono tabular-nums">
+        <span className="text-[11px] text-text-muted tabular-nums">
           {formatTime(match.time)}
         </span>
       </div>

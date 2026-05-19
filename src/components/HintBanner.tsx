@@ -10,7 +10,7 @@ export function HintBanner({ hint, onDismiss }: HintBannerProps) {
     hint.technique === "naked-single" ? "Naked Single" : "Hidden Single";
 
   return (
-    <div className="w-full max-w-lg rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 px-3 py-2 animate-modal-content">
+    <div className="w-full max-w-lg rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 px-3.5 py-2.5 animate-modal-content">
       <div className="flex items-start gap-2">
         <span className="text-lg leading-none mt-0.5" aria-hidden="true">
           💡

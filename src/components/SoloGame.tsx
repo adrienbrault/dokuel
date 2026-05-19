@@ -204,12 +204,12 @@ export function SoloGame({
               timerSecondsRef.current = s;
             }}
           />
-          <span className="text-xs text-text-muted font-mono tabular-nums">
+          <span className="text-xs text-text-muted tabular-nums mt-0.5">
             {paused ? (
               "Paused"
             ) : (
               <>
-                <span className="text-accent font-medium">
+                <span className="text-accent font-semibold">
                   {81 - game.cellsRemaining}
                 </span>
                 /81

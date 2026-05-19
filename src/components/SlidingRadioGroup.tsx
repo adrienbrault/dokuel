@@ -29,10 +29,13 @@ export function SlidingRadioGroup<T extends string>({
       className="relative flex w-full rounded-xl bg-bg-inset p-1"
     >
       <div
-        className="absolute top-1 bottom-1 rounded-lg bg-accent shadow-sm transition-transform duration-200 ease-out"
+        className="absolute top-1 bottom-1 rounded-lg transition-transform duration-200 ease-out"
         style={{
           width: `calc((100% - 0.5rem) / ${count})`,
           transform: `translateX(calc(${activeIndex} * 100%))`,
+          backgroundImage:
+            "linear-gradient(to bottom, oklch(0.59 0.123 166), oklch(0.475 0.113 170))",
+          boxShadow: "var(--shadow-accent)",
         }}
         aria-hidden="true"
       />

@@ -287,7 +287,7 @@ export function NumPad({
               type="button"
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
+              className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-bold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "numpad-key-active" : "numpad-key text-text-primary"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
@@ -300,7 +300,7 @@ export function NumPad({
                   : `${n}${isSelected ? ", selected" : ""}`
               }
             >
-              <span className="text-lg leading-none">{n}</span>
+              <span className="text-xl leading-none">{n}</span>
               {showRemainingCounts && (
                 <span
                   className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
