@@ -440,6 +440,26 @@ describe("useSudoku", () => {
     expect(result.current.board[pos.row]![pos.col]!.value).toBe(4);
   });
 
+  it("placeNoteAt toggles a note without moving the selection", () => {
+    const { result } = setupHook();
+
+    const [anchor, target] = findMultipleEmptyCells(result.current.board, 2);
+    if (!anchor || !target) throw new Error("Need two empty cells");
+
+    act(() => result.current.selectCell(anchor.row, anchor.col));
+    act(() => result.current.placeNoteAt(target.row, target.col, 6));
+
+    expect(result.current.board[target.row]![target.col]!.notes.has(6)).toBe(
+      true,
+    );
+    expect(result.current.selectedCell).toEqual(anchor);
+
+    act(() => result.current.placeNoteAt(target.row, target.col, 6));
+    expect(result.current.board[target.row]![target.col]!.notes.has(6)).toBe(
+      false,
+    );
+  });
+
   describe("hint", () => {
     it("places the deduced value on the board", () => {
       const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));

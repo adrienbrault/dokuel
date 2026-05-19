@@ -59,6 +59,7 @@ export type Action =
       autoEliminateNotes: boolean;
       asNote?: boolean | undefined;
     }
+  | { type: "PLACE_NOTE_AT"; row: number; col: number; value: number }
   | { type: "ERASE" }
   | { type: "UNDO" }
   | { type: "HINT" }
@@ -213,6 +214,41 @@ function handlePlaceNumber(
     ...state,
     board,
     status: complete ? "completed" : state.status,
+    history: pushHistory(state.history, moveAction),
+  };
+}
+
+/**
+ * Toggle a note at an explicit cell, independent of the current
+ * selection. Used by the digit drag-and-drop layer: a note dropped on
+ * a cell must land there without the cell becoming selected, so the
+ * board highlight stays on whatever the player was working with.
+ */
+function handlePlaceNoteAt(
+  state: State,
+  row: number,
+  col: number,
+  value: number,
+): State {
+  if (state.status === "completed") return state;
+  const cell = state.board[row]?.[col];
+  if (!cell || cell.isGiven || cell.value !== null) return state;
+
+  const board = cloneBoard(state.board);
+  const notes = board[row]![col]!.notes;
+  const moveAction: MoveAction = {
+    type: "toggleNote",
+    position: { row, col },
+    note: value,
+  };
+  if (notes.has(value)) {
+    notes.delete(value);
+  } else {
+    notes.add(value);
+  }
+  return {
+    ...state,
+    board,
     history: pushHistory(state.history, moveAction),
   };
 }
@@ -415,6 +451,9 @@ function dispatchAction(state: State, action: Action): State {
         action.autoEliminateNotes,
         action.asNote,
       );
+
+    case "PLACE_NOTE_AT":
+      return handlePlaceNoteAt(state, action.row, action.col, action.value);
 
     case "ERASE":
       return handleErase(state);
