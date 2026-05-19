@@ -1,9 +1,18 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate } from "yjs";
+
+type FakeProvider = {
+  connected: boolean;
+  connectCount: number;
+  disconnectCount: number;
+  connect(): void;
+  disconnect(): void;
+};
 
 const mocks = vi.hoisted(() => ({
   lastDoc: null as Doc | null,
+  lastProvider: null as FakeProvider | null,
   lastIdbName: null as string | null,
   lastIdbDoc: null as Doc | null,
   idbDestroyed: false,
@@ -15,7 +24,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("y-webrtc", () => {
-  class FakeWebrtcProvider {
+  class FakeWebrtcProvider implements FakeProvider {
     awareness = {
       setLocalStateField: vi.fn(),
       on: vi.fn(),
@@ -23,12 +32,22 @@ vi.mock("y-webrtc", () => {
       getStates: () => new Map(),
     };
     connected = false;
+    connectCount = 0;
+    disconnectCount = 0;
     constructor(_roomId: string, doc: Doc) {
       mocks.lastDoc = doc;
+      mocks.lastProvider = this;
     }
     on() {}
     off() {}
-    disconnect() {}
+    connect() {
+      this.connected = true;
+      this.connectCount += 1;
+    }
+    disconnect() {
+      this.connected = false;
+      this.disconnectCount += 1;
+    }
     destroy() {}
   }
   return { WebrtcProvider: FakeWebrtcProvider };
@@ -69,7 +88,19 @@ async function flushSync() {
 
 beforeEach(() => {
   mocks.idbSeedUpdate = null;
+  mocks.lastProvider = null;
 });
+
+// Force document.hidden + dispatch the visibilitychange event so the
+// hook's listener fires. jsdom defaults to hidden=false and exposes
+// the property as a getter, so we redefine it per call.
+function setTabHidden(hidden: boolean) {
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    get: () => hidden,
+  });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
 
 function countClues(puzzle: string): number {
   return puzzle.split("").filter((c) => c !== ".").length;
@@ -304,5 +335,132 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomState?.gameNumber).toBe(seedGameNumber);
     expect(result.current.roomState?.status).toBe("playing");
     expect(result.current.roomState?.players).toHaveLength(2);
+  });
+
+  describe("visibility-driven WebRTC lifecycle", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      setTabHidden(false);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      setTabHidden(false);
+    });
+
+    it("disconnects the WebRTC provider after the hide debounce", async () => {
+      renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-hide",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const provider = mocks.lastProvider!;
+      provider.connected = true;
+      provider.disconnectCount = 0;
+
+      act(() => {
+        setTabHidden(true);
+      });
+      expect(provider.disconnectCount).toBe(0);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      expect(provider.disconnectCount).toBe(1);
+      expect(provider.connected).toBe(false);
+    });
+
+    it("does not disconnect if the tab returns before the debounce", async () => {
+      renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-hide-cancel",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const provider = mocks.lastProvider!;
+      provider.connected = true;
+      provider.disconnectCount = 0;
+
+      act(() => {
+        setTabHidden(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000);
+      });
+      act(() => {
+        setTabHidden(false);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000);
+      });
+
+      expect(provider.disconnectCount).toBe(0);
+    });
+
+    it("reconnects when the tab returns after disconnecting", async () => {
+      renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-rejoin",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const provider = mocks.lastProvider!;
+      provider.connected = true;
+      provider.connectCount = 0;
+
+      act(() => {
+        setTabHidden(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      expect(provider.connected).toBe(false);
+
+      act(() => {
+        setTabHidden(false);
+      });
+      expect(provider.connectCount).toBe(1);
+      expect(provider.connected).toBe(true);
+    });
+
+    it("does not flag opponent as disconnected while we are the hidden one", async () => {
+      const { result } = renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-hide-flag",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const doc = mocks.lastDoc!;
+      const fakeRoom = { doc, roomId: "room-hide-flag" };
+      // Two players in the doc, no awareness peers → before the fix
+      // this would flip to true. With the !document.hidden gate it
+      // must stay false because *we* are the one going away.
+      await act(async () => {
+        joinRoom(fakeRoom, "p2", "Bob");
+        setTabHidden(true);
+      });
+      expect(result.current.opponentDisconnected).toBe(false);
+    });
   });
 });

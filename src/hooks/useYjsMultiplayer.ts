@@ -124,7 +124,11 @@ export function useYjsMultiplayer({
         playerId,
         getPlayers(room).length,
       );
-      setOpponentDisconnected(!hasOpponent && getPlayers(room).length > 1);
+      // We drop our own WebRTC on hide (see visibility handler), which
+      // clears our awareness — don't blame the opponent for that.
+      setOpponentDisconnected(
+        !document.hidden && !hasOpponent && getPlayers(room).length > 1,
+      );
     };
 
     awareness.on("change", updatePresence);
@@ -142,6 +146,34 @@ export function useYjsMultiplayer({
     provider.on("peers", onPeers);
 
     setConnected(provider.connected);
+
+    // Release WebRTC peer connections + signaling sockets while the
+    // tab is backgrounded: iOS Safari kills tabs under memory pressure
+    // and RTCPeerConnections are the dominant cost here. Y.Doc and
+    // persistence stay alive across the cycle.
+    const HIDE_DEBOUNCE_MS = 15_000;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (hideTimer === null) {
+          hideTimer = setTimeout(() => {
+            provider.disconnect();
+            hideTimer = null;
+          }, HIDE_DEBOUNCE_MS);
+        }
+      } else {
+        if (hideTimer !== null) {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+        }
+        if (!provider.connected) {
+          provider.connect();
+          announcePresence(awareness, playerId, playerNameRef.current);
+        }
+      }
+      updatePresence();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
 
     // Defer the writes until y-indexeddb has loaded any persisted
     // state. Writing before sync would seed clock-0 ops (initializeRoom
@@ -171,6 +203,11 @@ export function useYjsMultiplayer({
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (hideTimer !== null) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
       unobserveRoom();
       awareness.off("change", updatePresence);
       provider.off("status", onStatus);
