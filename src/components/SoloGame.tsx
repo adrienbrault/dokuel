@@ -126,12 +126,12 @@ export function SoloGame({
     holdFiredRef.current = false;
   };
 
-  // Digit drag: drop commits the value (the deliberate gesture earns
-  // the commit). Notes still come from tap-on-numpad.
+  // Digit drag: top-half drop commits a value, bottom-half adds a note.
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
     game,
     disabled: paused || game.status !== "playing",
     autoEliminateNotes: assistLevel !== "paper",
+    onHighlightDigit: highlight.setDigit,
   });
 
   const handleBack = () => {

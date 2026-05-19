@@ -196,6 +196,7 @@ export function MultiplayerBoard({
     game,
     disabled: game.status !== "playing",
     autoEliminateNotes: assistLevel !== "paper",
+    onHighlightDigit: highlight.setDigit,
   });
 
   return (
