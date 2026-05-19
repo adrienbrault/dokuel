@@ -1,5 +1,10 @@
+import { Check, Copy, Pencil, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
+import {
+  DIFFICULTY_BADGE_CLASSES,
+  DIFFICULTY_LABELS,
+  DIFFICULTY_OPTIONS,
+} from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
@@ -69,52 +74,67 @@ export function Lobby({
   }
 
   return (
-    <div className="screen-content gap-8">
-      <div className="flex flex-col items-center gap-2">
+    <div className="screen-content gap-6">
+      <div className="flex flex-col items-center gap-1">
         <h2 className="heading">Game Lobby</h2>
-        <button
-          type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-bg-raised cursor-pointer touch-manipulation press-spring-soft"
-          onClick={async () => {
-            await navigator.clipboard.writeText(roomState.roomId);
-            setCodeCopied(true);
-            setTimeout(() => setCodeCopied(false), 2000);
-          }}
-          title="Copy room code"
-        >
-          <span className="caption">{codeCopied ? "Copied!" : "Room:"}</span>
-          <span className="font-mono font-semibold text-text-primary">
-            {roomState.roomId}
-          </span>
-        </button>
-        <button
-          type="button"
-          className="btn btn-md btn-primary mt-1 shadow-sm shadow-accent/20"
-          onClick={handleShare}
-        >
-          {copied ? "Link Copied!" : "Share Invite Link"}
-        </button>
-        <p className="caption mt-1">
-          Difficulty:{" "}
-          <span className="font-medium text-text-primary capitalize">
-            {roomState.difficulty}
-          </span>
-        </p>
+        <p className="caption">Share the code, then start when ready</p>
       </div>
 
-      <div className="flex flex-col gap-3 w-full">
-        <h3 className="label tracking-wide">Players</h3>
+      <div className="card flex flex-col items-center gap-3.5 w-full p-5">
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="label">Room Code</span>
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-xl px-2 py-1 touch-manipulation transition-colors hover:bg-bg-inset"
+            onClick={async () => {
+              await navigator.clipboard.writeText(roomState.roomId);
+              setCodeCopied(true);
+              setTimeout(() => setCodeCopied(false), 2000);
+            }}
+            title="Copy room code"
+          >
+            <span className="text-2xl font-mono font-bold tracking-wide text-text-primary">
+              {roomState.roomId}
+            </span>
+            <span className="text-text-muted" aria-hidden="true">
+              {codeCopied ? <Check size={16} /> : <Copy size={15} />}
+            </span>
+          </button>
+          <span className="text-xs text-text-muted h-4">
+            {codeCopied ? "Copied to clipboard" : ""}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-md btn-primary flex items-center gap-2"
+          onClick={handleShare}
+        >
+          <Share2 size={15} aria-hidden="true" />
+          {copied ? "Link Copied!" : "Share Invite Link"}
+        </button>
+        <span
+          className={`text-xs font-bold px-2.5 py-1 rounded-full ${DIFFICULTY_BADGE_CLASSES[roomState.difficulty]}`}
+        >
+          {DIFFICULTY_LABELS[roomState.difficulty]}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-2.5 w-full">
+        <h3 className="label">Players</h3>
         {roomState.players.map((player) => {
           const isMe = player.id === playerId;
           return (
             <div
               key={player.id}
-              className="card flex items-center gap-3 px-4 py-3"
+              className="card flex items-center gap-3 px-3.5 py-3"
             >
-              <div
-                className="w-3 h-3 rounded-full shrink-0"
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                 style={{ backgroundColor: player.color }}
-              />
+                aria-hidden="true"
+              >
+                {player.name.charAt(0).toUpperCase()}
+              </span>
               {isMe && editingName ? (
                 <input
                   ref={inputRef}
@@ -127,12 +147,12 @@ export function Lobby({
                     if (e.key === "Escape") setEditingName(false);
                   }}
                   maxLength={24}
-                  className="font-medium text-text-primary bg-transparent border-b-2 border-accent outline-none min-w-0 flex-1"
+                  className="font-semibold text-text-primary bg-transparent border-b-2 border-accent outline-none min-w-0 flex-1"
                 />
               ) : (
                 <button
                   type="button"
-                  className={`font-medium text-text-primary text-left truncate ${isMe ? "cursor-pointer hover:underline decoration-accent decoration-2 underline-offset-2" : "cursor-default"}`}
+                  className={`font-semibold text-text-primary text-left truncate flex-1 ${isMe ? "cursor-pointer" : "cursor-default"}`}
                   onClick={() => {
                     if (isMe) startEditing(player.name);
                   }}
@@ -144,15 +164,16 @@ export function Lobby({
               {isMe && !editingName && (
                 <button
                   type="button"
-                  className="text-xs text-text-muted hover:text-accent shrink-0 touch-manipulation"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-bg-inset hover:text-accent transition-colors touch-manipulation"
                   onClick={() => startEditing(player.name)}
+                  aria-label="Edit name"
                   title="Edit name"
                 >
-                  Edit
+                  <Pencil size={13} aria-hidden="true" />
                 </button>
               )}
               {player.id === roomState.hostId && (
-                <span className="text-xs text-text-muted shrink-0 ml-auto">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-accent bg-accent/10 px-2 py-0.5 rounded-md shrink-0">
                   Host
                 </span>
               )}
@@ -160,21 +181,21 @@ export function Lobby({
           );
         })}
         {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
-            <span className="text-sm text-text-muted">
+          <div className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-border-default">
+            <span className="text-sm font-medium text-text-muted">
               Waiting for opponent
             </span>
             <span className="flex gap-0.5" aria-hidden="true">
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce"
                 style={{ animationDelay: "0ms" }}
               />
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce"
                 style={{ animationDelay: "150ms" }}
               />
               <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
+                className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce"
                 style={{ animationDelay: "300ms" }}
               />
             </span>
@@ -183,20 +204,26 @@ export function Lobby({
       </div>
 
       {isHost && onDifficultyChange && (
-        <SlidingRadioGroup
-          options={DIFFICULTY_OPTIONS}
-          value={roomState.difficulty}
-          onChange={onDifficultyChange}
-          name="room-difficulty"
-          ariaLabel="Difficulty"
-        />
+        <div className="flex flex-col gap-2 w-full">
+          <span className="label">Difficulty</span>
+          <SlidingRadioGroup
+            options={DIFFICULTY_OPTIONS}
+            value={roomState.difficulty}
+            onChange={onDifficultyChange}
+            name="room-difficulty"
+            ariaLabel="Difficulty"
+          />
+        </div>
       )}
 
       {onAssistLevelChange && (
-        <AssistLevelPicker
-          value={roomState.assistLevel}
-          onChange={onAssistLevelChange}
-        />
+        <div className="flex flex-col gap-2 w-full">
+          <span className="label">Assistance</span>
+          <AssistLevelPicker
+            value={roomState.assistLevel}
+            onChange={onAssistLevelChange}
+          />
+        </div>
       )}
 
       <div className="flex flex-col gap-3 w-full">
@@ -214,7 +241,7 @@ export function Lobby({
         </button>
         <button
           type="button"
-          className="btn-ghost mt-2 touch-manipulation"
+          className="btn-ghost touch-manipulation"
           onClick={onBack}
         >
           ← Back
