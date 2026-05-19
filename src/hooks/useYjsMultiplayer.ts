@@ -80,6 +80,8 @@ export function useYjsMultiplayer({
     const persistence = new IndexeddbPersistence(`dokuel_${roomId}`, doc);
     const provider = new WebrtcProvider(roomId, doc, {
       signaling: ["wss://signal.dokuel.com"],
+      maxConns: 4,
+      filterBcConns: true,
     });
 
     const room = createRoomFromDoc(doc, roomId);
