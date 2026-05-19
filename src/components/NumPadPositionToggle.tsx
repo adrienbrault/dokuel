@@ -21,7 +21,7 @@ export function NumPadPositionToggle({
         Pad
       </span>
       <div
-        className="flex gap-1 bg-bg-raised rounded-lg p-1"
+        className="flex gap-1 bg-bg-inset rounded-xl p-1"
         role="radiogroup"
         aria-label="Number pad position"
       >
@@ -31,9 +31,9 @@ export function NumPadPositionToggle({
             type="button"
             role="radio"
             aria-checked={position === opt.value}
-            className={`w-8 h-8 rounded-md flex items-center justify-center text-sm transition-all duration-150 select-none ${
+            className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all duration-150 select-none ${
               position === opt.value
-                ? "bg-bg-overlay shadow-sm text-accent font-bold"
+                ? "bg-bg-raised shadow-sm text-accent font-bold"
                 : "text-text-muted"
             }`}
             onClick={() => onChange(opt.value)}
