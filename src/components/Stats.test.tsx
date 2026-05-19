@@ -1,7 +1,42 @@
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
+import { saveGameResult } from "../lib/stats.ts";
 import { Stats } from "./Stats.tsx";
+
+describe("Stats page — solo section", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("shows a separate row for each assist mode played at a difficulty", () => {
+    saveGameResult("easy", "paper", 300, true);
+    saveGameResult("easy", "full", 120, true);
+
+    render(<Stats onBack={vi.fn()} />);
+
+    const section = screen.getByRole("region", { name: /solo/i });
+    expect(within(section).getByText("Paper")).toBeTruthy();
+    expect(within(section).getByText("Full")).toBeTruthy();
+    expect(within(section).getAllByText("05:00").length).toBeGreaterThan(0);
+    expect(within(section).getAllByText("02:00").length).toBeGreaterThan(0);
+  });
+
+  it("counts wins across every assist mode in the difficulty header", () => {
+    saveGameResult("medium", "paper", 300, true);
+    saveGameResult("medium", "standard", 200, true);
+    saveGameResult("medium", "full", 100, true);
+
+    render(<Stats onBack={vi.fn()} />);
+
+    const section = screen.getByRole("region", { name: /solo/i });
+    expect(within(section).getByText("3 wins")).toBeTruthy();
+  });
+});
 
 describe("Stats page — multiplayer section", () => {
   beforeEach(() => {

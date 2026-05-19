@@ -1,4 +1,4 @@
-import type { Difficulty } from "./types.ts";
+import type { AssistLevel, Difficulty } from "./types.ts";
 
 export const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
@@ -32,3 +32,9 @@ export const DIFFICULTY_TEXT_COLORS: Record<Difficulty, string> = {
 
 export const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] =
   DIFFICULTIES.map((value) => ({ value, label: DIFFICULTY_LABELS[value] }));
+
+export const ASSIST_LEVEL_LABELS: Record<AssistLevel, string> = {
+  paper: "Paper",
+  standard: "Standard",
+  full: "Full",
+};
