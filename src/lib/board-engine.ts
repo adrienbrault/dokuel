@@ -193,6 +193,11 @@ function handlePlaceNumber(
     };
   }
 
+  // A filled cell can't be overwritten by placing a number — the
+  // player must erase it first. Guards a committed digit against an
+  // accidental numpad tap or keyboard press silently clobbering it.
+  if (cell.value !== null) return state;
+
   const board = cloneBoard(state.board);
   board[row]![col]!.value = value;
   board[row]![col]!.notes = new Set();
