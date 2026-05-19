@@ -4,6 +4,7 @@ import type { Position } from "../lib/types.ts";
 type Handlers = {
   selectCell: (row: number, col: number) => void;
   setSelectedCells: (cells: Set<number>, primary: Position) => void;
+  deselectCell: () => void;
 };
 
 /**
@@ -15,7 +16,11 @@ type Handlers = {
  * Returns wrapped versions of the game's select handlers so callers
  * don't have to remember to clear() at every selection entry point.
  */
-export function useDigitHighlight({ selectCell, setSelectedCells }: Handlers) {
+export function useDigitHighlight({
+  selectCell,
+  setSelectedCells,
+  deselectCell,
+}: Handlers) {
   const [highlightedDigit, setHighlightedDigit] = useState<number | null>(null);
 
   const toggle = useCallback((n: number) => {
@@ -42,11 +47,17 @@ export function useDigitHighlight({ selectCell, setSelectedCells }: Handlers) {
     [setSelectedCells],
   );
 
+  const wrappedDeselectCell = useCallback(() => {
+    setHighlightedDigit(null);
+    deselectCell();
+  }, [deselectCell]);
+
   return {
     highlightedDigit,
     toggle,
     setDigit,
     selectCell: wrappedSelectCell,
     setSelectedCells: wrappedSetSelectedCells,
+    deselectCell: wrappedDeselectCell,
   };
 }
