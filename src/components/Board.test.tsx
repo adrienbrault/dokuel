@@ -167,6 +167,60 @@ describe("Board highlightedDigit", () => {
       screen.getByLabelText("Cell row 4 column 4, value 7").className,
     ).not.toContain("bg-cell-same-number");
   });
+
+  it("highlights row/col/box of highlightedDigit cells in full assist with no cell selected", () => {
+    // Mirrors the numpad-filter path: in full assist, hovering/dragging a
+    // digit on the numpad should show the same "where the digit can't go"
+    // row/col/box halo that a cell selection produces.
+    const board = makeBoard([
+      [1, 2, 5],
+      [4, 6, 5],
+    ]);
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        highlightedDigit={5}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        assistLevel="full"
+      />,
+    );
+
+    // Cell (1,0) shares row 1 with the 5 at (1,2)
+    const cell10 = screen.getByLabelText("Cell row 2 column 1, empty");
+    expect(cell10.className).toContain("bg-cell-match-row-col");
+
+    // Cell (0,6) shares col 6 with the 5 at (4,6)
+    const cell06 = screen.getByLabelText("Cell row 1 column 7, empty");
+    expect(cell06.className).toContain("bg-cell-match-row-col");
+
+    // Cell (3,7) shares box (1,2) with the 5 at (4,6)
+    const cell37 = screen.getByLabelText("Cell row 4 column 8, empty");
+    expect(cell37.className).toContain("bg-cell-match-row-col");
+  });
+
+  it("does not apply digit-highlight row/col/box halo outside full assist", () => {
+    const board = makeBoard([
+      [1, 2, 5],
+      [4, 6, 5],
+    ]);
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        highlightedDigit={5}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        assistLevel="standard"
+      />,
+    );
+
+    const cell10 = screen.getByLabelText("Cell row 2 column 1, empty");
+    expect(cell10.className).not.toContain("bg-cell-match-row-col");
+  });
 });
 
 describe("Board drag-select filters non-empty cells", () => {
