@@ -4,6 +4,7 @@ import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { clearSnapshot, loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
+import { recordRoomMount } from "./mp-telemetry.ts";
 import {
   announcePresence,
   claimWinner,
@@ -73,6 +74,16 @@ export function useYjsMultiplayer({
   const initialDifficultyRef = useRef(difficulty);
 
   useEffect(() => {
+    // Self-diagnostic for the iOS Safari reload problem. Visible to
+    // anyone with Safari Web Inspector access; surfaced as a console
+    // warn when the same room mounts more than once in an hour.
+    const mountCount = recordRoomMount(roomId);
+    if (mountCount > 1) {
+      console.warn(
+        `[dokuel] mp room ${roomId} mounted ${mountCount}× in last hour`,
+      );
+    }
+
     const doc = new Y.Doc();
     // Persist the doc locally so a tab refresh, brief disconnect, or
     // background tab eviction doesn't lose progress. The `dokuel_`
