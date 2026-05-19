@@ -448,29 +448,9 @@ body {
 
 /* ─── Drag-and-drop digit ─── */
 
-/* The floating digit overlay: a quick pop-in on grab, then a gentle
-   pulse while the user is searching for a target. Pulse breathes via
-   a transform so it doesn't conflict with the tilt/lift on hover. */
-@keyframes digit-drag-ghost {
-  0% {
-    transform: translate(-50%, calc(-100% - 0.5rem)) scale(0.6);
-    opacity: 0;
-  }
-  60% {
-    transform: translate(-50%, calc(-100% - 0.5rem)) scale(1.12);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, calc(-100% - 0.5rem)) scale(1);
-    opacity: 1;
-  }
-}
-.animate-digit-drag-ghost {
-  animation: digit-drag-ghost 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-/* Hovered drop target — the cell pulses harder, with the accent ring
-   matching the ghost color so the connection is visually obvious. */
+/* Hovered drop target — the cell pulses harder so the user sees
+   the digit will land there. The in-cell diagonal preview supplies
+   the value/note distinction. */
 @keyframes drop-target-pulse {
   0%,
   100% {

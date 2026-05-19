@@ -46,17 +46,17 @@ type Options = {
 type CellHit = { position: Position; mode: DigitDropMode };
 
 /**
- * How far (in CSS pixels) the drag ghost is anchored above the pointer.
- * The hit test offsets the pointer Y by this amount so the cell under
- * the visible GHOST drives the highlight — not the cell under the
- * finger, which would be hidden by the user's hand on touch devices.
- * Shared with DigitDragGhost so both ends agree on where the ghost is.
+ * How far (in CSS pixels) above the pointer we hit-test. On touch
+ * devices the finger occludes the cell directly underneath; lifting
+ * the hit point keeps the highlighted cell — and its diagonal drop
+ * preview — visible above the user's hand. The lift is small enough
+ * that a quick mouse drag still feels natural.
  */
-export const DRAG_GHOST_LIFT_PX = 40;
+const POINTER_LIFT_PX = 40;
 
 function cellHitFromPoint(pointerX: number, pointerY: number): CellHit | null {
   const x = pointerX;
-  const y = pointerY - DRAG_GHOST_LIFT_PX;
+  const y = pointerY - POINTER_LIFT_PX;
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
   const btn = (el as HTMLElement).closest?.("[data-row]") as HTMLElement | null;
