@@ -138,6 +138,22 @@ body {
   -webkit-font-smoothing: antialiased;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* A soft accent glow anchored to the top of the page gives every
+   * screen a subtle sense of depth without a heavy chrome. Screens and
+   * the game layout stay transparent so this shows through. */
+  background-image: radial-gradient(
+    125% 50% at 50% 0%,
+    oklch(0.92 0.05 168 / 0.55),
+    transparent 70%
+  );
+}
+
+.dark body {
+  background-image: radial-gradient(
+    125% 50% at 50% 0%,
+    oklch(0.5 0.07 168 / 0.16),
+    transparent 70%
+  );
 }
 
 @keyframes pop-in {
@@ -510,62 +526,123 @@ body {
 
 /* Buttons */
 .btn {
-  @apply rounded-xl font-semibold select-none touch-manipulation;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  @apply rounded-2xl font-semibold select-none touch-manipulation;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 @media (hover: hover) {
   .btn:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .btn-lg {
   @apply py-4 text-lg;
+  min-height: 3.5rem;
 }
 .btn-md {
-  @apply px-4 py-2 text-sm font-medium;
+  @apply rounded-xl px-4 py-2.5 text-sm font-semibold;
 }
 .btn-primary {
-  @apply bg-accent text-text-on-accent shadow-lg shadow-accent/20;
+  @apply text-text-on-accent;
+  background-image: linear-gradient(
+    to bottom,
+    oklch(0.58 0.13 168),
+    oklch(0.48 0.115 168)
+  );
+  box-shadow:
+    0 8px 20px -8px oklch(0.52 0.13 168 / 0.55),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.18);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    box-shadow:
+      0 14px 28px -8px oklch(0.52 0.13 168 / 0.6),
+      inset 0 1px 0 0 oklch(1 0 0 / 0.22);
+  }
 }
 .btn-secondary {
-  @apply bg-bg-raised text-text-primary;
+  @apply bg-bg-raised text-text-primary border border-border-default;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.04);
 }
 .btn-ghost {
-  @apply text-sm text-text-muted;
+  @apply text-sm font-medium text-text-muted;
+}
+
+/* Circular icon button — back, settings, theme & sound toggles */
+.btn-icon {
+  @apply flex h-10 w-10 items-center justify-center rounded-full text-text-secondary select-none touch-manipulation;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-icon:active {
+  transform: scale(0.9);
+}
+.btn-icon:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .btn-icon:hover {
+    background-color: var(--color-bg-raised);
+    color: var(--color-text-primary);
+  }
 }
 
 /* Surfaces */
 .card {
-  @apply rounded-xl bg-bg-inset border border-border-default;
+  @apply rounded-2xl bg-bg-inset border border-border-default;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.03);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm;
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-md;
   animation: modal-backdrop-in 0.2s ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-2xl p-8 shadow-2xl;
+  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-3xl p-8 border border-border-default;
+  box-shadow: 0 24px 64px -16px oklch(0 0 0 / 0.4);
   animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .screen {
-  @apply flex min-h-dvh items-center justify-center bg-bg-primary;
+  @apply flex min-h-dvh items-center justify-center;
   animation: screen-enter 0.2s ease-out;
 }
 .screen-content {
-  @apply flex flex-col items-center w-full max-w-sm px-6;
+  @apply flex flex-col items-center w-full max-w-sm px-6 py-6;
+}
+
+/* Inputs */
+.input-field {
+  @apply w-full rounded-2xl bg-bg-inset border border-border-default px-4 py-3.5 text-text-primary;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.input-field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px oklch(0.52 0.12 168 / 0.14);
 }
 
 /* Typography */
 .heading-xl {
-  @apply text-5xl font-bold tracking-tight text-text-primary;
+  @apply text-5xl font-extrabold tracking-tight text-text-primary;
 }
 .heading {
-  @apply text-2xl font-bold text-text-primary;
+  @apply text-2xl font-bold tracking-tight text-text-primary;
 }
 .label {
-  @apply text-xs font-medium text-text-muted uppercase tracking-wider;
+  @apply text-xs font-semibold text-text-muted uppercase tracking-wider;
 }
 .caption {
   @apply text-sm text-text-secondary;
