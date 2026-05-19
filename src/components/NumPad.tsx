@@ -9,7 +9,7 @@ import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 
-const LONG_PRESS_MS = 400;
+const LONG_PRESS_MS = 200;
 // Pointer must travel this far from the original button center before
 // we classify the gesture (skim vs. drag). Tuned to fingertip-sized slop.
 const GESTURE_THRESHOLD_PX = 12;

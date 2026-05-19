@@ -75,7 +75,7 @@ describe("NumPad", () => {
     expect(onNumber).toHaveBeenCalledWith(7);
   });
 
-  it("fires both onNumber (on press) and onLongPressNumber (at 400ms)", () => {
+  it("fires both onNumber (on press) and onLongPressNumber (at 200ms)", () => {
     const onNumber = vi.fn();
     const onLongPressNumber = vi.fn();
     render(
@@ -113,7 +113,7 @@ describe("NumPad", () => {
     const two = screen.getByRole("button", { name: /^2, / });
     fireEvent.pointerDown(two, { pointerType: "touch" });
     expect(onNumber).toHaveBeenCalledWith(2);
-    vi.advanceTimersByTime(200);
+    vi.advanceTimersByTime(100);
     fireEvent.pointerUp(two, { pointerType: "touch" });
     fireEvent.click(two);
     expect(onLongPressNumber).not.toHaveBeenCalled();
