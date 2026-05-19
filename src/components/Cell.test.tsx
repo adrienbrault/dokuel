@@ -125,6 +125,94 @@ describe("Cell chargingDigit", () => {
     expect(screen.getByRole("button").className).toContain("touch-none");
   });
 
+  it("draws the dragged digit as the landing preview on a valid target", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="value"
+        dropDigit={6}
+      />,
+    );
+    expect(screen.getByTestId("drop-preview")).toHaveTextContent("6");
+  });
+
+  it("fills the cell in value mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="value"
+        dropDigit={6}
+      />,
+    );
+    const preview = screen.getByTestId("drop-preview");
+    expect(preview.dataset.mode).toBe("value");
+    expect(preview.style.width).toBe("100%");
+    expect(preview.style.height).toBe("100%");
+  });
+
+  it("highlights the top half as the active zone in value mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="value"
+        dropDigit={6}
+      />,
+    );
+    const zone = screen.getByTestId("drop-zone");
+    expect(zone.style.top).toBe("0%");
+  });
+
+  it("highlights the bottom half as the active zone in note mode", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="note"
+        dropDigit={6}
+      />,
+    );
+    const zone = screen.getByTestId("drop-zone");
+    expect(zone.style.top).toBe("50%");
+  });
+
+  it("morphs to the dragged digit's sub-cell in note mode", () => {
+    // Digit 8 → note row 2, col 1 → left 33.33%, top 66.66%.
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="note"
+        dropDigit={8}
+      />,
+    );
+    const preview = screen.getByTestId("drop-preview");
+    expect(preview.dataset.mode).toBe("note");
+    expect(preview.style.left).toContain("33.3");
+    expect(preview.style.top).toContain("66.6");
+    expect(preview.style.width).toContain("33.3");
+  });
+
+  it("omits the drop preview on an invalid target", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="invalid"
+        dropMode="note"
+        dropDigit={6}
+      />,
+    );
+    expect(screen.queryByTestId("drop-preview")).toBeNull();
+  });
+
   it("hides the static note glyph for the digit being charged", () => {
     // Notes 1, 3, 5 in the cell; charging digit 3 — only 1 and 5
     // should remain visible in the notes grid (the 3 is being shown

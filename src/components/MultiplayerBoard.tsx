@@ -12,7 +12,7 @@ import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
 import { solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
-import { DigitDragGhost } from "./DigitDragGhost.tsx";
+import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
@@ -256,7 +256,7 @@ export function MultiplayerBoard({
             dragState={dragState}
             onStartCellDrag={startCellDrag}
           />
-          <DigitDragGhost state={dragState} />
+          <DigitDragIndicator state={dragState} />
         </>
       }
       controls={

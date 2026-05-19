@@ -51,6 +51,7 @@ type BoardProps = {
         x: number;
         y: number;
         pointerId: number;
+        pointerType: string;
       }) => void)
     | undefined;
 };
@@ -245,6 +246,10 @@ export function Board({
                       ? "invalid"
                       : "valid"
                     : null;
+                const dropMode =
+                  dropTargetState === "valid" ? dragState?.mode : undefined;
+                const dropDigit =
+                  dropTargetState === "valid" ? dragState?.digit : undefined;
 
                 return (
                   <Cell
@@ -273,6 +278,8 @@ export function Board({
                     }
                     isDragSource={isDragSource}
                     dropTargetState={dropTargetState}
+                    dropMode={dropMode}
+                    dropDigit={dropDigit}
                   />
                 );
               })}

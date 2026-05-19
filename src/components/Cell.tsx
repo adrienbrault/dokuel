@@ -2,6 +2,12 @@ import { type CSSProperties, memo } from "react";
 import { DIGITS } from "../lib/constants.ts";
 import type { AssistLevel, Cell as CellType } from "../lib/types.ts";
 
+// Note sub-cell positions. The 3×3 sub-grid means digit n lands at
+// row = floor((n-1)/3), col = (n-1) % 3. Used by the in-cell drop
+// preview so the note ghost sits exactly where the placed note
+// would render.
+const NOTE_GRID_FRACTION = 100 / 3;
+
 // Distance from the cell center to a note's sub-cell center, as a
 // percentage of the cell's own width. Centers of the 3x3 sub-cell grid
 // sit at 1/6, 1/2, and 5/6 of the cell width — so the offset from the
@@ -32,6 +38,15 @@ type CellProps = {
   isDragSource?: boolean | undefined;
   /** "valid" or "invalid" while the pointer hovers this cell with a drag. */
   dropTargetState?: "valid" | "invalid" | null | undefined;
+  /**
+   * Which slot in this cell the drop will land in, when the cell is a
+   * valid drop target. Drives which of the two landing previews
+   * brightens — the user sees both possible outcomes at once, with
+   * the active one emphasized.
+   */
+  dropMode?: "value" | "note" | undefined;
+  /** The digit currently being dragged — drawn in both preview slots. */
+  dropDigit?: number | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -51,6 +66,8 @@ export const Cell = memo(function Cell({
   chargingDigit,
   isDragSource,
   dropTargetState,
+  dropMode,
+  dropDigit,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -98,6 +115,9 @@ export const Cell = memo(function Cell({
       data-col={col}
       data-drag-source={isDragSource ? "true" : undefined}
       data-drop-target={dropTargetState ?? undefined}
+      data-drop-mode={
+        dropTargetState === "valid" ? (dropMode ?? undefined) : undefined
+      }
       onClick={() => onSelect(row, col)}
       aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
     >
@@ -120,6 +140,46 @@ export const Cell = memo(function Cell({
           ))}
         </div>
       ) : null}
+      {dropTargetState === "valid" && (
+        <span
+          data-testid="drop-zone"
+          data-mode={dropMode}
+          aria-hidden="true"
+          className="absolute inset-x-0 h-1/2 bg-accent/15 pointer-events-none animate-drop-preview"
+          style={{ top: dropMode === "value" ? "0%" : "50%" }}
+        />
+      )}
+      {dropTargetState === "valid" && dropDigit !== undefined && (
+        <span
+          data-testid="drop-preview"
+          data-mode={dropMode}
+          aria-hidden="true"
+          className="absolute flex items-center justify-center font-bold leading-none text-accent pointer-events-none animate-drop-preview"
+          style={
+            dropMode === "value"
+              ? {
+                  // Value pose: fills the cell, value-sized glyph.
+                  left: "0%",
+                  top: "0%",
+                  width: "100%",
+                  height: "100%",
+                  fontSize: "clamp(1.2578125rem, 5.75vw, 2.15625rem)",
+                }
+              : {
+                  // Note pose: the digit's own sub-cell, note-sized
+                  // glyph. Crossing the cell's midline morphs the
+                  // single preview between these two poses.
+                  left: `${((dropDigit - 1) % 3) * NOTE_GRID_FRACTION}%`,
+                  top: `${Math.floor((dropDigit - 1) / 3) * NOTE_GRID_FRACTION}%`,
+                  width: `${NOTE_GRID_FRACTION}%`,
+                  height: `${NOTE_GRID_FRACTION}%`,
+                  fontSize: "clamp(0.80859375rem, 3.1625vw, 1.078125rem)",
+                }
+          }
+        >
+          {dropDigit}
+        </span>
+      )}
       {cell.value === null && chargingDigit !== undefined && (
         <span
           data-testid="note-charge"

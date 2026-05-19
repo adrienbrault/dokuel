@@ -18,11 +18,46 @@ function mockElementFromPoint(getCell: (x: number, y: number) => HTMLElement) {
     getCell(x, y)) as typeof document.elementFromPoint;
 }
 
-function makeCellElement(row: number, col: number): HTMLElement {
+function makeCellElement(
+  row: number,
+  col: number,
+  rect: { left: number; top: number; width: number; height: number } = {
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100,
+  },
+): HTMLElement {
   const el = document.createElement("button");
   el.dataset.row = String(row);
   el.dataset.col = String(col);
+  el.getBoundingClientRect = () =>
+    ({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      x: rect.left,
+      y: rect.top,
+      toJSON: () => rect,
+    }) as DOMRect;
   return el;
+}
+
+// Default start params. pointerType "mouse" → zero lift, so test
+// coordinates map straight to local cell coordinates.
+function startParams(overrides: Record<string, unknown> = {}) {
+  return {
+    digit: 5,
+    source: { kind: "numpad" as const },
+    x: 0,
+    y: 0,
+    pointerId: 1,
+    pointerType: "mouse",
+    ...overrides,
+  };
 }
 
 describe("useDigitDrag", () => {
@@ -48,13 +83,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
     );
     act(() => {
-      result.current.start({
-        digit: 5,
-        source: { kind: "numpad" },
-        x: 100,
-        y: 200,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 5, x: 100, y: 200 }));
     });
     expect(result.current.state).toEqual({
       digit: 5,
@@ -63,6 +92,8 @@ describe("useDigitDrag", () => {
       y: 200,
       target: null,
       invalidTarget: false,
+      mode: "value",
+      lift: 20,
     });
   });
 
@@ -72,13 +103,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
     );
     act(() => {
-      result.current.start({
-        digit: 7,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 7 }));
     });
     act(() => {
       document.dispatchEvent(
@@ -99,13 +124,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => false }),
     );
     act(() => {
-      result.current.start({
-        digit: 1,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 1 }));
     });
     act(() => {
       document.dispatchEvent(
@@ -125,28 +144,108 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop, isDroppable: () => true }),
     );
     act(() => {
-      result.current.start({
-        digit: 9,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 9 }));
     });
+    // Mouse drag (20px lift): clientY 30 → local Y 10 → top half.
     act(() => {
       document.dispatchEvent(
-        pointerEvent("pointermove", { clientX: 50, clientY: 60 }),
+        pointerEvent("pointermove", { clientX: 50, clientY: 30 }),
       );
       document.dispatchEvent(
-        pointerEvent("pointerup", { clientX: 50, clientY: 60 }),
+        pointerEvent("pointerup", { clientX: 50, clientY: 30 }),
       );
     });
     expect(onDrop).toHaveBeenCalledWith(
       9,
       { kind: "numpad" },
       { row: 5, col: 6 },
+      "value",
     );
     expect(result.current.state).toBeNull();
+  });
+
+  it("computes 'value' mode when the pointer is in the top half of the cell", () => {
+    // Cell occupies (0,0)→(100,100). Mouse pointer (50, 30) → local
+    // Y 10 after the 20px lift, above the horizontal midline.
+    mockElementFromPoint(() => makeCellElement(1, 2));
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start(startParams({ digit: 4 }));
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 30 }),
+      );
+    });
+    expect(result.current.state?.mode).toBe("value");
+  });
+
+  it("computes 'note' mode when the pointer is in the bottom half of the cell", () => {
+    // Mouse pointer (50, 85) → local Y 65 after the 20px lift, below
+    // the midline.
+    mockElementFromPoint(() => makeCellElement(1, 2));
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start(startParams({ digit: 4 }));
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 85 }),
+      );
+    });
+    expect(result.current.state?.mode).toBe("note");
+  });
+
+  it("lifts the hit point above the finger for touch pointers", () => {
+    // Touch drag lifts the hit test 56px (20 base + 36 touch).
+    // clientY 80 resolves to local Y 24 — above the midline → value.
+    // Without the lift the raw clientY 80 would land in the bottom
+    // (note) half, so a "value" result proves the lift was applied.
+    mockElementFromPoint(() => makeCellElement(2, 3));
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start(startParams({ digit: 6, pointerType: "touch" }));
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 80 }),
+      );
+    });
+    expect(result.current.state?.lift).toBe(56);
+    expect(result.current.state?.mode).toBe("value");
+  });
+
+  it("passes the resolved mode to onDrop on release", () => {
+    mockElementFromPoint(() => makeCellElement(3, 4));
+    const onDrop = vi.fn();
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop, isDroppable: () => true }),
+    );
+    act(() => {
+      result.current.start(startParams({ digit: 7 }));
+    });
+    // Mouse pointer (10, 85) → local Y 65 after the 20px lift: below
+    // the midline → note.
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 10, clientY: 85 }),
+      );
+      document.dispatchEvent(
+        pointerEvent("pointerup", { clientX: 10, clientY: 85 }),
+      );
+    });
+    expect(onDrop).toHaveBeenCalledWith(
+      7,
+      { kind: "numpad" },
+      { row: 3, col: 4 },
+      "note",
+    );
   });
 
   it("cancels without onDrop when released outside a cell", () => {
@@ -156,13 +255,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop, isDroppable: () => true }),
     );
     act(() => {
-      result.current.start({
-        digit: 4,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 4 }));
     });
     act(() => {
       document.dispatchEvent(
@@ -180,13 +273,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop, isDroppable: () => false }),
     );
     act(() => {
-      result.current.start({
-        digit: 4,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 4 }));
     });
     act(() => {
       document.dispatchEvent(
@@ -204,13 +291,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop, isDroppable: () => true }),
     );
     act(() => {
-      result.current.start({
-        digit: 1,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 1 }));
     });
     act(() => {
       document.dispatchEvent(
@@ -234,13 +315,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop, isDroppable: () => true }),
     );
     act(() => {
-      result.current.start({
-        digit: 2,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 2 }));
     });
     act(() => {
       document.dispatchEvent(pointerEvent("pointercancel"));
@@ -255,13 +330,7 @@ describe("useDigitDrag", () => {
       useDigitDrag({ onDrop, isDroppable: () => true }),
     );
     act(() => {
-      result.current.start({
-        digit: 3,
-        source: { kind: "numpad" },
-        x: 0,
-        y: 0,
-        pointerId: 1,
-      });
+      result.current.start(startParams({ digit: 3 }));
     });
     act(() => {
       document.dispatchEvent(

@@ -1,7 +1,11 @@
 import { useCallback } from "react";
 import { gameFeedback } from "../lib/game-feedback.ts";
 import type { Board, Position } from "../lib/types.ts";
-import { type DigitDragSource, useDigitDrag } from "./useDigitDrag.ts";
+import {
+  type DigitDragSource,
+  type DigitDropMode,
+  useDigitDrag,
+} from "./useDigitDrag.ts";
 
 type Game = {
   board: Board;
@@ -23,9 +27,9 @@ type Options = {
 
 /**
  * Bundles the digit drag-and-drop wiring shared by SoloGame and
- * MultiplayerBoard: the drop commits the dragged digit as a VALUE at
- * the target cell, and the start handlers gate themselves on the
- * caller's disabled flag.
+ * MultiplayerBoard. The drop zone within the cell decides intent:
+ * top-right triangle commits the value, bottom-left commits a note.
+ * Start handlers gate themselves on the caller's disabled flag.
  */
 export function useGameDigitDrag({
   game,
@@ -42,11 +46,16 @@ export function useGameDigitDrag({
   );
 
   const onDrop = useCallback(
-    (digit: number, _source: DigitDragSource, target: Position) => {
+    (
+      digit: number,
+      _source: DigitDragSource,
+      target: Position,
+      mode: DigitDropMode,
+    ) => {
       if (disabled) return;
       gameFeedback.onPlace();
       game.selectCell(target.row, target.col);
-      game.placeNumber(digit, autoEliminateNotes, false);
+      game.placeNumber(digit, autoEliminateNotes, mode === "note");
     },
     [disabled, game.selectCell, game.placeNumber, autoEliminateNotes],
   );
@@ -54,7 +63,13 @@ export function useGameDigitDrag({
   const { state: dragState, start } = useDigitDrag({ onDrop, isDroppable });
 
   const startNumpadDrag = useCallback(
-    (args: { digit: number; x: number; y: number; pointerId: number }) => {
+    (args: {
+      digit: number;
+      x: number;
+      y: number;
+      pointerId: number;
+      pointerType: string;
+    }) => {
       if (disabled) return;
       start({ ...args, source: { kind: "numpad" } });
     },
@@ -68,6 +83,7 @@ export function useGameDigitDrag({
       x: number;
       y: number;
       pointerId: number;
+      pointerType: string;
     }) => {
       if (disabled) return;
       start({
@@ -76,6 +92,7 @@ export function useGameDigitDrag({
         x: args.x,
         y: args.y,
         pointerId: args.pointerId,
+        pointerType: args.pointerType,
       });
     },
     [disabled, start],

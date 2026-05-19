@@ -36,6 +36,7 @@ type NumPadProps = {
         x: number;
         y: number;
         pointerId: number;
+        pointerType: string;
       }) => void)
     | undefined;
   /** Fires when an ALONG-axis skim crosses into another digit's button. */
@@ -163,6 +164,7 @@ export function NumPad({
           x: e.clientX,
           y: e.clientY,
           pointerId: e.pointerId,
+          pointerType: e.pointerType,
         });
         onPressEnd?.();
       } else {
