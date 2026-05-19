@@ -84,18 +84,7 @@ export function useYjsMultiplayer({
     roomRef.current = room;
     providerRef.current = provider;
 
-    // The creator (came in from the create flow with a chosen
-    // difficulty) initializes the room and claims host. Joiners
-    // (difficulty=null, came via shared link) skip this and learn the
-    // host and difficulty from Yjs sync — otherwise both peers would
-    // race to write `hostId` on their own fresh Y.Doc and the joiner
-    // could win the CRDT tiebreak, stealing host.
-    const initialDifficulty = initialDifficultyRef.current;
-    if (initialDifficulty) {
-      initializeRoom(room, playerId, initialDifficulty);
-    }
-
-    joinRoom(room, playerId, playerNameRef.current);
+    const awareness = provider.awareness;
 
     const updateState = () => {
       const state = getRoomState(room);
@@ -128,10 +117,6 @@ export function useYjsMultiplayer({
 
     const unobserveRoom = observeRoomChanges(room, updateState);
 
-    // Track peer connections via awareness
-    const awareness = provider.awareness;
-    announcePresence(awareness, playerId, playerNameRef.current);
-
     const updatePresence = () => {
       const hasOpponent = presenceHasOpponent(
         awareness,
@@ -156,11 +141,36 @@ export function useYjsMultiplayer({
     };
     provider.on("peers", onPeers);
 
-    // Initial state
     setConnected(provider.connected);
-    updateState();
+
+    // Defer the writes until y-indexeddb has loaded any persisted
+    // state. Writing before sync would seed clock-0 ops (initializeRoom
+    // defaults, a fresh player Y.Map from joinRoom) that race the
+    // restored state — under iOS Safari's flaky IDB flushes on memory
+    // pressure, the doc can resolve back to lobby/gameNumber=0 over
+    // several reloads, wiping the in-progress game. Helpers are
+    // idempotent so post-sync invocation either seeds an empty room or
+    // no-ops one already populated.
+    let cancelled = false;
+    void persistence.whenSynced.then(() => {
+      if (cancelled) return;
+
+      // The creator (came in from the create flow with a chosen
+      // difficulty) initializes the room and claims host. Joiners
+      // (difficulty=null, came via shared link) skip this and learn
+      // host + difficulty from Yjs sync.
+      const initialDifficulty = initialDifficultyRef.current;
+      if (initialDifficulty) {
+        initializeRoom(room, playerId, initialDifficulty);
+      }
+      joinRoom(room, playerId, playerNameRef.current);
+
+      announcePresence(awareness, playerId, playerNameRef.current);
+      updateState();
+    });
 
     return () => {
+      cancelled = true;
       unobserveRoom();
       awareness.off("change", updatePresence);
       provider.off("status", onStatus);
