@@ -1,3 +1,4 @@
+import { LogIn, Play, UserPlus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
@@ -54,17 +55,17 @@ export function Landing({
   );
 
   return (
-    <div className="screen-content gap-4 sm:gap-8">
-      <div className="flex flex-col items-center gap-1 sm:gap-2">
-        <h1 className="heading-xl">Dokuel</h1>
+    <div className="screen-content gap-5 sm:gap-8">
+      <div className="flex flex-col items-center gap-1.5">
+        <h1 className="wordmark">Dokuel</h1>
         {!isReturningUser && (
-          <p className="text-sm text-text-muted">
+          <p className="text-sm text-text-secondary">
             1v1 sudoku duel — no account needed.
           </p>
         )}
       </div>
       {!isReturningUser && (
-        <div className="flex flex-col gap-1.5 sm:gap-3 w-full">
+        <div className="flex flex-col gap-2.5 sm:gap-3 w-full">
           <FeatureRow
             icon={<ZapIcon />}
             text="Real-time 1v1 — race a friend peer-to-peer"
@@ -95,7 +96,12 @@ export function Landing({
         )}
         <div className="flex flex-col gap-3">
           <span className="label">Solo</span>
-          <ActionButton label="Start Solo" onClick={onSolo} primary />
+          <ActionButton
+            label="Start Solo"
+            onClick={onSolo}
+            primary
+            icon={<Play size={20} fill="currentColor" strokeWidth={0} />}
+          />
           <DailyChallengeButton
             onClick={onDaily}
             completed={completed}
@@ -106,8 +112,16 @@ export function Landing({
         </div>
         <div className="flex flex-col gap-3">
           <span className="label">Multiplayer</span>
-          <ActionButton label="Create Game" onClick={onCreate} />
-          <ActionButton label="Join Game" onClick={onJoin} />
+          <ActionButton
+            label="Create Game"
+            onClick={onCreate}
+            icon={<UserPlus size={20} strokeWidth={2} />}
+          />
+          <ActionButton
+            label="Join Game"
+            onClick={onJoin}
+            icon={<LogIn size={20} strokeWidth={2} />}
+          />
         </div>
       </div>
       <button type="button" className="btn btn-ghost text-sm" onClick={onStats}>
@@ -132,8 +146,10 @@ export function Landing({
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-accent shrink-0">{icon}</span>
-      <span className="text-sm text-text-muted">{text}</span>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+        {icon}
+      </span>
+      <span className="text-sm text-text-secondary leading-snug">{text}</span>
     </div>
   );
 }
@@ -251,10 +267,12 @@ function ActionButton({
   label,
   onClick,
   primary = false,
+  icon,
 }: {
   label: string;
   onClick: () => void;
   primary?: boolean;
+  icon?: React.ReactNode;
 }) {
   return (
     <button
@@ -262,7 +280,14 @@ function ActionButton({
       className={`btn btn-lg w-full ${primary ? "btn-primary" : "btn-secondary"}`}
       onClick={onClick}
     >
-      {label}
+      <span className="flex items-center justify-center gap-2.5">
+        {icon && (
+          <span className={primary ? "" : "text-accent"} aria-hidden="true">
+            {icon}
+          </span>
+        )}
+        {label}
+      </span>
     </button>
   );
 }
