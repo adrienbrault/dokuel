@@ -26,13 +26,17 @@ export function SlidingRadioGroup<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="relative flex w-full rounded-xl bg-bg-inset p-1"
+      className="relative flex w-full rounded-2xl bg-bg-inset border border-border-default p-1"
     >
       <div
-        className="absolute top-1 bottom-1 rounded-lg bg-accent shadow-sm transition-transform duration-200 ease-out"
+        className="absolute top-1 bottom-1 rounded-xl transition-transform duration-200 ease-out"
         style={{
           width: `calc((100% - 0.5rem) / ${count})`,
           transform: `translateX(calc(${activeIndex} * 100%))`,
+          backgroundImage:
+            "linear-gradient(160deg, var(--color-accent), var(--color-accent-strong))",
+          boxShadow:
+            "0 6px 14px -8px oklch(0.52 0.12 168 / 0.6), inset 0 1px 0 0 oklch(1 0 0 / 0.2)",
         }}
         aria-hidden="true"
       />
