@@ -1,3 +1,4 @@
+import { LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function JoinScreen({
@@ -22,7 +23,12 @@ export function JoinScreen({
   return (
     <div className="screen">
       <form className="screen-content gap-6" onSubmit={handleSubmit}>
-        <h2 className="heading">Join Game</h2>
+        <div className="flex flex-col items-center gap-3">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+            <LogIn size={28} strokeWidth={2} aria-hidden="true" />
+          </span>
+          <h2 className="heading">Join Game</h2>
+        </div>
         <div className="flex flex-col items-center gap-2 w-full">
           <input
             ref={inputRef}
@@ -30,7 +36,7 @@ export function JoinScreen({
             placeholder="e.g. loud-duck-38"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="card w-full px-4 py-3 text-text-primary text-center text-lg font-mono"
+            className="card w-full px-4 py-3.5 text-text-primary text-center text-lg font-mono placeholder:text-text-muted/60 outline-none focus:border-accent focus:ring-2 focus:ring-accent/40 transition-shadow"
           />
           <p className="text-xs text-text-muted">
             Ask the host for their room code
