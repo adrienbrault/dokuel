@@ -46,6 +46,12 @@ function makeCellElement(
   return el;
 }
 
+function makeNumpadButton(digit: number): HTMLElement {
+  const el = document.createElement("button");
+  el.dataset.numpadDigit = String(digit);
+  return el;
+}
+
 // Default start params. pointerType "mouse" → 10px lift, so a
 // clientY resolves 10px higher in local cell coordinates.
 function startParams(overrides: Record<string, unknown> = {}) {
@@ -339,5 +345,49 @@ describe("useDigitDrag", () => {
     });
     expect(onDrop).not.toHaveBeenCalled();
     expect(result.current.state).toBeNull();
+  });
+
+  it("demotes a numpad drag back to a skim when it returns over the numpad", () => {
+    // Board cells sit above y=400; the numpad's digit-7 button below it.
+    mockElementFromPoint((_x, y) =>
+      y >= 400 ? makeNumpadButton(7) : makeCellElement(3, 4),
+    );
+    const onDrop = vi.fn();
+    const onReturnToNumpad = vi.fn();
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop, isDroppable: () => true, onReturnToNumpad }),
+    );
+    act(() => {
+      result.current.start(startParams({ digit: 5, x: 50, y: 450 }));
+    });
+    // Still over the numpad — the drag has not left it yet, so a move
+    // here must not demote it.
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 460 }),
+      );
+    });
+    expect(onReturnToNumpad).not.toHaveBeenCalled();
+    expect(result.current.state).not.toBeNull();
+    // Out over the board.
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 100 }),
+      );
+    });
+    // Back over the numpad — the drag now demotes to a skim.
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 450 }),
+      );
+    });
+    expect(onReturnToNumpad).toHaveBeenCalledTimes(1);
+    expect(onReturnToNumpad).toHaveBeenCalledWith({
+      digit: 7,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+    expect(result.current.state).toBeNull();
+    expect(onDrop).not.toHaveBeenCalled();
   });
 });
