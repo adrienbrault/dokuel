@@ -100,9 +100,11 @@ export function GameResult({
         </div>
       )}
       <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-5xl animate-emoji-bounce">
-            {isWinner ? "🎉" : "👏"}
+        <div className="flex flex-col items-center gap-3">
+          <span className="w-20 h-20 rounded-full bg-accent-soft flex items-center justify-center">
+            <span className="text-5xl animate-emoji-bounce">
+              {isWinner ? "🎉" : "👏"}
+            </span>
           </span>
           <h2 className="heading">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
@@ -115,46 +117,33 @@ export function GameResult({
             </span>
           )}
         </div>
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-3xl font-mono font-bold tabular-nums text-text-primary">
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="text-4xl font-mono font-bold tabular-nums text-text-primary">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
-            <span className="text-sm font-semibold text-accent">
-              New Personal Best!
+            <span className="flex items-center gap-1 text-sm font-bold text-accent">
+              ⚡ New Personal Best!
             </span>
           )}
         </div>
 
         {stats && !isMultiplayer && (
-          <div className="grid grid-cols-3 gap-4 w-full text-center">
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {stats.gamesPlayed}
-              </div>
-              <div className="text-xs text-text-muted">Played</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {formatTime(stats.bestTime)}
-              </div>
-              <div className="text-xs text-text-muted">Best</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
-                {formatTime(stats.averageTime)}
-              </div>
-              <div className="text-xs text-text-muted">Average</div>
-            </div>
+          <div className="grid grid-cols-3 w-full rounded-2xl bg-bg-inset border border-border-default divide-x divide-border-default overflow-hidden">
+            <ResultStat value={String(stats.gamesPlayed)} label="Played" />
+            <ResultStat value={formatTime(stats.bestTime)} label="Best" />
+            <ResultStat value={formatTime(stats.averageTime)} label="Average" />
           </div>
         )}
 
         {streakInfo && streakInfo.currentStreak > 0 && (
-          <div className="flex items-center justify-center gap-2 text-sm text-accent font-semibold">
-            <span>{streakInfo.currentStreak}-day streak!</span>
+          <div className="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/60">
+            <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
+              🔥 {streakInfo.currentStreak}-day streak!
+            </span>
             {streakInfo.currentStreak >= streakInfo.longestStreak &&
               streakInfo.currentStreak > 1 && (
-                <span className="text-xs font-normal text-text-muted">
+                <span className="text-xs font-semibold text-amber-600/80 dark:text-amber-500/80">
                   New record!
                 </span>
               )}
@@ -198,6 +187,17 @@ export function GameResult({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function ResultStat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 py-3">
+      <span className="text-lg font-bold text-text-primary font-mono tabular-nums">
+        {value}
+      </span>
+      <span className="text-xs text-text-muted">{label}</span>
     </div>
   );
 }

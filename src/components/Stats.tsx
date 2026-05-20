@@ -50,18 +50,22 @@ export function Stats({ onBack }: StatsProps) {
         </div>
 
         <div className="card p-4 w-full">
-          <div className="grid grid-cols-2 gap-4 text-center">
+          <div className="grid grid-cols-2 gap-4 text-center divide-x divide-border-default">
             <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
+              <div className="text-3xl font-bold text-accent font-mono tabular-nums leading-none">
                 {streak.currentStreak}
               </div>
-              <div className="text-xs text-text-muted">Current Streak</div>
+              <div className="text-xs text-text-muted mt-1.5">
+                🔥 Current Streak
+              </div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
+              <div className="text-3xl font-bold text-text-primary font-mono tabular-nums leading-none">
                 {streak.longestStreak}
               </div>
-              <div className="text-xs text-text-muted">Longest Streak</div>
+              <div className="text-xs text-text-muted mt-1.5">
+                Longest Streak
+              </div>
             </div>
           </div>
         </div>
