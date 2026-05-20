@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" role="img" aria-labelledby="title desc">
+  <title id="title">Empty-state board</title>
+  <desc id="desc">A quiet empty sudoku board with a single inviting highlighted cell.</desc>
+  <rect x="34" y="20" width="132" height="132" rx="24" fill="#fffaf2" stroke="#d7d0c4" stroke-width="3"/>
+  <g stroke="#ded7cb" stroke-width="2">
+    <path d="M78 28v116M122 28v116M42 64h116M42 108h116"/>
+    <path d="M100 28v116M42 86h116" stroke="#2f2b25" stroke-width="3" opacity=".45"/>
+  </g>
+  <rect x="79" y="65" width="42" height="42" rx="10" fill="#c9f2df"/>
+  <circle cx="100" cy="86" r="14" fill="#0a9878"/>
+  <path d="M94 86h12M100 80v12" stroke="#fffaf2" stroke-linecap="round" stroke-width="5"/>
+  <path d="M24 42c-8 9-9 21-1 31M176 118c8-9 9-21 1-31" fill="none" stroke="#ffd27f" stroke-linecap="round" stroke-width="6"/>
+</svg>

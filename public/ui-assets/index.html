@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dokuel UI Asset Candidates</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fbfaf6;
+        --surface: #fffdf8;
+        --surface-raised: #f3eee5;
+        --text: #28241f;
+        --muted: #706a61;
+        --border: #ded7cb;
+        --accent: #0a9878;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 50% -10%, #d9f4e9 0, transparent 38rem),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0;
+      }
+
+      header {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 28px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.4rem);
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+      }
+
+      .asset {
+        display: grid;
+        gap: 12px;
+        min-height: 236px;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: color-mix(in srgb, var(--surface) 92%, white);
+        box-shadow: 0 16px 35px -28px rgb(20 16 10 / 0.4);
+      }
+
+      .preview {
+        display: grid;
+        place-items: center;
+        min-height: 150px;
+        border-radius: 12px;
+        background:
+          linear-gradient(90deg, rgb(10 152 120 / 0.04) 1px, transparent 1px),
+          linear-gradient(rgb(10 152 120 / 0.04) 1px, transparent 1px),
+          var(--surface-raised);
+        background-size: 18px 18px;
+      }
+
+      .preview img {
+        width: min(130px, 80%);
+        max-height: 130px;
+      }
+
+      .asset:nth-child(4n) .preview img,
+      .asset:nth-child(8n) .preview img {
+        width: min(170px, 88%);
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      .asset p {
+        font-size: 0.82rem;
+        line-height: 1.35;
+      }
+
+      .concept {
+        margin-top: 28px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+      }
+
+      .concept img {
+        width: min(860px, 100%);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: white;
+      }
+
+      @media (max-width: 520px) {
+        main {
+          width: min(100% - 24px, 420px);
+          padding: 28px 0;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .asset {
+          min-height: 210px;
+          padding: 12px;
+        }
+
+        .preview {
+          min-height: 118px;
+        }
+
+        .preview img {
+          width: min(104px, 82%);
+          max-height: 104px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Dokuel UI asset candidates</h1>
+        <p>Ten small, vector-friendly candidates shaped around the current game UI.</p>
+      </header>
+
+      <section class="grid" aria-label="UI assets">
+        <article class="asset">
+          <div class="preview"><img src="./dokuel-mark.svg" alt="" /></div>
+          <h2>Dokuel Mark</h2>
+          <p>Compact app mark or splash icon using the board as the brand signal.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./daily-badge.svg" alt="" /></div>
+          <h2>Daily Badge</h2>
+          <p>Calendar tile for the landing row, daily streak surfaces, or share cards.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./duel-badge.svg" alt="" /></div>
+          <h2>Duel Badge</h2>
+          <p>Multiplayer identity for create-room, invite, and victory states.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./streak-token.svg" alt="" /></div>
+          <h2>Streak Token</h2>
+          <p>Warm reward token for daily completion and returning-player moments.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./room-code-ornament.svg" alt="" /></div>
+          <h2>Room Code Ornament</h2>
+          <p>Invite-card motif for lobby headers, copy states, or empty waiting rows.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./empty-state-board.svg" alt="" /></div>
+          <h2>Empty Board</h2>
+          <p>Quiet illustration for no saved games, no stats, or first-run guidance.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./victory-medal.svg" alt="" /></div>
+          <h2>Victory Medal</h2>
+          <p>More on-brand replacement candidate for the win modal celebration emoji.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./hint-token.svg" alt="" /></div>
+          <h2>Hint Token</h2>
+          <p>Hint affordance for button states, tutorial overlays, or assist-level copy.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./progress-ribbon.svg" alt="" /></div>
+          <h2>Progress Ribbon</h2>
+          <p>Multiplayer progress motif that can scale from icon to banner treatment.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./assist-level-tabs.svg" alt="" /></div>
+          <h2>Assist Tabs</h2>
+          <p>Segmented-control asset aligned with the Paper, Standard, Full picker.</p>
+        </article>
+        <article class="asset">
+          <div class="preview"><img src="./board-pattern-tile.svg" alt="" /></div>
+          <h2>Board Pattern Tile</h2>
+          <p>Repeatable background tile for share images, empty states, or subtle panels.</p>
+        </article>
+      </section>
+
+      <section class="concept" aria-label="Generated concept sheet">
+        <h2>Generated concept sheet</h2>
+        <p>The bitmap concept sheet that informed the vector candidates.</p>
+        <img src="./generated-concept-sheet.png" alt="Generated sheet of Dokuel UI asset ideas" />
+      </section>
+    </main>
+  </body>
+</html>

@@ -217,6 +217,14 @@ test("join game screen", async ({ page }, testInfo) => {
 	});
 });
 
+test("ui asset candidates", async ({ page }, testInfo) => {
+	await page.goto("/ui-assets/");
+	await page.getByRole("heading", { name: "Dokuel UI asset candidates" }).waitFor();
+	await page.screenshot({
+		path: screenshotPath("ui-asset-candidates", testInfo.project.name),
+	});
+});
+
 // --- Game states ---
 
 test("solo game - numpad digit highlight", async ({ page }, testInfo) => {

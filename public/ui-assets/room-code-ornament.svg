@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" role="img" aria-labelledby="title desc">
+  <title id="title">Room code ornament</title>
+  <desc id="desc">A compact invite card ornament with connected room-code tiles.</desc>
+  <rect x="18" y="24" width="204" height="72" rx="24" fill="#fffaf2" stroke="#d7d0c4" stroke-width="3"/>
+  <g fill="#f0eadf">
+    <rect x="48" y="42" width="34" height="34" rx="10"/>
+    <rect x="103" y="42" width="34" height="34" rx="10"/>
+    <rect x="158" y="42" width="34" height="34" rx="10"/>
+  </g>
+  <path d="M82 59h21M137 59h21" stroke="#0a9878" stroke-linecap="round" stroke-width="6"/>
+  <circle cx="65" cy="59" r="9" fill="#0a9878"/>
+  <circle cx="120" cy="59" r="9" fill="#ffd27f"/>
+  <circle cx="175" cy="59" r="9" fill="#ff7a59"/>
+  <path d="M36 24c5 12 4 24-7 34M204 96c-5-12-4-24 7-34" fill="none" stroke="#0a9878" stroke-linecap="round" stroke-width="5" opacity=".55"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Victory medal</title>
+  <desc id="desc">A sudoku victory medal with a completed path.</desc>
+  <path d="M57 18h46l-13 39H70L57 18Z" fill="#0a9878"/>
+  <path d="M47 18h31L67 62 40 43 47 18ZM113 18H82l11 44 27-19-7-25Z" fill="#42c39a"/>
+  <circle cx="80" cy="94" r="46" fill="#ffd27f"/>
+  <circle cx="80" cy="94" r="36" fill="#fff3d7" stroke="#c07b20" stroke-width="5"/>
+  <g stroke="#d4a24d" stroke-width="2">
+    <path d="M62 72v44M80 72v44M98 72v44M56 82h48M56 100h48"/>
+  </g>
+  <path d="m61 97 13 13 27-34" fill="none" stroke="#0a9878" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+</svg>

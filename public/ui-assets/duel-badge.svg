@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Duel badge</title>
+  <desc id="desc">Two sudoku boards racing toward the same center cell.</desc>
+  <rect x="18" y="42" width="50" height="76" rx="14" fill="#fffaf2" stroke="#d7d0c4" stroke-width="3"/>
+  <rect x="92" y="42" width="50" height="76" rx="14" fill="#fffaf2" stroke="#d7d0c4" stroke-width="3"/>
+  <g stroke="#d8d0c2" stroke-width="2">
+    <path d="M35 48v64M51 48v64M24 67h38M24 93h38"/>
+    <path d="M109 48v64M125 48v64M98 67h38M98 93h38"/>
+  </g>
+  <path d="m57 90 17-17M103 90 86 73" stroke="#0a9878" stroke-linecap="round" stroke-width="8"/>
+  <circle cx="80" cy="80" r="20" fill="#0a9878"/>
+  <path d="M72 80h16M80 72v16" stroke="#fffaf2" stroke-linecap="round" stroke-width="6"/>
+  <circle cx="42" cy="62" r="5" fill="#ff7a59"/>
+  <circle cx="118" cy="98" r="5" fill="#ffd27f"/>
+</svg>
