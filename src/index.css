@@ -16,6 +16,11 @@
   --color-success: oklch(0.65 0.18 155);
   --color-accent: oklch(0.52 0.12 168);
   --color-accent-light: oklch(0.92 0.04 168);
+  --color-accent-strong: oklch(0.44 0.13 162);
+  --color-accent-soft: oklch(0.95 0.035 172);
+
+  /* Ambient glow painted at the top of every screen for depth */
+  --color-glow: oklch(0.62 0.08 172 / 0.08);
 
   /* Semantic surfaces */
   --color-bg-primary: oklch(0.99 0.004 80);
@@ -68,6 +73,11 @@
   --color-cell-conflict: oklch(0.7 0.18 25);
   --color-cell-conflict-bg: oklch(0.25 0.05 25);
   --color-accent-light: oklch(0.28 0.05 168);
+  --color-accent-strong: oklch(0.42 0.12 162);
+  --color-accent-soft: oklch(0.27 0.045 172);
+
+  /* Ambient glow painted at the top of every screen for depth */
+  --color-glow: oklch(0.6 0.13 172 / 0.12);
 
   /* Semantic surfaces */
   --color-bg-primary: oklch(0.14 0.008 80);
@@ -492,64 +502,108 @@ body {
 
 /* ─── Design System: Component Classes ─── */
 
+/* Ambient surface — base background plus a soft glow at the top edge,
+   giving every screen a sense of depth instead of a flat fill. */
+.app-surface {
+  background-color: var(--color-bg-primary);
+  background-image: radial-gradient(
+    115% 50% at 50% 0%,
+    var(--color-glow) 0%,
+    transparent 72%
+  );
+}
+
 /* Buttons */
 .btn {
-  @apply rounded-xl font-semibold select-none touch-manipulation;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  @apply rounded-2xl font-semibold select-none touch-manipulation;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 @media (hover: hover) {
   .btn:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
 }
 .btn-lg {
   @apply py-4 text-lg;
 }
 .btn-md {
-  @apply px-4 py-2 text-sm font-medium;
+  @apply px-4 py-2.5 text-sm font-semibold;
 }
 .btn-primary {
-  @apply bg-accent text-text-on-accent shadow-lg shadow-accent/20;
+  background-image: linear-gradient(
+    160deg,
+    var(--color-accent) 0%,
+    var(--color-accent-strong) 100%
+  );
+  color: var(--color-text-on-accent);
+  box-shadow:
+    0 10px 22px -10px oklch(0.52 0.12 168 / 0.55),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.22);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    box-shadow:
+      0 16px 30px -12px oklch(0.52 0.12 168 / 0.62),
+      inset 0 1px 0 0 oklch(1 0 0 / 0.28);
+  }
 }
 .btn-secondary {
-  @apply bg-bg-raised text-text-primary;
+  @apply bg-bg-raised text-text-primary border border-border-default;
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.04);
 }
 .btn-ghost {
-  @apply text-sm text-text-muted;
+  @apply text-sm font-medium text-text-muted;
 }
 
 /* Surfaces */
 .card {
-  @apply rounded-xl bg-bg-inset border border-border-default;
+  @apply rounded-2xl bg-bg-inset border border-border-default;
+  box-shadow:
+    0 1px 2px 0 oklch(0 0 0 / 0.03),
+    0 14px 30px -22px oklch(0 0 0 / 0.18);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm;
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
   animation: modal-backdrop-in 0.2s ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-2xl p-8 shadow-2xl;
+  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-3xl p-8 shadow-2xl border border-border-default;
   animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .screen {
-  @apply flex min-h-dvh items-center justify-center bg-bg-primary;
+  @apply flex min-h-dvh items-center justify-center;
+  background-color: var(--color-bg-primary);
+  background-image: radial-gradient(
+    115% 50% at 50% 0%,
+    var(--color-glow) 0%,
+    transparent 72%
+  );
   animation: screen-enter 0.2s ease-out;
 }
 .screen-content {
   @apply flex flex-col items-center w-full max-w-sm px-6;
 }
 
+/* Icon tile — a tinted, rounded container that frames an icon */
+.icon-tile {
+  @apply flex items-center justify-center rounded-xl shrink-0;
+}
+
 /* Typography */
 .heading-xl {
-  @apply text-5xl font-bold tracking-tight text-text-primary;
+  @apply text-[2.75rem] font-bold tracking-tight text-text-primary leading-none;
 }
 .heading {
-  @apply text-2xl font-bold text-text-primary;
+  @apply text-2xl font-bold tracking-tight text-text-primary;
 }
 .label {
-  @apply text-xs font-medium text-text-muted uppercase tracking-wider;
+  @apply text-xs font-semibold text-text-muted uppercase tracking-wider;
 }
 .caption {
   @apply text-sm text-text-secondary;
