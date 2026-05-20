@@ -363,6 +363,32 @@ describe("NumPad", () => {
     expect(onStartDrag).not.toHaveBeenCalled();
   });
 
+  it("treats a shallow diagonal pan as a skim, outside the drag cone", () => {
+    const onStartDrag = vi.fn();
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onLongPressNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // A pan ~37° off the board-facing axis sits outside the 60° drag
+    // cone — diagonal enough to read as an along-axis skim, not a drag.
+    fireEvent.pointerMove(three, { pointerId: 1, clientX: 30, clientY: 40 });
+    expect(onStartDrag).not.toHaveBeenCalled();
+  });
+
   it("fires onSkimDigit when the finger crosses into a different digit", () => {
     const onSkimDigit = vi.fn();
     render(
