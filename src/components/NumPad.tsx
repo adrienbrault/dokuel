@@ -249,26 +249,26 @@ export function NumPad({
 
   return (
     <div
-      className={`flex items-center gap-1 ${isVertical ? "flex-col w-12" : "flex-col w-full"} lg:flex-col lg:w-14`}
+      className={`flex items-center gap-1 ${isVertical ? "flex-col w-12" : "flex-col w-full"} lg:flex-col lg:w-auto lg:gap-2`}
     >
-      {/* Horizontal one-liner: only on mobile bottom position (room to fit) */}
-      {!isVertical && (
-        <p
-          className="text-[0.625rem] text-text-muted leading-tight select-none lg:hidden"
-          aria-hidden="true"
-        >
-          tap = note · hold = enter · drag = place
-        </p>
-      )}
-      {/* Stacked variant: mobile side-positioned numpads, and always on desktop */}
+      {/* Mobile legend: one-liner for bottom, stacked words for side numpads */}
       <p
-        className={`text-[0.625rem] text-text-muted leading-tight select-none text-center whitespace-pre-line ${isVertical ? "" : "hidden lg:block"}`}
+        className={`text-[0.625rem] text-text-muted leading-tight select-none lg:hidden ${isVertical ? "text-center whitespace-pre-line" : ""}`}
         aria-hidden="true"
       >
-        {"tap\nnote\n· · ·\nhold\nenter\n· · ·\ndrag\nplace"}
+        {isVertical
+          ? "tap\nnote\n· · ·\nhold\nenter\n· · ·\ndrag\nplace"
+          : "tap = note · hold = enter · drag = place"}
+      </p>
+      {/* Desktop legend: three readable lines above the 3×3 grid */}
+      <p
+        className="hidden lg:block text-[0.6875rem] text-text-muted leading-snug select-none text-center whitespace-pre-line"
+        aria-hidden="true"
+      >
+        {"tap = note\nhold = enter\ndrag = place"}
       </p>
       <div
-        className={`flex gap-1 lg:flex-col lg:w-14 ${isVertical ? "flex-col" : "flex-row justify-center"} ${isVertical ? "w-12" : "w-full lg:w-14"}`}
+        className={`flex gap-1 lg:grid lg:grid-cols-3 lg:gap-1.5 lg:w-auto ${isVertical ? "flex-col w-12" : "flex-row justify-center w-full"}`}
         role="group"
         aria-label="Number pad"
       >
@@ -287,7 +287,7 @@ export function NumPad({
               type="button"
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-10 lg:w-14 ${isVertical ? "h-11 w-12" : "h-14 flex-1"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-16 lg:w-16 ${isVertical ? "h-11 w-12" : "h-14 flex-1"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
@@ -300,10 +300,10 @@ export function NumPad({
                   : `${n}${isSelected ? ", selected" : ""}`
               }
             >
-              <span className="text-lg leading-none">{n}</span>
+              <span className="text-lg lg:text-2xl leading-none">{n}</span>
               {showRemainingCounts && (
                 <span
-                  className={`text-[0.625rem] leading-none mt-0.5 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
+                  className={`text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
                 >
                   {remaining}
                 </span>
