@@ -69,10 +69,13 @@ export function NumPad({
   // sticks on touch devices after pointer-capture release).
   const [pressedDigit, setPressedDigit] = useState<number | null>(null);
   // Once a press is classified as a skim, the gesture is owned at the
-  // document level so the finger can be tracked outside this button.
-  const { beginSkim } = useNumPadSkim({
+  // document level so the finger can be tracked outside this button —
+  // and promoted into a drag if it slides off toward the board.
+  const { beginSkim, groupRef } = useNumPadSkim({
+    position,
     onSkimDigit,
     onPressEnd,
+    onStartDrag,
     setPressedDigit,
   });
 
@@ -158,7 +161,7 @@ export function NumPad({
         });
         onPressEnd?.();
       } else {
-        beginSkim(press.digit, e.pointerId);
+        beginSkim(press.digit, e.pointerId, e.pointerType);
       }
     },
     [isVertical, onSkimDigit, onStartDrag, cancelTimer, onPressEnd, beginSkim],
@@ -205,6 +208,7 @@ export function NumPad({
           : "tap = note · hold = enter · drag = place"}
       </p>
       <div
+        ref={groupRef}
         className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full"}`}
         role="group"
         aria-label="Number pad"

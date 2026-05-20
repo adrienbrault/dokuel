@@ -8,6 +8,21 @@ function mockElementFromPoint(el: HTMLElement | null) {
   document.elementFromPoint = (() => el) as typeof document.elementFromPoint;
 }
 
+function mockRect(el: HTMLElement, rect: Partial<DOMRect>) {
+  el.getBoundingClientRect = (() => ({
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0,
+    toJSON: () => {},
+    ...rect,
+  })) as typeof el.getBoundingClientRect;
+}
+
 function docPointer(type: string, init: Partial<PointerEvent> = {}) {
   return new PointerEvent(type, {
     bubbles: true,
@@ -549,5 +564,163 @@ describe("NumPad", () => {
     fireEvent.pointerMove(nine, { pointerId: 1, clientX: 50, clientY: 0 });
     fireEvent.pointerMove(nine, { pointerId: 1, clientX: 100, clientY: 0 });
     expect(onStartDrag).toHaveBeenCalledTimes(1);
+  });
+
+  it("promotes a skim into a drag when the finger pulls off the numpad toward the board", () => {
+    const onStartDrag = vi.fn();
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    const five = screen.getByRole("button", { name: /^5, / });
+    // Numpad button row spans y∈[0,80]; the board sits above (y<0).
+    mockRect(screen.getByRole("group", { name: "Number pad" }), {
+      top: 0,
+      bottom: 80,
+      left: 0,
+      right: 300,
+    });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Pan along-axis past threshold → skim mode armed.
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 80,
+      clientY: 20,
+    });
+    // Finger skims onto digit 5 while still over the numpad row.
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 140, clientY: 20 }),
+      );
+    });
+    expect(onSkimDigit).toHaveBeenLastCalledWith(5);
+    expect(onStartDrag).not.toHaveBeenCalled();
+    // Finger lifts off the numpad toward the board → drag-to-place,
+    // carrying the skimmed digit (5), not the pressed one (3).
+    mockElementFromPoint(null);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 140, clientY: -10 }),
+      );
+    });
+    expect(onStartDrag).toHaveBeenCalledTimes(1);
+    expect(onStartDrag).toHaveBeenCalledWith({
+      digit: 5,
+      x: 140,
+      y: -10,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+  });
+
+  it("does not promote a skim into a drag when the finger slides off the numpad's end", () => {
+    const onStartDrag = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    mockRect(screen.getByRole("group", { name: "Number pad" }), {
+      top: 0,
+      bottom: 80,
+      left: 0,
+      right: 300,
+    });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 80,
+      clientY: 20,
+    });
+    // Finger runs past the right end, still level with the numpad row.
+    mockElementFromPoint(null);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 360, clientY: 20 }),
+      );
+    });
+    expect(onStartDrag).not.toHaveBeenCalled();
+  });
+
+  it("promotes a skim into a drag on a vertical numpad when the finger pulls toward the board", () => {
+    const onStartDrag = vi.fn();
+    render(
+      <NumPad
+        position="right"
+        remainingCounts={ZERO_REMAINING}
+        onNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    const five = screen.getByRole("button", { name: /^5, / });
+    // Right numpad column spans x∈[0,60]; the board sits to the left.
+    mockRect(screen.getByRole("group", { name: "Number pad" }), {
+      top: 0,
+      bottom: 600,
+      left: 0,
+      right: 60,
+    });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Vertical pan = along-axis for a vertical numpad → skim.
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 10,
+      clientY: 80,
+    });
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 10, clientY: 140 }),
+      );
+    });
+    expect(onStartDrag).not.toHaveBeenCalled();
+    // Finger pulls left toward the board, off the numpad column.
+    mockElementFromPoint(null);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: -20, clientY: 140 }),
+      );
+    });
+    expect(onStartDrag).toHaveBeenCalledTimes(1);
+    expect(onStartDrag).toHaveBeenCalledWith({
+      digit: 5,
+      x: -20,
+      y: 140,
+      pointerId: 1,
+      pointerType: "touch",
+    });
   });
 });
