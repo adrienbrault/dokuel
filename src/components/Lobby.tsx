@@ -1,3 +1,4 @@
+import { Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
@@ -69,12 +70,12 @@ export function Lobby({
   }
 
   return (
-    <div className="screen-content gap-8">
-      <div className="flex flex-col items-center gap-2">
+    <div className="screen-content gap-7 py-10">
+      <div className="flex flex-col items-center gap-3">
         <h2 className="heading">Game Lobby</h2>
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-bg-raised cursor-pointer touch-manipulation press-spring-soft"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-bg-inset border border-border-default cursor-pointer touch-manipulation press-spring-soft"
           onClick={async () => {
             await navigator.clipboard.writeText(roomState.roomId);
             setCodeCopied(true);
@@ -82,24 +83,19 @@ export function Lobby({
           }}
           title="Copy room code"
         >
-          <span className="caption">{codeCopied ? "Copied!" : "Room:"}</span>
-          <span className="font-mono font-semibold text-text-primary">
+          <Copy size={14} className="text-text-muted" aria-hidden="true" />
+          <span className="caption">{codeCopied ? "Copied!" : "Room"}</span>
+          <span className="font-mono font-bold text-text-primary">
             {roomState.roomId}
           </span>
         </button>
         <button
           type="button"
-          className="btn btn-md btn-primary mt-1 shadow-sm shadow-accent/20"
+          className="btn btn-md btn-primary"
           onClick={handleShare}
         >
           {copied ? "Link Copied!" : "Share Invite Link"}
         </button>
-        <p className="caption mt-1">
-          Difficulty:{" "}
-          <span className="font-medium text-text-primary capitalize">
-            {roomState.difficulty}
-          </span>
-        </p>
       </div>
 
       <div className="flex flex-col gap-3 w-full">
@@ -182,21 +178,31 @@ export function Lobby({
         )}
       </div>
 
-      {isHost && onDifficultyChange && (
-        <SlidingRadioGroup
-          options={DIFFICULTY_OPTIONS}
-          value={roomState.difficulty}
-          onChange={onDifficultyChange}
-          name="room-difficulty"
-          ariaLabel="Difficulty"
-        />
-      )}
+      <div className="flex flex-col gap-2 w-full">
+        <span className="label">Difficulty</span>
+        {isHost && onDifficultyChange ? (
+          <SlidingRadioGroup
+            options={DIFFICULTY_OPTIONS}
+            value={roomState.difficulty}
+            onChange={onDifficultyChange}
+            name="room-difficulty"
+            ariaLabel="Difficulty"
+          />
+        ) : (
+          <div className="card px-4 py-2.5 text-center text-sm font-semibold text-text-primary capitalize">
+            {roomState.difficulty}
+          </div>
+        )}
+      </div>
 
       {onAssistLevelChange && (
-        <AssistLevelPicker
-          value={roomState.assistLevel}
-          onChange={onAssistLevelChange}
-        />
+        <div className="flex flex-col gap-2 w-full">
+          <span className="label">Assistance</span>
+          <AssistLevelPicker
+            value={roomState.assistLevel}
+            onChange={onAssistLevelChange}
+          />
+        </div>
       )}
 
       <div className="flex flex-col gap-3 w-full">
