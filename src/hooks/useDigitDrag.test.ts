@@ -390,4 +390,40 @@ describe("useDigitDrag", () => {
     expect(result.current.state).toBeNull();
     expect(onDrop).not.toHaveBeenCalled();
   });
+
+  it("does not demote a cell-sourced drag that passes over the numpad", () => {
+    mockElementFromPoint((_x, y) =>
+      y >= 400 ? makeNumpadButton(7) : makeCellElement(3, 4),
+    );
+    const onReturnToNumpad = vi.fn();
+    const { result } = renderHook(() =>
+      useDigitDrag({
+        onDrop: vi.fn(),
+        isDroppable: () => true,
+        onReturnToNumpad,
+      }),
+    );
+    act(() => {
+      result.current.start(
+        startParams({
+          digit: 5,
+          source: { kind: "cell", row: 3, col: 4 },
+          x: 50,
+          y: 100,
+        }),
+      );
+    });
+    // Out over the board, then back over the numpad — a drag that began
+    // on a cell has no skim to resume, so it stays a drag throughout.
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 450 }),
+      );
+    });
+    expect(onReturnToNumpad).not.toHaveBeenCalled();
+    expect(result.current.state).not.toBeNull();
+  });
 });
