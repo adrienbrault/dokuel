@@ -123,8 +123,8 @@ export function GameLayout({
             {position === "bottom" && numPad}
           </div>
         </div>
-        {/* Desktop: always show numpad on the right */}
-        <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
+        {/* Desktop: numpad as a 3×3 grid, vertically centered beside the board */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:self-center">
           {numPad}
         </div>
       </div>
