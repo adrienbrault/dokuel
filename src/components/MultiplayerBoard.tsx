@@ -207,16 +207,17 @@ export function MultiplayerBoard({
       onDeselectCell={highlight.deselectCell}
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center gap-0.5 px-5 py-1.5 rounded-full bg-bg-raised border border-border-default">
           <Timer
             running={game.status === "playing"}
             initialSeconds={initialTimerSeconds}
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
+            className="text-lg font-bold text-text-primary font-mono tabular-nums leading-none"
           />
-          <span className="text-xs text-text-muted font-mono tabular-nums">
-            <span className="text-accent font-medium">
+          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums leading-none">
+            <span className="text-accent font-semibold">
               {81 - game.cellsRemaining}
             </span>
             /81

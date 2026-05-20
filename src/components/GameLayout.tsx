@@ -1,4 +1,4 @@
-import { Settings, X } from "lucide-react";
+import { ChevronLeft, Settings, X } from "lucide-react";
 import {
   type PointerEvent,
   type ReactNode,
@@ -52,11 +52,13 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center min-h-dvh app-surface py-4 px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
-        <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
+        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
+          {title}
+        </p>
       )}
 
       {/* Header */}
@@ -65,10 +67,11 @@ export function GameLayout({
       >
         <button
           type="button"
-          className="btn-ghost touch-manipulation"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-bg-raised border border-border-default text-text-secondary hover:text-text-primary press-spring-soft touch-manipulation"
           onClick={onBack}
+          aria-label="Back"
         >
-          ← Back
+          <ChevronLeft size={20} aria-hidden="true" />
         </button>
         {timer}
         <SettingsButton
@@ -161,7 +164,7 @@ function SettingsButton({
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className="w-10 h-10 flex items-center justify-center rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
+        className="w-10 h-10 flex items-center justify-center rounded-full bg-bg-raised border border-border-default text-text-secondary hover:text-text-primary press-spring-soft touch-manipulation"
         onClick={() => setOpen((v) => !v)}
         aria-label="Settings"
         aria-expanded={open}

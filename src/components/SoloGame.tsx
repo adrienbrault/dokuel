@@ -94,12 +94,10 @@ export function SoloGame({
     }
   };
 
-  // Touch numpad: tap is the cheap, frequent action (note); hold is the
-  // deliberate commit (value). The 400ms hold doubles as a guard against
-  // accidental value placement. With no cell selected, the numpad
-  // doubles as a filter chip and pan-along-axis skims highlights.
-  // holdFiredRef defers the note-deselect to press end so a tap+hold
-  // can still land the digit on the originally selected cell.
+  // Touch numpad: tap places a note, a 400ms hold commits a value (the
+  // delay guards against accidental placement). With no cell selected the
+  // numpad acts as a filter chip. holdFiredRef defers note-deselect to
+  // press end so a tap+hold still lands on the originally selected cell.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
   const highlight = useDigitHighlight(game);
   const holdFiredRef = useRef(false);
@@ -191,7 +189,7 @@ export function SoloGame({
       timer={
         <button
           type="button"
-          className="flex flex-col items-center touch-manipulation"
+          className="flex flex-col items-center gap-0.5 px-5 py-1.5 rounded-full bg-bg-raised border border-border-default press-spring-soft touch-manipulation"
           onClick={() => {
             if (game.status === "playing") setPaused((p) => !p);
           }}
@@ -203,13 +201,14 @@ export function SoloGame({
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
+            className="text-lg font-bold text-text-primary font-mono tabular-nums leading-none"
           />
-          <span className="text-xs text-text-muted font-mono tabular-nums">
+          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums leading-none">
             {paused ? (
-              "Paused"
+              "Paused — tap to resume"
             ) : (
               <>
-                <span className="text-accent font-medium">
+                <span className="text-accent font-semibold">
                   {81 - game.cellsRemaining}
                 </span>
                 /81
