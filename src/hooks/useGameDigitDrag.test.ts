@@ -52,8 +52,8 @@ function makeGame() {
 }
 
 // Drop target is cell (0,0), a 100×100 square at the viewport origin.
-// With the 20px mouse lift, clientY 30 → local 10 (top/value half) and
-// clientY 85 → local 65 (bottom/note half).
+// With no mouse lift, clientY 30 → local 30 (top/value half) and
+// clientY 85 → local 85 (bottom/note half).
 const VALUE_Y = 30;
 const NOTE_Y = 85;
 
