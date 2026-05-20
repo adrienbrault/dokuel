@@ -1,6 +1,6 @@
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 
-const CHIP_SIZE_PX = 34;
+const CHIP_SIZE_PX = 17;
 
 type Props = {
   state: DigitDragState | null;
@@ -13,20 +13,22 @@ type Props = {
  * lift is zero and the chip sits right at the cursor.
  *
  * The chip is a transit cursor, not a preview. Once the pointer is
- * over a valid cell, that cell draws its own two landing previews —
- * so the chip fades out to keep attention on a single surface. It
- * stays visible (green) while in transit over empty space, and turns
- * red over a cell that can't accept the digit.
+ * over a valid cell, the chip dims to a quiet position marker and
+ * sheds its digit — the cell draws its own landing preview, animating
+ * the digit toward the note or value slot. The digit decouples from
+ * the chip so it is never shown in two places at once. The chip turns
+ * red (digit kept) over a cell that can't accept the digit, since no
+ * cell preview leads there.
  */
 export function DigitDragIndicator({ state }: Props) {
   if (!state) return null;
 
   const isInvalid = state.target !== null && state.invalidTarget;
   const isOverValid = state.target !== null && !state.invalidTarget;
-  const pose: "free" | "invalid" | "hidden" = isInvalid
+  const pose: "free" | "invalid" | "dimmed" = isInvalid
     ? "invalid"
     : isOverValid
-      ? "hidden"
+      ? "dimmed"
       : "free";
 
   return (
@@ -45,14 +47,21 @@ export function DigitDragIndicator({ state }: Props) {
         width: CHIP_SIZE_PX,
         height: CHIP_SIZE_PX,
         fontSize: CHIP_SIZE_PX * 0.62,
-        opacity: pose === "hidden" ? 0 : 1,
-        transform: `translate(-50%, -50%) scale(${pose === "hidden" ? 0.6 : 1})`,
+        opacity: pose === "dimmed" ? 0.4 : 1,
+        transform: "translate(-50%, -50%)",
         transition:
-          "opacity 0.15s ease, transform 0.15s ease, background-color 0.12s ease, color 0.12s ease",
+          "opacity 0.15s ease, background-color 0.12s ease, color 0.12s ease",
         lineHeight: 1,
       }}
     >
-      {state.digit}
+      <span
+        style={{
+          opacity: pose === "dimmed" ? 0 : 1,
+          transition: "opacity 0.12s ease",
+        }}
+      >
+        {state.digit}
+      </span>
     </div>
   );
 }
