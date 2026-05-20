@@ -578,7 +578,7 @@ body {
 }
 .wordmark {
   @apply font-extrabold tracking-tight;
-  font-size: clamp(3rem, 14vw, 4rem);
+  font-size: clamp(2.25rem, 11vw, 3.25rem);
   line-height: 1;
   background: linear-gradient(
     150deg,

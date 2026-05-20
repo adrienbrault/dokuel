@@ -52,7 +52,7 @@ function ControlButton({
       disabled={disabled}
       className={`flex flex-col items-center justify-center gap-1 w-[4.75rem] py-2 rounded-xl border select-none touch-manipulation transition-colors ${
         disabled
-          ? "border-transparent text-text-disabled cursor-default"
+          ? "border-border-default/60 text-text-disabled cursor-default"
           : "border-border-default bg-bg-raised text-text-secondary press-spring-soft"
       }`}
       onClick={onClick}

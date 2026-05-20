@@ -55,7 +55,7 @@ export function Landing({
   );
 
   return (
-    <div className="screen-content gap-5 sm:gap-8">
+    <div className="screen-content gap-4 sm:gap-8">
       <div className="flex flex-col items-center gap-1.5">
         <h1 className="wordmark">Dokuel</h1>
         {!isReturningUser && (
@@ -65,7 +65,7 @@ export function Landing({
         )}
       </div>
       {!isReturningUser && (
-        <div className="flex flex-col gap-2.5 sm:gap-3 w-full">
+        <div className="flex flex-col gap-2 sm:gap-3 w-full">
           <FeatureRow
             icon={<ZapIcon />}
             text="Real-time 1v1 — race a friend peer-to-peer"
