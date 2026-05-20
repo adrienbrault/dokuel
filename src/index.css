@@ -15,6 +15,8 @@
   --color-cell-conflict-bg: oklch(0.95 0.04 25);
   --color-success: oklch(0.65 0.18 155);
   --color-accent: oklch(0.52 0.12 168);
+  --color-accent-bright: oklch(0.61 0.13 168);
+  --color-accent-deep: oklch(0.45 0.12 168);
   --color-accent-light: oklch(0.92 0.04 168);
 
   /* Semantic surfaces */
@@ -23,6 +25,13 @@
   --color-bg-raised: oklch(0.95 0.008 80);
   --color-bg-overlay: oklch(0.99 0.004 80);
   --color-border-default: oklch(0.9 0.01 80);
+
+  /* Elevated surface — cards, buttons, popovers, sit above the page */
+  --color-surface: oklch(1 0 0);
+  --color-surface-hover: oklch(0.975 0.005 80);
+
+  /* Ambient glow washed behind menu screens */
+  --color-screen-glow: oklch(0.88 0.06 168 / 0.5);
 
   /* Semantic text */
   --color-text-primary: oklch(0.18 0.01 80);
@@ -75,6 +84,13 @@
   --color-bg-raised: oklch(0.21 0.008 80);
   --color-bg-overlay: oklch(0.16 0.008 80);
   --color-border-default: oklch(0.32 0.008 80);
+
+  /* Elevated surface — lighter than the page so it reads as raised */
+  --color-surface: oklch(0.2 0.01 80);
+  --color-surface-hover: oklch(0.24 0.012 80);
+
+  /* Ambient glow washed behind menu screens */
+  --color-screen-glow: oklch(0.55 0.07 168 / 0.14);
 
   /* Semantic text */
   --color-text-primary: oklch(0.78 0.005 80);
@@ -494,11 +510,15 @@ body {
 
 /* Buttons */
 .btn {
-  @apply rounded-xl font-semibold select-none touch-manipulation;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  @apply rounded-2xl font-semibold select-none touch-manipulation;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    filter 0.2s ease,
+    background-color 0.2s ease;
 }
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 @media (hover: hover) {
   .btn:hover {
@@ -509,47 +529,101 @@ body {
   @apply py-4 text-lg;
 }
 .btn-md {
-  @apply px-4 py-2 text-sm font-medium;
+  @apply px-4 py-2.5 text-sm font-semibold;
 }
 .btn-primary {
-  @apply bg-accent text-text-on-accent shadow-lg shadow-accent/20;
+  @apply text-text-on-accent;
+  background-image: linear-gradient(
+    180deg,
+    var(--color-accent-bright),
+    var(--color-accent-deep)
+  );
+  box-shadow:
+    0 1px 2px oklch(0.4 0.1 168 / 0.3),
+    0 10px 24px -10px oklch(0.52 0.12 168 / 0.55);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    filter: brightness(1.05);
+  }
+}
+.btn-primary:active {
+  box-shadow: 0 1px 3px oklch(0.4 0.1 168 / 0.35);
 }
 .btn-secondary {
-  @apply bg-bg-raised text-text-primary;
+  @apply bg-surface text-text-primary border border-border-default;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+}
+@media (hover: hover) {
+  .btn-secondary:hover {
+    background-color: var(--color-surface-hover);
+  }
 }
 .btn-ghost {
-  @apply text-sm text-text-muted;
+  @apply text-sm font-medium text-text-muted;
 }
 
 /* Surfaces */
 .card {
-  @apply rounded-xl bg-bg-inset border border-border-default;
+  @apply rounded-2xl bg-surface border border-border-default;
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.03),
+    0 8px 24px -14px oklch(0 0 0 / 0.18);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm;
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
   animation: modal-backdrop-in 0.2s ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-bg-overlay rounded-2xl p-8 shadow-2xl;
+  @apply flex flex-col items-center gap-6 bg-surface border border-border-default rounded-3xl p-8;
+  box-shadow: 0 24px 60px -16px oklch(0 0 0 / 0.4);
   animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .screen {
-  @apply flex min-h-dvh items-center justify-center bg-bg-primary;
+  @apply flex min-h-dvh items-center justify-center;
+  background-color: var(--color-bg-primary);
+  background-image: radial-gradient(
+    125% 60% at 50% -12%,
+    var(--color-screen-glow),
+    transparent 62%
+  );
   animation: screen-enter 0.2s ease-out;
 }
 .screen-content {
   @apply flex flex-col items-center w-full max-w-sm px-6;
 }
 
+/* Icon chip — rounded square that holds an icon inside menu rows */
+.icon-chip {
+  @apply flex items-center justify-center rounded-xl shrink-0;
+}
+
+/* Circular icon button — used for header controls (back, settings) */
+.icon-btn {
+  @apply flex items-center justify-center rounded-full bg-surface border border-border-default text-text-secondary;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.2s ease;
+}
+.icon-btn:active {
+  transform: scale(0.92);
+}
+@media (hover: hover) {
+  .icon-btn:hover {
+    background-color: var(--color-surface-hover);
+  }
+}
+
 /* Typography */
 .heading-xl {
-  @apply text-5xl font-bold tracking-tight text-text-primary;
+  @apply text-5xl font-extrabold tracking-tight text-text-primary;
 }
 .heading {
-  @apply text-2xl font-bold text-text-primary;
+  @apply text-2xl font-bold tracking-tight text-text-primary;
 }
 .label {
-  @apply text-xs font-medium text-text-muted uppercase tracking-wider;
+  @apply text-xs font-semibold text-text-muted uppercase tracking-wider;
 }
 .caption {
   @apply text-sm text-text-secondary;
