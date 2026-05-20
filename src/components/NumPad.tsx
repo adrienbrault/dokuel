@@ -249,26 +249,19 @@ export function NumPad({
 
   return (
     <div
-      className={`flex items-center gap-1 ${isVertical ? "flex-col w-12" : "flex-col w-full"} lg:flex-col lg:w-auto lg:gap-2`}
+      className={`flex flex-col items-center gap-1 lg:gap-2 ${isVertical ? "w-12 lg:w-16" : "w-full"}`}
     >
-      {/* Mobile legend: one-liner for bottom, stacked words for side numpads */}
+      {/* Legend: one-liner for the horizontal pad, stacked words for sides */}
       <p
-        className={`text-[0.625rem] text-text-muted leading-tight select-none lg:hidden ${isVertical ? "text-center whitespace-pre-line" : ""}`}
+        className={`text-[0.625rem] lg:text-xs text-text-muted leading-tight select-none ${isVertical ? "text-center whitespace-pre-line" : ""}`}
         aria-hidden="true"
       >
         {isVertical
           ? "tap\nnote\n· · ·\nhold\nenter\n· · ·\ndrag\nplace"
           : "tap = note · hold = enter · drag = place"}
       </p>
-      {/* Desktop legend: three readable lines above the 3×3 grid */}
-      <p
-        className="hidden lg:block text-[0.6875rem] text-text-muted leading-snug select-none text-center whitespace-pre-line"
-        aria-hidden="true"
-      >
-        {"tap = note\nhold = enter\ndrag = place"}
-      </p>
       <div
-        className={`flex gap-1 lg:grid lg:grid-cols-3 lg:gap-1.5 lg:w-auto ${isVertical ? "flex-col w-12" : "flex-row justify-center w-full"}`}
+        className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full"}`}
         role="group"
         aria-label="Number pad"
       >
@@ -287,7 +280,7 @@ export function NumPad({
               type="button"
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold lg:h-16 lg:w-16 ${isVertical ? "h-11 w-12" : "h-14 flex-1"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
+              className={`relative flex flex-col items-center justify-center rounded-lg select-none touch-none font-semibold ${isVertical ? "h-11 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md" : "bg-bg-raised text-text-primary"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}

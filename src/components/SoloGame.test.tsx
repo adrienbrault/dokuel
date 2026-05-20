@@ -34,10 +34,8 @@ describe("SoloGame numpad selection", () => {
     );
 
     // Select an empty cell, then tap a numpad digit (tap = note).
-    // GameLayout renders a numpad per responsive breakpoint; the first
-    // is the mobile bottom one referenced by the bug report.
     fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
-    const seven = screen.getAllByRole("button", { name: "7" })[0]!;
+    const seven = screen.getByRole("button", { name: "7" });
     fireEvent.pointerDown(seven, { pointerType: "touch" });
     fireEvent.pointerUp(seven, { pointerType: "touch" });
 
@@ -53,8 +51,8 @@ describe("SoloGame numpad selection", () => {
 
     // Select an empty cell, then start skimming across the numpad.
     fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
-    const three = screen.getAllByRole("button", { name: "3" })[0]!;
-    const five = screen.getAllByRole("button", { name: "5" })[0]!;
+    const three = screen.getByRole("button", { name: "3" });
+    const five = screen.getByRole("button", { name: "5" });
     fireEvent.pointerDown(three, {
       pointerType: "touch",
       pointerId: 1,

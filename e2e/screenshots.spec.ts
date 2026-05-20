@@ -290,12 +290,13 @@ test("solo game - drag from numpad mid-flight", async ({ page }, testInfo) => {
 		digitBox.y + digitBox.height / 2,
 	);
 	await page.mouse.down();
-	// Push past the 12px slop threshold to convert press into drag —
-	// stay inside the button so the pointermove handler still fires
-	// before pointerleave kills the press.
+	// Drag straight up — perpendicular to the horizontal numpad — to convert
+	// the press into a drag (along-axis motion would skim instead). Stay
+	// inside the button so the pointermove handler still fires before
+	// pointerleave kills the press.
 	await page.mouse.move(
-		digitBox.x + digitBox.width / 2 + 14,
-		digitBox.y + digitBox.height / 2,
+		digitBox.x + digitBox.width / 2,
+		digitBox.y + digitBox.height / 2 - 22,
 		{ steps: 3 },
 	);
 	// Hover over the target cell so it shows the valid-drop highlight
@@ -331,9 +332,11 @@ test("drag from numpad commits the digit on drop", async ({ page }) => {
 		digitBox.y + digitBox.height / 2,
 	);
 	await page.mouse.down();
+	// Drag straight up — perpendicular to the horizontal numpad — to start
+	// the drag rather than an along-axis skim.
 	await page.mouse.move(
-		digitBox.x + digitBox.width / 2 + 14,
-		digitBox.y + digitBox.height / 2,
+		digitBox.x + digitBox.width / 2,
+		digitBox.y + digitBox.height / 2 - 22,
 		{ steps: 3 },
 	);
 	await page.mouse.move(
