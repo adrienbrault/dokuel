@@ -1,3 +1,15 @@
+import {
+  BarChart3,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Flame,
+  LogIn,
+  Play,
+  Smartphone,
+  Swords,
+  Zap,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
@@ -9,6 +21,7 @@ import {
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
+import { Logo } from "./Logo.tsx";
 
 type LandingProps = {
   onSolo: () => void;
@@ -54,37 +67,40 @@ export function Landing({
   );
 
   return (
-    <div className="screen-content gap-4 sm:gap-8">
-      <div className="flex flex-col items-center gap-1 sm:gap-2">
+    <div className="screen-content gap-6 py-8">
+      <div className="flex flex-col items-center gap-3">
+        <Logo size={56} className="drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)]" />
         <h1 className="heading-xl">Dokuel</h1>
         {!isReturningUser && (
-          <p className="text-sm text-text-muted">
-            1v1 sudoku duel — no account needed.
+          <p className="caption text-center text-balance">
+            Real-time 1v1 sudoku duel — no account needed.
           </p>
         )}
       </div>
+
       {!isReturningUser && (
-        <div className="flex flex-col gap-1.5 sm:gap-3 w-full">
+        <div className="flex flex-col gap-2.5 w-full">
           <FeatureRow
-            icon={<ZapIcon />}
-            text="Real-time 1v1 — race a friend peer-to-peer"
+            icon={<Zap size={17} strokeWidth={2.4} />}
+            text="Race a friend in real time, peer-to-peer"
           />
           <FeatureRow
-            icon={<CalendarIcon />}
-            text="Daily challenge — same puzzle for everyone"
+            icon={<CalendarDays size={17} strokeWidth={2.4} />}
+            text="A fresh daily challenge for everyone"
           />
           <FeatureRow
-            icon={<GlobeIcon />}
-            text="Mobile & desktop — dark mode, haptics, sounds"
+            icon={<Smartphone size={17} strokeWidth={2.4} />}
+            text="Mobile & desktop — dark mode, haptics, sound"
           />
         </div>
       )}
-      <div className="flex flex-col gap-3 sm:gap-6 w-full">
+
+      <div className="flex flex-col gap-6 w-full">
         {savedGames.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <span className="label">Continue</span>
+          <div className="flex flex-col gap-2.5">
+            <span className="label">Pick up where you left off</span>
             {savedGames.map((game) => (
-              <ContinueButton
+              <ContinueCard
                 key={game.key}
                 game={game}
                 onClick={() => onContinue(game.key, game.difficulty)}
@@ -93,10 +109,17 @@ export function Landing({
             ))}
           </div>
         )}
-        <div className="flex flex-col gap-3">
-          <span className="label">Solo</span>
-          <ActionButton label="Start Solo" onClick={onSolo} primary />
-          <DailyChallengeButton
+
+        <div className="flex flex-col gap-2.5">
+          <button
+            type="button"
+            className="btn btn-primary w-full flex items-center justify-center gap-2.5 py-5 text-xl"
+            onClick={onSolo}
+          >
+            <Play size={22} fill="currentColor" strokeWidth={0} />
+            Start Solo
+          </button>
+          <DailyChallengeCard
             onClick={onDaily}
             completed={completed}
             streak={streak.currentStreak}
@@ -104,27 +127,45 @@ export function Landing({
             progress={dailyProgress}
           />
         </div>
-        <div className="flex flex-col gap-3">
-          <span className="label">Multiplayer</span>
-          <ActionButton label="Create Game" onClick={onCreate} />
-          <ActionButton label="Join Game" onClick={onJoin} />
+
+        <div className="flex flex-col gap-2.5">
+          <span className="label">Play a friend</span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <ActionTile
+              icon={<Swords size={22} strokeWidth={2} />}
+              label="Create Game"
+              sublabel="Start a room"
+              onClick={onCreate}
+            />
+            <ActionTile
+              icon={<LogIn size={22} strokeWidth={2} />}
+              label="Join Game"
+              sublabel="Enter a code"
+              onClick={onJoin}
+            />
+          </div>
         </div>
       </div>
-      <button type="button" className="btn btn-ghost text-sm" onClick={onStats}>
-        <span className="flex items-center gap-1.5">
-          <StatsIcon />
+
+      <div className="flex flex-col items-center gap-3">
+        <button
+          type="button"
+          className="btn btn-ghost flex items-center gap-1.5"
+          onClick={onStats}
+        >
+          <BarChart3 size={16} strokeWidth={2.2} aria-hidden="true" />
           View Stats
-        </span>
-      </button>
-      <a
-        href="https://github.com/adrienbrault/sudoku"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors"
-      >
-        <GitHubIcon />
-        <span>Open source</span>
-      </a>
+        </button>
+        <a
+          href="https://github.com/adrienbrault/sudoku"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors"
+        >
+          <GitHubIcon />
+          <span>Open source</span>
+        </a>
+      </div>
     </div>
   );
 }
@@ -132,13 +173,15 @@ export function Landing({
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-accent shrink-0">{icon}</span>
-      <span className="text-sm text-text-muted">{text}</span>
+      <span className="icon-tile w-8 h-8 bg-accent-soft text-accent">
+        {icon}
+      </span>
+      <span className="text-sm text-text-secondary">{text}</span>
     </div>
   );
 }
 
-function DailyChallengeButton({
+function DailyChallengeCard({
   onClick,
   completed,
   streak,
@@ -151,42 +194,45 @@ function DailyChallengeButton({
   dateLabel: string;
   progress: number | null;
 }) {
+  const status = completed
+    ? "Completed today"
+    : progress !== null
+      ? `${progress}% done`
+      : "New puzzle ready";
+
   return (
     <button
       type="button"
-      className="btn btn-lg btn-secondary w-full relative"
+      className="card w-full flex items-center gap-3.5 p-3.5 text-left press-spring-soft touch-manipulation"
       onClick={onClick}
     >
-      <span className="flex items-center justify-center gap-2">
-        Daily Challenge
-        <span className="text-sm font-normal text-text-muted">
-          — {dateLabel}
-        </span>
+      <span className="icon-tile w-12 h-12 bg-accent-soft text-accent relative">
+        <CalendarDays size={22} strokeWidth={2} aria-hidden="true" />
         {completed && (
-          <svg
-            className="w-5 h-5 text-emerald-500"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-label="Completed"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )}
-        {!completed && progress !== null && (
-          <span className="text-sm font-normal text-text-muted">
-            · {progress}%
+          <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-success flex items-center justify-center ring-2 ring-bg-inset">
+            <Check size={12} strokeWidth={3} className="text-white" />
           </span>
         )}
       </span>
+      <span className="flex-1 min-w-0">
+        <span className="font-semibold text-text-primary block">
+          Daily Challenge
+        </span>
+        <span className="text-xs text-text-muted">
+          {dateLabel} · {status}
+        </span>
+      </span>
       {streak > 0 && (
-        <span className="text-xs font-medium text-accent mt-0.5 block">
-          {streak}-day streak
+        <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 shrink-0">
+          <Flame size={13} strokeWidth={2.4} aria-hidden="true" />
+          <span className="text-xs font-bold tabular-nums">{streak}</span>
         </span>
       )}
+      <ChevronRight
+        size={18}
+        className="text-text-muted shrink-0"
+        aria-hidden="true"
+      />
     </button>
   );
 }
@@ -198,7 +244,7 @@ function progressPercent(game: SavedGameSummary): number {
   return Math.round((filled / remaining) * 100);
 }
 
-function ContinueButton({
+function ContinueCard({
   game,
   onClick,
   onDelete,
@@ -207,24 +253,35 @@ function ContinueButton({
   onClick: () => void;
   onDelete: () => void;
 }) {
+  const percent = progressPercent(game);
   return (
-    <div className="flex gap-2 w-full">
+    <div className="card w-full flex items-stretch overflow-hidden">
       <button
         type="button"
-        className="btn btn-lg btn-primary flex-1 min-w-0"
+        className="flex-1 min-w-0 flex items-center gap-3.5 p-3.5 text-left press-spring-soft touch-manipulation"
         onClick={onClick}
       >
-        <span className="flex items-center justify-center gap-2">
-          Continue
-          <span className="text-sm font-normal opacity-80">
-            {DIFFICULTY_LABELS[game.difficulty]} · {progressPercent(game)}% ·{" "}
-            {formatTime(game.timer)}
+        <span className="icon-tile w-12 h-12 bg-accent text-text-on-accent shrink-0">
+          <Play size={20} fill="currentColor" strokeWidth={0} />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="font-semibold text-text-primary block">
+            Continue · {DIFFICULTY_LABELS[game.difficulty]}
+          </span>
+          <span className="text-xs text-text-muted tabular-nums">
+            {percent}% complete · {formatTime(game.timer)}
+          </span>
+          <span className="mt-1.5 block h-1.5 rounded-full bg-bg-raised overflow-hidden">
+            <span
+              className="block h-full rounded-full bg-accent"
+              style={{ width: `${percent}%` }}
+            />
           </span>
         </span>
       </button>
       <button
         type="button"
-        className="btn btn-lg btn-secondary px-3 shrink-0"
+        className="flex items-center justify-center w-12 shrink-0 border-l border-border-default text-text-muted hover:text-cell-conflict hover:bg-bg-raised transition-colors touch-manipulation"
         onClick={onDelete}
         aria-label="Delete saved game"
       >
@@ -247,102 +304,33 @@ function ContinueButton({
   );
 }
 
-function ActionButton({
+function ActionTile({
+  icon,
   label,
+  sublabel,
   onClick,
-  primary = false,
 }: {
+  icon: React.ReactNode;
   label: string;
+  sublabel: string;
   onClick: () => void;
-  primary?: boolean;
 }) {
   return (
     <button
       type="button"
-      className={`btn btn-lg w-full ${primary ? "btn-primary" : "btn-secondary"}`}
+      className="btn btn-secondary flex flex-col items-center gap-2 py-4 px-2"
       onClick={onClick}
     >
-      {label}
+      <span className="icon-tile w-11 h-11 bg-accent-soft text-accent">
+        {icon}
+      </span>
+      <span className="flex flex-col items-center gap-0.5">
+        <span className="text-sm font-semibold text-text-primary">{label}</span>
+        <span className="text-[0.6875rem] font-normal text-text-muted">
+          {sublabel}
+        </span>
+      </span>
     </button>
-  );
-}
-
-function ZapIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M2 12h20" />
-      <ellipse cx="12" cy="12" rx="4" ry="10" />
-    </svg>
-  );
-}
-
-function StatsIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M18 20V10" />
-      <path d="M12 20V4" />
-      <path d="M6 20v-6" />
-    </svg>
   );
 }
 
