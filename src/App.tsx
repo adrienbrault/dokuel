@@ -126,7 +126,7 @@ function App() {
     case "landing":
       return (
         <div className="screen relative">
-          <div className="absolute top-4 right-4 flex gap-1">
+          <div className="absolute top-4 right-4 flex gap-2 z-10">
             <SoundToggle
               enabled={soundOn}
               onToggle={() => {

@@ -7,14 +7,14 @@ export function SoundToggle({ enabled, onToggle }: SoundToggleProps) {
   return (
     <button
       type="button"
-      className="p-2 rounded-lg text-text-muted hover:bg-bg-raised transition-colors touch-manipulation"
+      className="icon-btn w-9 h-9 touch-manipulation"
       onClick={onToggle}
       aria-label={enabled ? "Mute sounds" : "Enable sounds"}
     >
       {enabled ? (
         <svg
-          width="24"
-          height="24"
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -30,8 +30,8 @@ export function SoundToggle({ enabled, onToggle }: SoundToggleProps) {
         </svg>
       ) : (
         <svg
-          width="24"
-          height="24"
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

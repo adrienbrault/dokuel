@@ -1,3 +1,17 @@
+import {
+  CalendarDays,
+  CalendarHeart,
+  ChartColumn,
+  Check,
+  ChevronRight,
+  Flame,
+  Globe,
+  LogIn,
+  Play,
+  Swords,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
@@ -53,78 +67,111 @@ export function Landing({
     [savedGames],
   );
 
+  const dailySub = completed
+    ? `${formatShortDate(today)} · completed`
+    : dailyProgress !== null
+      ? `${formatShortDate(today)} · ${dailyProgress}% done`
+      : `${formatShortDate(today)} · same puzzle for everyone`;
+
   return (
-    <div className="screen-content gap-4 sm:gap-8">
-      <div className="flex flex-col items-center gap-1 sm:gap-2">
-        <h1 className="heading-xl">Dokuel</h1>
-        {!isReturningUser && (
-          <p className="text-sm text-text-muted">
-            1v1 sudoku duel — no account needed.
-          </p>
-        )}
-      </div>
+    <div className="screen-content gap-7 py-10 sm:gap-9">
+      <header className="flex flex-col items-center gap-2">
+        <h1 className="text-[3.25rem] leading-none font-extrabold tracking-tight bg-gradient-to-br from-text-primary to-accent bg-clip-text text-transparent">
+          Dokuel
+        </h1>
+        <p className="text-sm text-text-muted">
+          1v1 sudoku duel — no account needed.
+        </p>
+      </header>
+
       {!isReturningUser && (
-        <div className="flex flex-col gap-1.5 sm:gap-3 w-full">
+        <div className="flex flex-col gap-2.5 w-full">
           <FeatureRow
-            icon={<ZapIcon />}
-            text="Real-time 1v1 — race a friend peer-to-peer"
+            icon={<Zap size={16} aria-hidden="true" />}
+            text="Race a friend in real time, peer-to-peer"
           />
           <FeatureRow
-            icon={<CalendarIcon />}
-            text="Daily challenge — same puzzle for everyone"
+            icon={<CalendarDays size={16} aria-hidden="true" />}
+            text="A fresh daily challenge for everyone"
           />
           <FeatureRow
-            icon={<GlobeIcon />}
+            icon={<Globe size={16} aria-hidden="true" />}
             text="Mobile & desktop — dark mode, haptics, sounds"
           />
         </div>
       )}
-      <div className="flex flex-col gap-3 sm:gap-6 w-full">
-        {savedGames.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <span className="label">Continue</span>
-            {savedGames.map((game) => (
-              <ContinueButton
-                key={game.key}
-                game={game}
-                onClick={() => onContinue(game.key, game.difficulty)}
-                onDelete={() => handleDelete(game.key)}
-              />
-            ))}
-          </div>
-        )}
-        <div className="flex flex-col gap-3">
-          <span className="label">Solo</span>
-          <ActionButton label="Start Solo" onClick={onSolo} primary />
-          <DailyChallengeButton
-            onClick={onDaily}
-            completed={completed}
-            streak={streak.currentStreak}
-            dateLabel={formatShortDate(today)}
-            progress={dailyProgress}
+
+      <div className="flex flex-col gap-2.5 w-full">
+        {savedGames.map((game) => (
+          <ContinueRow
+            key={game.key}
+            game={game}
+            onClick={() => onContinue(game.key, game.difficulty)}
+            onDelete={() => handleDelete(game.key)}
           />
-        </div>
-        <div className="flex flex-col gap-3">
-          <span className="label">Multiplayer</span>
-          <ActionButton label="Create Game" onClick={onCreate} />
-          <ActionButton label="Join Game" onClick={onJoin} />
-        </div>
+        ))}
+
+        <ActionRow
+          variant="primary"
+          icon={<Play size={20} aria-hidden="true" />}
+          label="Start Solo"
+          sublabel="Pick a difficulty and play"
+          onClick={onSolo}
+        />
+        <ActionRow
+          icon={<CalendarHeart size={20} aria-hidden="true" />}
+          label="Daily Challenge"
+          sublabel={dailySub}
+          onClick={onDaily}
+          accessory={
+            completed ? (
+              <span
+                className="icon-chip w-7 h-7 bg-success/15 text-success"
+                aria-hidden="true"
+              >
+                <Check size={16} strokeWidth={3} />
+              </span>
+            ) : streak.currentStreak > 0 ? (
+              <span className="flex items-center gap-1 rounded-full bg-accent-light px-2 py-1 text-xs font-bold text-accent">
+                <Flame size={12} aria-hidden="true" />
+                {streak.currentStreak}
+              </span>
+            ) : undefined
+          }
+        />
+        <ActionRow
+          icon={<Swords size={20} aria-hidden="true" />}
+          label="Create Game"
+          sublabel="Host a 1v1 room"
+          onClick={onCreate}
+        />
+        <ActionRow
+          icon={<LogIn size={20} aria-hidden="true" />}
+          label="Join Game"
+          sublabel="Enter a friend's room code"
+          onClick={onJoin}
+        />
       </div>
-      <button type="button" className="btn btn-ghost text-sm" onClick={onStats}>
-        <span className="flex items-center gap-1.5">
-          <StatsIcon />
+
+      <div className="flex flex-col items-center gap-3">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-accent transition-colors touch-manipulation"
+          onClick={onStats}
+        >
+          <ChartColumn size={16} aria-hidden="true" />
           View Stats
-        </span>
-      </button>
-      <a
-        href="https://github.com/adrienbrault/sudoku"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors"
-      >
-        <GitHubIcon />
-        <span>Open source</span>
-      </a>
+        </button>
+        <a
+          href="https://github.com/adrienbrault/sudoku"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors"
+        >
+          <GitHubIcon />
+          <span>Open source</span>
+        </a>
+      </div>
     </div>
   );
 }
@@ -132,62 +179,75 @@ export function Landing({
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-accent shrink-0">{icon}</span>
-      <span className="text-sm text-text-muted">{text}</span>
+      <span
+        className="icon-chip w-8 h-8 bg-accent-light text-accent"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <span className="text-sm text-text-secondary">{text}</span>
     </div>
   );
 }
 
-function DailyChallengeButton({
+function ActionRow({
+  icon,
+  label,
+  sublabel,
   onClick,
-  completed,
-  streak,
-  dateLabel,
-  progress,
+  variant,
+  accessory,
 }: {
+  icon: React.ReactNode;
+  label: string;
+  sublabel: string;
   onClick: () => void;
-  completed: boolean;
-  streak: number;
-  dateLabel: string;
-  progress: number | null;
+  variant?: "primary" | undefined;
+  accessory?: React.ReactNode;
 }) {
+  const primary = variant === "primary";
   return (
     <button
       type="button"
-      className="btn btn-lg btn-secondary w-full relative"
+      className={`btn ${primary ? "btn-primary" : "btn-secondary"} w-full flex items-center gap-3.5 px-3.5 py-3 text-left`}
       onClick={onClick}
     >
-      <span className="flex items-center justify-center gap-2">
-        Daily Challenge
-        <span className="text-sm font-normal text-text-muted">
-          — {dateLabel}
-        </span>
-        {completed && (
-          <svg
-            className="w-5 h-5 text-emerald-500"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-label="Completed"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )}
-        {!completed && progress !== null && (
-          <span className="text-sm font-normal text-text-muted">
-            · {progress}%
-          </span>
-        )}
+      <span
+        className={`icon-chip w-11 h-11 ${primary ? "bg-white/20 text-text-on-accent" : "bg-accent-light text-accent"}`}
+      >
+        {icon}
       </span>
-      {streak > 0 && (
-        <span className="text-xs font-medium text-accent mt-0.5 block">
-          {streak}-day streak
+      <span className="flex-1 min-w-0">
+        <span className="block text-[0.95rem] font-bold leading-tight">
+          {label}
         </span>
-      )}
+        <span
+          className={`block text-xs leading-tight mt-0.5 truncate ${primary ? "text-text-on-accent/75" : "text-text-muted"}`}
+        >
+          {sublabel}
+        </span>
+      </span>
+      {accessory}
+      <ChevronRight
+        size={18}
+        className={primary ? "text-text-on-accent/55" : "text-text-muted"}
+        aria-hidden="true"
+      />
     </button>
+  );
+}
+
+function GitHubIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+    </svg>
   );
 }
 
@@ -198,7 +258,7 @@ function progressPercent(game: SavedGameSummary): number {
   return Math.round((filled / remaining) * 100);
 }
 
-function ContinueButton({
+function ContinueRow({
   game,
   onClick,
   onDelete,
@@ -207,155 +267,45 @@ function ContinueButton({
   onClick: () => void;
   onDelete: () => void;
 }) {
+  const pct = progressPercent(game);
   return (
-    <div className="flex gap-2 w-full">
+    <div className="card relative w-full flex items-stretch overflow-hidden press-spring-soft">
       <button
         type="button"
-        className="btn btn-lg btn-primary flex-1 min-w-0"
+        className="flex-1 min-w-0 flex items-center gap-3.5 px-3.5 py-3 text-left touch-manipulation"
         onClick={onClick}
       >
-        <span className="flex items-center justify-center gap-2">
-          Continue
-          <span className="text-sm font-normal opacity-80">
-            {DIFFICULTY_LABELS[game.difficulty]} · {progressPercent(game)}% ·{" "}
-            {formatTime(game.timer)}
+        <span
+          className="icon-chip w-11 h-11 bg-accent text-text-on-accent"
+          aria-hidden="true"
+        >
+          <Play size={20} />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[0.95rem] font-bold leading-tight text-text-primary">
+            Continue
           </span>
+          <span className="block text-xs leading-tight mt-0.5 text-text-muted truncate">
+            {DIFFICULTY_LABELS[game.difficulty]} · {formatTime(game.timer)}
+          </span>
+        </span>
+        <span className="rounded-full bg-accent-light px-2 py-1 text-xs font-bold text-accent tabular-nums">
+          {pct}%
         </span>
       </button>
       <button
         type="button"
-        className="btn btn-lg btn-secondary px-3 shrink-0"
+        className="flex items-center justify-center w-12 shrink-0 border-l border-border-default text-text-muted hover:text-cell-conflict hover:bg-surface-hover transition-colors touch-manipulation"
         onClick={onDelete}
         aria-label="Delete saved game"
       >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M18 6L6 18" />
-          <path d="M6 6l12 12" />
-        </svg>
+        <Trash2 size={17} aria-hidden="true" />
       </button>
+      <span
+        className="absolute bottom-0 left-0 h-1 bg-accent rounded-r-full transition-all"
+        style={{ width: `${pct}%` }}
+        aria-hidden="true"
+      />
     </div>
-  );
-}
-
-function ActionButton({
-  label,
-  onClick,
-  primary = false,
-}: {
-  label: string;
-  onClick: () => void;
-  primary?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className={`btn btn-lg w-full ${primary ? "btn-primary" : "btn-secondary"}`}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
-function ZapIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M2 12h20" />
-      <ellipse cx="12" cy="12" rx="4" ry="10" />
-    </svg>
-  );
-}
-
-function StatsIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M18 20V10" />
-      <path d="M12 20V4" />
-      <path d="M6 20v-6" />
-    </svg>
-  );
-}
-
-function GitHubIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-    </svg>
   );
 }
