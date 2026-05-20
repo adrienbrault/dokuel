@@ -365,25 +365,12 @@ function handleUndo(state: State): State {
       }
       break;
     }
-    case "hint": {
-      const { row, col } = lastAction.position;
-      board[row]![col]!.value = null;
-      board[row]![col]!.notes = new Set(lastAction.previousNotes);
-      for (const cleared of lastAction.clearedNotes) {
-        board[cleared.row]![cleared.col]!.notes.add(cleared.note);
-      }
-      break;
-    }
   }
 
   return {
     ...state,
     board,
     history,
-    hintsUsed:
-      lastAction.type === "hint"
-        ? Math.max(0, state.hintsUsed - 1)
-        : state.hintsUsed,
   };
 }
 

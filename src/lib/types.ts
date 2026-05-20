@@ -47,13 +47,6 @@ export type MoveAction =
         previousValue: CellValue;
         previousNotes: Set<number>;
       }[];
-    }
-  | {
-      type: "hint";
-      position: Position;
-      value: number;
-      previousNotes: Set<number>;
-      clearedNotes: ClearedNote[];
     };
 
 // --- Hint Explanation ---
