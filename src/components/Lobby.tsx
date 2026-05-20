@@ -1,5 +1,6 @@
+import { Check, Copy, Pencil, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
+import { DIFFICULTY_LABELS, DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
@@ -68,13 +69,15 @@ export function Lobby({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const showDifficultyControl = isHost && onDifficultyChange;
+
   return (
-    <div className="screen-content gap-8">
-      <div className="flex flex-col items-center gap-2">
+    <div className="screen-content gap-6 py-8">
+      <div className="flex flex-col items-center gap-3 w-full">
         <h2 className="heading">Game Lobby</h2>
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-bg-raised cursor-pointer touch-manipulation press-spring-soft"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-bg-raised border border-border-default press-spring-soft touch-manipulation"
           onClick={async () => {
             await navigator.clipboard.writeText(roomState.roomId);
             setCodeCopied(true);
@@ -82,39 +85,40 @@ export function Lobby({
           }}
           title="Copy room code"
         >
-          <span className="caption">{codeCopied ? "Copied!" : "Room:"}</span>
-          <span className="font-mono font-semibold text-text-primary">
+          <span className="font-mono font-bold text-text-primary tracking-wide">
             {roomState.roomId}
           </span>
+          {codeCopied ? (
+            <Check size={15} className="text-success" aria-hidden="true" />
+          ) : (
+            <Copy size={15} className="text-text-muted" aria-hidden="true" />
+          )}
         </button>
         <button
           type="button"
-          className="btn btn-md btn-primary mt-1 shadow-sm shadow-accent/20"
+          className="btn btn-md btn-primary flex items-center gap-2"
           onClick={handleShare}
         >
+          <Share2 size={16} strokeWidth={2.2} aria-hidden="true" />
           {copied ? "Link Copied!" : "Share Invite Link"}
         </button>
-        <p className="caption mt-1">
-          Difficulty:{" "}
-          <span className="font-medium text-text-primary capitalize">
-            {roomState.difficulty}
-          </span>
-        </p>
       </div>
 
-      <div className="flex flex-col gap-3 w-full">
-        <h3 className="label tracking-wide">Players</h3>
+      <div className="flex flex-col gap-2 w-full">
+        <span className="label">Players</span>
         {roomState.players.map((player) => {
           const isMe = player.id === playerId;
           return (
             <div
               key={player.id}
-              className="card flex items-center gap-3 px-4 py-3"
+              className="card flex items-center gap-3 px-3.5 py-3"
             >
-              <div
-                className="w-3 h-3 rounded-full shrink-0"
+              <span
+                className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white text-sm font-bold"
                 style={{ backgroundColor: player.color }}
-              />
+              >
+                {player.name.charAt(0).toUpperCase()}
+              </span>
               {isMe && editingName ? (
                 <input
                   ref={inputRef}
@@ -127,12 +131,12 @@ export function Lobby({
                     if (e.key === "Escape") setEditingName(false);
                   }}
                   maxLength={24}
-                  className="font-medium text-text-primary bg-transparent border-b-2 border-accent outline-none min-w-0 flex-1"
+                  className="font-semibold text-text-primary bg-transparent border-b-2 border-accent outline-none min-w-0 flex-1"
                 />
               ) : (
                 <button
                   type="button"
-                  className={`font-medium text-text-primary text-left truncate ${isMe ? "cursor-pointer hover:underline decoration-accent decoration-2 underline-offset-2" : "cursor-default"}`}
+                  className={`font-semibold text-text-primary text-left truncate flex-1 ${isMe ? "cursor-pointer" : "cursor-default"}`}
                   onClick={() => {
                     if (isMe) startEditing(player.name);
                   }}
@@ -144,15 +148,16 @@ export function Lobby({
               {isMe && !editingName && (
                 <button
                   type="button"
-                  className="text-xs text-text-muted hover:text-accent shrink-0 touch-manipulation"
+                  className="flex items-center justify-center w-7 h-7 rounded-lg text-text-muted hover:text-accent hover:bg-bg-raised transition-colors shrink-0 touch-manipulation"
                   onClick={() => startEditing(player.name)}
                   title="Edit name"
+                  aria-label="Edit name"
                 >
-                  Edit
+                  <Pencil size={14} aria-hidden="true" />
                 </button>
               )}
               {player.id === roomState.hostId && (
-                <span className="text-xs text-text-muted shrink-0 ml-auto">
+                <span className="text-[0.625rem] font-bold uppercase tracking-wider text-accent bg-accent-soft px-2 py-1 rounded-full shrink-0">
                   Host
                 </span>
               )}
@@ -160,50 +165,57 @@ export function Lobby({
           );
         })}
         {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
+          <div className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-border-default">
             <span className="text-sm text-text-muted">
               Waiting for opponent
             </span>
-            <span className="flex gap-0.5" aria-hidden="true">
-              <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              />
-              <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              />
-              <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              />
+            <span className="flex gap-1" aria-hidden="true">
+              {[0, 150, 300].map((delay) => (
+                <span
+                  key={delay}
+                  className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
+                  style={{ animationDelay: `${delay}ms` }}
+                />
+              ))}
             </span>
           </div>
         )}
       </div>
 
-      {isHost && onDifficultyChange && (
-        <SlidingRadioGroup
-          options={DIFFICULTY_OPTIONS}
-          value={roomState.difficulty}
-          onChange={onDifficultyChange}
-          name="room-difficulty"
-          ariaLabel="Difficulty"
-        />
-      )}
+      <div className="flex flex-col gap-2 w-full">
+        <span className="label">Difficulty</span>
+        {showDifficultyControl ? (
+          <SlidingRadioGroup
+            options={DIFFICULTY_OPTIONS}
+            value={roomState.difficulty}
+            onChange={onDifficultyChange}
+            name="room-difficulty"
+            ariaLabel="Difficulty"
+          />
+        ) : (
+          <div className="card px-4 py-2.5">
+            <span className="text-sm font-semibold text-text-primary capitalize">
+              {DIFFICULTY_LABELS[roomState.difficulty]}
+            </span>
+          </div>
+        )}
+      </div>
 
       {onAssistLevelChange && (
-        <AssistLevelPicker
-          value={roomState.assistLevel}
-          onChange={onAssistLevelChange}
-        />
+        <div className="flex flex-col gap-2 w-full">
+          <span className="label">Assistance</span>
+          <AssistLevelPicker
+            value={roomState.assistLevel}
+            onChange={onAssistLevelChange}
+          />
+        </div>
       )}
 
       <div className="flex flex-col gap-3 w-full">
         <button
           type="button"
           disabled={!canStart}
-          className={`btn btn-lg w-full transition-all duration-100 ${
+          className={`btn btn-lg w-full ${
             canStart
               ? "btn-primary"
               : "bg-bg-disabled text-text-disabled cursor-not-allowed"
@@ -214,7 +226,7 @@ export function Lobby({
         </button>
         <button
           type="button"
-          className="btn-ghost mt-2 touch-manipulation"
+          className="btn btn-ghost touch-manipulation"
           onClick={onBack}
         >
           ← Back
