@@ -66,9 +66,11 @@ describe("DigitDragIndicator", () => {
     expect(el.style.top).toBe("300px");
   });
 
-  it("hides itself over a valid target so the cell's previews lead", () => {
-    // Over a valid cell the cell draws its own two landing previews;
-    // the transit chip fades out to keep attention on one surface.
+  it("dims to a quiet marker over a valid target and sheds its digit", () => {
+    // Over a valid cell the cell draws its own landing preview that
+    // animates the digit toward the note or value slot. The transit
+    // chip stays visible but dims to a quiet position marker, and the
+    // digit decouples from the chip so it is never shown in two places.
     const { getByTestId } = render(
       <DigitDragIndicator
         state={makeState({
@@ -81,10 +83,11 @@ describe("DigitDragIndicator", () => {
       />,
     );
     const el = getByTestId("digit-drag-indicator");
-    expect(el.dataset.pose).toBe("hidden");
-    expect(el.style.opacity).toBe("0");
-    // Still positioned at the pointer so it fades in place when the
-    // pointer leaves the cell.
+    expect(el.dataset.pose).toBe("dimmed");
+    expect(el.style.opacity).toBe("0.15");
+    const digit = el.querySelector("span");
+    expect(digit?.style.opacity).toBe("0");
+    // Still positioned at the pointer so it tracks while it dims.
     expect(el.style.left).toBe("150px");
     expect(el.style.top).toBe("250px");
   });
