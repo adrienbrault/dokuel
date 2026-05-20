@@ -6,8 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import type { NumPadPosition } from "../lib/types.ts";
+import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 
 type GameLayoutProps = {
@@ -146,6 +148,7 @@ function SettingsButton({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const darkMode = useDarkMode();
 
   useEffect(() => {
     if (!open) return;
@@ -188,6 +191,13 @@ function SettingsButton({
             position={position}
             onChange={onPositionChange}
           />
+          <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
+            <p className="text-xs text-text-muted font-medium">Dark mode</p>
+            <DarkModeToggle
+              isDark={darkMode.isDark}
+              onToggle={darkMode.toggle}
+            />
+          </div>
           {extra && (
             <div className="mt-3 pt-3 border-t border-border-default">
               {extra}
