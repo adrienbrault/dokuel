@@ -1,4 +1,11 @@
-import { type PointerEvent, useCallback, useRef, useState } from "react";
+import {
+  type PointerEvent,
+  type Ref,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { useNumPadSkim } from "../hooks/useNumPadSkim.ts";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
@@ -43,6 +50,26 @@ type NumPadProps = {
     | undefined;
   /** Fires when an ALONG-axis skim crosses into another digit's button. */
   onSkimDigit?: ((n: number) => void) | undefined;
+  /** Imperative handle — see NumPadHandle. */
+  ref?: Ref<NumPadHandle> | undefined;
+};
+
+/**
+ * Imperative surface a parent uses to fold a returning digit drag back
+ * into a numpad skim — the reverse of the skim-to-drag handoff.
+ */
+export type NumPadHandle = {
+  /**
+   * Resumes a skim for a gesture that began as a drag and has been
+   * brought back over the digits. Highlights `digit`, restores the
+   * press visual, and re-arms document-level skim tracking under the
+   * same pointer.
+   */
+  resumeSkimFromDrag: (info: {
+    digit: number;
+    pointerId: number;
+    pointerType: string;
+  }) => void;
 };
 
 export function NumPad({
@@ -56,6 +83,7 @@ export function NumPad({
   onPressEnd,
   onStartDrag,
   onSkimDigit,
+  ref,
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
 
@@ -85,6 +113,19 @@ export function NumPad({
     onStartDrag,
     setPressedDigit,
   });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      resumeSkimFromDrag: ({ digit, pointerId, pointerType }) => {
+        setPressedDigit(digit);
+        onSkimDigit?.(digit);
+        haptics.tap();
+        beginSkim(digit, pointerId, pointerType);
+      },
+    }),
+    [beginSkim, onSkimDigit],
+  );
 
   const cancelTimer = useCallback(() => {
     if (pressRef.current?.timer) {
