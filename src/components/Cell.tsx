@@ -121,10 +121,14 @@ export const Cell = memo(function Cell({
       onClick={() => onSelect(row, col)}
       aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
     >
+      <span
+        aria-hidden="true"
+        className="cell-depth pointer-events-none absolute inset-0"
+      />
       {cell.value ? (
         <span
           key={cell.value}
-          className={`text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
+          className={`relative text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
         >
           {cell.value}
         </span>
