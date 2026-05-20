@@ -47,7 +47,7 @@ export function DigitDragIndicator({ state }: Props) {
         width: CHIP_SIZE_PX,
         height: CHIP_SIZE_PX,
         fontSize: CHIP_SIZE_PX * 0.62,
-        opacity: pose === "dimmed" ? 0.4 : 1,
+        opacity: pose === "dimmed" ? 0.15 : 1,
         transform: "translate(-50%, -50%)",
         transition:
           "opacity 0.15s ease, background-color 0.12s ease, color 0.12s ease",

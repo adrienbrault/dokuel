@@ -84,7 +84,7 @@ describe("DigitDragIndicator", () => {
     );
     const el = getByTestId("digit-drag-indicator");
     expect(el.dataset.pose).toBe("dimmed");
-    expect(el.style.opacity).toBe("0.4");
+    expect(el.style.opacity).toBe("0.15");
     const digit = el.querySelector("span");
     expect(digit?.style.opacity).toBe("0");
     // Still positioned at the pointer so it tracks while it dims.
