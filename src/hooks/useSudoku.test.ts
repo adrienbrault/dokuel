@@ -8,9 +8,8 @@ function setupHook(difficulty: "easy" | "medium" = "easy") {
   return renderHook(() => useSudoku(puzzle));
 }
 
-// Deterministic fixture: solved board with two cells removed so
-// hints can be applied without completing the board (which would
-// block undo).
+// Deterministic fixture: solved board with two cells removed so a
+// hint targets a known naked single while a peer cell stays empty.
 const SOLVED =
   "534678912" +
   "672195348" +
@@ -22,7 +21,7 @@ const SOLVED =
   "287419635" +
   "345286179";
 // R0C0 (=5) and R0C5 (=8) blanked. Both are naked singles; R0C5 is a
-// row-peer of R0C0, so it can hold a note that hint placement must clear.
+// row-peer of R0C0, used to verify a hint leaves peer notes untouched.
 const TWO_HOLE_PUZZLE = `${SOLVED.slice(0, 0)}.${SOLVED.slice(1, 5)}.${SOLVED.slice(6)}`;
 
 describe("useSudoku reset", () => {
@@ -461,13 +460,13 @@ describe("useSudoku", () => {
   });
 
   describe("hint", () => {
-    it("places the deduced value on the board", () => {
+    it("does not fill the hinted cell", () => {
       const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
 
       expect(result.current.board[0]![0]!.value).toBeNull();
       act(() => result.current.hint());
 
-      expect(result.current.board[0]![0]!.value).toBe(5);
+      expect(result.current.board[0]![0]!.value).toBeNull();
     });
 
     it("increments hintsUsed and selects the hinted cell", () => {
@@ -478,27 +477,32 @@ describe("useSudoku", () => {
 
       expect(result.current.hintsUsed).toBe(1);
       expect(result.current.selectedCell).toEqual({ row: 0, col: 0 });
-      expect(result.current.activeHint).not.toBeNull();
     });
 
-    it("pushes a hint MoveAction so undo reverts it", () => {
+    it("exposes the deduced value and explanation via activeHint", () => {
+      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
+
+      act(() => result.current.hint());
+
+      expect(result.current.activeHint).not.toBeNull();
+      expect(result.current.activeHint!.position).toEqual({ row: 0, col: 0 });
+      expect(result.current.activeHint!.value).toBe(5);
+    });
+
+    it("adds nothing to undo history", () => {
       const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
 
       const beforeLen = result.current.historyLength;
       act(() => result.current.hint());
-      expect(result.current.historyLength).toBe(beforeLen + 1);
-      expect(result.current.board[0]![0]!.value).toBe(5);
 
-      act(() => result.current.undo());
-      expect(result.current.board[0]![0]!.value).toBeNull();
-      expect(result.current.hintsUsed).toBe(0);
+      expect(result.current.historyLength).toBe(beforeLen);
     });
 
-    it("clears peer notes for the placed value", () => {
+    it("leaves peer notes untouched", () => {
       const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
 
-      // Put note 5 on R0C5 (a row-peer of R0C0). Hint will place 5 at
-      // R0C0 and should strip the note from R0C5.
+      // Put note 5 on R0C5, a row-peer of the hinted cell R0C0. The
+      // hint must not place a value, so the note must survive.
       act(() => result.current.toggleNotesMode());
       act(() => result.current.selectCell(0, 5));
       act(() => result.current.placeNumber(5));
@@ -508,22 +512,6 @@ describe("useSudoku", () => {
       act(() => result.current.selectCell(0, 0));
       act(() => result.current.hint());
 
-      expect(result.current.board[0]![0]!.value).toBe(5);
-      expect(result.current.board[0]![5]!.notes.has(5)).toBe(false);
-    });
-
-    it("undo restores peer notes cleared by the hint", () => {
-      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
-
-      act(() => result.current.toggleNotesMode());
-      act(() => result.current.selectCell(0, 5));
-      act(() => result.current.placeNumber(5));
-      act(() => result.current.toggleNotesMode());
-      act(() => result.current.selectCell(0, 0));
-      act(() => result.current.hint());
-      expect(result.current.board[0]![5]!.notes.has(5)).toBe(false);
-
-      act(() => result.current.undo());
       expect(result.current.board[0]![5]!.notes.has(5)).toBe(true);
     });
   });

@@ -365,28 +365,18 @@ function handleUndo(state: State): State {
       }
       break;
     }
-    case "hint": {
-      const { row, col } = lastAction.position;
-      board[row]![col]!.value = null;
-      board[row]![col]!.notes = new Set(lastAction.previousNotes);
-      for (const cleared of lastAction.clearedNotes) {
-        board[cleared.row]![cleared.col]!.notes.add(cleared.note);
-      }
-      break;
-    }
   }
 
   return {
     ...state,
     board,
     history,
-    hintsUsed:
-      lastAction.type === "hint"
-        ? Math.max(0, state.hintsUsed - 1)
-        : state.hintsUsed,
   };
 }
 
+// A hint never writes to the board. It selects the deduced cell and
+// surfaces the explanation so the player enters the value themselves —
+// no value placed, no peer notes cleared, nothing pushed to history.
 function handleHint(state: State): State {
   if (!state.solution || state.status === "completed") return state;
 
@@ -394,33 +384,13 @@ function handleHint(state: State): State {
   if (!hint) return state;
 
   const { row, col } = hint.position;
-  const board = cloneBoard(state.board);
-  const cell = board[row]![col]!;
-  const previousNotes = new Set(cell.notes);
-  cell.value = hint.value;
-  cell.notes = new Set();
-  const clearedNotes = clearPeerNotes(board, row, col, hint.value);
-
-  const moveAction: MoveAction = {
-    type: "hint",
-    position: hint.position,
-    value: hint.value,
-    previousNotes,
-    clearedNotes,
-  };
-
-  const conflicts = getConflicts(board);
-  const complete = isBoardComplete(board, conflicts);
 
   return {
     ...state,
-    board,
-    status: complete ? "completed" : state.status,
     selectedCell: hint.position,
     selectedCells: new Set([cellKey(row, col)]),
     activeHint: hint,
     hintsUsed: state.hintsUsed + 1,
-    history: pushHistory(state.history, moveAction),
   };
 }
 
