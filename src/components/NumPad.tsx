@@ -8,6 +8,13 @@ const LONG_PRESS_MS = 200;
 // Pointer must travel this far from the original button center before
 // we classify the gesture (skim vs. drag). Tuned to fingertip-sized slop.
 const GESTURE_THRESHOLD_PX = 12;
+// Half-angle of the drag cone — the wedge pointing perpendicular to the
+// numpad, toward the board. A pan within this many degrees of that axis
+// reads as a drag-to-place; a wider pan reads as an along-axis skim.
+// The 60° cone (±30°) keeps a diagonal flick toward a neighbouring
+// digit on the skim side rather than misfiring a drag.
+const DRAG_CONE_HALF_ANGLE_DEG = 30;
+const DRAG_CONE_SLOPE = Math.tan((DRAG_CONE_HALF_ANGLE_DEG * Math.PI) / 180);
 
 type NumPadProps = {
   position: NumPadPosition;
@@ -127,13 +134,16 @@ export function NumPad({
       if (dx * dx + dy * dy < GESTURE_THRESHOLD_PX * GESTURE_THRESHOLD_PX)
         return;
 
-      // Classify by which axis dominates relative to the numpad's main
-      // axis. Along-axis → skim highlights. Perpendicular → drag-to-place.
+      // Classify by the pan's angle relative to the numpad's main axis.
+      // A pan aimed within the drag cone — close to perpendicular,
+      // toward the board — is a drag-to-place; a wider pan is an
+      // along-axis skim that highlights digits.
       const along = isVertical ? Math.abs(dy) : Math.abs(dx);
       const perp = isVertical ? Math.abs(dx) : Math.abs(dy);
       const skim: "skim" | null = onSkimDigit ? "skim" : null;
       const drag: "drag" | null = onStartDrag ? "drag" : null;
-      const mode = along >= perp ? (skim ?? drag) : (drag ?? skim);
+      const withinDragCone = along < perp * DRAG_CONE_SLOPE;
+      const mode = withinDragCone ? (drag ?? skim) : (skim ?? drag);
       if (mode === null) return;
 
       cancelTimer();
