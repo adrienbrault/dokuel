@@ -1,10 +1,5 @@
-import {
-  type PointerEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type PointerEvent, useCallback, useRef, useState } from "react";
+import { useNumPadSkim } from "../hooks/useNumPadSkim.ts";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
@@ -73,18 +68,13 @@ export function NumPad({
   // Visual press feedback (drives bg-accent without CSS :active, which
   // sticks on touch devices after pointer-capture release).
   const [pressedDigit, setPressedDigit] = useState<number | null>(null);
-  // Active skim gesture id; the effect below attaches doc listeners.
-  const [skimPointerId, setSkimPointerId] = useState<number | null>(null);
-  // Last digit the finger was over while skimming. Seeded to the originally
-  // pressed digit so we don't re-fire onSkimDigit before the finger crosses
-  // into a different button.
-  const skimDigitRef = useRef<number | null>(null);
-  // Keep the latest callbacks fresh for the document listeners without
-  // re-binding them every render.
-  const onSkimDigitRef = useRef(onSkimDigit);
-  const onPressEndRef = useRef(onPressEnd);
-  onSkimDigitRef.current = onSkimDigit;
-  onPressEndRef.current = onPressEnd;
+  // Once a press is classified as a skim, the gesture is owned at the
+  // document level so the finger can be tracked outside this button.
+  const { beginSkim } = useNumPadSkim({
+    onSkimDigit,
+    onPressEnd,
+    setPressedDigit,
+  });
 
   const cancelTimer = useCallback(() => {
     if (pressRef.current?.timer) {
@@ -168,18 +158,17 @@ export function NumPad({
         });
         onPressEnd?.();
       } else {
-        skimDigitRef.current = press.digit;
-        setSkimPointerId(e.pointerId);
+        beginSkim(press.digit, e.pointerId);
       }
     },
-    [isVertical, onSkimDigit, onStartDrag, cancelTimer, onPressEnd],
+    [isVertical, onSkimDigit, onStartDrag, cancelTimer, onPressEnd, beginSkim],
   );
 
   const handlePointerEnd = useCallback(() => {
     const press = pressRef.current;
     if (!press) return;
     if (press.gestureMode === "skim") {
-      // The skim effect's document listeners own end-of-gesture cleanup
+      // The skim hook's document listeners own end-of-gesture cleanup
       // (including onPressEnd). Just detach this button-scoped state.
       pressRef.current = null;
       return;
@@ -189,51 +178,6 @@ export function NumPad({
     setPressedDigit(null);
     onPressEnd?.();
   }, [cancelTimer, onPressEnd]);
-
-  // Skim mode: track the finger as it crosses into other digit buttons.
-  useEffect(() => {
-    if (skimPointerId === null) return;
-    const ownPointerId = skimPointerId;
-
-    const onMove = (e: globalThis.PointerEvent) => {
-      if (e.pointerId !== ownPointerId) return;
-      e.preventDefault();
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const btn = el
-        ? ((el as HTMLElement).closest?.(
-            "[data-numpad-digit]",
-          ) as HTMLButtonElement | null)
-        : null;
-      // Skip disabled (completed) digits — they're visually hidden, so
-      // briefly highlighting them as the finger drifts over their slot
-      // would surprise the user.
-      if (!btn || btn.disabled) return;
-      const digit = Number(btn.dataset.numpadDigit);
-      if (Number.isNaN(digit)) return;
-      if (digit === skimDigitRef.current) return;
-      skimDigitRef.current = digit;
-      setPressedDigit(digit);
-      haptics.light();
-      onSkimDigitRef.current?.(digit);
-    };
-
-    const end = (e: globalThis.PointerEvent) => {
-      if (e.pointerId !== ownPointerId) return;
-      setSkimPointerId(null);
-      skimDigitRef.current = null;
-      setPressedDigit(null);
-      onPressEndRef.current?.();
-    };
-
-    document.addEventListener("pointermove", onMove, { passive: false });
-    document.addEventListener("pointerup", end);
-    document.addEventListener("pointercancel", end);
-    return () => {
-      document.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerup", end);
-      document.removeEventListener("pointercancel", end);
-    };
-  }, [skimPointerId]);
 
   const handleClick = useCallback(
     (n: number) => () => {
