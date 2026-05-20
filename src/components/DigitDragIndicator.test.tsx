@@ -28,23 +28,23 @@ describe("DigitDragIndicator", () => {
     expect(getByTestId("digit-drag-indicator").textContent).toBe("5");
   });
 
-  it("sits right at the cursor for a mouse drag", () => {
+  it("floats just above the cursor for a mouse drag", () => {
     const { getByTestId } = render(
-      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 0 })} />,
+      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 10 })} />,
     );
     const el = getByTestId("digit-drag-indicator");
     expect(el.dataset.pose).toBe("free");
     expect(el.style.left).toBe("200px");
-    expect(el.style.top).toBe("300px");
+    expect(el.style.top).toBe("290px");
   });
 
-  it("rides above the finger for a touch drag", () => {
+  it("rides well above the finger for a touch drag", () => {
     const { getByTestId } = render(
-      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 36 })} />,
+      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 46 })} />,
     );
     const el = getByTestId("digit-drag-indicator");
     expect(el.style.left).toBe("200px");
-    expect(el.style.top).toBe("264px");
+    expect(el.style.top).toBe("254px");
   });
 
   it("stays free-following but switches to the 'invalid' pose over a non-droppable cell", () => {

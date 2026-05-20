@@ -8,9 +8,9 @@ type Props = {
 
 /**
  * The dragged digit, rendered as a small chip that tracks the pointer
- * in real-time. On touch it's lifted clear of the fingertip (so the
- * finger doesn't occlude the cell being aimed at); on mouse/pen the
- * lift is zero and the chip sits right at the cursor.
+ * in real-time. On touch it's lifted well clear of the fingertip (so
+ * the finger doesn't occlude the cell being aimed at); on mouse/pen it
+ * floats just above the cursor.
  *
  * The chip is a transit cursor, not a preview. Once the pointer is
  * over a valid cell, the chip dims to a quiet position marker and
