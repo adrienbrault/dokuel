@@ -191,10 +191,8 @@ export function SoloGame({
       timer={
         <button
           type="button"
-          className="flex flex-col items-center touch-manipulation"
-          onClick={() => {
-            if (game.status === "playing") setPaused((p) => !p);
-          }}
+          className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm press-spring-soft touch-manipulation"
+          onClick={() => game.status === "playing" && setPaused((p) => !p)}
           aria-label={paused ? "Resume" : "Pause"}
         >
           <Timer
@@ -203,8 +201,9 @@ export function SoloGame({
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
+            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
           />
-          <span className="text-xs text-text-muted font-mono tabular-nums">
+          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
             {paused ? (
               "Paused"
             ) : (
