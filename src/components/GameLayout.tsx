@@ -39,7 +39,7 @@ export function GameLayout({
   headerExtra,
   footer,
   boardClassName = "",
-  headerClassName = "max-w-lg lg:max-w-4xl",
+  headerClassName = "max-w-lg",
   onDeselectCell,
   settingsExtra,
 }: GameLayoutProps) {
@@ -80,22 +80,23 @@ export function GameLayout({
 
       {headerExtra}
 
-      {/* Main game area — mobile: respects position; desktop: always side-by-side.
-          On mobile we align to the bottom so the grid + controls + numpad sit
-          close to the thumbs; any slack opens up between header and board. */}
+      {/* Main game area — the numpad sits in its chosen position at every
+          breakpoint: "bottom" stacks a full-width digit row under the board,
+          "left"/"right" place a vertical column beside it. Keeping the layout
+          identical on mobile and desktop means dragging a digit toward the
+          board is always a perpendicular gesture. */}
       <div
         className={`
           flex gap-3 w-full justify-center flex-1
-          lg:flex-row lg:items-start lg:max-w-4xl lg:mx-auto lg:gap-6
-          ${position === "left" ? "flex-row items-end lg:items-start lg:max-w-4xl lg:mx-auto" : ""}
-          ${position === "right" ? "flex-row-reverse items-end lg:items-start lg:max-w-4xl lg:mx-auto lg:flex-row" : ""}
-          ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-start" : ""}
+          ${position === "left" ? "flex-row items-end lg:items-center" : ""}
+          ${position === "right" ? "flex-row-reverse items-end lg:items-center" : ""}
+          ${position === "bottom" ? "flex-col items-center" : ""}
         `}
       >
-        {/* Mobile: show numpad in position (left/right) */}
-        <div className="lg:hidden">{position !== "bottom" && numPad}</div>
+        {/* Side numpad (left / right positions) */}
+        {position !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-2xl lg:w-full ${position === "bottom" ? "flex-1 justify-end lg:justify-center w-full" : "flex-1 min-w-0"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
         >
           <div className="flex flex-col items-center gap-3 w-full">
             {controls}
@@ -117,15 +118,14 @@ export function GameLayout({
           >
             {board}
           </div>
-          {/* Mobile: show numpad at bottom if position=bottom.
-              Widened to match the board so the digit row spans the grid. */}
-          <div className="lg:hidden flex justify-center -mx-2 w-[calc(100%+1rem)]">
-            {position === "bottom" && numPad}
-          </div>
-        </div>
-        {/* Desktop: numpad as a 3×3 grid, vertically centered beside the board */}
-        <div className="hidden lg:flex lg:flex-col lg:gap-3 lg:self-center">
-          {numPad}
+          {/* Bottom numpad — widened to span the board on mobile, where the
+              board itself runs edge-to-edge; reset to the board width on
+              desktop where the board is capped. */}
+          {position === "bottom" && (
+            <div className="flex justify-center -mx-2 w-[calc(100%+1rem)] lg:mx-0 lg:w-full">
+              {numPad}
+            </div>
+          )}
         </div>
       </div>
 
