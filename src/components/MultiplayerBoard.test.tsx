@@ -102,7 +102,7 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
-  it("deselects the cell after a tap-only numpad note", () => {
+  it("keeps the cell selected after a tap-only numpad note", () => {
     vi.useFakeTimers();
     try {
       render(<MultiplayerBoard {...baseProps()} />);
@@ -119,11 +119,10 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.pointerDown(five, { pointerType: "touch" });
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
-      // Cell stays empty (note, not digit) and no longer carries selection.
-      expect(
-        screen.queryByLabelText(/Cell row 1 column 1, empty/),
-      ).not.toBeNull();
-      expect(cell.className).not.toContain("cell-selected-glow");
+      // The note lands and the cell stays selected so the player can keep
+      // penciling into it without re-tapping the cell.
+      expect(cell.textContent).toContain("5");
+      expect(cell.className).toContain("cell-selected-glow");
     } finally {
       vi.useRealTimers();
     }
