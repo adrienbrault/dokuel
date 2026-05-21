@@ -162,3 +162,34 @@ export async function decodeChallenge(blob: string): Promise<Challenge | null> {
     return null;
   }
 }
+
+const CHALLENGE_PATH = "/challenge";
+
+/**
+ * Build a shareable challenge link. The artifact rides in the URL hash,
+ * so it never reaches a server. This is the transport seam: a future
+ * server would store the artifact and hand back a short id here, while
+ * the Challenge model and the codec above stay untouched.
+ */
+export async function buildChallengeUrl(challenge: Challenge): Promise<string> {
+  const blob = await encodeChallenge(challenge);
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://dokuel.com";
+  return `${origin}${CHALLENGE_PATH}#${blob}`;
+}
+
+/**
+ * Extract a Challenge from a location. Returns `null` when the path is
+ * not the challenge route, the hash is empty, or the blob is undecodable.
+ */
+export async function parseChallengeUrl(loc: {
+  pathname: string;
+  hash: string;
+}): Promise<Challenge | null> {
+  if (loc.pathname.replace(/^\/+|\/+$/g, "") !== "challenge") return null;
+  const blob = loc.hash.replace(/^#/, "");
+  if (!blob) return null;
+  return decodeChallenge(blob);
+}

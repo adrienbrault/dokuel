@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildChallengeUrl,
   decodeChallenge,
   encodeChallenge,
   ghostPercentAt,
+  parseChallengeUrl,
 } from "./challenge.ts";
 import type { Challenge, GhostSample } from "./types.ts";
 
@@ -93,5 +95,33 @@ describe("ghostPercentAt", () => {
 
   it("handles a single-sample timeline", () => {
     expect(ghostPercentAt([{ t: 0, p: 0 }], 42)).toBe(0);
+  });
+});
+
+describe("buildChallengeUrl / parseChallengeUrl", () => {
+  it("round-trips a challenge through a shareable URL", async () => {
+    const url = await buildChallengeUrl(fixture);
+    expect(url).toContain("/challenge#");
+    const { pathname, hash } = new URL(url);
+    expect(await parseChallengeUrl({ pathname, hash })).toEqual(fixture);
+  });
+
+  it("returns null when the path is not the challenge route", async () => {
+    const blob = await encodeChallenge(fixture);
+    expect(
+      await parseChallengeUrl({ pathname: "/some-room", hash: `#${blob}` }),
+    ).toBeNull();
+  });
+
+  it("returns null when the hash is empty", async () => {
+    expect(
+      await parseChallengeUrl({ pathname: "/challenge", hash: "" }),
+    ).toBeNull();
+  });
+
+  it("returns null for an undecodable blob", async () => {
+    expect(
+      await parseChallengeUrl({ pathname: "/challenge", hash: "#not-a-blob!" }),
+    ).toBeNull();
   });
 });
