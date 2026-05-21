@@ -93,29 +93,25 @@ export function ChallengeGame({ challenge, onBack }: ChallengeGameProps) {
     }
   };
 
-  // Touch numpad: tap is the note action, hold commits the value.
+  // Touch numpad: a quick tap commits the value, a hold adds a pencil
+  // note. With no cell selected, a tap toggles the digit's highlight.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
   const highlight = useDigitHighlight(game);
-  const holdFiredRef = useRef(false);
-  const handleTapNote = (n: number) => {
+  const handleTapValue = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
-      holdFiredRef.current = false;
+      game.placeNumber(n, assistLevel !== "paper", false);
     } else {
       highlight.toggle(n);
     }
   };
-  const handleHoldValue = (n: number) => {
+  const handleHoldNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", false);
-      holdFiredRef.current = true;
+      game.placeNumber(n, assistLevel !== "paper", true);
+      setChargingDigit(n);
     }
   };
   const handlePressEnd = () => {
     setChargingDigit(null);
-    if (!holdFiredRef.current) highlight.endNumpadPress(chargingDigit);
-    holdFiredRef.current = false;
   };
 
   const numPadRef = useRef<NumPadHandle>(null);
@@ -226,8 +222,8 @@ export function ChallengeGame({ challenge, onBack }: ChallengeGameProps) {
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onNumber={handleTapNote}
-          onLongPressNumber={handleHoldValue}
+          onTapNumber={handleTapValue}
+          onHoldNumber={handleHoldNote}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
           onSkimDigit={highlight.skimToDigit}
