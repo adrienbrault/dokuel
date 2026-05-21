@@ -17,7 +17,7 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
-import { NumPad } from "./NumPad.tsx";
+import { NumPad, type NumPadHandle } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
@@ -191,12 +191,15 @@ export function MultiplayerBoard({
 
   // Digit drag-and-drop: drop commits the value, mirroring solo play.
   // Keyed off local status only — the loser keeps interacting until they
-  // finish their own board.
+  // finish their own board. A drag brought back over the numpad demotes
+  // to a skim (see NumPad).
+  const numPadRef = useRef<NumPadHandle>(null);
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
     game,
     disabled: game.status !== "playing",
     autoEliminateNotes: assistLevel !== "paper",
     onHighlightDigit: highlight.setDigit,
+    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
   });
 
   return (
@@ -226,6 +229,7 @@ export function MultiplayerBoard({
       }
       numPad={
         <NumPad
+          ref={numPadRef}
           position={position}
           remainingCounts={game.remainingCounts}
           selectedValue={
