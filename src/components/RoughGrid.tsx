@@ -33,12 +33,15 @@ export const RoughGrid = memo(function RoughGrid({
 
     const base = {
       stroke: "currentColor",
-      roughness: 0.8,
-      bowing: 0.8,
-      preserveVertices: true,
+      roughness: 1.6,
+      bowing: 1.2,
     };
     const thin = { ...base, strokeWidth: Math.max(1, cellPx * 0.028) };
-    const thick = { ...base, strokeWidth: Math.max(2.2, cellPx * 0.072) };
+    const thick = {
+      ...base,
+      roughness: 2.0,
+      strokeWidth: Math.max(2.2, cellPx * 0.072),
+    };
 
     // Internal lines 1..8 — every third one is a 3×3 box separator.
     for (let i = 1; i < 9; i++) {
