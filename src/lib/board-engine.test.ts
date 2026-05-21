@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  completionPercent,
   initState,
   projectBoard,
   reducer,
@@ -31,6 +32,28 @@ describe("serializeBoard", () => {
     const board = initState({ puzzle }).board;
     const { values } = serializeBoard(board);
     expect(values).toBe(puzzle);
+  });
+});
+
+describe("completionPercent", () => {
+  // 30 givens, 51 empty cells — only the dot count matters here.
+  const puzzle = "1".repeat(30) + ".".repeat(51);
+
+  it("is 0 when no empty cells are filled", () => {
+    expect(completionPercent(puzzle, 51)).toBe(0);
+  });
+
+  it("is 100 when all empty cells are filled", () => {
+    expect(completionPercent(puzzle, 0)).toBe(100);
+  });
+
+  it("rounds the filled fraction to a whole percent", () => {
+    // 25 of 51 filled → 49.02% → 49
+    expect(completionPercent(puzzle, 26)).toBe(49);
+  });
+
+  it("is 0 for a puzzle with no empty cells", () => {
+    expect(completionPercent("1".repeat(81), 0)).toBe(0);
   });
 });
 

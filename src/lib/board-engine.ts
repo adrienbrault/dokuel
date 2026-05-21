@@ -520,6 +520,26 @@ export function serializeBoard(board: Board): SavedBoard {
   return { values, notes };
 }
 
+/**
+ * Completion percent (0–100) of a player's board: the share of the
+ * puzzle's empty cells that have been filled. The single source of
+ * truth for progress reporting — multiplayer live progress and
+ * async-challenge ghost recording both derive from this so they can't
+ * drift apart.
+ */
+export function completionPercent(
+  puzzle: string,
+  cellsRemaining: number,
+): number {
+  let total = 0;
+  for (const ch of puzzle) {
+    if (ch === ".") total++;
+  }
+  if (total <= 0) return 0;
+  const filled = total - cellsRemaining;
+  return Math.round((filled / total) * 100);
+}
+
 export function initState(args: {
   puzzle: string;
   solution?: string | undefined;
