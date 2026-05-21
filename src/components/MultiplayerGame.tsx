@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -8,9 +9,12 @@ type MultiplayerGameProps = {
   playerId: string;
   playerName: string;
   roomId: string;
-  difficulty: import("../lib/types.ts").Difficulty | null;
+  difficulty: Difficulty | null;
   onRename?: (name: string) => void;
   onBack: () => void;
+  onPlayAsync?:
+    | ((difficulty: Difficulty, assistLevel: AssistLevel) => void)
+    | undefined;
 };
 
 export function MultiplayerGame({
@@ -20,6 +24,7 @@ export function MultiplayerGame({
   difficulty,
   onRename,
   onBack,
+  onPlayAsync,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const [toast, setToast] = useState<string | null>(null);
@@ -90,6 +95,7 @@ export function MultiplayerGame({
           onDifficultyChange={mp.setDifficulty}
           onStart={mp.sendStartGame}
           onBack={onBack}
+          onPlayAsync={onPlayAsync}
         />
         {toast && <Toast message={toast} />}
       </div>

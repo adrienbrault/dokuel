@@ -221,6 +221,16 @@ function App() {
           roomId={screen.roomId}
           difficulty={screen.difficulty}
           onBack={() => navigate({ name: "landing" })}
+          onPlayAsync={(difficulty, assistLevel) => {
+            gameIdRef.current++;
+            navigate({
+              name: "solo",
+              difficulty,
+              gameId: gameIdRef.current,
+              gameKey: generateId(),
+              assistLevel,
+            });
+          }}
         />
       );
 
