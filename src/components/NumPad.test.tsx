@@ -45,122 +45,125 @@ describe("NumPad", () => {
       null) as typeof document.elementFromPoint;
   });
 
-  it("fires onNumber on pointerdown (instant note feedback)", () => {
-    const onNumber = vi.fn();
+  it("fires onTapNumber on pointerup for a quick tap", () => {
+    const onTapNumber = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={onNumber}
+        onTapNumber={onTapNumber}
       />,
     );
     const seven = screen.getByRole("button", { name: /^7, / });
     fireEvent.pointerDown(seven, { pointerType: "touch" });
-    // Don't need to wait for click — pointerdown is enough.
-    expect(onNumber).toHaveBeenCalledTimes(1);
-    expect(onNumber).toHaveBeenCalledWith(7);
+    // pointerdown alone commits nothing — the value waits for release.
+    expect(onTapNumber).not.toHaveBeenCalled();
+    fireEvent.pointerUp(seven, { pointerType: "touch" });
+    expect(onTapNumber).toHaveBeenCalledTimes(1);
+    expect(onTapNumber).toHaveBeenCalledWith(7);
   });
 
-  it("does not double-fire onNumber when click follows pointerdown", () => {
-    const onNumber = vi.fn();
+  it("does not double-fire onTapNumber when click follows a pointer tap", () => {
+    const onTapNumber = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={onNumber}
+        onTapNumber={onTapNumber}
       />,
     );
     const seven = screen.getByRole("button", { name: /^7, / });
     fireEvent.pointerDown(seven, { pointerType: "touch" });
     fireEvent.pointerUp(seven, { pointerType: "touch" });
     fireEvent.click(seven);
-    expect(onNumber).toHaveBeenCalledTimes(1);
+    expect(onTapNumber).toHaveBeenCalledTimes(1);
   });
 
-  it("fires onNumber on click without pointer (keyboard activation)", () => {
-    const onNumber = vi.fn();
+  it("fires onTapNumber on click without pointer (keyboard activation)", () => {
+    const onTapNumber = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={onNumber}
+        onTapNumber={onTapNumber}
       />,
     );
     const seven = screen.getByRole("button", { name: /^7, / });
     fireEvent.click(seven);
-    expect(onNumber).toHaveBeenCalledWith(7);
+    expect(onTapNumber).toHaveBeenCalledWith(7);
   });
 
-  it("fires both onNumber (on press) and onLongPressNumber (at 200ms)", () => {
-    const onNumber = vi.fn();
-    const onLongPressNumber = vi.fn();
+  it("fires onHoldNumber at 200ms and not onTapNumber on the release", () => {
+    const onTapNumber = vi.fn();
+    const onHoldNumber = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={onNumber}
-        onLongPressNumber={onLongPressNumber}
+        onTapNumber={onTapNumber}
+        onHoldNumber={onHoldNumber}
       />,
     );
     const four = screen.getByRole("button", { name: /^4, / });
     fireEvent.pointerDown(four, { pointerType: "touch" });
-    expect(onNumber).toHaveBeenCalledWith(4);
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(onLongPressNumber).toHaveBeenCalledWith(4);
+    expect(onHoldNumber).toHaveBeenCalledWith(4);
     fireEvent.pointerUp(four, { pointerType: "touch" });
     fireEvent.click(four);
-    // onNumber still only called once (from pointerdown), not from click
-    expect(onNumber).toHaveBeenCalledTimes(1);
+    // A completed hold consumes the gesture — the release is not also a tap.
+    expect(onTapNumber).not.toHaveBeenCalled();
   });
 
-  it("does not fire long-press if released early", () => {
-    const onNumber = vi.fn();
-    const onLongPressNumber = vi.fn();
+  it("fires onTapNumber, not onHoldNumber, when released before 200ms", () => {
+    const onTapNumber = vi.fn();
+    const onHoldNumber = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={onNumber}
-        onLongPressNumber={onLongPressNumber}
+        onTapNumber={onTapNumber}
+        onHoldNumber={onHoldNumber}
       />,
     );
     const two = screen.getByRole("button", { name: /^2, / });
     fireEvent.pointerDown(two, { pointerType: "touch" });
-    expect(onNumber).toHaveBeenCalledWith(2);
     vi.advanceTimersByTime(100);
     fireEvent.pointerUp(two, { pointerType: "touch" });
     fireEvent.click(two);
-    expect(onLongPressNumber).not.toHaveBeenCalled();
-    expect(onNumber).toHaveBeenCalledTimes(1);
+    expect(onHoldNumber).not.toHaveBeenCalled();
+    expect(onTapNumber).toHaveBeenCalledTimes(1);
+    expect(onTapNumber).toHaveBeenCalledWith(2);
   });
 
-  it("cancels long-press if pointer leaves the button", () => {
-    const onLongPressNumber = vi.fn();
+  it("cancels the hold and fires nothing when the pointer leaves the button", () => {
+    const onTapNumber = vi.fn();
+    const onHoldNumber = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={onLongPressNumber}
+        onTapNumber={onTapNumber}
+        onHoldNumber={onHoldNumber}
       />,
     );
     const six = screen.getByRole("button", { name: /^6, / });
     fireEvent.pointerDown(six, { pointerType: "touch" });
     fireEvent.pointerLeave(six);
     vi.advanceTimersByTime(500);
-    expect(onLongPressNumber).not.toHaveBeenCalled();
+    expect(onHoldNumber).not.toHaveBeenCalled();
+    expect(onTapNumber).not.toHaveBeenCalled();
   });
 
-  it("calls onPressEnd on pointer release (after early tap)", () => {
+  it("calls onPressEnd on pointer release (after a quick tap)", () => {
     const onPressEnd = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
         onPressEnd={onPressEnd}
       />,
     );
@@ -171,14 +174,14 @@ describe("NumPad", () => {
     expect(onPressEnd).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onPressEnd after long-press fires (on release)", () => {
+  it("calls onPressEnd after a hold fires (on release)", () => {
     const onPressEnd = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
         onPressEnd={onPressEnd}
       />,
     );
@@ -196,11 +199,11 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
       />,
     );
-    expect(screen.getByText(/tap = note · hold = enter/i)).toBeInTheDocument();
+    expect(screen.getByText(/tap = enter · hold = note/i)).toBeInTheDocument();
   });
 
   it("starts a drag when the pan is perpendicular to the numpad axis", () => {
@@ -210,8 +213,8 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
         onStartDrag={onStartDrag}
         onSkimDigit={onSkimDigit}
       />,
@@ -255,8 +258,8 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
         onStartDrag={onStartDrag}
       />,
     );
@@ -287,7 +290,7 @@ describe("NumPad", () => {
         position="bottom"
         remainingCounts={ZERO_REMAINING}
         selectedValue={null}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onSkimDigit={onSkimDigit}
       />,
     );
@@ -324,7 +327,7 @@ describe("NumPad", () => {
         position="bottom"
         remainingCounts={ZERO_REMAINING}
         selectedValue={null}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
       />,
     );
     const three = screen.getByRole("button", { name: /^3, / });
@@ -346,8 +349,8 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
         onStartDrag={onStartDrag}
         onSkimDigit={onSkimDigit}
       />,
@@ -371,8 +374,8 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
         onStartDrag={onStartDrag}
         onSkimDigit={onSkimDigit}
       />,
@@ -396,8 +399,8 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={vi.fn()}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
         onStartDrag={vi.fn()}
         onSkimDigit={onSkimDigit}
       />,
@@ -432,7 +435,7 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onSkimDigit={onSkimDigit}
       />,
     );
@@ -466,7 +469,7 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onPressEnd={onPressEnd}
         onSkimDigit={vi.fn()}
       />,
@@ -494,7 +497,7 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={remaining}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onSkimDigit={onSkimDigit}
       />,
     );
@@ -527,7 +530,7 @@ describe("NumPad", () => {
       <NumPad
         position="right"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onStartDrag={onStartDrag}
         onSkimDigit={onSkimDigit}
       />,
@@ -545,15 +548,15 @@ describe("NumPad", () => {
     expect(onSkimDigit).not.toHaveBeenCalled(); // still on original digit
   });
 
-  it("cancels the long-press timer once a drag begins", () => {
-    const onLongPressNumber = vi.fn();
+  it("cancels the hold timer once a drag begins", () => {
+    const onHoldNumber = vi.fn();
     const onStartDrag = vi.fn();
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
-        onLongPressNumber={onLongPressNumber}
+        onTapNumber={vi.fn()}
+        onHoldNumber={onHoldNumber}
         onStartDrag={onStartDrag}
       />,
     );
@@ -568,7 +571,7 @@ describe("NumPad", () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(onLongPressNumber).not.toHaveBeenCalled();
+    expect(onHoldNumber).not.toHaveBeenCalled();
   });
 
   it("only starts the drag once per press", () => {
@@ -577,7 +580,7 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onStartDrag={onStartDrag}
       />,
     );
@@ -600,7 +603,7 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onStartDrag={onStartDrag}
         onSkimDigit={onSkimDigit}
       />,
@@ -660,7 +663,7 @@ describe("NumPad", () => {
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onStartDrag={onStartDrag}
         onSkimDigit={vi.fn()}
       />,
@@ -703,7 +706,7 @@ describe("NumPad", () => {
         position="bottom"
         remainingCounts={ZERO_REMAINING}
         selectedValue={null}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onSkimDigit={onSkimDigit}
       />,
     );
@@ -737,7 +740,7 @@ describe("NumPad", () => {
       <NumPad
         position="right"
         remainingCounts={ZERO_REMAINING}
-        onNumber={vi.fn()}
+        onTapNumber={vi.fn()}
         onStartDrag={onStartDrag}
         onSkimDigit={vi.fn()}
       />,

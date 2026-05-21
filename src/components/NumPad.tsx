@@ -29,10 +29,10 @@ type NumPadProps = {
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
   disableCompleted?: boolean | undefined;
-  /** Fires on pointerdown (instant note placement / highlight toggle). */
-  onNumber: (n: number) => void;
-  /** Fires after LONG_PRESS_MS (commits a value over the just-placed note). */
-  onLongPressNumber?: ((n: number) => void) | undefined;
+  /** Fires on a quick tap — pointerup before the hold threshold (commits the value / toggles highlight). */
+  onTapNumber: (n: number) => void;
+  /** Fires after LONG_PRESS_MS while still pressed (adds a pencil note). */
+  onHoldNumber?: ((n: number) => void) | undefined;
   /** Fires when the press ends (pointerup/cancel/leave or post-drag/skim). */
   onPressEnd?: (() => void) | undefined;
   /**
@@ -78,8 +78,8 @@ export function NumPad({
   selectedValue,
   showRemainingCounts = true,
   disableCompleted = false,
-  onNumber,
-  onLongPressNumber,
+  onTapNumber,
+  onHoldNumber,
   onPressEnd,
   onStartDrag,
   onSkimDigit,
@@ -95,9 +95,10 @@ export function NumPad({
     pointerId: number;
     button: HTMLButtonElement;
     gestureMode: "none" | "drag" | "skim";
+    holdFired: boolean;
   } | null>(null);
   // Suppress the synthetic click that follows pointerdown→pointerup so
-  // onNumber doesn't double-fire. A fresh pointerdown clears it.
+  // onTapNumber doesn't double-fire. A fresh pointerdown clears it.
   const pointerFiredRef = useRef(false);
 
   // Visual press feedback (drives bg-accent without CSS :active, which
@@ -140,16 +141,19 @@ export function NumPad({
       cancelTimer();
       pointerFiredRef.current = true;
       setPressedDigit(n);
-      onNumber(n); // instant note placement / highlight toggle
       const btn = e.currentTarget;
       const rect = btn.getBoundingClientRect();
       const originX = rect.left + rect.width / 2;
       const originY = rect.top + rect.height / 2;
-      const timer = onLongPressNumber
+      const timer = onHoldNumber
         ? setTimeout(() => {
-            if (pressRef.current) pressRef.current.timer = null;
+            const press = pressRef.current;
+            if (press) {
+              press.timer = null;
+              press.holdFired = true;
+            }
             haptics.tap();
-            onLongPressNumber(n);
+            onHoldNumber(n);
           }, LONG_PRESS_MS)
         : null;
       pressRef.current = {
@@ -160,9 +164,10 @@ export function NumPad({
         pointerId: e.pointerId,
         button: btn,
         gestureMode: "none",
+        holdFired: false,
       };
     },
-    [onNumber, onLongPressNumber, cancelTimer],
+    [onHoldNumber, cancelTimer],
   );
 
   const handlePointerMove = useCallback(
@@ -218,20 +223,29 @@ export function NumPad({
     [isVertical, onSkimDigit, onStartDrag, cancelTimer, onPressEnd, beginSkim],
   );
 
-  const handlePointerEnd = useCallback(() => {
-    const press = pressRef.current;
-    if (!press) return;
-    if (press.gestureMode === "skim") {
-      // The skim hook's document listeners own end-of-gesture cleanup
-      // (including onPressEnd). Just detach this button-scoped state.
+  // End-of-press cleanup. `commit` is true only for pointerup: a quick
+  // release that never became a hold, drag, or skim commits the tapped
+  // value. A pointerleave/cancel passes false — a finger sliding off the
+  // button is a cancel, not a tap. Skim end-of-gesture is owned by the
+  // skim hook's document listeners, so we only detach button state.
+  const endPress = useCallback(
+    (commit: boolean) => {
+      const press = pressRef.current;
+      if (!press) return;
+      if (press.gestureMode === "skim") {
+        pressRef.current = null;
+        return;
+      }
+      cancelTimer();
+      if (commit && !press.holdFired && press.gestureMode === "none") {
+        onTapNumber(press.digit);
+      }
       pressRef.current = null;
-      return;
-    }
-    cancelTimer();
-    pressRef.current = null;
-    setPressedDigit(null);
-    onPressEnd?.();
-  }, [cancelTimer, onPressEnd]);
+      setPressedDigit(null);
+      onPressEnd?.();
+    },
+    [cancelTimer, onPressEnd, onTapNumber],
+  );
 
   const handleClick = useCallback(
     (n: number) => () => {
@@ -240,9 +254,9 @@ export function NumPad({
         return;
       }
       // Keyboard/AT activation: no pointer events fired, so honor click.
-      onNumber(n);
+      onTapNumber(n);
     },
-    [onNumber],
+    [onTapNumber],
   );
 
   return (
@@ -255,8 +269,8 @@ export function NumPad({
         aria-hidden="true"
       >
         {isVertical
-          ? "tap\nnote\n· · ·\nhold\nenter\n· · ·\ndrag\nplace"
-          : "tap = note · hold = enter · drag = place"}
+          ? "tap\nenter\n· · ·\nhold\nnote\n· · ·\ndrag\nplace"
+          : "tap = enter · hold = note · drag = place"}
       </p>
       <div
         ref={groupRef}
@@ -282,9 +296,9 @@ export function NumPad({
               className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerEnd}
-              onPointerLeave={handlePointerEnd}
-              onPointerCancel={handlePointerEnd}
+              onPointerUp={() => endPress(true)}
+              onPointerLeave={() => endPress(false)}
+              onPointerCancel={() => endPress(false)}
               onClick={handleClick(n)}
               aria-label={
                 showRemainingCounts

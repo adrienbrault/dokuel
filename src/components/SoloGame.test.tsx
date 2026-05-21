@@ -28,22 +28,60 @@ describe("SoloGame numpad selection", () => {
       null) as typeof document.elementFromPoint;
   });
 
-  it("keeps the cell selected after tapping a numpad digit for a note", () => {
+  it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
     );
 
-    // Select an empty cell, then tap a numpad digit (tap = note).
-    const cell = screen.getByLabelText("Cell row 1 column 1, empty");
-    fireEvent.click(cell);
+    // Select an empty cell, then tap a numpad digit — a tap commits the value.
+    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
     const seven = screen.getByRole("button", { name: "7" });
     fireEvent.pointerDown(seven, { pointerType: "touch" });
     fireEvent.pointerUp(seven, { pointerType: "touch" });
 
-    // The note lands and the cell stays selected so the player can keep
-    // penciling into it without re-tapping the cell.
+    // The value lands and the cell stays selected so the player can keep
+    // working it without re-tapping the cell.
+    const filled = screen.getByLabelText("Cell row 1 column 1, value 7");
+    expect(filled.className).toContain("cell-selected-glow");
+  });
+
+  it("places a pencil note and keeps the cell selected after a numpad hold", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    // Select an empty cell, then hold a numpad digit — a hold adds a note.
+    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
+    const seven = screen.getByRole("button", { name: "7" });
+    fireEvent.pointerDown(seven, { pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    fireEvent.pointerUp(seven, { pointerType: "touch" });
+
+    // The cell holds no value (still "empty") but carries the note, and
+    // stays selected for continued penciling.
+    const cell = screen.getByLabelText("Cell row 1 column 1, empty");
     expect(cell.textContent).toContain("7");
     expect(cell.className).toContain("cell-selected-glow");
+  });
+
+  it("toggles the digit highlight on a numpad tap with no cell selected", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    // No cell selected: a tap filters the board instead of placing a value.
+    const five = screen.getByRole("button", { name: "5" });
+    fireEvent.pointerDown(five, { pointerType: "touch" });
+    fireEvent.pointerUp(five, { pointerType: "touch" });
+
+    // Row 2 column 6 holds 5 in PUZZLE and picks up the same-number
+    // highlight; no empty cell gained a value.
+    expect(
+      screen.getByLabelText("Cell row 2 column 6, value 5").className,
+    ).toContain("bg-cell-same-number");
+    expect(screen.queryByLabelText("Cell row 1 column 1, value 5")).toBeNull();
   });
 
   it("highlights the skimmed digit on the board while a cell is selected", () => {

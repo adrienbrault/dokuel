@@ -1,12 +1,23 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { test as base } from "@playwright/test";
+import { type Locator, type Page, test as base } from "@playwright/test";
 
 const SCREENSHOT_DIR = join(import.meta.dirname, "screenshots");
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
 function screenshotPath(name: string, project: string) {
 	return join(SCREENSHOT_DIR, `${name}--${project.replace(/\s+/g, "-")}.png`);
+}
+
+// Press and hold a numpad digit past the 200ms threshold so it commits a
+// pencil note. A quick click commits the value instead.
+async function holdNumpadDigit(page: Page, digit: Locator) {
+	const box = await digit.boundingBox();
+	if (!box) throw new Error("numpad digit not visible");
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.down();
+	await page.waitForTimeout(250);
+	await page.mouse.up();
 }
 
 // Fixture that seeds localStorage and disables CSS animations/transitions
@@ -247,10 +258,10 @@ test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
 	// Select an empty cell so the hold has a meaningful target
 	await page.locator('button[aria-label*=", empty"]').first().click();
 
-	// Hold a digit; screenshot mid-hold to show the in-cell charging
-	// glyph growing toward value-size. Animations are disabled here, so
-	// the overlay snaps to its end state — what matters is that the
-	// digit is visibly previewed in the cell before commit.
+	// Hold a digit past the threshold so the note commits and the in-cell
+	// charge glyph appears, then screenshot. Animations are disabled here,
+	// so the overlay snaps to its end state — what matters is that the
+	// held note is visibly landing in the cell.
 	const digit = page
 		.locator(
 			'[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
@@ -260,6 +271,7 @@ test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
 	if (!box) throw new Error("digit not visible");
 	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 	await page.mouse.down();
+	await page.waitForTimeout(250);
 
 	await page.screenshot({
 		path: screenshotPath("solo-hold-charging", testInfo.project.name),
@@ -405,25 +417,21 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	);
 	const enabledCount = await enabledNumpad.count();
 
-	// Fill first few empty cells with VALUES via keyboard (tap-on-numpad
-	// is now "note"; keyboard digit still follows notesMode, which is off,
-	// so it places a value).
+	// Fill the first few empty cells with values via the keyboard.
 	for (let i = 0; i < 5; i++) {
 		await emptyCells.nth(0).click();
 		await page.keyboard.press(String((i % 9) + 1));
 	}
 
-	// Add notes to subsequent cells by tapping numpad digits — tap = note.
+	// Add pencil notes to subsequent cells by holding numpad digits past
+	// the threshold — hold = note.
 	const remainingEmpty = page.locator('button[aria-label*=", empty"]');
 	for (let i = 0; i < 6; i++) {
 		const count = await enabledNumpad.count();
 		if (count < 2) break;
 		await remainingEmpty.nth(i).click();
-		await enabledNumpad.nth(i % count).click();
-		await enabledNumpad.nth((i + 1) % count).click();
-		if (i % 2 === 0 && count > 2) {
-			await enabledNumpad.nth((i + 2) % count).click();
-		}
+		await holdNumpadDigit(page, enabledNumpad.nth(i % count));
+		await holdNumpadDigit(page, enabledNumpad.nth((i + 1) % count));
 	}
 
 	// Deselect by clicking a filled cell for cleaner screenshot

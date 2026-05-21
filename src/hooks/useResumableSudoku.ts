@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { serializeBoard } from "../lib/board-engine.ts";
 import {
   completeGame,
@@ -90,9 +90,17 @@ export function useResumableSudoku({
     getTimerSeconds,
   ]);
 
-  // On completion: orchestrate side effects via completeGame, notify caller
+  // On completion: orchestrate side effects via completeGame, notify caller.
+  // Guarded so dep churn (getTimerSeconds is recreated every render) can't
+  // re-fire completeGame and log the same win multiple times.
+  const completedRef = useRef(false);
   useEffect(() => {
-    if (game.status !== "completed") return;
+    if (game.status !== "completed") {
+      completedRef.current = false;
+      return;
+    }
+    if (completedRef.current) return;
+    completedRef.current = true;
     const seconds = getTimerSeconds();
     const result = completeGame({
       gameKey,

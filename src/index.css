@@ -294,42 +294,33 @@ body {
   animation: cell-reveal 0.15s ease-out both;
 }
 
-/* In-cell hold feedback: the just-placed note glyph grows from its
-   note-grid position (corner/edge/center based on digit) toward the
-   cell center at value-size over the same 400ms hold threshold used
-   by NumPad. --charge-dx / --charge-dy are the offset from cell
-   center to the digit's sub-cell center, supplied inline by Cell.
+/* In-cell hold feedback: when a hold commits a pencil note, the glyph
+   flourishes — it lands value-size at the cell center, then collapses
+   into its note-grid sub-cell (corner/edge/center based on digit) at
+   note size over the same 200ms hold threshold used by NumPad.
+   --charge-dx / --charge-dy are the offset from cell center to the
+   digit's sub-cell center, supplied inline by Cell.
 
-   Timing curve: a long, slow build for ~60% of the duration (the
-   glyph creeps out of its corner, gathering tension), a fast snap to
-   an overshoot near the end (~15% of the duration), and a quick
-   settle to the final value size before the actual value commits.
-   Keyframe percentages do the work — animation-timing-function is
-   linear so the spacing dictates speed. */
+   Timing curve: a quick settle from a slight overshoot (~40% of the
+   duration), then a glide down into the sub-cell. Keyframe percentages
+   do the work — animation-timing-function is linear so the spacing
+   dictates speed. */
 @keyframes note-charge {
   0% {
-    transform: translate(var(--charge-dx, 0%), var(--charge-dy, 0%)) scale(0.4);
-    opacity: 0.55;
-  }
-  60% {
-    transform: translate(
-        calc(var(--charge-dx, 0%) * 0.6),
-        calc(var(--charge-dy, 0%) * 0.6)
-      )
-      scale(0.6);
-    opacity: 0.75;
-  }
-  85% {
     transform: translate(0%, 0%) scale(1.2);
     opacity: 1;
   }
-  100% {
+  40% {
     transform: translate(0%, 0%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--charge-dx, 0%), var(--charge-dy, 0%)) scale(0.4);
     opacity: 1;
   }
 }
 .animate-note-charge {
-  animation: note-charge 400ms linear forwards;
+  animation: note-charge 200ms linear forwards;
 }
 
 @keyframes emoji-bounce {

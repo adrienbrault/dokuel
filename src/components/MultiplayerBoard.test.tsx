@@ -102,7 +102,7 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
-  it("keeps the cell selected after a tap-only numpad note", () => {
+  it("keeps the cell selected after a numpad tap places a value", () => {
     vi.useFakeTimers();
     try {
       render(<MultiplayerBoard {...baseProps()} />);
@@ -113,22 +113,21 @@ describe("MultiplayerBoard local autosave", () => {
       // (standard assist level uses the glow, paper uses a ring).
       expect(cell.className).toContain("cell-selected-glow");
 
-      // Tap = note (instant on pointerdown). No hold timer expiration
-      // before release, so the long-press digit must not fire.
+      // A quick tap commits the value.
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
-      // The note lands and the cell stays selected so the player can keep
-      // penciling into it without re-tapping the cell.
-      expect(cell.textContent).toContain("5");
-      expect(cell.className).toContain("cell-selected-glow");
+      // The value lands and the cell stays selected so the player can keep
+      // working it without re-tapping the cell.
+      const filledCell = screen.getByLabelText(/Cell row 1 column 1, value 5/);
+      expect(filledCell.className).toContain("cell-selected-glow");
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("keeps the cell selected after a tap+hold digit placement", () => {
+  it("keeps the cell selected after a numpad hold places a note", () => {
     vi.useFakeTimers();
     try {
       render(<MultiplayerBoard {...baseProps()} />);
@@ -136,6 +135,7 @@ describe("MultiplayerBoard local autosave", () => {
       const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
       fireEvent.click(cell);
 
+      // Holding past the threshold adds a pencil note.
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
       act(() => {
@@ -143,10 +143,11 @@ describe("MultiplayerBoard local autosave", () => {
       });
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
-      // Digit landed and the cell remains selected so the player can
-      // keep working it (e.g. erase + retry without re-tapping).
-      const filledCell = screen.getByLabelText(/Cell row 1 column 1, value 5/);
-      expect(filledCell.className).toContain("cell-selected-glow");
+      // The note lands (the cell keeps no value) and stays selected so the
+      // player can keep penciling into it without re-tapping the cell.
+      const noted = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      expect(noted.textContent).toContain("5");
+      expect(noted.className).toContain("cell-selected-glow");
     } finally {
       vi.useRealTimers();
     }
@@ -237,14 +238,11 @@ describe("MultiplayerBoard local autosave", () => {
       const undo = screen.getByLabelText("Undo") as HTMLButtonElement;
       expect(undo.disabled).toBe(true);
 
-      // Place a 5 in (0,0) via tap-and-hold.
+      // Place a 5 in (0,0) with a numpad tap.
       const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
       fireEvent.click(cell);
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
-      act(() => {
-        vi.advanceTimersByTime(500);
-      });
       fireEvent.pointerUp(five, { pointerType: "touch" });
       expect(
         screen.queryByLabelText(/Cell row 1 column 1, value 5/),
@@ -273,14 +271,9 @@ describe("MultiplayerBoard local autosave", () => {
       // (0,0) is empty in PUZZLE; correct solution value is 5.
       const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
       fireEvent.click(cell);
-      // Numpad tap is now "note"; long-press is what commits a value.
-      // MultiplayerBoard doesn't wire useKeyboard so we can't use the
-      // keyboard path here — simulate the hold gesture instead.
+      // A numpad tap commits the value.
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
-      act(() => {
-        vi.advanceTimersByTime(500);
-      });
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
       expect(
@@ -322,9 +315,6 @@ describe("MultiplayerBoard after opponent wins", () => {
       fireEvent.click(cell);
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
-      act(() => {
-        vi.advanceTimersByTime(500);
-      });
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
       // Loser can still commit values to their board.
@@ -443,9 +433,6 @@ describe("MultiplayerBoard after opponent wins", () => {
       fireEvent.click(cell);
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
-      act(() => {
-        vi.advanceTimersByTime(500);
-      });
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
       // Save should exist while the loser is still working on their board.
