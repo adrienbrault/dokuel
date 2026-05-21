@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChallengeRecorder } from "../hooks/useChallengeRecorder.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
-import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
-import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
+import { useSoloGameInput } from "../hooks/useSoloGameInput.ts";
 import { completionPercent } from "../lib/board-engine.ts";
 import { shareChallenge } from "../lib/challenge.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { getPlayerName } from "../lib/player.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
-import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
@@ -21,7 +18,7 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
-import { NumPad, type NumPadHandle } from "./NumPad.tsx";
+import { NumPad } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
@@ -113,51 +110,7 @@ export function SoloGame({
     });
   }, [puzzle, difficulty, assistLevel, game.hintsUsed, ghostSamples]);
 
-  // Keyboard digit follows the current notesMode flag (N toggles it),
-  // preserving the established "press N then 1" pencil-mark workflow.
-  const handleKeyboardNumber = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      const wasNoteMode = game.notesMode;
-      game.placeNumber(n, assistLevel !== "paper");
-      if (wasNoteMode) game.deselectCell();
-    }
-  };
-
-  // Touch numpad: a quick tap commits the value, a hold adds a pencil
-  // note. The selected cell stays selected through either action so the
-  // player can keep working it. With no cell selected, a tap toggles the
-  // digit's board-wide highlight instead.
-  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  const highlight = useDigitHighlight(game);
-  const handleTapValue = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", false);
-    } else {
-      highlight.toggle(n);
-    }
-  };
-
-  const handleHoldNote = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
-    }
-  };
-
-  const handlePressEnd = () => {
-    setChargingDigit(null);
-  };
-
-  // Digit drag: top-half drop commits a value, bottom-half adds a note.
-  // A drag brought back over the numpad demotes to a skim (see NumPad).
-  const numPadRef = useRef<NumPadHandle>(null);
-  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
-    game,
-    disabled: paused || game.status !== "playing",
-    autoEliminateNotes: assistLevel !== "paper",
-    onHighlightDigit: highlight.setDigit,
-    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
-  });
+  const input = useSoloGameInput(game, assistLevel, paused);
 
   const handleBack = () => {
     if (
@@ -182,33 +135,13 @@ export function SoloGame({
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [game.status]);
 
-  useKeyboard({
-    selectedCell: game.selectedCell,
-    onSelectCell: game.selectCell,
-    onDeselectCell: game.deselectCell,
-    onPlaceNumber: handleKeyboardNumber,
-    onErase: game.erase,
-    onUndo: game.undo,
-    onToggleNotes: game.toggleNotesMode,
-    enabled: game.status === "playing" && !paused,
-  });
-
-  const hintCells = useMemo(() => {
-    if (!game.activeHint) return undefined;
-    const set = new Set<number>();
-    for (const pos of game.activeHint.relatedCells) {
-      set.add(cellKey(pos.row, pos.col));
-    }
-    return set;
-  }, [game.activeHint]);
-
   return (
     <GameLayout
       onBack={handleBack}
       title={title}
       position={position}
       onPositionChange={setPosition}
-      onDeselectCell={highlight.deselectCell}
+      onDeselectCell={input.highlight.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
@@ -245,21 +178,21 @@ export function SoloGame({
       }
       numPad={
         <NumPad
-          ref={numPadRef}
+          ref={input.numPadRef}
           position={position}
           remainingCounts={game.remainingCounts}
           selectedValue={
             game.selectedCell
               ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
-              : highlight.highlightedDigit
+              : input.highlight.highlightedDigit
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onTapNumber={handleTapValue}
-          onHoldNumber={handleHoldNote}
-          onPressEnd={handlePressEnd}
-          onStartDrag={startNumpadDrag}
-          onSkimDigit={highlight.skimToDigit}
+          onTapNumber={input.onTapNumber}
+          onHoldNumber={input.onHoldNumber}
+          onPressEnd={input.onPressEnd}
+          onStartDrag={input.startNumpadDrag}
+          onSkimDigit={input.highlight.skimToDigit}
         />
       }
       board={
@@ -270,16 +203,18 @@ export function SoloGame({
             selectedCells={paused ? undefined : game.selectedCells}
             assistLevel={assistLevel}
             conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
-            hintCells={hintCells}
-            highlightedDigit={paused ? null : highlight.highlightedDigit}
-            onSelectCell={paused ? () => {} : highlight.selectCell}
-            onSetSelectedCells={paused ? undefined : highlight.setSelectedCells}
+            hintCells={input.hintCells}
+            highlightedDigit={paused ? null : input.highlight.highlightedDigit}
+            onSelectCell={paused ? () => {} : input.highlight.selectCell}
+            onSetSelectedCells={
+              paused ? undefined : input.highlight.setSelectedCells
+            }
             animateReveal={!revealed}
-            chargingDigit={paused ? null : chargingDigit}
-            dragState={paused ? null : dragState}
-            onStartCellDrag={paused ? undefined : startCellDrag}
+            chargingDigit={paused ? null : input.chargingDigit}
+            dragState={paused ? null : input.dragState}
+            onStartCellDrag={paused ? undefined : input.startCellDrag}
           />
-          <DigitDragIndicator state={paused ? null : dragState} />
+          <DigitDragIndicator state={paused ? null : input.dragState} />
           {paused && (
             <button
               type="button"
