@@ -23,8 +23,8 @@ export type DigitDragState = {
   /** Which slot the current pointer position would land in. */
   mode: DigitDropMode;
   /**
-   * Hit-test/chip offset above the pointer, in CSS pixels. Larger for
-   * touch than for mouse/pen — see liftForPointerType.
+   * Hit-test/chip offset above the pointer, in CSS pixels. Non-zero
+   * only for touch — see liftForPointerType.
    */
   lift: number;
 };
@@ -65,23 +65,16 @@ type Options = {
 type CellHit = { position: Position; mode: DigitDropMode };
 
 /**
- * Baseline upward offset applied to every drag so the chip floats
- * clear above the pointer instead of sitting right on top of it.
+ * Upward offset applied to a touch drag, in CSS pixels. A fingertip
+ * occludes the cell directly underneath it, so the hit point — and
+ * the chip — are raised clear of the hand. Mouse and pen are precise
+ * pointers that occlude nothing, so they get no lift: the chip sits
+ * right at the cursor.
  */
-const POINTER_LIFT_BASE_PX = 10;
-
-/**
- * Extra lift for touch. A fingertip occludes the cell directly
- * underneath it, so the hit point — and the chip — are raised
- * further clear of the hand. Mouse and pen are precise pointers
- * that occlude nothing, so they only get the baseline offset.
- */
-const TOUCH_EXTRA_LIFT_PX = 36;
+const TOUCH_LIFT_PX = 46;
 
 export function liftForPointerType(pointerType: string): number {
-  return (
-    POINTER_LIFT_BASE_PX + (pointerType === "touch" ? TOUCH_EXTRA_LIFT_PX : 0)
-  );
+  return pointerType === "touch" ? TOUCH_LIFT_PX : 0;
 }
 
 function cellHitFromPoint(

@@ -28,14 +28,14 @@ describe("DigitDragIndicator", () => {
     expect(getByTestId("digit-drag-indicator").textContent).toBe("5");
   });
 
-  it("floats just above the cursor for a mouse drag", () => {
+  it("sits right at the cursor for a mouse drag", () => {
     const { getByTestId } = render(
-      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 10 })} />,
+      <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 0 })} />,
     );
     const el = getByTestId("digit-drag-indicator");
     expect(el.dataset.pose).toBe("free");
     expect(el.style.left).toBe("200px");
-    expect(el.style.top).toBe("290px");
+    expect(el.style.top).toBe("300px");
   });
 
   it("rides well above the finger for a touch drag", () => {

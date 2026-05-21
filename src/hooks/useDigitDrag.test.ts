@@ -52,8 +52,8 @@ function makeNumpadButton(digit: number): HTMLElement {
   return el;
 }
 
-// Default start params. pointerType "mouse" → 10px lift, so a
-// clientY resolves 10px higher in local cell coordinates.
+// Default start params. pointerType "mouse" → no lift, so a
+// clientY resolves directly in local cell coordinates.
 function startParams(overrides: Record<string, unknown> = {}) {
   return {
     digit: 5,
@@ -99,7 +99,7 @@ describe("useDigitDrag", () => {
       target: null,
       invalidTarget: false,
       mode: "value",
-      lift: 10,
+      lift: 0,
     });
   });
 
@@ -152,7 +152,7 @@ describe("useDigitDrag", () => {
     act(() => {
       result.current.start(startParams({ digit: 9 }));
     });
-    // Mouse drag (10px lift): clientY 30 → local Y 20 → top half.
+    // Mouse drag (no lift): clientY 30 → local Y 30 → top half.
     act(() => {
       document.dispatchEvent(
         pointerEvent("pointermove", { clientX: 50, clientY: 30 }),
@@ -172,7 +172,7 @@ describe("useDigitDrag", () => {
 
   it("computes 'value' mode when the pointer is in the top half of the cell", () => {
     // Cell occupies (0,0)→(100,100). Mouse pointer (50, 30) → local
-    // Y 20 after the 10px lift, above the horizontal midline.
+    // Y 30 with no lift, above the horizontal midline.
     mockElementFromPoint(() => makeCellElement(1, 2));
     const { result } = renderHook(() =>
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
@@ -189,7 +189,7 @@ describe("useDigitDrag", () => {
   });
 
   it("computes 'note' mode when the pointer is in the bottom half of the cell", () => {
-    // Mouse pointer (50, 85) → local Y 75 after the 10px lift, below
+    // Mouse pointer (50, 85) → local Y 85 with no lift, below
     // the midline.
     mockElementFromPoint(() => makeCellElement(1, 2));
     const { result } = renderHook(() =>
@@ -236,7 +236,7 @@ describe("useDigitDrag", () => {
     act(() => {
       result.current.start(startParams({ digit: 7 }));
     });
-    // Mouse pointer (10, 85) → local Y 75 after the 10px lift: below
+    // Mouse pointer (10, 85) → local Y 85 with no lift: below
     // the midline → note.
     act(() => {
       document.dispatchEvent(
