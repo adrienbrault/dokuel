@@ -157,24 +157,24 @@ export function MultiplayerBoard({
     getTimeSeconds: () => timerSecondsRef.current,
   });
 
-  // Touch numpad: tap adds a note, hold commits the value. The selected
-  // cell stays selected through either action so the player can keep
-  // working it. With no cell selected, the numpad doubles as a filter
-  // chip — a tap toggles the digit's board-wide highlight.
+  // Touch numpad: a quick tap commits the value, a hold adds a pencil
+  // note. The selected cell stays selected through either action so the
+  // player can keep working it. With no cell selected, the numpad doubles
+  // as a filter chip — a tap toggles the digit's board-wide highlight.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
   const highlight = useDigitHighlight(game);
-  const handleTapNote = (n: number) => {
+  const handleTapValue = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
+      game.placeNumber(n, assistLevel !== "paper", false);
     } else {
       highlight.toggle(n);
     }
   };
 
-  const handleHoldValue = (n: number) => {
+  const handleHoldNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", false);
+      game.placeNumber(n, assistLevel !== "paper", true);
+      setChargingDigit(n);
     }
   };
 
@@ -232,8 +232,8 @@ export function MultiplayerBoard({
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onNumber={handleTapNote}
-          onLongPressNumber={handleHoldValue}
+          onTapNumber={handleTapValue}
+          onHoldNumber={handleHoldNote}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
           onSkimDigit={highlight.skimToDigit}

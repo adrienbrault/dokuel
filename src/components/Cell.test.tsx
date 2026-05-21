@@ -39,8 +39,8 @@ describe("Cell chargingDigit", () => {
   });
 
   it("renders the charging glyph for the held digit even if the note isn't in the cell yet", () => {
-    // Race: pointerdown fires onNumber but the parent's setChargingDigit
-    // may render before the cell has propagated its new notes set.
+    // Race: the hold places the note and sets chargingDigit, but the
+    // parent may render before the cell has propagated its new notes set.
     render(<Cell {...defaultProps()} cell={makeCell()} chargingDigit={4} />);
     expect(screen.getByTestId("note-charge")).toHaveTextContent("4");
   });
