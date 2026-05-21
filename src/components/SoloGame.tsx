@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useChallengeRecorder } from "../hooks/useChallengeRecorder.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
+import { completionPercent } from "../lib/board-engine.ts";
+import { shareChallenge } from "../lib/challenge.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
+import { getPlayerName } from "../lib/player.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
@@ -51,14 +55,15 @@ export function SoloGame({
   streakInfo,
 }: SoloGameProps) {
   const timerSecondsRef = useRef(0);
+  const getTimerSeconds = useCallback(() => timerSecondsRef.current, []);
 
-  const { game, assistLevel, setAssistLevel, initialTimerSeconds } =
+  const { game, puzzle, assistLevel, setAssistLevel, initialTimerSeconds } =
     useResumableSudoku({
       gameKey,
       initialPuzzle,
       difficulty,
       initialAssistLevel,
-      getTimerSeconds: () => timerSecondsRef.current,
+      getTimerSeconds,
       dailyDate,
       onComplete,
     });
@@ -82,6 +87,31 @@ export function SoloGame({
     [difficulty, assistLevel],
   );
   const personalBest = priorStats?.bestTime ?? null;
+
+  // Record the solve as a ghost timeline so it can be shared as a
+  // challenge — a friend then races this pace on the same board.
+  const myPercent = useMemo(
+    () => completionPercent(puzzle, game.cellsRemaining),
+    [puzzle, game.cellsRemaining],
+  );
+  const { samples: ghostSamples } = useChallengeRecorder({
+    completionPercent: myPercent,
+    getTimerSeconds,
+    storageKey: gameKey,
+  });
+
+  const handleChallengeFriend = useCallback(async () => {
+    await shareChallenge({
+      v: 1,
+      puzzle,
+      difficulty,
+      assistLevel,
+      challengerName: getPlayerName(),
+      finalTime: timerSecondsRef.current,
+      hintsUsed: game.hintsUsed,
+      ghost: ghostSamples,
+    });
+  }, [puzzle, difficulty, assistLevel, game.hintsUsed, ghostSamples]);
 
   // Keyboard digit follows the current notesMode flag (N toggles it),
   // preserving the established "press N then 1" pencil-mark workflow.
@@ -299,6 +329,7 @@ export function SoloGame({
             }
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
+            onChallengeFriend={handleChallengeFriend}
             isDaily={!!streakInfo || !!title?.startsWith("Daily")}
             tip={
               !tipDismissed && position === "bottom"
