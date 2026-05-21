@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import {
   DIFFICULTY_BADGE_CLASSES,
@@ -21,6 +22,11 @@ type GameResultProps = {
   isDaily?: boolean | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
+  /** A comparison line shown for challenge results (you vs the challenger). */
+  comparison?: ReactNode | undefined;
+  /** When provided, renders a "Challenge a Friend" action that builds and
+   *  shares an async-challenge link. May be async (it encodes a blob). */
+  onChallengeFriend?: (() => void | Promise<void>) | undefined;
 };
 
 export function buildShareText({
@@ -66,8 +72,11 @@ export function GameResult({
   isDaily,
   tip,
   onDismissTip,
+  comparison,
+  onChallengeFriend,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
+  const [challengeShared, setChallengeShared] = useState(false);
 
   const handleShare = () => {
     const text = buildShareText({
@@ -81,6 +90,13 @@ export function GameResult({
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleChallenge = async () => {
+    if (!onChallengeFriend) return;
+    await onChallengeFriend();
+    setChallengeShared(true);
+    setTimeout(() => setChallengeShared(false), 2000);
   };
 
   return (
@@ -130,6 +146,12 @@ export function GameResult({
           )}
         </div>
 
+        {comparison && (
+          <div className="text-sm text-text-secondary text-center -mt-1">
+            {comparison}
+          </div>
+        )}
+
         {stats && !isMultiplayer && (
           <div className="grid grid-cols-3 gap-2.5 w-full text-center">
             <StatTile label="Played" value={String(stats.gamesPlayed)} />
@@ -174,6 +196,17 @@ export function GameResult({
               onClick={handleShare}
             >
               {copied ? "Copied!" : "Share Result"}
+            </button>
+          )}
+          {onChallengeFriend && (
+            <button
+              type="button"
+              className="btn btn-ghost w-full py-2"
+              onClick={() => {
+                void handleChallenge();
+              }}
+            >
+              {challengeShared ? "Challenge Link Ready!" : "Challenge a Friend"}
             </button>
           )}
         </div>
