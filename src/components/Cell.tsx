@@ -29,9 +29,9 @@ type CellProps = {
   onSelect: (row: number, col: number) => void;
   revealDelay?: number | undefined;
   /**
-   * When set, render the digit as a centered overlay that animates
-   * from note-size to value-size over the long-press window — gives
-   * the user in-cell feedback that holding will commit the value.
+   * When set, render the digit as an overlay that flourishes a freshly
+   * held pencil note into place — landing value-size at the cell center,
+   * then collapsing into its note-grid slot.
    */
   chargingDigit?: number | undefined;
   /** True when this cell is the source of an in-flight digit drag. */
