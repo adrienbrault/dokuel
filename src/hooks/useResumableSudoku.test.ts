@@ -154,6 +154,29 @@ describe("useResumableSudoku", () => {
     expect(stats!.bestTime).toBe(90);
   });
 
+  it("records the win only once across re-renders after completion", () => {
+    const { result, rerender } = renderHook(() =>
+      useResumableSudoku({
+        initialPuzzle: puzzleMissingOneCell(),
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 90,
+      }),
+    );
+
+    act(() => result.current.game.selectCell(0, 0));
+    act(() => result.current.game.placeNumber(5));
+    expect(result.current.game.status).toBe("completed");
+
+    // Post-win re-renders recreate the inline getTimerSeconds, churning the
+    // completion effect's deps. The win must still be recorded exactly once.
+    rerender();
+    rerender();
+    rerender();
+
+    expect(getStatsForDifficulty("easy")!.gamesPlayed).toBe(1);
+  });
+
   it("calls onComplete with the timer value and an empty result for non-daily games", () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() =>
