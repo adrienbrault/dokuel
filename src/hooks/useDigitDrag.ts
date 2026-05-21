@@ -53,11 +53,13 @@ type Options = {
    * placement) and the gesture is handed back so the numpad can resume
    * a skim under the same pointer.
    */
-  onReturnToNumpad?: (info: {
-    digit: number;
-    pointerId: number;
-    pointerType: string;
-  }) => void;
+  onReturnToNumpad?:
+    | ((info: {
+        digit: number;
+        pointerId: number;
+        pointerType: string;
+      }) => void)
+    | undefined;
 };
 
 type CellHit = { position: Position; mode: DigitDropMode };
