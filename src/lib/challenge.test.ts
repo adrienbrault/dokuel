@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { decodeChallenge, encodeChallenge } from "./challenge.ts";
-import type { Challenge } from "./types.ts";
+import {
+  decodeChallenge,
+  encodeChallenge,
+  ghostPercentAt,
+} from "./challenge.ts";
+import type { Challenge, GhostSample } from "./types.ts";
 
 const fixture: Challenge = {
   v: 1,
@@ -58,5 +62,36 @@ describe("encodeChallenge / decodeChallenge", () => {
   it("returns null for an empty ghost timeline", async () => {
     const blob = await encodeChallenge({ ...fixture, ghost: [] });
     expect(await decodeChallenge(blob)).toBeNull();
+  });
+});
+
+describe("ghostPercentAt", () => {
+  const samples: GhostSample[] = [
+    { t: 0, p: 0 },
+    { t: 10, p: 50 },
+    { t: 20, p: 100 },
+  ];
+
+  it("clamps to 0 before and at the first sample", () => {
+    expect(ghostPercentAt(samples, -5)).toBe(0);
+    expect(ghostPercentAt(samples, 0)).toBe(0);
+  });
+
+  it("clamps to 100 at and after the last sample", () => {
+    expect(ghostPercentAt(samples, 20)).toBe(100);
+    expect(ghostPercentAt(samples, 99)).toBe(100);
+  });
+
+  it("returns the exact value at a sample point", () => {
+    expect(ghostPercentAt(samples, 10)).toBe(50);
+  });
+
+  it("linearly interpolates between bracketing samples", () => {
+    expect(ghostPercentAt(samples, 5)).toBe(25);
+    expect(ghostPercentAt(samples, 15)).toBe(75);
+  });
+
+  it("handles a single-sample timeline", () => {
+    expect(ghostPercentAt([{ t: 0, p: 0 }], 42)).toBe(0);
   });
 });

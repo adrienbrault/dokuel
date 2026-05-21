@@ -1,4 +1,4 @@
-import type { Challenge } from "./types.ts";
+import type { Challenge, GhostSample } from "./types.ts";
 
 /**
  * Async-challenge artifact codec.
@@ -115,6 +115,31 @@ function isValidChallenge(data: unknown): data is Challenge {
     if (typeof s.t !== "number" || typeof s.p !== "number") return false;
   }
   return true;
+}
+
+/**
+ * The ghost's completion percent at elapsed time `t` (seconds), linearly
+ * interpolated between the two bracketing samples. Clamps to the
+ * endpoints outside the recorded range — before the first sample and at
+ * or after the last. `samples` is assumed non-empty and monotonic, as
+ * produced by the recorder.
+ */
+export function ghostPercentAt(samples: GhostSample[], t: number): number {
+  const first = samples[0];
+  if (!first) return 0;
+  if (t <= first.t) return first.p;
+  const last = samples[samples.length - 1]!;
+  if (t >= last.t) return last.p;
+  for (let i = 1; i < samples.length; i++) {
+    const b = samples[i]!;
+    if (t < b.t) {
+      const a = samples[i - 1]!;
+      const span = b.t - a.t;
+      if (span <= 0) return b.p;
+      return Math.round(a.p + ((b.p - a.p) * (t - a.t)) / span);
+    }
+  }
+  return last.p;
 }
 
 /** Serialize a challenge to a compact, URL-safe blob string. */
