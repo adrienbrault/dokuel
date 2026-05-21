@@ -35,10 +35,10 @@ async function pumpStream(
 ): Promise<Uint8Array> {
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
+  let result = await reader.read();
+  while (!result.done) {
+    chunks.push(result.value);
+    result = await reader.read();
   }
   return concatBytes(chunks);
 }
@@ -192,4 +192,21 @@ export async function parseChallengeUrl(loc: {
   const blob = loc.hash.replace(/^#/, "");
   if (!blob) return null;
   return decodeChallenge(blob);
+}
+
+/**
+ * Build a challenge link and hand it to the user: the native share
+ * sheet when available, otherwise the clipboard.
+ */
+export async function shareChallenge(challenge: Challenge): Promise<void> {
+  const url = await buildChallengeUrl(challenge);
+  if (navigator.share) {
+    try {
+      await navigator.share({ url, title: "Dokuel — beat my time!" });
+      return;
+    } catch {
+      // cancelled or unsupported — fall through to clipboard
+    }
+  }
+  await navigator.clipboard?.writeText(url);
 }
