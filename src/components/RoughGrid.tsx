@@ -40,7 +40,7 @@ export const RoughGrid = memo(function RoughGrid({
     const thick = {
       ...base,
       roughness: 1.8,
-      bowing: 2.5,
+      bowing: 0.8,
       strokeWidth: Math.max(1.8, cellPx * 0.052),
     };
 
