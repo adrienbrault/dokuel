@@ -10,7 +10,7 @@ describe("GameResult", () => {
     expect(screen.getByText("You Won!")).toBeInTheDocument();
     expect(screen.getByText("03:42")).toBeInTheDocument();
     expect(
-      document.querySelector('img[src="/ui-assets/victory-medal.svg"]'),
+      document.querySelector('img[src="/ui-assets/sprites/victory-medal.png"]'),
     ).toBeInTheDocument();
   });
 
@@ -19,7 +19,7 @@ describe("GameResult", () => {
 
     expect(screen.getByText("Puzzle Complete!")).toBeInTheDocument();
     expect(
-      document.querySelector('img[src="/ui-assets/dokuel-mark.svg"]'),
+      document.querySelector('img[src="/ui-assets/sprites/dokuel-mark.png"]'),
     ).toBeInTheDocument();
   });
 

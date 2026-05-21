@@ -1,5 +1,5 @@
-import { Eraser, Lightbulb, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { SpriteIcon } from "./SpriteIcon.tsx";
 
 type GameControlsProps = {
   onErase: () => void;
@@ -21,14 +21,14 @@ export function GameControls({
         onClick={onUndo}
         disabled={!historyLength || historyLength === 0}
       >
-        <Undo2 size={17} strokeWidth={2.25} aria-hidden="true" />
+        <SpriteIcon name="undoToken" className="w-5 h-5" />
       </ControlButton>
       <ControlButton label="Erase" onClick={onErase}>
-        <Eraser size={17} strokeWidth={2.25} aria-hidden="true" />
+        <SpriteIcon name="eraseToken" className="w-5 h-5" />
       </ControlButton>
       {onHint && (
         <ControlButton label="Hint" onClick={onHint}>
-          <Lightbulb size={17} strokeWidth={2.25} aria-hidden="true" />
+          <SpriteIcon name="hintToken" className="w-5 h-5" />
         </ControlButton>
       )}
     </div>

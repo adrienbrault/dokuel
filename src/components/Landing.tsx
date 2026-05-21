@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  ChartColumn,
   Check,
   ChevronRight,
   Flame,
@@ -21,6 +20,7 @@ import {
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
+import { SpriteIcon } from "./SpriteIcon.tsx";
 
 type LandingProps = {
   onSolo: () => void;
@@ -74,12 +74,7 @@ export function Landing({
   return (
     <div className="screen-content gap-7 py-10 sm:gap-9">
       <header className="flex flex-col items-center gap-2">
-        <img
-          src="/ui-assets/dokuel-mark.svg"
-          alt=""
-          className="w-16 h-16"
-          aria-hidden="true"
-        />
+        <SpriteIcon name="dokuelMark" className="w-16 h-16" />
         <h1 className="text-[3.25rem] leading-none font-extrabold tracking-tight bg-gradient-to-br from-text-primary to-accent bg-clip-text text-transparent">
           Dokuel
         </h1>
@@ -117,13 +112,13 @@ export function Landing({
 
         <ActionRow
           variant="primary"
-          icon={<AssetIcon src="/ui-assets/dokuel-mark.svg" />}
+          icon={<SpriteIcon name="soloToken" className="w-9 h-9" />}
           label="Start Solo"
           sublabel="Pick a difficulty and play"
           onClick={onSolo}
         />
         <ActionRow
-          icon={<AssetIcon src="/ui-assets/daily-badge.svg" />}
+          icon={<SpriteIcon name="dailyBadge" className="w-9 h-9" />}
           label="Daily Challenge"
           sublabel={dailySub}
           onClick={onDaily}
@@ -144,7 +139,7 @@ export function Landing({
           }
         />
         <ActionRow
-          icon={<AssetIcon src="/ui-assets/duel-badge.svg" />}
+          icon={<SpriteIcon name="duelBadge" className="w-9 h-9" />}
           label="Create Game"
           sublabel="Host a 1v1 room"
           onClick={onCreate}
@@ -163,7 +158,7 @@ export function Landing({
           className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-accent transition-colors touch-manipulation"
           onClick={onStats}
         >
-          <ChartColumn size={16} aria-hidden="true" />
+          <SpriteIcon name="statsToken" className="w-4 h-4" />
           View Stats
         </button>
         <a
@@ -178,10 +173,6 @@ export function Landing({
       </div>
     </div>
   );
-}
-
-function AssetIcon({ src }: { src: string }) {
-  return <img src={src} alt="" className="w-9 h-9" aria-hidden="true" />;
 }
 
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
