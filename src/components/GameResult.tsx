@@ -101,13 +101,16 @@ export function GameResult({
       )}
       <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
         <div className="flex flex-col items-center gap-2.5">
-          <span
-            className={`flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce ${
-              isWinner ? "bg-accent-light" : "bg-bg-inset"
-            }`}
-          >
-            {isWinner ? "🎉" : "👏"}
-          </span>
+          <img
+            src={
+              isWinner
+                ? "/ui-assets/victory-medal.svg"
+                : "/ui-assets/dokuel-mark.svg"
+            }
+            alt=""
+            className="w-20 h-20 animate-emoji-bounce"
+            aria-hidden="true"
+          />
           <h2 className="heading">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
@@ -140,6 +143,12 @@ export function GameResult({
 
         {streakInfo && streakInfo.currentStreak > 0 && (
           <div className="flex items-center justify-center gap-2 text-sm text-accent font-semibold">
+            <img
+              src="/ui-assets/streak-token.svg"
+              alt=""
+              className="w-7 h-7"
+              aria-hidden="true"
+            />
             <span>{streakInfo.currentStreak}-day streak!</span>
             {streakInfo.currentStreak >= streakInfo.longestStreak &&
               streakInfo.currentStreak > 1 && (

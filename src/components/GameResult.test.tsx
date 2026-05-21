@@ -4,19 +4,23 @@ import { describe, expect, it, vi } from "vitest";
 import { buildShareText, GameResult } from "./GameResult.tsx";
 
 describe("GameResult", () => {
-  it("renders win state with time and emoji", () => {
+  it("renders win state with time and victory asset", () => {
     render(<GameResult isWinner={true} time="03:42" onNewGame={vi.fn()} />);
 
     expect(screen.getByText("You Won!")).toBeInTheDocument();
     expect(screen.getByText("03:42")).toBeInTheDocument();
-    expect(screen.getByText("🎉")).toBeInTheDocument();
+    expect(
+      document.querySelector('img[src="/ui-assets/victory-medal.svg"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders completion state for non-winner", () => {
     render(<GameResult isWinner={false} time="05:00" onNewGame={vi.fn()} />);
 
     expect(screen.getByText("Puzzle Complete!")).toBeInTheDocument();
-    expect(screen.getByText("👏")).toBeInTheDocument();
+    expect(
+      document.querySelector('img[src="/ui-assets/dokuel-mark.svg"]'),
+    ).toBeInTheDocument();
   });
 
   it("displays difficulty label when provided", () => {

@@ -72,6 +72,12 @@ export function Lobby({
   return (
     <div className="screen-content gap-7 py-10">
       <div className="flex flex-col items-center gap-3">
+        <img
+          src="/ui-assets/room-code-ornament.svg"
+          alt=""
+          className="w-32 h-16"
+          aria-hidden="true"
+        />
         <h2 className="heading">Game Lobby</h2>
         <button
           type="button"

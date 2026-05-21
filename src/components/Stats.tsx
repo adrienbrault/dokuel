@@ -85,7 +85,13 @@ export function Stats({ onBack }: StatsProps) {
             Multiplayer
           </h3>
           {mpSummary.played === 0 ? (
-            <div className="card p-4 w-full">
+            <div className="card p-5 w-full flex flex-col items-center gap-3">
+              <img
+                src="/ui-assets/empty-state-board.svg"
+                alt=""
+                className="w-28 h-24"
+                aria-hidden="true"
+              />
               <p className="text-sm text-text-muted text-center">
                 No multiplayer games yet
               </p>

@@ -459,7 +459,7 @@ test("solo game - win modal", async ({ page }, testInfo) => {
 			</div>
 			<div class="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full relative">
 				<div class="flex flex-col items-center gap-2">
-					<span class="text-5xl animate-emoji-bounce">🎉</span>
+					<img src="/ui-assets/victory-medal.svg" alt="" class="w-20 h-20 animate-emoji-bounce" aria-hidden="true" />
 					<h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">You Won!</h2>
 					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Easy</span>
 				</div>

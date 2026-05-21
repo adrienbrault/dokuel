@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  CalendarHeart,
   ChartColumn,
   Check,
   ChevronRight,
@@ -8,7 +7,6 @@ import {
   Globe,
   LogIn,
   Play,
-  Swords,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -76,6 +74,12 @@ export function Landing({
   return (
     <div className="screen-content gap-7 py-10 sm:gap-9">
       <header className="flex flex-col items-center gap-2">
+        <img
+          src="/ui-assets/dokuel-mark.svg"
+          alt=""
+          className="w-16 h-16"
+          aria-hidden="true"
+        />
         <h1 className="text-[3.25rem] leading-none font-extrabold tracking-tight bg-gradient-to-br from-text-primary to-accent bg-clip-text text-transparent">
           Dokuel
         </h1>
@@ -113,13 +117,13 @@ export function Landing({
 
         <ActionRow
           variant="primary"
-          icon={<Play size={20} aria-hidden="true" />}
+          icon={<AssetIcon src="/ui-assets/dokuel-mark.svg" />}
           label="Start Solo"
           sublabel="Pick a difficulty and play"
           onClick={onSolo}
         />
         <ActionRow
-          icon={<CalendarHeart size={20} aria-hidden="true" />}
+          icon={<AssetIcon src="/ui-assets/daily-badge.svg" />}
           label="Daily Challenge"
           sublabel={dailySub}
           onClick={onDaily}
@@ -140,7 +144,7 @@ export function Landing({
           }
         />
         <ActionRow
-          icon={<Swords size={20} aria-hidden="true" />}
+          icon={<AssetIcon src="/ui-assets/duel-badge.svg" />}
           label="Create Game"
           sublabel="Host a 1v1 room"
           onClick={onCreate}
@@ -174,6 +178,10 @@ export function Landing({
       </div>
     </div>
   );
+}
+
+function AssetIcon({ src }: { src: string }) {
+  return <img src={src} alt="" className="w-9 h-9" aria-hidden="true" />;
 }
 
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
