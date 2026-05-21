@@ -7,6 +7,9 @@ type MultiplayerHeaderExtraProps = {
   opponentProgress: { completionPercent: number } | null;
   opponentDisconnected: boolean;
   myPercent: number;
+  /** Label for the opponent's progress bar. Defaults to "Opponent";
+   *  async challenges pass the challenger's name to race a named ghost. */
+  opponentLabel?: string;
 };
 
 export function MultiplayerHeaderExtra({
@@ -16,6 +19,7 @@ export function MultiplayerHeaderExtra({
   opponentProgress,
   opponentDisconnected,
   myPercent,
+  opponentLabel = "Opponent",
 }: MultiplayerHeaderExtraProps) {
   if (gameOver && !iFinished) {
     return (
@@ -30,7 +34,7 @@ export function MultiplayerHeaderExtra({
           <div className="flex flex-col gap-1.5">
             <ProgressBar label="You" percent={myPercent} color="bg-accent" />
             <ProgressBar
-              label="Opponent"
+              label={opponentLabel}
               percent={opponentProgress.completionPercent}
               color="bg-rose-400"
             />
@@ -46,7 +50,9 @@ export function MultiplayerHeaderExtra({
         <ProgressBar label="You" percent={myPercent} color="bg-accent" />
         <ProgressBar
           label={
-            opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
+            opponentDisconnected
+              ? `${opponentLabel} (reconnecting...)`
+              : opponentLabel
           }
           percent={opponentProgress.completionPercent}
           color="bg-rose-400"
