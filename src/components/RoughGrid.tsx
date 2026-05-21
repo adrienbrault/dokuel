@@ -39,8 +39,9 @@ export const RoughGrid = memo(function RoughGrid({
     const thin = { ...base, strokeWidth: Math.max(1, cellPx * 0.028) };
     const thick = {
       ...base,
-      roughness: 2.0,
-      strokeWidth: Math.max(2.2, cellPx * 0.072),
+      roughness: 1.8,
+      bowing: 4.5,
+      strokeWidth: Math.max(3, cellPx * 0.085),
     };
 
     // Internal lines 1..8 — every third one is a 3×3 box separator.
