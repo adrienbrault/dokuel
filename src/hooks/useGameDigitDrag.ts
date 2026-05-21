@@ -30,6 +30,17 @@ type Options = {
    * the highlight on that digit instead of jumping to the drop target.
    */
   onHighlightDigit: (digit: number) => void;
+  /**
+   * Forwarded to the drag layer: fires when a numpad drag is brought
+   * back over the numpad, so the caller can resume a numpad skim.
+   */
+  onReturnToNumpad?:
+    | ((info: {
+        digit: number;
+        pointerId: number;
+        pointerType: string;
+      }) => void)
+    | undefined;
 };
 
 /**
@@ -49,6 +60,7 @@ export function useGameDigitDrag({
   disabled,
   autoEliminateNotes,
   onHighlightDigit,
+  onReturnToNumpad,
 }: Options) {
   const isDroppable = useCallback(
     (row: number, col: number) => {
@@ -97,7 +109,11 @@ export function useGameDigitDrag({
     ],
   );
 
-  const { state: dragState, start } = useDigitDrag({ onDrop, isDroppable });
+  const { state: dragState, start } = useDigitDrag({
+    onDrop,
+    isDroppable,
+    onReturnToNumpad,
+  });
 
   const startNumpadDrag = useCallback(
     (args: {
