@@ -47,6 +47,19 @@ type Options = {
     mode: DigitDropMode,
   ) => void;
   isDroppable: (row: number, col: number, digit: number) => boolean;
+  /**
+   * Called when a numpad-sourced drag is brought back over the numpad
+   * digits after it had left them. The drag is cancelled (no
+   * placement) and the gesture is handed back so the numpad can resume
+   * a skim under the same pointer.
+   */
+  onReturnToNumpad?:
+    | ((info: {
+        digit: number;
+        pointerId: number;
+        pointerType: string;
+      }) => void)
+    | undefined;
 };
 
 type CellHit = { position: Position; mode: DigitDropMode };
@@ -88,6 +101,22 @@ function cellHitFromPoint(
   return { position: { row, col }, mode: cellModeAt(btn, x, y) };
 }
 
+/**
+ * The numpad digit the raw pointer point sits over, or null. Unlike
+ * the cell hit-test this uses the unlifted point — numpad re-entry is
+ * decided by the finger itself, not by the lifted aim point above it.
+ */
+function numpadDigitAtPoint(x: number, y: number): number | null {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  const btn = (el as HTMLElement).closest?.(
+    "[data-numpad-digit]",
+  ) as HTMLButtonElement | null;
+  if (!btn || btn.disabled) return null;
+  const digit = Number(btn.dataset.numpadDigit);
+  return Number.isNaN(digit) ? null : digit;
+}
+
 function cellModeAt(cell: HTMLElement, _x: number, y: number): DigitDropMode {
   const rect = cell.getBoundingClientRect();
   if (rect.height <= 0) return "value";
@@ -99,7 +128,11 @@ function cellModeAt(cell: HTMLElement, _x: number, y: number): DigitDropMode {
   return localY < 0.5 ? "value" : "note";
 }
 
-export function useDigitDrag({ onDrop, isDroppable }: Options) {
+export function useDigitDrag({
+  onDrop,
+  isDroppable,
+  onReturnToNumpad,
+}: Options) {
   const [state, setState] = useState<DigitDragState | null>(null);
   const [activePointerId, setActivePointerId] = useState<number | null>(null);
   // Keep the latest callbacks in refs so the document-level listeners we
@@ -107,8 +140,20 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
   // render — the listeners' lifecycle is tied to the drag, not to React.
   const onDropRef = useRef(onDrop);
   const isDroppableRef = useRef(isDroppable);
+  const onReturnToNumpadRef = useRef(onReturnToNumpad);
   onDropRef.current = onDrop;
   isDroppableRef.current = isDroppable;
+  onReturnToNumpadRef.current = onReturnToNumpad;
+  // Mirror of `state` for the document listeners, plus the pointerType
+  // they need to hand a returning drag back to the numpad skim.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const pointerTypeRef = useRef("touch");
+  // Latches true once the drag's finger has been seen off the numpad.
+  // Only then does a return over the numpad demote the drag — a drag
+  // classified while the finger still covers its numpad button would
+  // otherwise cancel itself on the very next move.
+  const leftNumpadRef = useRef(false);
 
   const end = useCallback((commit: boolean) => {
     setActivePointerId(null);
@@ -132,16 +177,37 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== ownPointerId) return;
       e.preventDefault();
+      const current = stateRef.current;
+      if (!current) return;
+
+      // A numpad-sourced drag brought back over the numpad digits —
+      // after having left them — is demoted: cancel the drag and hand
+      // the gesture back so the finger resumes skimming/highlighting.
+      if (current.source.kind === "numpad" && onReturnToNumpadRef.current) {
+        const numpadDigit = numpadDigitAtPoint(e.clientX, e.clientY);
+        if (numpadDigit === null) {
+          leftNumpadRef.current = true;
+        } else if (leftNumpadRef.current) {
+          end(false);
+          onReturnToNumpadRef.current({
+            digit: numpadDigit,
+            pointerId: ownPointerId,
+            pointerType: pointerTypeRef.current,
+          });
+          return;
+        }
+      }
+
+      const hit = cellHitFromPoint(e.clientX, e.clientY, current.lift);
+      const invalid =
+        hit !== null &&
+        !isDroppableRef.current(
+          hit.position.row,
+          hit.position.col,
+          current.digit,
+        );
       setState((prev) => {
         if (!prev) return prev;
-        const hit = cellHitFromPoint(e.clientX, e.clientY, prev.lift);
-        const invalid =
-          hit !== null &&
-          !isDroppableRef.current(
-            hit.position.row,
-            hit.position.col,
-            prev.digit,
-          );
         return {
           ...prev,
           x: e.clientX,
@@ -182,6 +248,8 @@ export function useDigitDrag({ onDrop, isDroppable }: Options) {
   const start = useCallback(
     ({ digit, source, x, y, pointerId, pointerType }: StartParams) => {
       const lift = liftForPointerType(pointerType);
+      pointerTypeRef.current = pointerType;
+      leftNumpadRef.current = false;
       const hit = cellHitFromPoint(x, y, lift);
       const invalid =
         hit !== null &&

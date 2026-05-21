@@ -80,4 +80,62 @@ describe("SoloGame numpad selection", () => {
       screen.getByLabelText("Cell row 2 column 6, value 5").className,
     ).toContain("bg-cell-same-number");
   });
+
+  it("stops a numpad drag and resumes the skim when it returns to the numpad", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    const three = screen.getByRole("button", { name: "3" });
+    const five = screen.getByRole("button", { name: "5" });
+    const boardCell = screen.getByLabelText("Cell row 1 column 1, empty");
+
+    // Press digit 3 and pan straight off the numpad → drag-to-place.
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 50,
+    });
+    expect(screen.queryByTestId("digit-drag-indicator")).not.toBeNull();
+
+    // Drag over a board cell — the drag has now left the numpad.
+    document.elementFromPoint = (() =>
+      boardCell) as typeof document.elementFromPoint;
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          pointerId: 1,
+          clientX: 40,
+          clientY: 20,
+        }),
+      );
+    });
+
+    // Bring the finger back over numpad digit 5 → the drag stops and the
+    // skim resumes on the digit now under the finger.
+    document.elementFromPoint = (() =>
+      five) as typeof document.elementFromPoint;
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          pointerId: 1,
+          clientX: 0,
+          clientY: 0,
+        }),
+      );
+    });
+
+    expect(screen.queryByTestId("digit-drag-indicator")).toBeNull();
+    expect(five.className).toContain("bg-accent");
+    expect(three.className).not.toContain("bg-accent");
+  });
 });

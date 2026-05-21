@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NumPad } from "./NumPad.tsx";
+import { NumPad, type NumPadHandle } from "./NumPad.tsx";
 
 const ZERO_REMAINING = { 1: 9, 2: 9, 3: 9, 4: 9, 5: 9, 6: 9, 7: 9, 8: 9, 9: 9 };
 
@@ -691,6 +692,43 @@ describe("NumPad", () => {
       );
     });
     expect(onStartDrag).not.toHaveBeenCalled();
+  });
+
+  it("resumes a live skim when a drag returns via resumeSkimFromDrag", () => {
+    const onSkimDigit = vi.fn();
+    const ref = createRef<NumPadHandle>();
+    render(
+      <NumPad
+        ref={ref}
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        selectedValue={null}
+        onNumber={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const five = screen.getByRole("button", { name: /^5, / });
+    const seven = screen.getByRole("button", { name: /^7, / });
+    // A returning drag handed digit 5 back: highlight it and re-arm the
+    // skim under the same pointer.
+    act(() => {
+      ref.current?.resumeSkimFromDrag({
+        digit: 5,
+        pointerId: 1,
+        pointerType: "touch",
+      });
+    });
+    expect(onSkimDigit).toHaveBeenCalledWith(5);
+    expect(hasAccent(five)).toBe(true);
+    // The skim is live — sliding the finger onto digit 7 highlights it.
+    mockElementFromPoint(seven);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+    });
+    expect(onSkimDigit).toHaveBeenLastCalledWith(7);
+    expect(hasAccent(seven)).toBe(true);
   });
 
   it("promotes a skim into a drag on a vertical numpad when the finger pulls toward the board", () => {

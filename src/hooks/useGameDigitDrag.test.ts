@@ -161,4 +161,49 @@ describe("useGameDigitDrag", () => {
     expect(game.placeNumber).toHaveBeenCalledWith(9, true, false);
     expect(game.placeNoteAt).not.toHaveBeenCalled();
   });
+
+  it("forwards onReturnToNumpad when a numpad drag returns over the numpad", () => {
+    const game = makeGame();
+    const onReturnToNumpad = vi.fn();
+    const numpadButton = document.createElement("button");
+    numpadButton.dataset.numpadDigit = "8";
+    const { result } = renderHook(() =>
+      useGameDigitDrag({
+        game,
+        autoEliminateNotes: true,
+        onHighlightDigit: vi.fn(),
+        onReturnToNumpad,
+      }),
+    );
+
+    act(() => {
+      result.current.startNumpadDrag({
+        digit: 3,
+        x: 0,
+        y: 0,
+        pointerId: 1,
+        pointerType: "touch",
+      });
+    });
+    // Leave the numpad over a board cell, then return over the numpad.
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 50 }),
+      );
+    });
+    act(() => {
+      document.elementFromPoint = (() =>
+        numpadButton) as typeof document.elementFromPoint;
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 500 }),
+      );
+    });
+
+    expect(onReturnToNumpad).toHaveBeenCalledWith({
+      digit: 8,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+    expect(game.placeNumber).not.toHaveBeenCalled();
+  });
 });

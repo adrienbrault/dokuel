@@ -17,7 +17,7 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
-import { NumPad } from "./NumPad.tsx";
+import { NumPad, type NumPadHandle } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
@@ -63,8 +63,7 @@ export function SoloGame({
       onComplete,
     });
 
-  // Seed the ref so saves happening before the first onTick still capture the
-  // resumed timer value rather than zero.
+  // Seed the ref so saves before the first onTick capture the resumed timer.
   if (timerSecondsRef.current === 0 && initialTimerSeconds > 0) {
     timerSecondsRef.current = initialTimerSeconds;
   }
@@ -94,12 +93,9 @@ export function SoloGame({
     }
   };
 
-  // Touch numpad: tap is the cheap, frequent action (note); hold is the
-  // deliberate commit (value). The 400ms hold doubles as a guard against
-  // accidental value placement. With no cell selected, the numpad
-  // doubles as a filter chip and pan-along-axis skims highlights.
-  // holdFiredRef defers the note-deselect to press end so a tap+hold
-  // can still land the digit on the originally selected cell.
+  // Touch numpad: tap is the note action, hold commits the value. With no
+  // cell selected it skims highlights; holdFiredRef defers the note-deselect
+  // to press end so a tap+hold still lands on the originally selected cell.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
   const highlight = useDigitHighlight(game);
   const holdFiredRef = useRef(false);
@@ -127,11 +123,14 @@ export function SoloGame({
   };
 
   // Digit drag: top-half drop commits a value, bottom-half adds a note.
+  // A drag brought back over the numpad demotes to a skim (see NumPad).
+  const numPadRef = useRef<NumPadHandle>(null);
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
     game,
     disabled: paused || game.status !== "playing",
     autoEliminateNotes: assistLevel !== "paper",
     onHighlightDigit: highlight.setDigit,
+    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
   });
 
   const handleBack = () => {
@@ -220,6 +219,7 @@ export function SoloGame({
       }
       numPad={
         <NumPad
+          ref={numPadRef}
           position={position}
           remainingCounts={game.remainingCounts}
           selectedValue={
