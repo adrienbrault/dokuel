@@ -21,34 +21,40 @@
 ### Solo Play
 
 - Four difficulty levels: Easy, Medium, Hard, Expert
-- Pencil notes with a 3x3 mini-grid per cell (board ring indicator when active)
-- Multi-level undo with move count badge
-- Hint system — reveal one cell's correct value
-- Pause with board overlay
-- Soft validation — conflicts are highlighted in real time but never blocked (toggleable during gameplay)
+- Three assistance levels — Paper (no help), Standard (highlights conflicts, auto-clears resolved notes), Full (also shows remaining-digit counts on the numpad); switchable mid-game from the settings popover
+- Pencil notes with a 3x3 mini-grid per cell
+- Multi-cell selection — drag across cells to place or erase notes in bulk
+- Multi-level undo
+- Hint system — surfaces the next logical step (naked or hidden single), explains the reasoning, and highlights the cells that prove it
+- Pause with board overlay; also auto-pauses when the browser tab loses focus
+- Soft validation — conflicts are surfaced visually but never block a move (off at the Paper assist level)
 - Auto-save — resume in-progress games across browser sessions
-- Personal best time shown near timer; PB indicator on win
-- Timer tracking with per-difficulty stats (best time, average, games played)
-- Confetti celebration with haptic feedback, sound, and share button
+- Personal best time shown near the timer; PB indicator on win (hint-assisted games are excluded)
+- Per-difficulty stats — best time, average, games played — tracked separately per assist level
+- Confetti celebration with haptic feedback, sound, and a share button
 
 ### Daily Challenge
 
-- Same puzzle for everyone, every day
+- One shared medium puzzle per day — same board for everyone, everywhere
 - Deterministic generation via seeded RNG — same date, same board, any device
-- Streak tracking with current/longest streak shown on landing page
+- Streak tracking — current streak on the landing page, current and longest on the Stats screen
 
 ### 1v1 Multiplayer
 
-- Peer-to-peer via WebRTC — no server needed, game state syncs directly between players
-- Auto-generated fun player names (adjective + animal) with inline editing in lobby
+- Peer-to-peer via WebRTC — no game server, state syncs directly between players
+- Auto-generated fun player names (adjective + animal) with inline editing in the lobby
 - Create a room, share the link, race to solve the same puzzle
 - Live opponent progress bar (cells remaining, completion %)
-- 60-second disconnect countdown with option to claim win
+- Resilient to refreshes and brief drops — the synced game is persisted locally via IndexedDB
+- 60-second disconnect countdown, then claim the win if the opponent doesn't return
 - Rematch without leaving the room
+- Win/loss record, win rate, and recent-match history on the Stats screen
 
 ### Mobile-First UX
 
 - Touch-optimized with 44px+ tap targets
+- Numpad gestures — tap to pencil a note, press-and-hold to commit a value, or drag a digit onto the board (drop high for a value, low for a note)
+- Tap a numpad digit with no cell selected to highlight every matching digit on the board
 - Haptic feedback (vibration patterns for place, erase, conflict, completion)
 - Synthesized sound effects via Web Audio API (toggleable)
 - Movable numpad — Bottom (default), Left, or Right — configurable via settings popover
@@ -57,7 +63,7 @@
 
 ### Desktop Support
 
-- Full keyboard controls: arrow keys to navigate, 1–9 to place, N for notes, Delete to erase, Ctrl+Z to undo
+- Full keyboard controls: arrow keys to navigate, 1–9 to place, N to toggle notes, Backspace/Delete to erase, Ctrl/Cmd+Z to undo, Esc to deselect
 - Responsive side-by-side layout with board and numpad on wide screens
 
 ## Tech Stack
@@ -106,11 +112,14 @@ Output is written to `dist/`.
 | `bun run preview` | Preview production build locally |
 | `bun run test` | Run tests once |
 | `bun run test:watch` | Run tests in watch mode |
+| `bun run test:coverage` | Run tests with a coverage report |
+| `bun run diff-coverage` | Report test coverage on git-changed lines |
 | `bun run lint` | Check lint + formatting |
 | `bun run lint:fix` | Auto-fix lint + formatting |
 | `bun run typecheck` | TypeScript type checking |
 | `bun run ci` | Full CI pipeline (lint + typecheck + test) |
 | `bun run screenshots` | Capture Playwright screenshots across 4 viewports |
+| `bun run screenshots:combine` | Rebuild combined contact sheets from existing PNGs |
 | `bun run screenshots:readme` | Re-capture screenshots and rewrite the README screenshot sections |
 | `bun run e2e` | Run all Playwright tests |
 
@@ -118,19 +127,25 @@ Output is written to `dist/`.
 
 ```
 src/
+├── App.tsx         # Root component + client-side router
 ├── components/     # React UI components
-│   ├── Board, Cell, NumPad, NumPadPositionToggle
-│   ├── SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing
-│   ├── GameLayout, GameControls, GameResult, Stats, DifficultyPicker, Timer
-│   ├── DarkModeToggle, SoundToggle, ToggleSwitch, Toast
-│   └── App (router)
-├── hooks/          # State management
-│   ├── useSudoku, useYjsMultiplayer, useKeyboard
-│   └── useNumPadPosition, useDarkMode
+│   ├── Landing, DifficultyPicker, AssistLevelPicker, JoinScreen, Stats
+│   ├── SoloGame, DailyGame, GameLayout, GameControls, GameResult, HintBanner
+│   ├── Board, Cell, NumPad, NumPadPositionToggle, DigitDragIndicator, Timer
+│   ├── MultiplayerScreen, MultiplayerGame, MultiplayerBoard, Lobby
+│   ├── MultiplayerHeaderExtra, ProgressBar
+│   └── DarkModeToggle, SoundToggle, ToggleSwitch, SlidingRadioGroup, Toast
+├── hooks/          # React state hooks + multiplayer logic
+│   ├── useSudoku, useResumableSudoku, useKeyboard, useAssistLevel
+│   ├── useNumPadPosition, useDarkMode, useLocalStorage, useDelayedFlag
+│   ├── useDigitHighlight, useDigitDrag, useGameDigitDrag, useDragSelect, useNumPadSkim
+│   ├── useYjsMultiplayer, useOpponentProgressVisible, useRecordMultiplayerMatch
+│   └── p2p-room (Yjs CRDT room), mp-snapshot, mp-telemetry
 ├── lib/            # Pure logic — no React dependency
-│   ├── sudoku (engine), types, p2p-room (Yjs CRDT), room-code
-│   ├── daily (seeded RNG), daily-streak, stats, game-storage
-│   └── name-generator, haptics, sounds, format, constants
+│   ├── sudoku, board-engine, hint-engine, game-completion (engine)
+│   ├── types, constants, format, id, storage
+│   ├── daily (seeded RNG), daily-streak, stats, multiplayer-stats, game-storage
+│   └── room-code, name-generator, game-feedback, haptics, sounds
 ```
 
 ### Key Design Decisions
