@@ -17,7 +17,7 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
-import { NumPad } from "./NumPad.tsx";
+import { NumPad, type NumPadHandle } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
@@ -127,11 +127,14 @@ export function SoloGame({
   };
 
   // Digit drag: top-half drop commits a value, bottom-half adds a note.
+  // A drag brought back over the numpad demotes to a skim (see NumPad).
+  const numPadRef = useRef<NumPadHandle>(null);
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
     game,
     disabled: paused || game.status !== "playing",
     autoEliminateNotes: assistLevel !== "paper",
     onHighlightDigit: highlight.setDigit,
+    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
   });
 
   const handleBack = () => {
@@ -220,6 +223,7 @@ export function SoloGame({
       }
       numPad={
         <NumPad
+          ref={numPadRef}
           position={position}
           remainingCounts={game.remainingCounts}
           selectedValue={
