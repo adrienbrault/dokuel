@@ -1,6 +1,19 @@
 @import "tailwindcss";
 
+/* Excalifont — Excalidraw's hand-drawn typeface. Vendored basic-Latin
+   subset (digits + A–Z/a–z), enough for the sudoku digits it renders. */
+@font-face {
+  font-family: "Excalifont";
+  src: url("./assets/fonts/Excalifont-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
+  /* Fonts */
+  --font-hand: "Excalifont", "DM Sans", system-ui, sans-serif;
+
   /* Board & cell */
   --color-board-bg: oklch(0.97 0.005 80);
   --color-board-border: oklch(0.35 0.01 80);

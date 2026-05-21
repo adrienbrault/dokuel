@@ -292,10 +292,12 @@ export function NumPad({
                   : `${n}${isSelected ? ", selected" : ""}`
               }
             >
-              <span className="text-lg lg:text-2xl leading-none">{n}</span>
+              <span className="font-hand text-lg lg:text-2xl leading-none">
+                {n}
+              </span>
               {showRemainingCounts && (
                 <span
-                  className={`text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
+                  className={`font-hand text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
                 >
                   {remaining}
                 </span>
