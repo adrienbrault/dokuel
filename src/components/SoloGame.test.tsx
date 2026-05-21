@@ -28,20 +28,22 @@ describe("SoloGame numpad selection", () => {
       null) as typeof document.elementFromPoint;
   });
 
-  it("keeps the tapped digit selected after the cell deselects", () => {
+  it("keeps the cell selected after tapping a numpad digit for a note", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
     );
 
     // Select an empty cell, then tap a numpad digit (tap = note).
-    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
+    const cell = screen.getByLabelText("Cell row 1 column 1, empty");
+    fireEvent.click(cell);
     const seven = screen.getByRole("button", { name: "7" });
     fireEvent.pointerDown(seven, { pointerType: "touch" });
     fireEvent.pointerUp(seven, { pointerType: "touch" });
 
-    // The cell deselects on release; the digit the note was placed for
-    // should stay selected on the numpad.
-    expect(seven.className).toContain("bg-accent");
+    // The note lands and the cell stays selected so the player can keep
+    // penciling into it without re-tapping the cell.
+    expect(cell.textContent).toContain("7");
+    expect(cell.className).toContain("cell-selected-glow");
   });
 
   it("highlights the skimmed digit on the board while a cell is selected", () => {

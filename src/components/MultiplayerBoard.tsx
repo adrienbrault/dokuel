@@ -157,20 +157,16 @@ export function MultiplayerBoard({
     getTimeSeconds: () => timerSecondsRef.current,
   });
 
-  // Touch numpad: tap is the cheap, frequent action (note); hold is the
-  // deliberate commit (value). Keyboard digit (if focused) still follows
-  // the in-reducer notesMode flag via useSudoku's default behavior.
+  // Touch numpad: tap adds a note, hold commits the value. The selected
+  // cell stays selected through either action so the player can keep
+  // working it. With no cell selected, the numpad doubles as a filter
+  // chip — a tap toggles the digit's board-wide highlight.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  // With no cell selected, the numpad doubles as a filter chip.
   const highlight = useDigitHighlight(game);
-  // Defer note-deselect to press end so a tap+hold can still commit
-  // the digit on the originally selected cell.
-  const holdFiredRef = useRef(false);
   const handleTapNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", true);
       setChargingDigit(n);
-      holdFiredRef.current = false;
     } else {
       highlight.toggle(n);
     }
@@ -179,14 +175,11 @@ export function MultiplayerBoard({
   const handleHoldValue = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
       game.placeNumber(n, assistLevel !== "paper", false);
-      holdFiredRef.current = true;
     }
   };
 
   const handlePressEnd = () => {
     setChargingDigit(null);
-    if (!holdFiredRef.current) game.deselectCell();
-    holdFiredRef.current = false;
   };
 
   // Digit drag-and-drop: drop commits the value, mirroring solo play.
@@ -243,7 +236,7 @@ export function MultiplayerBoard({
           onLongPressNumber={handleHoldValue}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
-          onSkimDigit={highlight.setDigit}
+          onSkimDigit={highlight.skimToDigit}
         />
       }
       board={

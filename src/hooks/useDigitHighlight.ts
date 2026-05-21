@@ -63,19 +63,6 @@ export function useDigitHighlight({
     [deselectCell],
   );
 
-  // Ends a numpad press: deselects the active cell and promotes the
-  // press's `placedDigit` to the highlight — but only when nothing is
-  // highlighted yet, so a skim that already settled on a digit keeps
-  // it. A null digit (a press that placed nothing) leaves the current
-  // highlight intact.
-  const endNumpadPress = useCallback(
-    (placedDigit: number | null) => {
-      setHighlightedDigit((prev) => prev ?? placedDigit);
-      deselectCell();
-    },
-    [deselectCell],
-  );
-
   return {
     highlightedDigit,
     toggle,
@@ -84,6 +71,5 @@ export function useDigitHighlight({
     setSelectedCells: wrappedSetSelectedCells,
     deselectCell: wrappedDeselectCell,
     skimToDigit,
-    endNumpadPress,
   };
 }

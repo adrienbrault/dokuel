@@ -90,46 +90,6 @@ describe("useDigitHighlight", () => {
     expect(handlers.deselectCell).toHaveBeenCalled();
   });
 
-  it("endNumpadPress promotes the placed digit to the highlight and deselects", () => {
-    const handlers = makeHandlers();
-    const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    act(() => {
-      result.current.endNumpadPress(7);
-    });
-    expect(result.current.highlightedDigit).toBe(7);
-    expect(handlers.deselectCell).toHaveBeenCalled();
-  });
-
-  it("endNumpadPress with no placed digit deselects but keeps the highlight", () => {
-    const handlers = makeHandlers();
-    const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    act(() => {
-      result.current.toggle(4);
-    });
-    act(() => {
-      result.current.endNumpadPress(null);
-    });
-    expect(result.current.highlightedDigit).toBe(4);
-    expect(handlers.deselectCell).toHaveBeenCalled();
-  });
-
-  it("endNumpadPress keeps an already-highlighted digit over the placed one", () => {
-    const handlers = makeHandlers();
-    const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    // A skim settled on 5; releasing on the originally-pressed 3 must
-    // not snap the highlight back.
-    act(() => {
-      result.current.skimToDigit(5);
-    });
-    act(() => {
-      result.current.endNumpadPress(3);
-    });
-    expect(result.current.highlightedDigit).toBe(5);
-  });
-
   it("skimToDigit sets the highlight and deselects the cell", () => {
     const handlers = makeHandlers();
     const { result } = renderHook(() => useDigitHighlight(handlers));
