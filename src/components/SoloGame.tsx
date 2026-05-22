@@ -93,19 +93,12 @@ export function SoloGame({
     }
   };
 
-  // Touch numpad: a quick tap commits the value, a hold adds a pencil
-  // note. The selected cell stays selected through either action so the
-  // player can keep working it. With no cell selected, a tap toggles the
-  // digit's board-wide highlight instead.
+  // Touch numpad: a quick tap commits the value into the selected empty
+  // cell; on a filled cell it highlights the digit instead, and a hold
+  // adds a pencil note (see useDigitHighlight). With no cell selected, a
+  // tap toggles the digit's board-wide highlight.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  const highlight = useDigitHighlight(game);
-  const handleTapValue = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", false);
-    } else {
-      highlight.toggle(n);
-    }
-  };
+  const highlight = useDigitHighlight(game, assistLevel !== "paper");
 
   const handleHoldNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
@@ -225,7 +218,7 @@ export function SoloGame({
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onTapNumber={handleTapValue}
+          onTapNumber={highlight.tapDigit}
           onHoldNumber={handleHoldNote}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}

@@ -45,6 +45,31 @@ describe("SoloGame numpad selection", () => {
     expect(filled.className).toContain("cell-selected-glow");
   });
 
+  it("deselects the cell and highlights the digit when a digit is tapped on a filled cell", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    // Select a filled (given) cell, then tap a numpad digit — a tap can't
+    // overwrite a filled cell, so it highlights the digit instead.
+    const filled = screen.getByLabelText("Cell row 2 column 1, value 6");
+    fireEvent.click(filled);
+    expect(filled.className).toContain("cell-selected-glow");
+
+    const three = screen.getByRole("button", { name: "3" });
+    fireEvent.pointerDown(three, { pointerType: "touch" });
+    fireEvent.pointerUp(three, { pointerType: "touch" });
+
+    // The cell is no longer selected, and the tapped digit drives the
+    // board's same-number highlight.
+    expect(
+      screen.getByLabelText("Cell row 2 column 1, value 6").className,
+    ).not.toContain("cell-selected-glow");
+    expect(
+      screen.getByLabelText("Cell row 2 column 7, value 3").className,
+    ).toContain("bg-cell-same-number");
+  });
+
   it("places a pencil note and keeps the cell selected after a numpad hold", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,

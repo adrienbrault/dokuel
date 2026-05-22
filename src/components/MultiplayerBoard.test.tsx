@@ -128,6 +128,34 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("deselects the cell and highlights the digit when a digit is tapped on a filled cell", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      // Select a filled cell, then tap a numpad digit — a tap can't
+      // overwrite it, so it highlights the digit instead.
+      const filled = screen.getByLabelText("Cell row 1 column 5, value 7");
+      fireEvent.click(filled);
+      expect(filled.className).toContain("cell-selected-glow");
+
+      const three = screen.getAllByLabelText("3")[0]!;
+      fireEvent.pointerDown(three, { pointerType: "touch" });
+      fireEvent.pointerUp(three, { pointerType: "touch" });
+
+      // The cell is no longer selected, and the digit drives the board's
+      // same-number highlight.
+      expect(
+        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+      ).not.toContain("cell-selected-glow");
+      expect(
+        screen.getByLabelText("Cell row 2 column 7, value 3").className,
+      ).toContain("bg-cell-same-number");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps the cell selected after a numpad hold places a note", () => {
     vi.useFakeTimers();
     try {
