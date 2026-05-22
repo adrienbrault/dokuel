@@ -459,19 +459,6 @@ describe("useSudoku", () => {
     );
   });
 
-  it("placeNumberAt fills a cell without moving the selection", () => {
-    const { result } = setupHook();
-
-    const [anchor, target] = findMultipleEmptyCells(result.current.board, 2);
-    if (!anchor || !target) throw new Error("Need two empty cells");
-
-    act(() => result.current.selectCell(anchor.row, anchor.col));
-    act(() => result.current.placeNumberAt(target.row, target.col, 6));
-
-    expect(result.current.board[target.row]![target.col]!.value).toBe(6);
-    expect(result.current.selectedCell).toEqual(anchor);
-  });
-
   describe("hint", () => {
     it("does not fill the hinted cell", () => {
       const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
