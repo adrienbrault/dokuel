@@ -224,10 +224,10 @@ export function Lobby({
           Start Game
         </button>
         {onPlayAsync && waiting && (
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-2">
             <button
               type="button"
-              className="btn btn-secondary w-full touch-manipulation"
+              className="btn btn-lg btn-secondary w-full"
               onClick={() =>
                 onPlayAsync(roomState.difficulty, roomState.assistLevel)
               }
