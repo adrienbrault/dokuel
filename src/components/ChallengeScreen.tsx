@@ -40,7 +40,10 @@ export function ChallengeScreen({ onBack }: { onBack: () => void }) {
   if (state.status === "loading") {
     return (
       <div className="screen">
-        <p className="caption">Loading challenge...</p>
+        <div className="flex flex-col items-center gap-3">
+          <span className="text-4xl animate-pulse">🧩</span>
+          <p className="caption">Loading challenge...</p>
+        </div>
       </div>
     );
   }
@@ -48,14 +51,25 @@ export function ChallengeScreen({ onBack }: { onBack: () => void }) {
   if (state.status === "error") {
     return (
       <div className="screen">
-        <div className="screen-content gap-4 items-center text-center">
-          <h2 className="heading">Challenge unavailable</h2>
-          <p className="caption">
-            This challenge link is invalid or out of date.
-          </p>
-          <button type="button" className="btn btn-primary" onClick={onBack}>
-            Back to Dokuel
-          </button>
+        <div className="screen-content">
+          <div className="card flex w-full flex-col items-center gap-4 px-8 py-10 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-bg-inset text-4xl animate-emoji-bounce">
+              🧩
+            </span>
+            <div className="flex flex-col gap-1.5">
+              <h2 className="heading">Challenge unavailable</h2>
+              <p className="caption">
+                This challenge link is invalid or out of date.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-md btn-primary"
+              onClick={onBack}
+            >
+              Back to Dokuel
+            </button>
+          </div>
         </div>
       </div>
     );
