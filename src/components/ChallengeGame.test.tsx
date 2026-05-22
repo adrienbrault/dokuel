@@ -24,9 +24,9 @@ afterEach(() => {
 });
 
 describe("ChallengeGame", () => {
-  it("shows who set the challenge", () => {
+  it("shows the challenger and the time to beat", () => {
     render(<ChallengeGame challenge={challenge} onBack={vi.fn()} />);
-    expect(screen.getByText("Challenge from clever-otter")).toBeInTheDocument();
+    expect(screen.getByText("Beat clever-otter's 03:20")).toBeInTheDocument();
   });
 
   it("races a ghost progress bar labelled with the challenger's name", () => {

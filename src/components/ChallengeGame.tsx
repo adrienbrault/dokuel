@@ -161,32 +161,35 @@ export function ChallengeGame({ challenge, onBack }: ChallengeGameProps) {
 
   const friendTime = timerSecondsRef.current;
   const delta = friendTime - challenge.finalTime;
+  const won = delta <= 0;
+  const verdict =
+    delta === 0
+      ? "Dead heat — a perfect tie!"
+      : delta < 0
+        ? `You won by ${formatTime(-delta)}`
+        : `${challenge.challengerName} won by ${formatTime(delta)}`;
   const comparison = (
-    <span className="flex flex-col gap-0.5">
-      <span>
-        You {formatTime(friendTime)} · {challenge.challengerName}{" "}
-        {formatTime(challenge.finalTime)}
+    <span className="flex flex-col items-center gap-1">
+      <span
+        className={`text-base font-bold ${won ? "text-accent" : "text-text-primary"}`}
+      >
+        {verdict}
       </span>
-      <span className="font-semibold text-text-primary">
-        {delta === 0
-          ? "Dead heat — a perfect tie!"
-          : delta < 0
-            ? `You won by ${formatTime(-delta)}`
-            : `${challenge.challengerName} won by ${formatTime(delta)}`}
-      </span>
-      {challenge.hintsUsed > 0 && (
-        <span className="text-xs text-text-muted">
-          {challenge.challengerName} used {challenge.hintsUsed} hint
-          {challenge.hintsUsed > 1 ? "s" : ""}
+      <span className="caption">
+        {challenge.challengerName} finished in{" "}
+        <span className="font-semibold text-text-primary">
+          {formatTime(challenge.finalTime)}
         </span>
-      )}
+        {challenge.hintsUsed > 0 &&
+          ` · ${challenge.hintsUsed} hint${challenge.hintsUsed > 1 ? "s" : ""}`}
+      </span>
     </span>
   );
 
   return (
     <GameLayout
       onBack={handleBack}
-      title={`Challenge from ${challenge.challengerName}`}
+      title={`Beat ${challenge.challengerName}'s ${formatTime(challenge.finalTime)}`}
       position={position}
       onPositionChange={setPosition}
       onDeselectCell={highlight.deselectCell}
@@ -273,7 +276,7 @@ export function ChallengeGame({ challenge, onBack }: ChallengeGameProps) {
       footer={
         showResult ? (
           <GameResult
-            isWinner={delta <= 0}
+            isWinner={won}
             time={formatTime(friendTime)}
             difficulty={challenge.difficulty}
             isMultiplayer

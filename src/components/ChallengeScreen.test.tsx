@@ -32,7 +32,7 @@ describe("ChallengeScreen", () => {
     render(<ChallengeScreen onBack={vi.fn()} />);
 
     expect(
-      await screen.findByText("Challenge from clever-otter"),
+      await screen.findByText("Beat clever-otter's 03:20"),
     ).toBeInTheDocument();
   });
 
