@@ -1,12 +1,16 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { Position } from "../lib/types.ts";
 import { useDigitHighlight } from "./useDigitHighlight.ts";
 
-function makeHandlers() {
+function makeHandlers(selectedCell: Position | null = null) {
   return {
+    selectedCell,
+    selectedCells: new Set<number>(),
     selectCell: vi.fn(),
     setSelectedCells: vi.fn(),
     deselectCell: vi.fn(),
+    placeNumberAt: vi.fn(),
   };
 }
 
@@ -130,5 +134,72 @@ describe("useDigitHighlight", () => {
       result.current.setDigit(8);
     });
     expect(result.current.highlightedDigit).toBe(8);
+  });
+
+  it("tapDigit toggles the highlight when no cell is selected", () => {
+    const { result } = renderHook(() => useDigitHighlight(makeHandlers()));
+
+    act(() => {
+      result.current.tapDigit(3);
+    });
+    expect(result.current.highlightedDigit).toBe(3);
+
+    act(() => {
+      result.current.tapDigit(3);
+    });
+    expect(result.current.highlightedDigit).toBeNull();
+  });
+
+  it("tapDigit drops the selection and highlights the digit when a cell is selected", () => {
+    const handlers = makeHandlers({ row: 0, col: 0 });
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.tapDigit(5);
+    });
+    expect(result.current.highlightedDigit).toBe(5);
+    expect(handlers.deselectCell).toHaveBeenCalled();
+  });
+
+  it("tapCell selects the cell when no digit is highlighted", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.tapCell(2, 3);
+    });
+    expect(handlers.selectCell).toHaveBeenCalledWith(2, 3);
+    expect(handlers.placeNumberAt).not.toHaveBeenCalled();
+  });
+
+  it("tapCell fills the cell with the active digit, which stays highlighted", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.tapDigit(7);
+    });
+    act(() => {
+      result.current.tapCell(1, 2);
+    });
+
+    expect(handlers.placeNumberAt).toHaveBeenCalledWith(1, 2, 7, true);
+    expect(handlers.selectCell).not.toHaveBeenCalled();
+    // The digit stays active so the next cell tap places it again.
+    expect(result.current.highlightedDigit).toBe(7);
+  });
+
+  it("tapCell forwards the autoEliminateNotes flag", () => {
+    const handlers = makeHandlers();
+    const { result } = renderHook(() => useDigitHighlight(handlers, false));
+
+    act(() => {
+      result.current.tapDigit(4);
+    });
+    act(() => {
+      result.current.tapCell(0, 0);
+    });
+
+    expect(handlers.placeNumberAt).toHaveBeenCalledWith(0, 0, 4, false);
   });
 });
