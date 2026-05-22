@@ -15,6 +15,7 @@ import type { Player, RoomState } from "../lib/types.ts";
 export type MpSnapshot = {
   gameNumber: number;
   puzzle: string | null;
+  solution: string | null;
   status: RoomState["status"];
   difficulty: RoomState["difficulty"];
   assistLevel: RoomState["assistLevel"];
@@ -42,6 +43,7 @@ export function saveSnapshot(roomId: string, state: RoomState): void {
   const snap: MpSnapshot = {
     gameNumber: state.gameNumber,
     puzzle: state.puzzle,
+    solution: state.solution,
     status: state.status,
     difficulty: state.difficulty,
     assistLevel: state.assistLevel,

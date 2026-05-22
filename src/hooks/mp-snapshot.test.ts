@@ -26,6 +26,7 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
       },
     ],
     puzzle: ".".repeat(81),
+    solution: "1".repeat(81),
     winnerId: null,
     winnerName: null,
     gameNumber: 1,
@@ -50,6 +51,7 @@ describe("mp-snapshot", () => {
     expect(snap?.gameNumber).toBe(1);
     expect(snap?.players).toHaveLength(2);
     expect(snap?.puzzle).toBe(".".repeat(81));
+    expect(snap?.solution).toBe("1".repeat(81));
   });
 
   it("skips saving when no game has started", () => {

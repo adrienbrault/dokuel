@@ -9,7 +9,6 @@ import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
 import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
-import { solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
@@ -26,6 +25,15 @@ const EMPTY_CONFLICTS = new Set<number>();
 export type MultiplayerBoardProps = {
   roomId: string;
   puzzle: string;
+  /**
+   * The puzzle's solution, computed once when the game started and
+   * carried in the Yjs room. Authoritative for error highlighting —
+   * never recomputed locally, because the solver picks a random valid
+   * solution for non-unique puzzles, so a reload would otherwise flip
+   * correct digits to red. Null only for pre-existing games restored
+   * from an older snapshot that predates this field.
+   */
+  solution: string | null;
   /**
    * Monotonic counter from the Yjs room; bumps on every new puzzle
    * (start or rematch). Drives the in-place board reset that replaces
@@ -53,6 +61,7 @@ export type MultiplayerBoardProps = {
 export function MultiplayerBoard({
   roomId,
   puzzle,
+  solution,
   gameNumber,
   playerId,
   difficulty,
@@ -77,8 +86,7 @@ export function MultiplayerBoard({
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
     [saved],
   );
-  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
-  const game = useSudoku(puzzle, solution, savedBoard);
+  const game = useSudoku(puzzle, solution ?? undefined, savedBoard);
   // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
   // Reset the reducer in-place rather than remount the whole subtree:
   // keeps the timer ref, num-pad position, and any other UI state alive.
@@ -86,7 +94,7 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (gameNumber === prevGameNumberRef.current) return;
     prevGameNumberRef.current = gameNumber;
-    game.reset(puzzle, solution, savedBoard);
+    game.reset(puzzle, solution ?? undefined, savedBoard);
   }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =

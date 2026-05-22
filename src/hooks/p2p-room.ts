@@ -225,6 +225,7 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     hostId: (roomMap.get("hostId") as string) || "",
     players,
     puzzle: (roomMap.get("puzzle") as string) || null,
+    solution: (roomMap.get("solution") as string) || null,
     winnerId: (roomMap.get("winnerId") as string) || null,
     winnerName: (roomMap.get("winnerName") as string) || null,
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
@@ -292,6 +293,8 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
     if (!roomMap.has("status")) roomMap.set("status", snap.status);
     if (!roomMap.has("gameNumber")) roomMap.set("gameNumber", snap.gameNumber);
     if (!roomMap.has("puzzle")) roomMap.set("puzzle", snap.puzzle);
+    if (!roomMap.has("solution"))
+      roomMap.set("solution", snap.solution ?? null);
     if (!roomMap.has("difficulty")) roomMap.set("difficulty", snap.difficulty);
     if (!roomMap.has("assistLevel"))
       roomMap.set("assistLevel", snap.assistLevel);

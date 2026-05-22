@@ -103,6 +103,7 @@ export type RoomState = {
   hostId: string;
   players: Player[];
   puzzle: string | null; // 81-char string, null in lobby
+  solution: string | null; // 81-char string, null in lobby
   winnerId: string | null;
   winnerName: string | null;
   gameNumber: number;
