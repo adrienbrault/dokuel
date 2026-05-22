@@ -74,6 +74,23 @@ export function useSudoku(
     dispatch({ type: "PLACE_NOTE_AT", row, col, value });
   }, []);
 
+  // Place a value at an explicit cell without selecting it — digit-first
+  // numpad input fills the tapped cell this way so the selection stays
+  // off and the active digit's highlight stays put.
+  const placeNumberAt = useCallback(
+    (row: number, col: number, value: number, autoEliminateNotes = true) => {
+      gameFeedback.onPlace();
+      dispatch({
+        type: "PLACE_NUMBER_AT",
+        row,
+        col,
+        value,
+        autoEliminateNotes,
+      });
+    },
+    [],
+  );
+
   const erase = useCallback(() => {
     gameFeedback.onErase();
     dispatch({ type: "ERASE" });
@@ -122,6 +139,7 @@ export function useSudoku(
     setSelectedCells,
     placeNumber,
     placeNoteAt,
+    placeNumberAt,
     erase,
     undo,
     activeHint: state.activeHint,
