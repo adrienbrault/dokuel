@@ -10,7 +10,7 @@ function screenshotPath(name: string, project: string) {
 }
 
 // Press and hold a numpad digit past the 200ms threshold so it commits a
-// pencil note. A quick click commits the value instead.
+// pencil note into the selected cell.
 async function holdNumpadDigit(page: Page, digit: Locator) {
 	const box = await digit.boundingBox();
 	if (!box) throw new Error("numpad digit not visible");
