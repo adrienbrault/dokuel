@@ -60,6 +60,13 @@ export type Action =
       asNote?: boolean | undefined;
     }
   | { type: "PLACE_NOTE_AT"; row: number; col: number; value: number }
+  | {
+      type: "PLACE_NUMBER_AT";
+      row: number;
+      col: number;
+      value: number;
+      autoEliminateNotes: boolean;
+    }
   | { type: "ERASE" }
   | { type: "UNDO" }
   | { type: "HINT" }
@@ -258,6 +265,47 @@ function handlePlaceNoteAt(
   };
 }
 
+/**
+ * Place a value at an explicit cell, independent of the current
+ * selection. Used by digit-first numpad input: with a digit
+ * highlighted, tapping a cell fills it without that cell becoming
+ * selected, so the highlight stays on the active digit.
+ */
+function handlePlaceNumberAt(
+  state: State,
+  row: number,
+  col: number,
+  value: number,
+  autoEliminateNotes: boolean,
+): State {
+  if (state.status === "completed") return state;
+  const cell = state.board[row]?.[col];
+  if (!cell || cell.isGiven || cell.value !== null) return state;
+
+  const board = cloneBoard(state.board);
+  board[row]![col]!.value = value;
+  board[row]![col]!.notes = new Set();
+  const clearedNotes = autoEliminateNotes
+    ? clearPeerNotes(board, row, col, value)
+    : [];
+  const moveAction: MoveAction = {
+    type: "place",
+    position: { row, col },
+    value,
+    previousValue: cell.value,
+    previousNotes: new Set(cell.notes),
+    clearedNotes,
+  };
+  const conflicts = getConflicts(board);
+  const complete = isBoardComplete(board, conflicts);
+  return {
+    ...state,
+    board,
+    status: complete ? "completed" : state.status,
+    history: pushHistory(state.history, moveAction),
+  };
+}
+
 function handleErase(state: State): State {
   if (!state.selectedCell || state.status === "completed") return state;
 
@@ -429,6 +477,15 @@ function dispatchAction(state: State, action: Action): State {
 
     case "PLACE_NOTE_AT":
       return handlePlaceNoteAt(state, action.row, action.col, action.value);
+
+    case "PLACE_NUMBER_AT":
+      return handlePlaceNumberAt(
+        state,
+        action.row,
+        action.col,
+        action.value,
+        action.autoEliminateNotes,
+      );
 
     case "ERASE":
       return handleErase(state);
