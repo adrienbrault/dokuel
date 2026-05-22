@@ -1,16 +1,37 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { Position } from "../lib/types.ts";
+import type { Board, Position } from "../lib/types.ts";
 import { useDigitHighlight } from "./useDigitHighlight.ts";
 
-function makeHandlers(selectedCell: Position | null = null) {
+function emptyBoard(): Board {
+  return Array.from({ length: 9 }, () =>
+    Array.from({ length: 9 }, () => ({
+      value: null as number | null,
+      isGiven: false,
+      notes: new Set<number>(),
+    })),
+  );
+}
+
+function makeHandlers(
+  selectedCell: Position | null = null,
+  selectedCellValue: number | null = null,
+) {
+  const board = emptyBoard();
+  if (selectedCell && selectedCellValue !== null) {
+    board[selectedCell.row]![selectedCell.col]!.value = selectedCellValue;
+  }
   return {
+    board,
     selectedCell,
-    selectedCells: new Set<number>(),
+    selectedCells:
+      selectedCell === null
+        ? new Set<number>()
+        : new Set([selectedCell.row * 9 + selectedCell.col]),
     selectCell: vi.fn(),
     setSelectedCells: vi.fn(),
     deselectCell: vi.fn(),
-    placeNumberAt: vi.fn(),
+    placeNumber: vi.fn(),
   };
 }
 
@@ -150,56 +171,36 @@ describe("useDigitHighlight", () => {
     expect(result.current.highlightedDigit).toBeNull();
   });
 
-  it("tapDigit drops the selection and highlights the digit when a cell is selected", () => {
+  it("tapDigit places the value when the selected cell is empty", () => {
     const handlers = makeHandlers({ row: 0, col: 0 });
     const { result } = renderHook(() => useDigitHighlight(handlers));
 
     act(() => {
       result.current.tapDigit(5);
     });
-    expect(result.current.highlightedDigit).toBe(5);
-    expect(handlers.deselectCell).toHaveBeenCalled();
+    expect(handlers.placeNumber).toHaveBeenCalledWith(5, true, false);
+    expect(result.current.highlightedDigit).toBeNull();
   });
 
-  it("tapCell selects the cell when no digit is highlighted", () => {
-    const handlers = makeHandlers();
+  it("tapDigit drops the selection and highlights the digit when the selected cell is filled", () => {
+    const handlers = makeHandlers({ row: 0, col: 0 }, 7);
     const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    act(() => {
-      result.current.tapCell(2, 3);
-    });
-    expect(handlers.selectCell).toHaveBeenCalledWith(2, 3);
-    expect(handlers.placeNumberAt).not.toHaveBeenCalled();
-  });
-
-  it("tapCell fills the cell with the active digit, which stays highlighted", () => {
-    const handlers = makeHandlers();
-    const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    act(() => {
-      result.current.tapDigit(7);
-    });
-    act(() => {
-      result.current.tapCell(1, 2);
-    });
-
-    expect(handlers.placeNumberAt).toHaveBeenCalledWith(1, 2, 7, true);
-    expect(handlers.selectCell).not.toHaveBeenCalled();
-    // The digit stays active so the next cell tap places it again.
-    expect(result.current.highlightedDigit).toBe(7);
-  });
-
-  it("tapCell forwards the autoEliminateNotes flag", () => {
-    const handlers = makeHandlers();
-    const { result } = renderHook(() => useDigitHighlight(handlers, false));
 
     act(() => {
       result.current.tapDigit(4);
     });
-    act(() => {
-      result.current.tapCell(0, 0);
-    });
+    expect(handlers.deselectCell).toHaveBeenCalled();
+    expect(handlers.placeNumber).not.toHaveBeenCalled();
+    expect(result.current.highlightedDigit).toBe(4);
+  });
 
-    expect(handlers.placeNumberAt).toHaveBeenCalledWith(0, 0, 4, false);
+  it("tapDigit forwards the autoEliminateNotes flag to placeNumber", () => {
+    const handlers = makeHandlers({ row: 0, col: 0 });
+    const { result } = renderHook(() => useDigitHighlight(handlers, false));
+
+    act(() => {
+      result.current.tapDigit(5);
+    });
+    expect(handlers.placeNumber).toHaveBeenCalledWith(5, false, false);
   });
 });

@@ -1,29 +1,29 @@
 import { useCallback, useState } from "react";
-import type { Position } from "../lib/types.ts";
+import type { Board, Position } from "../lib/types.ts";
 
 type Handlers = {
+  board: Board;
   selectedCell: Position | null;
   selectedCells: Set<number>;
   selectCell: (row: number, col: number) => void;
   setSelectedCells: (cells: Set<number>, primary: Position) => void;
   deselectCell: () => void;
-  placeNumberAt: (
-    row: number,
-    col: number,
+  placeNumber: (
     value: number,
     autoEliminateNotes?: boolean,
+    asNote?: boolean,
   ) => void;
 };
 
 /**
- * Coordinates digit-first numpad input with board-wide same-number
- * highlighting. Tracks the digit (1-9) the player has made active; only
- * one is active at a time.
+ * Tracks the digit (1-9) the player has toggled on via the numpad for
+ * board-wide same-number highlighting, and routes the numpad tap.
  *
- * A numpad tap (`tapDigit`) makes a digit active and drops any cell
- * selection. A cell tap (`tapCell`) then fills that cell with the
- * active digit, which stays active so several cells can be filled in a
- * row; with no digit active a cell tap selects the cell instead.
+ * `tapDigit` is the quick-tap handler. With nothing selected it toggles
+ * the digit's highlight. With an empty cell selected it places the
+ * value, as before. But when the selected cell already holds a value —
+ * where a tap could not place anything anyway — it is repurposed: the
+ * selection is dropped and that digit becomes the active highlight.
  *
  * Returns wrapped versions of the game's select handlers so callers
  * don't have to remember to clear the active digit at every selection
@@ -31,12 +31,13 @@ type Handlers = {
  */
 export function useDigitHighlight(
   {
+    board,
     selectedCell,
     selectedCells,
     selectCell,
     setSelectedCells,
     deselectCell,
-    placeNumberAt,
+    placeNumber,
   }: Handlers,
   autoEliminateNotes = true,
 ) {
@@ -71,32 +72,34 @@ export function useDigitHighlight(
     deselectCell();
   }, [deselectCell]);
 
-  // Numpad digit tap (digit-first input): with a cell selected, drop the
-  // selection and make this digit active. With nothing selected, toggle
-  // the digit's board-wide highlight.
+  // Numpad quick tap. Nothing selected → toggle the digit highlight.
+  // Empty cell selected → place the value. Filled cell selected → a tap
+  // can't overwrite it, so drop the selection and highlight the digit.
   const tapDigit = useCallback(
     (n: number) => {
-      if (selectedCell || selectedCells.size > 0) {
+      if (selectedCell === null && selectedCells.size === 0) {
+        toggle(n);
+        return;
+      }
+      const onFilledCell =
+        selectedCell !== null &&
+        board[selectedCell.row]![selectedCell.col]!.value !== null;
+      if (onFilledCell) {
         deselectCell();
         setHighlightedDigit(n);
       } else {
-        toggle(n);
+        placeNumber(n, autoEliminateNotes, false);
       }
     },
-    [selectedCell, selectedCells, deselectCell, toggle],
-  );
-
-  // Cell tap: with a digit active, fill the cell with it and keep the
-  // digit active for the next tap; otherwise select the cell.
-  const tapCell = useCallback(
-    (row: number, col: number) => {
-      if (highlightedDigit !== null) {
-        placeNumberAt(row, col, highlightedDigit, autoEliminateNotes);
-      } else {
-        wrappedSelectCell(row, col);
-      }
-    },
-    [highlightedDigit, placeNumberAt, autoEliminateNotes, wrappedSelectCell],
+    [
+      board,
+      selectedCell,
+      selectedCells,
+      deselectCell,
+      placeNumber,
+      autoEliminateNotes,
+      toggle,
+    ],
   );
 
   // Skim across the numpad: make `digit` the active highlight and drop
@@ -115,7 +118,6 @@ export function useDigitHighlight(
     toggle,
     setDigit,
     tapDigit,
-    tapCell,
     selectCell: wrappedSelectCell,
     setSelectedCells: wrappedSetSelectedCells,
     deselectCell: wrappedDeselectCell,

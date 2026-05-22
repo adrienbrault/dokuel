@@ -93,9 +93,10 @@ export function SoloGame({
     }
   };
 
-  // Touch numpad: digit-first input (see useDigitHighlight). A quick tap
-  // makes the digit active; tapping cells then fills them with it. A
-  // hold still pencils a note into the selected cell.
+  // Touch numpad: a quick tap commits the value into the selected empty
+  // cell; on a filled cell it highlights the digit instead, and a hold
+  // adds a pencil note (see useDigitHighlight). With no cell selected, a
+  // tap toggles the digit's board-wide highlight.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
   const highlight = useDigitHighlight(game, assistLevel !== "paper");
 
@@ -234,7 +235,7 @@ export function SoloGame({
             conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
             hintCells={hintCells}
             highlightedDigit={paused ? null : highlight.highlightedDigit}
-            onSelectCell={paused ? () => {} : highlight.tapCell}
+            onSelectCell={paused ? () => {} : highlight.selectCell}
             onSetSelectedCells={paused ? undefined : highlight.setSelectedCells}
             animateReveal={!revealed}
             chargingDigit={paused ? null : chargingDigit}

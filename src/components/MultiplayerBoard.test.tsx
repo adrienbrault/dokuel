@@ -84,10 +84,11 @@ describe("MultiplayerBoard local autosave", () => {
         vi.advanceTimersByTime(7000);
       });
 
-      // Place a value to trigger autosave (it watches game.board, not the
-      // timer ref). Digit-first: tap the digit, then tap the cell.
+      // Place a cell to trigger autosave (it watches game.board, not the
+      // timer ref).
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
       fireEvent.click(screen.getAllByLabelText("5")[0]!);
-      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
 
       const saved = loadGame(`mp_${props.roomId}_${props.puzzle.slice(0, 12)}`);
       expect(saved?.timer).toBeGreaterThanOrEqual(7);
@@ -101,22 +102,54 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
-  it("fills a tapped cell with the highlighted digit (digit-first)", () => {
+  it("keeps the cell selected after a numpad tap places a value", () => {
     vi.useFakeTimers();
     try {
       render(<MultiplayerBoard {...baseProps()} />);
 
-      // Tap a numpad digit first — with no cell selected it becomes the
-      // active digit.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      // Selection styling is applied via the cell-selected-glow class
+      // (standard assist level uses the glow, paper uses a ring).
+      expect(cell.className).toContain("cell-selected-glow");
+
+      // A quick tap commits the value.
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
-      // Tapping an empty cell fills it with the active digit; the cell is
-      // not selected, so the digit stays active for the next tap.
-      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+      // The value lands and the cell stays selected so the player can keep
+      // working it without re-tapping the cell.
       const filledCell = screen.getByLabelText(/Cell row 1 column 1, value 5/);
-      expect(filledCell.className).not.toContain("cell-selected-glow");
+      expect(filledCell.className).toContain("cell-selected-glow");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("deselects the cell and highlights the digit when a digit is tapped on a filled cell", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      // Select a filled cell, then tap a numpad digit — a tap can't
+      // overwrite it, so it highlights the digit instead.
+      const filled = screen.getByLabelText("Cell row 1 column 5, value 7");
+      fireEvent.click(filled);
+      expect(filled.className).toContain("cell-selected-glow");
+
+      const three = screen.getAllByLabelText("3")[0]!;
+      fireEvent.pointerDown(three, { pointerType: "touch" });
+      fireEvent.pointerUp(three, { pointerType: "touch" });
+
+      // The cell is no longer selected, and the digit drives the board's
+      // same-number highlight.
+      expect(
+        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+      ).not.toContain("cell-selected-glow");
+      expect(
+        screen.getByLabelText("Cell row 2 column 7, value 3").className,
+      ).toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
     }
@@ -199,27 +232,26 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
-  it("drops the cell selection when a numpad digit is tapped", () => {
+  it("clears the digit highlight when a cell is selected", () => {
     vi.useFakeTimers();
     try {
       render(<MultiplayerBoard {...baseProps()} />);
 
-      // Select an empty cell.
-      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
-      fireEvent.click(cell);
-      expect(cell.className).toContain("cell-selected-glow");
-
-      // Tapping a numpad digit drops the selection and highlights the
-      // digit instead of placing a value into the cell.
       const seven = screen.getAllByLabelText("7")[0]!;
       fireEvent.pointerDown(seven, { pointerType: "touch" });
       fireEvent.pointerUp(seven, { pointerType: "touch" });
-
-      const after = screen.getByLabelText(/Cell row 1 column 1, empty/);
-      expect(after.className).not.toContain("cell-selected-glow");
       expect(
         screen.getByLabelText("Cell row 1 column 5, value 7").className,
       ).toContain("bg-cell-same-number");
+
+      // Click an empty cell — selection clears the digit highlight so the
+      // selection's own value (or lack of one) drives the board again.
+      const empty = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(empty);
+
+      expect(
+        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+      ).not.toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
     }
@@ -234,11 +266,12 @@ describe("MultiplayerBoard local autosave", () => {
       const undo = screen.getByLabelText("Undo") as HTMLButtonElement;
       expect(undo.disabled).toBe(true);
 
-      // Place a 5 in (0,0): tap the digit, then tap the cell.
+      // Place a 5 in (0,0) with a numpad tap.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
       fireEvent.pointerUp(five, { pointerType: "touch" });
-      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
       expect(
         screen.queryByLabelText(/Cell row 1 column 1, value 5/),
       ).not.toBeNull();
@@ -264,11 +297,12 @@ describe("MultiplayerBoard local autosave", () => {
       const { unmount } = render(<MultiplayerBoard {...props} />);
 
       // (0,0) is empty in PUZZLE; correct solution value is 5.
-      // Digit-first: tap the digit, then tap the cell to fill it.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      // A numpad tap commits the value.
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
       fireEvent.pointerUp(five, { pointerType: "touch" });
-      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
 
       expect(
         screen.queryByLabelText(/Cell row 1 column 1, value 5/),
@@ -305,11 +339,11 @@ describe("MultiplayerBoard after opponent wins", () => {
       render(<MultiplayerBoard {...props} />);
 
       // (0,0) is empty in PUZZLE; correct solution value is 5.
-      // Digit-first: tap the digit, then tap the cell to fill it.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
       fireEvent.pointerUp(five, { pointerType: "touch" });
-      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
 
       // Loser can still commit values to their board.
       expect(
@@ -423,11 +457,11 @@ describe("MultiplayerBoard after opponent wins", () => {
       };
       const { unmount } = render(<MultiplayerBoard {...props} />);
 
-      // Digit-first: tap the digit, then tap the cell to fill it.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
       const five = screen.getAllByLabelText("5")[0]!;
       fireEvent.pointerDown(five, { pointerType: "touch" });
       fireEvent.pointerUp(five, { pointerType: "touch" });
-      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
 
       // Save should exist while the loser is still working on their board.
       const key = `mp_${props.roomId}_${props.puzzle.slice(0, 12)}`;
