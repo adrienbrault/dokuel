@@ -157,19 +157,11 @@ export function MultiplayerBoard({
     getTimeSeconds: () => timerSecondsRef.current,
   });
 
-  // Touch numpad: a quick tap commits the value, a hold adds a pencil
-  // note. The selected cell stays selected through either action so the
-  // player can keep working it. With no cell selected, the numpad doubles
-  // as a filter chip — a tap toggles the digit's board-wide highlight.
+  // Touch numpad: digit-first input (see useDigitHighlight). A quick tap
+  // makes the digit active; tapping cells then fills them with it. A
+  // hold still pencils a note into the selected cell.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  const highlight = useDigitHighlight(game);
-  const handleTapValue = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", false);
-    } else {
-      highlight.toggle(n);
-    }
-  };
+  const highlight = useDigitHighlight(game, assistLevel !== "paper");
 
   const handleHoldNote = (n: number) => {
     if (game.selectedCell || game.selectedCells.size > 0) {
@@ -232,7 +224,7 @@ export function MultiplayerBoard({
           }
           showRemainingCounts={assistLevel === "full"}
           disableCompleted={assistLevel !== "paper"}
-          onTapNumber={handleTapValue}
+          onTapNumber={highlight.tapDigit}
           onHoldNumber={handleHoldNote}
           onPressEnd={handlePressEnd}
           onStartDrag={startNumpadDrag}
@@ -248,7 +240,7 @@ export function MultiplayerBoard({
             assistLevel={assistLevel}
             conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
             highlightedDigit={highlight.highlightedDigit}
-            onSelectCell={highlight.selectCell}
+            onSelectCell={highlight.tapCell}
             onSetSelectedCells={highlight.setSelectedCells}
             animateReveal={!revealed}
             chargingDigit={chargingDigit}
