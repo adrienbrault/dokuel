@@ -300,7 +300,7 @@ describe("useYjsMultiplayer", () => {
     expect(countClues(puzzle)).toBeLessThanOrEqual(21);
   });
 
-  it("preserves persisted gameNumber and puzzle across a fresh mount", async () => {
+  it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {
     // Build a seed update representing a previously-saved doc: a
     // started game with two players. Without the whenSynced gate, the
     // hook's synchronous joinRoom + initializeRoom would race the IDB
@@ -314,8 +314,10 @@ describe("useYjsMultiplayer", () => {
     startGame(seedRoom);
     const seedGameNumber = seedDoc.getMap("room").get("gameNumber") as number;
     const seedPuzzle = seedDoc.getMap("room").get("puzzle") as string;
+    const seedSolution = seedDoc.getMap("room").get("solution") as string;
     expect(seedGameNumber).toBeGreaterThan(0);
     expect(seedPuzzle).toBeTruthy();
+    expect(seedSolution).toBeTruthy();
 
     mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
 
@@ -332,6 +334,7 @@ describe("useYjsMultiplayer", () => {
 
     expect(result.current.hasStartedGame).toBe(true);
     expect(result.current.puzzle).toBe(seedPuzzle);
+    expect(result.current.solution).toBe(seedSolution);
     expect(result.current.roomState?.gameNumber).toBe(seedGameNumber);
     expect(result.current.roomState?.status).toBe("playing");
     expect(result.current.roomState?.players).toHaveLength(2);

@@ -363,6 +363,7 @@ describe("p2p-room", () => {
       expect(state!.assistLevel).toBe("standard");
       expect(state!.players).toHaveLength(1);
       expect(state!.puzzle).toBeNull();
+      expect(state!.solution).toBeNull();
       expect(state!.winnerId).toBeNull();
       expect(state!.winnerName).toBeNull();
       expect(state!.gameNumber).toBe(0);
@@ -378,6 +379,8 @@ describe("p2p-room", () => {
       expect(state.status).toBe("playing");
       expect(state.difficulty).toBe("hard");
       expect(state.puzzle).toHaveLength(81);
+      expect(state.solution).toHaveLength(81);
+      expect(state.solution).not.toContain(".");
       expect(state.gameNumber).toBe(1);
     });
 
@@ -473,6 +476,7 @@ describe("p2p-room", () => {
       return {
         gameNumber: 2,
         puzzle: ".".repeat(81),
+        solution: "1".repeat(81),
         status: "playing",
         difficulty: "hard",
         assistLevel: "standard",
@@ -511,6 +515,7 @@ describe("p2p-room", () => {
       expect(state?.status).toBe("playing");
       expect(state?.gameNumber).toBe(2);
       expect(state?.puzzle).toBe(snap.puzzle);
+      expect(state?.solution).toBe(snap.solution);
       expect(state?.difficulty).toBe("hard");
       expect(state?.hostId).toBe("p1");
       expect(state?.players).toHaveLength(2);

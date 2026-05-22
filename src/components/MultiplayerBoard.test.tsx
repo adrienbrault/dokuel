@@ -26,6 +26,7 @@ function baseProps() {
   return {
     roomId: "room-abc",
     puzzle: PUZZLE,
+    solution: SOLVED,
     gameNumber: 1,
     playerId: "p1",
     difficulty: "easy" as const,
@@ -286,6 +287,62 @@ describe("MultiplayerBoard local autosave", () => {
       expect(
         screen.queryByLabelText(/Cell row 1 column 1, value 5/),
       ).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("MultiplayerBoard error highlighting", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("trusts the solution prop instead of recomputing it", () => {
+    // Crash-reload bug: MultiplayerBoard used to recompute the solution
+    // from the puzzle, but the solver returns a random valid solution
+    // for non-unique puzzles. A reload could pick a different one and
+    // flip every correct digit to red. Here the prop disagrees with the
+    // genuine solve at (0,0) — the board must follow the prop.
+    vi.useFakeTimers();
+    try {
+      const altSolution = `9${SOLVED.slice(1)}`;
+      render(<MultiplayerBoard {...baseProps()} solution={altSolution} />);
+
+      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      // 5 is the genuine solution value, but the prop says 9 — so it
+      // renders as an error.
+      const cell = screen.getByLabelText(/Cell row 1 column 1, value 5/);
+      expect(cell.querySelector("span")?.className).toContain(
+        "text-cell-conflict",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not flag a digit that matches the solution prop", () => {
+    vi.useFakeTimers();
+    try {
+      render(<MultiplayerBoard {...baseProps()} />);
+
+      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      const cell = screen.getByLabelText(/Cell row 1 column 1, value 5/);
+      expect(cell.querySelector("span")?.className).not.toContain(
+        "text-cell-conflict",
+      );
     } finally {
       vi.useRealTimers();
     }

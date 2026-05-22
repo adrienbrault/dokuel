@@ -43,6 +43,7 @@ export function MultiplayerGame({
         <MultiplayerBoard
           roomId={roomId}
           puzzle={mp.puzzle}
+          solution={mp.solution}
           gameNumber={mp.roomState?.gameNumber ?? 0}
           playerId={playerId}
           difficulty={mp.roomState?.difficulty ?? "medium"}

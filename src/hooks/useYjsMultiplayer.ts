@@ -53,6 +53,7 @@ export function useYjsMultiplayer({
   const [connected, setConnected] = useState(false);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [puzzle, setPuzzle] = useState<string | null>(null);
+  const [solution, setSolution] = useState<string | null>(null);
   const [opponentProgress, setOpponentProgress] =
     useState<OpponentProgress | null>(null);
   const [gameOver, setGameOver] = useState<GameOverInfo | null>(null);
@@ -110,6 +111,7 @@ export function useYjsMultiplayer({
       if (state.gameNumber > lastGameNumberRef.current) {
         lastGameNumberRef.current = state.gameNumber;
         setPuzzle(state.puzzle);
+        setSolution(state.solution);
         setGameOver(null);
         setOpponentProgress(null);
         setHasStartedGame(true);
@@ -328,6 +330,7 @@ export function useYjsMultiplayer({
     connected,
     roomState,
     puzzle,
+    solution,
     opponentProgress,
     opponentDisconnected,
     gameOver,

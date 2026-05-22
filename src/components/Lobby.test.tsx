@@ -21,6 +21,7 @@ const BASE_STATE: RoomState = {
     },
   ],
   puzzle: null,
+  solution: null,
   winnerId: null,
   winnerName: null,
   gameNumber: 0,
