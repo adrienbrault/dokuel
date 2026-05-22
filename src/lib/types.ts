@@ -121,3 +121,38 @@ export type GameEvent = {
   timestamp: number;
   message: string;
 };
+
+// --- Async Challenge ---
+
+/**
+ * One progress sample from a challenger's solve. `t` is whole seconds
+ * elapsed since they started; `p` is completion percent (0–100, integer).
+ * A timeline is monotonic non-decreasing in both `t` and `p` — a ghost
+ * bar never rewinds.
+ */
+export type GhostSample = { t: number; p: number };
+
+/**
+ * A self-contained async challenge artifact. Everything a friend's
+ * client needs to replay the same puzzle and race the challenger's
+ * ghost, with no server and no live peer. Versioned so a future
+ * decoder can reject or migrate older blobs.
+ */
+export type Challenge = {
+  /** Schema version. Bump on any breaking field change. */
+  v: 1;
+  /** 81-char puzzle string ('.' = empty). Carried in full because solo
+   *  puzzles are not seeded. The solution is never transported — the
+   *  friend's client derives it — so the link can't leak the answer. */
+  puzzle: string;
+  difficulty: Difficulty;
+  assistLevel: AssistLevel;
+  /** Challenger's display name. */
+  challengerName: string;
+  /** Challenger's completion time, whole seconds. */
+  finalTime: number;
+  /** Hints the challenger used, surfaced for fairness context. */
+  hintsUsed: number;
+  /** Monotonic progress timeline: first sample {t:0,p:0}, last {t:finalTime,p:100}. */
+  ghost: GhostSample[];
+};

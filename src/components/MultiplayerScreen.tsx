@@ -1,52 +1,27 @@
 import { useCallback, useMemo, useState } from "react";
-import { generateId } from "../lib/id.ts";
-import { generatePlayerName } from "../lib/name-generator.ts";
-import type { Difficulty } from "../lib/types.ts";
+import { getPlayerId, getPlayerName, setPlayerName } from "../lib/player.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
-
-function getPlayerId() {
-  let id = localStorage.getItem("sudoku_player_id");
-  if (!id) {
-    id = sessionStorage.getItem("sudoku_player_id");
-    if (!id) {
-      id = generateId();
-    }
-    localStorage.setItem("sudoku_player_id", id);
-  }
-  return id;
-}
-
-function getPlayerName() {
-  let name = localStorage.getItem("sudoku_player_name");
-  if (!name) {
-    name = sessionStorage.getItem("sudoku_player_name");
-    if (!name) {
-      name = generatePlayerName();
-    }
-    localStorage.setItem("sudoku_player_name", name);
-  }
-  return name;
-}
-
-function persistPlayerName(name: string) {
-  localStorage.setItem("sudoku_player_name", name);
-}
 
 export function MultiplayerScreen({
   roomId,
   difficulty,
   onBack,
+  onPlayAsync,
 }: {
   roomId: string;
   difficulty: Difficulty | null;
   onBack: () => void;
+  onPlayAsync?:
+    | ((difficulty: Difficulty, assistLevel: AssistLevel) => void)
+    | undefined;
 }) {
   const playerId = useMemo(getPlayerId, []);
   const [playerName, setName] = useState(getPlayerName);
 
   const handleRename = useCallback((name: string) => {
     setName(name);
-    persistPlayerName(name);
+    setPlayerName(name);
   }, []);
 
   return (
@@ -57,6 +32,7 @@ export function MultiplayerScreen({
       onRename={handleRename}
       difficulty={difficulty}
       onBack={onBack}
+      onPlayAsync={onPlayAsync}
     />
   );
 }

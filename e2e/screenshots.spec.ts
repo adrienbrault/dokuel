@@ -1,6 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { type Locator, type Page, test as base } from "@playwright/test";
+import { encodeChallenge } from "../src/lib/challenge.ts";
+import type { Challenge } from "../src/lib/types.ts";
 
 const SCREENSHOT_DIR = join(import.meta.dirname, "screenshots");
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -478,6 +480,67 @@ test("solo game - win modal", async ({ page }, testInfo) => {
 
 	await page.screenshot({
 		path: screenshotPath("solo-win-modal", testInfo.project.name),
+	});
+});
+
+// --- Async challenge ---
+
+const CHALLENGE_FIXTURE: Challenge = {
+	v: 1,
+	puzzle:
+		"53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
+	difficulty: "medium",
+	assistLevel: "standard",
+	challengerName: "clever-otter",
+	finalTime: 272,
+	hintsUsed: 0,
+	ghost: [
+		{ t: 0, p: 0 },
+		{ t: 60, p: 25 },
+		{ t: 150, p: 60 },
+		{ t: 272, p: 100 },
+	],
+};
+
+const CHALLENGE_SOLUTION =
+	"534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+
+test("challenge game - racing the ghost", async ({ page }, testInfo) => {
+	const blob = await encodeChallenge(CHALLENGE_FIXTURE);
+	await page.goto(`/challenge#${blob}`);
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+	await page.screenshot({
+		path: screenshotPath("challenge-game", testInfo.project.name),
+	});
+});
+
+test("challenge result - head to head", async ({ page }, testInfo) => {
+	const blob = await encodeChallenge(CHALLENGE_FIXTURE);
+	await page.goto(`/challenge#${blob}`);
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	// Solve the board so the result screen — and its comparison — render.
+	for (let i = 0; i < 81; i++) {
+		if (CHALLENGE_FIXTURE.puzzle[i] !== ".") continue;
+		const r = Math.floor(i / 9) + 1;
+		const c = (i % 9) + 1;
+		await page
+			.getByRole("button", { name: `Cell row ${r} column ${c}, empty` })
+			.click();
+		await page.keyboard.press(CHALLENGE_SOLUTION[i] as string);
+	}
+
+	await page.getByText(/You Won|Puzzle Complete/).waitFor();
+	await page.screenshot({
+		path: screenshotPath("challenge-result", testInfo.project.name),
+	});
+});
+
+test("challenge unavailable - invalid link", async ({ page }, testInfo) => {
+	await page.goto("/challenge#not-a-real-blob");
+	await page.getByRole("heading", { name: "Challenge unavailable" }).waitFor();
+	await page.screenshot({
+		path: screenshotPath("challenge-error", testInfo.project.name),
 	});
 });
 

@@ -37,6 +37,47 @@ describe("Lobby", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
+  it("offers an async-challenge fallback while waiting for an opponent", async () => {
+    const onPlayAsync = vi.fn();
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+        onPlayAsync={onPlayAsync}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Play async instead"));
+    expect(onPlayAsync).toHaveBeenCalledWith("medium", "standard");
+  });
+
+  it("hides the async fallback once a second player has joined", () => {
+    const state: RoomState = {
+      ...BASE_STATE,
+      players: [
+        ...BASE_STATE.players,
+        {
+          id: "p2",
+          name: "Bob",
+          color: "#EF4444",
+          cellsRemaining: 81,
+          completionPercent: 0,
+        },
+      ],
+    };
+    render(
+      <Lobby
+        roomState={state}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+        onPlayAsync={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Play async instead")).not.toBeInTheDocument();
+  });
+
   it("shows start button enabled when two players and user is host", () => {
     const state: RoomState = {
       ...BASE_STATE,

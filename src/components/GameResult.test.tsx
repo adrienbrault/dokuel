@@ -121,6 +121,36 @@ describe("GameResult", () => {
     expect(text).toContain("🔥 5-day streak");
   });
 
+  it("renders a comparison line when provided", () => {
+    render(
+      <GameResult
+        isWinner={false}
+        time="04:12"
+        isMultiplayer
+        comparison="You 04:12 · alice 03:58"
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("You 04:12 · alice 03:58")).toBeInTheDocument();
+  });
+
+  it("renders Challenge a Friend and calls onChallengeFriend on click", async () => {
+    const onChallengeFriend = vi.fn();
+
+    render(
+      <GameResult
+        isWinner={true}
+        time="03:00"
+        onNewGame={vi.fn()}
+        onChallengeFriend={onChallengeFriend}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Challenge a Friend"));
+    expect(onChallengeFriend).toHaveBeenCalledOnce();
+  });
+
   it("calls onRematch and onNewGame when buttons clicked", async () => {
     const onRematch = vi.fn();
     const onNewGame = vi.fn();

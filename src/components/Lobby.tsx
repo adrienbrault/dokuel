@@ -13,6 +13,10 @@ type LobbyProps = {
   onDifficultyChange?: (level: Difficulty) => void;
   onStart: () => void;
   onBack: () => void;
+  /** Leave the live room and solve this board now as an async challenge. */
+  onPlayAsync?:
+    | ((difficulty: Difficulty, assistLevel: AssistLevel) => void)
+    | undefined;
 };
 
 export function Lobby({
@@ -23,6 +27,7 @@ export function Lobby({
   onDifficultyChange,
   onStart,
   onBack,
+  onPlayAsync,
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
   const canStart = roomState.players.length === 2;
@@ -218,6 +223,22 @@ export function Lobby({
         >
           Start Game
         </button>
+        {onPlayAsync && waiting && (
+          <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              className="btn btn-secondary w-full touch-manipulation"
+              onClick={() =>
+                onPlayAsync(roomState.difficulty, roomState.assistLevel)
+              }
+            >
+              Play async instead
+            </button>
+            <p className="caption text-center">
+              Solve it now and share a link — they race your time later.
+            </p>
+          </div>
+        )}
         <button
           type="button"
           className="btn-ghost mt-2 touch-manipulation"

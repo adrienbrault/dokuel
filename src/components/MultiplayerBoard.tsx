@@ -6,7 +6,7 @@ import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
-import { serializeBoard } from "../lib/board-engine.ts";
+import { completionPercent, serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
 import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
@@ -109,20 +109,19 @@ export function MultiplayerBoard({
   const iFinished = iWon || game.status === "completed";
   const showResult = useDelayedFlag(iFinished, 300);
 
-  const myPercent = useMemo(() => {
-    const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-    const filled = total - game.cellsRemaining;
-    return total > 0 ? Math.round((filled / total) * 100) : 0;
-  }, [game.cellsRemaining, puzzle]);
+  const myPercent = useMemo(
+    () => completionPercent(puzzle, game.cellsRemaining),
+    [game.cellsRemaining, puzzle],
+  );
 
   // Send progress when cells change
   useEffect(() => {
     if (prevCellsRef.current !== game.cellsRemaining) {
       prevCellsRef.current = game.cellsRemaining;
-      const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-      const filled = total - game.cellsRemaining;
-      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-      onProgress(game.cellsRemaining, percent);
+      onProgress(
+        game.cellsRemaining,
+        completionPercent(puzzle, game.cellsRemaining),
+      );
     }
   }, [game.cellsRemaining, onProgress, puzzle]);
 

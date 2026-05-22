@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChallengeScreen } from "./components/ChallengeScreen.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
@@ -32,7 +33,8 @@ type Screen =
       difficulty: Difficulty | null;
     }
   | { name: "join" }
-  | { name: "stats" };
+  | { name: "stats" }
+  | { name: "challenge" };
 
 const VALID_DIFFICULTIES = new Set<string>([
   "easy",
@@ -54,6 +56,9 @@ function screenToPath(screen: Screen): string {
       return "/join";
     case "stats":
       return "/stats";
+    case "challenge":
+      // The artifact rides in the URL hash, preserved by the browser.
+      return "/challenge";
     case "multiplayer":
       return `/${screen.roomId}`;
   }
@@ -66,6 +71,9 @@ function pathToScreen(pathname: string): Screen {
   if (path === "daily") return { name: "daily" };
   if (path === "join") return { name: "join" };
   if (path === "stats") return { name: "stats" };
+  // Must precede the multiplayer catch-all below, which would otherwise
+  // treat "challenge" as a room id.
+  if (path === "challenge") return { name: "challenge" };
 
   if (path.startsWith("solo/")) {
     const parts = path.slice(5).split("/");
@@ -221,11 +229,24 @@ function App() {
           roomId={screen.roomId}
           difficulty={screen.difficulty}
           onBack={() => navigate({ name: "landing" })}
+          onPlayAsync={(difficulty, assistLevel) => {
+            gameIdRef.current++;
+            navigate({
+              name: "solo",
+              difficulty,
+              gameId: gameIdRef.current,
+              gameKey: generateId(),
+              assistLevel,
+            });
+          }}
         />
       );
 
     case "stats":
       return <Stats onBack={() => navigate({ name: "landing" })} />;
+
+    case "challenge":
+      return <ChallengeScreen onBack={() => navigate({ name: "landing" })} />;
 
     case "join":
       return (
