@@ -502,12 +502,37 @@ const CHALLENGE_FIXTURE: Challenge = {
 	],
 };
 
+const CHALLENGE_SOLUTION =
+	"534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+
 test("challenge game - racing the ghost", async ({ page }, testInfo) => {
 	const blob = await encodeChallenge(CHALLENGE_FIXTURE);
 	await page.goto(`/challenge#${blob}`);
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 	await page.screenshot({
 		path: screenshotPath("challenge-game", testInfo.project.name),
+	});
+});
+
+test("challenge result - head to head", async ({ page }, testInfo) => {
+	const blob = await encodeChallenge(CHALLENGE_FIXTURE);
+	await page.goto(`/challenge#${blob}`);
+	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+	// Solve the board so the result screen — and its comparison — render.
+	for (let i = 0; i < 81; i++) {
+		if (CHALLENGE_FIXTURE.puzzle[i] !== ".") continue;
+		const r = Math.floor(i / 9) + 1;
+		const c = (i % 9) + 1;
+		await page
+			.getByRole("button", { name: `Cell row ${r} column ${c}, empty` })
+			.click();
+		await page.keyboard.press(CHALLENGE_SOLUTION[i] as string);
+	}
+
+	await page.getByText(/You Won|Puzzle Complete/).waitFor();
+	await page.screenshot({
+		path: screenshotPath("challenge-result", testInfo.project.name),
 	});
 });
 
