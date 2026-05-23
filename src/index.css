@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @theme {
   /* Board & cell */
@@ -60,6 +61,33 @@
   --color-difficulty-medium-text: oklch(0.4 0.12 80);
   --color-difficulty-hard-text: oklch(0.4 0.12 50);
   --color-difficulty-expert-text: oklch(0.4 0.12 15);
+
+  /* shadcn/ui token aliases — map shadcn's expected token names to
+   * dokuel's brand tokens so generated components pick up the brand
+   * palette and automatically flip in dark mode via the .dark cascade
+   * below. */
+  --color-background: var(--color-bg-primary);
+  --color-foreground: var(--color-text-primary);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text-primary);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-text-primary);
+  --color-primary: var(--color-accent);
+  --color-primary-foreground: var(--color-text-on-accent);
+  --color-secondary: var(--color-bg-raised);
+  --color-secondary-foreground: var(--color-text-primary);
+  --color-muted: var(--color-bg-inset);
+  --color-muted-foreground: var(--color-text-muted);
+  /* --color-accent already exists as brand teal above; shadcn maps to
+   * it (used for ToggleGroup data-[state=on] active states, hover
+   * surfaces, etc.). Just add the paired foreground. */
+  --color-accent-foreground: var(--color-text-on-accent);
+  --color-destructive: var(--color-cell-conflict);
+  --color-destructive-foreground: var(--color-text-on-accent);
+  --color-border: var(--color-border-default);
+  --color-input: var(--color-border-default);
+  --color-ring: var(--color-accent);
+  --radius: 0.5rem;
 }
 
 /* Dark mode overrides */
