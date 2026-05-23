@@ -529,15 +529,6 @@ body {
 /* ─── Design System: Component Classes ─── */
 
 /* Surfaces */
-.modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
-  animation: modal-backdrop-in 0.2s ease-out;
-}
-.modal-panel {
-  @apply flex flex-col items-center gap-6 bg-surface border border-border-default rounded-3xl p-8;
-  box-shadow: 0 24px 60px -16px oklch(0 0 0 / 0.4);
-  animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
 .screen {
   @apply flex min-h-dvh items-center justify-center;
   background-color: var(--color-bg-primary);
