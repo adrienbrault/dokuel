@@ -6,6 +6,7 @@ import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 import { Button } from "./ui/button.tsx";
 import { Card } from "./ui/card.tsx";
+import { Input } from "./ui/input.tsx";
 
 type LobbyProps = {
   roomState: RoomState;
@@ -110,7 +111,7 @@ export function Lobby({
                 style={{ backgroundColor: player.color }}
               />
               {isMe && editingName ? (
-                <input
+                <Input
                   ref={inputRef}
                   type="text"
                   value={nameInput}
@@ -121,7 +122,7 @@ export function Lobby({
                     if (e.key === "Escape") setEditingName(false);
                   }}
                   maxLength={24}
-                  className="font-medium text-text-primary bg-transparent border-b-2 border-accent outline-none min-w-0 flex-1"
+                  className="h-auto p-0 border-0 border-b-2 border-accent rounded-none bg-transparent font-medium text-text-primary shadow-none focus-visible:ring-0 focus-visible:border-accent min-w-0 flex-1"
                 />
               ) : (
                 <button
