@@ -23,6 +23,7 @@ import {
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
+import { Button } from "./ui/button.tsx";
 
 type LandingProps = {
   onSolo: () => void;
@@ -207,9 +208,10 @@ function ActionRow({
 }) {
   const primary = variant === "primary";
   return (
-    <button
+    <Button
       type="button"
-      className={`btn ${primary ? "btn-primary" : "btn-secondary"} w-full flex items-center gap-3.5 px-3.5 py-3 text-left`}
+      variant={primary ? "default" : "secondary"}
+      className="w-full h-auto justify-start gap-3.5 px-3.5 py-3 text-left"
       onClick={onClick}
     >
       <span
@@ -233,7 +235,7 @@ function ActionRow({
         className={primary ? "text-text-on-accent/55" : "text-text-muted"}
         aria-hidden="true"
       />
-    </button>
+    </Button>
   );
 }
 
