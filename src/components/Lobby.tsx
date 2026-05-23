@@ -5,6 +5,7 @@ import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 import { Button } from "./ui/button.tsx";
+import { Card } from "./ui/card.tsx";
 
 type LobbyProps = {
   roomState: RoomState;
@@ -100,9 +101,9 @@ export function Lobby({
         {roomState.players.map((player) => {
           const isMe = player.id === playerId;
           return (
-            <div
+            <Card
               key={player.id}
-              className="card flex items-center gap-3 px-4 py-3"
+              className="flex-row items-center gap-3 px-4 py-3"
             >
               <div
                 className="w-3 h-3 rounded-full shrink-0"
@@ -149,7 +150,7 @@ export function Lobby({
                   Host
                 </span>
               )}
-            </div>
+            </Card>
           );
         })}
         {waiting && (
@@ -186,9 +187,9 @@ export function Lobby({
             ariaLabel="Difficulty"
           />
         ) : (
-          <div className="card px-4 py-2.5 text-center text-sm font-semibold text-text-primary capitalize">
+          <Card className="px-4 py-2.5 text-center text-sm font-semibold text-text-primary capitalize">
             {roomState.difficulty}
-          </div>
+          </Card>
         )}
       </div>
 
