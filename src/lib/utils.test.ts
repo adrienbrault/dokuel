@@ -3,6 +3,7 @@ import { cn } from "./utils.ts";
 
 describe("cn", () => {
   it("merges conditional classes and dedupes conflicting Tailwind utilities", () => {
-    expect(cn("px-2 py-1", false && "hidden", "px-4")).toBe("py-1 px-4");
+    const disabled = false as boolean;
+    expect(cn("px-2 py-1", disabled && "hidden", "px-4")).toBe("py-1 px-4");
   });
 });
