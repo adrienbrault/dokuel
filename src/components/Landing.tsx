@@ -271,7 +271,7 @@ function ContinueRow({
 }) {
   const pct = progressPercent(game);
   return (
-    <div className="card relative w-full flex items-stretch overflow-hidden press-spring-soft">
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm relative w-full flex items-stretch overflow-hidden press-spring-soft">
       <button
         type="button"
         className="flex-1 min-w-0 flex items-center gap-3.5 px-3.5 py-3 text-left touch-manipulation"
