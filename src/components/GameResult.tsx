@@ -5,6 +5,7 @@ import {
 } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { Button } from "./ui/button.tsx";
 
 type GameResultProps = {
   isWinner: boolean;
@@ -152,29 +153,22 @@ export function GameResult({
 
         <div className="flex flex-col gap-3 w-full">
           {onRematch && (
-            <button
-              type="button"
-              className="btn btn-primary w-full py-3 text-lg"
-              onClick={onRematch}
-            >
+            <Button size="lg" className="w-full" onClick={onRematch}>
               {isMultiplayer ? "Rematch" : "Play Again"}
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            className="btn btn-secondary w-full py-3 text-lg"
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full"
             onClick={onNewGame}
           >
             New Game
-          </button>
+          </Button>
           {!isMultiplayer && (
-            <button
-              type="button"
-              className="btn btn-ghost w-full py-2"
-              onClick={handleShare}
-            >
+            <Button variant="ghost" className="w-full" onClick={handleShare}>
               {copied ? "Copied!" : "Share Result"}
-            </button>
+            </Button>
           )}
         </div>
         {tip && (
