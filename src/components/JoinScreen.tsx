@@ -1,6 +1,7 @@
 import { LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button.tsx";
+import { Input } from "./ui/input.tsx";
 
 export function JoinScreen({
   onJoin,
@@ -36,13 +37,13 @@ export function JoinScreen({
             Ask the host for their room code.
           </p>
         </header>
-        <input
+        <Input
           ref={inputRef}
           type="text"
           placeholder="e.g. loud-duck-38"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="w-full px-4 py-3.5 rounded-2xl bg-surface border-2 border-border-default text-text-primary text-center text-lg font-mono shadow-sm transition-colors focus:border-accent focus:outline-none"
+          className="h-auto py-3.5 text-center text-lg font-mono"
         />
         <Button
           type="submit"
