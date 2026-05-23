@@ -20,6 +20,7 @@ import {
 } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { Button } from "./ui/button.tsx";
+import { Card } from "./ui/card.tsx";
 
 type StatsProps = {
   onBack: () => void;
@@ -50,7 +51,7 @@ export function Stats({ onBack }: StatsProps) {
           </p>
         </div>
 
-        <div className="card p-4 w-full">
+        <Card className="p-4 w-full">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
@@ -65,7 +66,7 @@ export function Stats({ onBack }: StatsProps) {
               <div className="text-xs text-text-muted">Longest Streak</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         <section aria-label="Solo" className="flex flex-col gap-3 w-full">
           <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
@@ -86,11 +87,11 @@ export function Stats({ onBack }: StatsProps) {
             Multiplayer
           </h3>
           {mpSummary.played === 0 ? (
-            <div className="card p-4 w-full">
+            <Card className="p-4 w-full">
               <p className="text-sm text-text-muted text-center">
                 No multiplayer games yet
               </p>
-            </div>
+            </Card>
           ) : (
             <>
               <MultiplayerSummaryCard
@@ -109,7 +110,7 @@ export function Stats({ onBack }: StatsProps) {
                   <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                     Recent matches
                   </h4>
-                  <ul className="card divide-y divide-border-default w-full">
+                  <ul className="rounded-xl border bg-card text-card-foreground shadow-sm divide-y divide-border-default w-full">
                     {mpRecent.map((m) => (
                       <RecentMatchRow
                         key={`${m.roomId}-${m.gameNumber}`}
@@ -144,8 +145,8 @@ function DifficultyStats({ difficulty }: { difficulty: Difficulty }) {
   const totalWins = byLevel.reduce((sum, s) => sum + s.gamesPlayed, 0);
 
   return (
-    <div className="card p-4 w-full">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="p-4 w-full gap-3">
+      <div className="flex items-center justify-between">
         <span
           className={`text-sm font-semibold ${DIFFICULTY_TEXT_COLORS[difficulty]}`}
         >
@@ -166,7 +167,7 @@ function DifficultyStats({ difficulty }: { difficulty: Difficulty }) {
       ) : (
         <p className="text-sm text-text-muted text-center">No games yet</p>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -214,14 +215,14 @@ function MultiplayerSummaryCard({
   winRate: number;
 }) {
   return (
-    <div className="card p-4 w-full">
+    <Card className="p-4 w-full">
       <div className="grid grid-cols-4 gap-3 text-center">
         <SummaryStat value={played} label="Played" />
         <SummaryStat value={wins} label="Wins" />
         <SummaryStat value={losses} label="Losses" />
         <SummaryStat value={`${Math.round(winRate * 100)}%`} label="Win rate" />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -256,8 +257,8 @@ function MultiplayerDifficultyStats({
   if (!stats) return null;
 
   return (
-    <div className="card p-4 w-full">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="p-4 w-full gap-3">
+      <div className="flex items-center justify-between">
         <span
           className={`text-sm font-semibold ${DIFFICULTY_TEXT_COLORS[difficulty]}`}
         >
@@ -280,7 +281,7 @@ function MultiplayerDifficultyStats({
         />
         <SummaryStat value={stats.played} label="Played" />
       </div>
-    </div>
+    </Card>
   );
 }
 
