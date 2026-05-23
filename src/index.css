@@ -383,10 +383,11 @@ body {
   }
 }
 .confetti-container {
-  position: absolute;
+  position: fixed;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  z-index: 60;
 }
 .confetti-container span {
   position: absolute;
