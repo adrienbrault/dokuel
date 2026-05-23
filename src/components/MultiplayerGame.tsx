@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
-import { Toast } from "./Toast.tsx";
 import { Button } from "./ui/button.tsx";
 
 type MultiplayerGameProps = {
@@ -23,14 +23,10 @@ export function MultiplayerGame({
   onBack,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
-  const [toast, setToast] = useState<string | null>(null);
 
   // Show errors as transient toasts instead of replacing the UI
   useEffect(() => {
-    if (!mp.error) return;
-    setToast(mp.error);
-    const id = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(id);
+    if (mp.error) toast.error(mp.error);
   }, [mp.error]);
 
   // Once we've started a game and have a puzzle, keep the board mounted
@@ -65,7 +61,6 @@ export function MultiplayerGame({
             }}
           />
         )}
-        {toast && <Toast message={toast} />}
       </>
     );
   }
@@ -93,7 +88,6 @@ export function MultiplayerGame({
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
-        {toast && <Toast message={toast} />}
       </div>
     );
   }
