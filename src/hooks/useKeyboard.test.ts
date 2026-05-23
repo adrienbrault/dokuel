@@ -155,4 +155,19 @@ describe("useKeyboard", () => {
     expect(opts.onToggleNotes).not.toHaveBeenCalled();
     expect(opts.onUndo).not.toHaveBeenCalled();
   });
+
+  it("skips events that have already been defaultPrevented", () => {
+    // Radix Dialog/Popover preventDefault on Escape when consuming it
+    // for dismissal — the puzzle keyboard must not also fire and
+    // deselect the cell in that case.
+    const opts = setup();
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      cancelable: true,
+      bubbles: true,
+    });
+    event.preventDefault();
+    window.dispatchEvent(event);
+    expect(opts.onDeselectCell).not.toHaveBeenCalled();
+  });
 });
