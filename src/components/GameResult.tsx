@@ -86,20 +86,7 @@ export function GameResult({
 
   return (
     <div className="modal-overlay p-6">
-      {isWinner && (
-        <div className="confetti-container">
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
-      )}
+      {isWinner && <ConfettiOverlay />}
       <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
         <div className="flex flex-col items-center gap-2.5">
           <span
@@ -181,6 +168,23 @@ export function GameResult({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function ConfettiOverlay() {
+  return (
+    <div className="confetti-container">
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
     </div>
   );
 }
