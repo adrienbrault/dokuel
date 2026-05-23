@@ -1,4 +1,5 @@
 import type { NumPadPosition } from "../lib/types.ts";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.tsx";
 
 type NumPadPositionToggleProps = {
   position: NumPadPosition;
@@ -20,29 +21,27 @@ export function NumPadPositionToggle({
       <span className="text-[10px] font-medium text-text-muted uppercase tracking-wide">
         Pad
       </span>
-      <div
-        className="flex gap-1 bg-bg-raised rounded-lg p-1"
+      <ToggleGroup
+        type="single"
+        value={position}
+        onValueChange={(next) => {
+          if (next && next !== position) onChange(next as NumPadPosition);
+        }}
         role="radiogroup"
         aria-label="Number pad position"
+        className="bg-bg-raised rounded-lg p-1 gap-1"
       >
         {OPTIONS.map((opt) => (
-          <button
+          <ToggleGroupItem
             key={opt.value}
-            type="button"
-            role="radio"
-            aria-checked={position === opt.value}
-            className={`w-8 h-8 rounded-md flex items-center justify-center text-sm transition-all duration-150 select-none ${
-              position === opt.value
-                ? "bg-bg-overlay shadow-sm text-accent font-bold"
-                : "text-text-muted"
-            }`}
-            onClick={() => onChange(opt.value)}
+            value={opt.value}
             aria-label={`Pad ${opt.value}`}
+            className="w-8 h-8 rounded-md data-[state=on]:bg-bg-overlay data-[state=on]:shadow-sm data-[state=on]:text-accent data-[state=on]:font-bold"
           >
             {opt.label}
-          </button>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
     </div>
   );
 }
