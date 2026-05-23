@@ -2,6 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { useAssistLevel } from "../hooks/useAssistLevel.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
+import { Button } from "./ui/button.tsx";
 
 type DifficultyPickerProps = {
   onSelect: (difficulty: Difficulty, assistLevel: AssistLevel) => void;
@@ -116,13 +117,14 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       </div>
 
-      <button
+      <Button
         type="button"
-        className="btn-ghost mt-1 touch-manipulation"
+        variant="ghost"
+        className="mt-1 touch-manipulation"
         onClick={onBack}
       >
         ← Back
-      </button>
+      </Button>
     </div>
   );
 }
