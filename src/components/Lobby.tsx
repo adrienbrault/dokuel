@@ -4,6 +4,7 @@ import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
+import { Button } from "./ui/button.tsx";
 
 type LobbyProps = {
   roomState: RoomState;
@@ -89,13 +90,9 @@ export function Lobby({
             {roomState.roomId}
           </span>
         </button>
-        <button
-          type="button"
-          className="btn btn-md btn-primary"
-          onClick={handleShare}
-        >
+        <Button type="button" onClick={handleShare}>
           {copied ? "Link Copied!" : "Share Invite Link"}
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col gap-3 w-full">
@@ -206,25 +203,23 @@ export function Lobby({
       )}
 
       <div className="flex flex-col gap-3 w-full">
-        <button
+        <Button
           type="button"
+          size="lg"
           disabled={!canStart}
-          className={`btn btn-lg w-full transition-all duration-100 ${
-            canStart
-              ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled cursor-not-allowed"
-          }`}
+          className="w-full"
           onClick={onStart}
         >
           Start Game
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn-ghost mt-2 touch-manipulation"
+          variant="ghost"
+          className="mt-2 touch-manipulation"
           onClick={onBack}
         >
           ← Back
-        </button>
+        </Button>
       </div>
     </div>
   );
