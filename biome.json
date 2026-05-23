@@ -102,6 +102,9 @@
           "style": {
             "noRestrictedImports": "off"
           },
+          "security": {
+            "noSecrets": "off"
+          },
           "nursery": {
             "noExcessiveLinesPerFile": "off"
           }
