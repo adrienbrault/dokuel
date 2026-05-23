@@ -529,12 +529,6 @@ body {
 /* ─── Design System: Component Classes ─── */
 
 /* Surfaces */
-.card {
-  @apply rounded-2xl bg-surface border border-border-default;
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.03),
-    0 8px 24px -14px oklch(0 0 0 / 0.18);
-}
 .modal-overlay {
   @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
   animation: modal-backdrop-in 0.2s ease-out;
