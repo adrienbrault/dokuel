@@ -3,6 +3,7 @@ import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
+import { Button } from "./ui/button.tsx";
 
 type MultiplayerGameProps = {
   playerId: string;
@@ -130,13 +131,9 @@ function DisconnectOverlay({ onClaimWin }: { onClaimWin: () => void }) {
             <span className="font-mono tabular-nums">{seconds}s</span>
           </p>
         ) : (
-          <button
-            type="button"
-            className="btn btn-md btn-primary mt-3"
-            onClick={onClaimWin}
-          >
+          <Button type="button" className="mt-3" onClick={onClaimWin}>
             Claim Win
-          </button>
+          </Button>
         )}
       </div>
     </div>
