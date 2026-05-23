@@ -19,6 +19,7 @@ import {
   getStatsByAssistLevel,
 } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { Button } from "./ui/button.tsx";
 
 type StatsProps = {
   onBack: () => void;
@@ -122,13 +123,14 @@ export function Stats({ onBack }: StatsProps) {
           )}
         </section>
 
-        <button
+        <Button
           type="button"
-          className="btn-ghost touch-manipulation"
+          variant="ghost"
+          className="touch-manipulation"
           onClick={onBack}
         >
           ← Back
-        </button>
+        </Button>
       </div>
     </div>
   );
