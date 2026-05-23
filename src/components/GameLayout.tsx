@@ -1,16 +1,11 @@
-import { ArrowLeft, Settings, X } from "lucide-react";
-import {
-  type PointerEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { ArrowLeft, Settings } from "lucide-react";
+import type { PointerEvent, ReactNode } from "react";
 import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover.tsx";
 
 type GameLayoutProps = {
   onBack: () => void;
@@ -146,76 +141,46 @@ function SettingsButton({
   onPositionChange: (position: NumPadPosition) => void;
   extra?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const darkMode = useDarkMode();
 
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [open]);
-
   return (
-    <div className="relative" ref={ref}>
-      <button
+    <Popover>
+      <PopoverTrigger
         type="button"
         className="icon-btn w-10 h-10 touch-manipulation"
-        onClick={() => setOpen((v) => !v)}
         aria-label="Settings"
-        aria-expanded={open}
       >
         <Settings size={18} aria-hidden="true" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-text-muted font-medium">
-              Numpad position
-            </p>
-            <button
-              type="button"
-              className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary transition-colors"
-              onClick={() => setOpen(false)}
-              aria-label="Close settings"
-            >
-              <X size={14} aria-hidden="true" />
-            </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-72 max-w-[calc(100vw-2rem)] p-3.5"
+      >
+        <p className="text-xs text-text-muted font-medium mb-2">
+          Numpad position
+        </p>
+        <NumPadPositionToggle position={position} onChange={onPositionChange} />
+        <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
+          <p className="text-xs text-text-muted font-medium">Dark mode</p>
+          <DarkModeToggle isDark={darkMode.isDark} onToggle={darkMode.toggle} />
+        </div>
+        {extra && (
+          <div className="mt-3 pt-3 border-t border-border-default">
+            {extra}
           </div>
-          <NumPadPositionToggle
-            position={position}
-            onChange={onPositionChange}
-          />
-          <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
-            <p className="text-xs text-text-muted font-medium">Dark mode</p>
-            <DarkModeToggle
-              isDark={darkMode.isDark}
-              onToggle={darkMode.toggle}
-            />
-          </div>
-          {extra && (
-            <div className="mt-3 pt-3 border-t border-border-default">
-              {extra}
-            </div>
-          )}
-          <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
-            <p className="text-xs text-text-muted mb-2 font-medium">
-              Keyboard shortcuts
-            </p>
-            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-              {KEYBOARD_SHORTCUTS.map((s) => (
-                <Shortcut key={s.label} keys={s.keys} label={s.label} />
-              ))}
-            </div>
+        )}
+        <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
+          <p className="text-xs text-text-muted mb-2 font-medium">
+            Keyboard shortcuts
+          </p>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+            {KEYBOARD_SHORTCUTS.map((s) => (
+              <Shortcut key={s.label} keys={s.keys} label={s.label} />
+            ))}
           </div>
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
