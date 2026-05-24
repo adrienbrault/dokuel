@@ -572,7 +572,7 @@ test("solo game - settings popover open", async ({ page }, testInfo) => {
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
 	await page.getByLabel("Settings").click();
-	await page.getByLabel("Close settings").waitFor();
+	await page.locator('[data-slot="popover-content"]').waitFor();
 
 	await page.screenshot({
 		path: screenshotPath("solo-settings-popover", testInfo.project.name),
@@ -588,22 +588,24 @@ test("multiplayer - settings with opponent bar toggle", async ({
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
 	await page.getByLabel("Settings").click();
-	await page.locator(".absolute.right-0.top-full").waitFor();
+	await page.locator('[data-slot="popover-content"]').waitFor();
 
 	await page.evaluate(() => {
-		const popover = document.querySelector(".absolute.right-0.top-full");
+		const popover = document.querySelector('[data-slot="popover-content"]');
 		if (!popover) return;
 
 		const section = document.createElement("div");
 		section.className = "mt-3 pt-3 border-t border-border-default";
 		section.innerHTML = `
-			<label class="flex items-center gap-3 cursor-pointer select-none touch-manipulation">
+			<div class="flex items-center gap-3 select-none touch-manipulation">
 				<span class="text-sm text-text-secondary">Opponent bar</span>
 				<button type="button" role="switch" aria-checked="true" aria-label="Opponent bar"
-					class="relative w-11 h-6 rounded-full transition-colors duration-200 bg-accent">
-					<span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 translate-x-5"></span>
+					data-slot="switch" data-size="default" data-state="checked"
+					class="peer group/switch inline-flex shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none data-[state=checked]:bg-primary h-[1.15rem] w-8">
+					<span data-slot="switch-thumb" data-state="checked"
+						class="pointer-events-none block rounded-full bg-background ring-0 transition-transform size-4 translate-x-[calc(100%-2px)]"></span>
 				</button>
-			</label>
+			</div>
 		`;
 		const numpadSection = popover.querySelector("p + div");
 		if (numpadSection) {
