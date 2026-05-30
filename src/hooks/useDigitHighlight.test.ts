@@ -194,6 +194,20 @@ describe("useDigitHighlight", () => {
     expect(result.current.highlightedDigit).toBe(4);
   });
 
+  it("tapDigit drops the selection and highlights the digit when multiple cells are selected", () => {
+    const handlers = makeHandlers({ row: 0, col: 0 });
+    // Simulate a multi-cell selection: the primary plus another cell.
+    handlers.selectedCells = new Set([0, 1]);
+    const { result } = renderHook(() => useDigitHighlight(handlers));
+
+    act(() => {
+      result.current.tapDigit(6);
+    });
+    expect(handlers.deselectCell).toHaveBeenCalled();
+    expect(handlers.placeNumber).not.toHaveBeenCalled();
+    expect(result.current.highlightedDigit).toBe(6);
+  });
+
   it("tapDigit forwards the autoEliminateNotes flag to placeNumber", () => {
     const handlers = makeHandlers({ row: 0, col: 0 });
     const { result } = renderHook(() => useDigitHighlight(handlers, false));
