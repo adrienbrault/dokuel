@@ -8,6 +8,11 @@ import type {
   Position,
 } from "../lib/types.ts";
 import { Cell } from "./Cell.tsx";
+import { RoughGrid } from "./RoughGrid.tsx";
+
+// Padding between the board edge and the 9×9 cell grid. Gives the
+// hand-drawn Rough.js border room to wobble without being clipped.
+const BOARD_PAD = 8;
 
 type BoardProps = {
   board: BoardType;
@@ -114,12 +119,9 @@ export function Board({
     onSelectCell,
   });
 
-  // Snap the board to an integer-pixel size so every cell and every gap
-  // renders at exact device pixels. Sub-pixel cell widths cause adjacent
-  // gaps to anti-alias to different widths (some 1px, some 2px); flooring
-  // to an integer cell size makes that impossible.
-  // Total board = 9 cells + 6 thin gaps (1px) + 2 thick gaps (2px) + 2 outer
-  // pads (2px) = 9 * cellPx + 14.
+  // Snap the board to an integer-pixel cell size so the hand-drawn grid
+  // and every digit render at exact device pixels. Total board = 9 cells
+  // + 2 padding bands (BOARD_PAD each) = 9 * cellPx + 2 * BOARD_PAD.
   const containerRef = useRef<HTMLDivElement>(null);
   const [cellPx, setCellPx] = useState(32);
   useLayoutEffect(() => {
@@ -128,7 +130,7 @@ export function Board({
     const update = () => {
       const w = el.clientWidth;
       if (w === 0) return;
-      setCellPx(Math.max(20, Math.floor((w - 14) / 9)));
+      setCellPx(Math.max(20, Math.floor((w - BOARD_PAD * 2) / 9)));
     };
     update();
     if (typeof ResizeObserver === "undefined") return;
@@ -136,8 +138,7 @@ export function Board({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const boxPx = cellPx * 3 + 2;
-  const boardPx = cellPx * 9 + 14;
+  const boardPx = cellPx * 9 + BOARD_PAD * 2;
 
   // Block iOS Safari's swipe-from-edge back gesture for drags that
   // originate inside the board. touch-action: none on the cell isn't
@@ -161,13 +162,8 @@ export function Board({
     >
       <div
         ref={gridRef}
-        style={{
-          width: boardPx,
-          height: boardPx,
-          gridTemplateColumns: `repeat(3, ${boxPx}px)`,
-          gridTemplateRows: `repeat(3, ${boxPx}px)`,
-        }}
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        style={{ width: boardPx, height: boardPx }}
+        className="relative bg-cell-bg shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
         role="region"
         aria-label="Sudoku board"
         onPointerDown={
@@ -181,111 +177,104 @@ export function Board({
           onSetSelectedCells ? dragHandlers.onClickCapture : undefined
         }
       >
-        {Array.from({ length: 9 }, (_, boxIdx) => {
-          const boxRow = Math.floor(boxIdx / 3);
-          const boxCol = boxIdx % 3;
-          return (
-            <div
-              key={boxIdx}
-              style={{
-                gridTemplateColumns: `repeat(3, ${cellPx}px)`,
-                gridTemplateRows: `repeat(3, ${cellPx}px)`,
-              }}
-              className="grid gap-px bg-border-default"
-            >
-              {Array.from({ length: 9 }, (_, cellIdx) => {
-                const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
-                const colIdx = boxCol * 3 + (cellIdx % 3);
-                const cell = board[rowIdx]![colIdx]!;
-                const isSelected =
-                  selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
-                const isHighlighted =
-                  !isPaper &&
-                  selectedCell !== null &&
-                  (selectedCell.row === rowIdx ||
-                    selectedCell.col === colIdx ||
-                    (Math.floor(selectedCell.row / 3) ===
-                      Math.floor(rowIdx / 3) &&
-                      Math.floor(selectedCell.col / 3) ===
-                        Math.floor(colIdx / 3)));
-                const isSameNumber =
-                  !isPaper &&
-                  !isSelected &&
-                  selectedValue !== null &&
-                  cell.value !== null &&
-                  cell.value === selectedValue;
-                const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
-                const isMultiSelected =
-                  !isSelected &&
-                  (selectedCells?.size ?? 0) > 1 &&
-                  (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isHintRelated =
-                  !isSelected &&
-                  (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isSameNumberRowCol =
-                  matchRowColSet !== null &&
-                  !isSelected &&
-                  !isSameNumber &&
-                  (matchRowColSet.rows.has(rowIdx) ||
-                    matchRowColSet.cols.has(colIdx) ||
-                    matchRowColSet.boxes.has(
-                      Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
-                    ));
+        <div
+          className="absolute grid"
+          style={{
+            top: BOARD_PAD,
+            left: BOARD_PAD,
+            gridTemplateColumns: `repeat(9, ${cellPx}px)`,
+            gridTemplateRows: `repeat(9, ${cellPx}px)`,
+          }}
+        >
+          {Array.from({ length: 81 }, (_, idx) => {
+            const rowIdx = Math.floor(idx / 9);
+            const colIdx = idx % 9;
+            const cell = board[rowIdx]![colIdx]!;
+            const isSelected =
+              selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
+            const isHighlighted =
+              !isPaper &&
+              selectedCell !== null &&
+              (selectedCell.row === rowIdx ||
+                selectedCell.col === colIdx ||
+                (Math.floor(selectedCell.row / 3) === Math.floor(rowIdx / 3) &&
+                  Math.floor(selectedCell.col / 3) === Math.floor(colIdx / 3)));
+            const isSameNumber =
+              !isPaper &&
+              !isSelected &&
+              selectedValue !== null &&
+              cell.value !== null &&
+              cell.value === selectedValue;
+            const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
+            const isMultiSelected =
+              !isSelected &&
+              (selectedCells?.size ?? 0) > 1 &&
+              (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+            const isHintRelated =
+              !isSelected && (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+            const isSameNumberRowCol =
+              matchRowColSet !== null &&
+              !isSelected &&
+              !isSameNumber &&
+              (matchRowColSet.rows.has(rowIdx) ||
+                matchRowColSet.cols.has(colIdx) ||
+                matchRowColSet.boxes.has(
+                  Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
+                ));
 
-                // Drag-related render flags
-                const isDragSource =
-                  dragState?.source.kind === "cell" &&
-                  dragState.source.row === rowIdx &&
-                  dragState.source.col === colIdx;
-                const isDropTarget =
-                  dragState?.target?.row === rowIdx &&
-                  dragState?.target?.col === colIdx;
-                const dropTargetState =
-                  isDropTarget && dragState
-                    ? dragState.invalidTarget
-                      ? "invalid"
-                      : "valid"
-                    : null;
-                const dropMode =
-                  dropTargetState === "valid" ? dragState?.mode : undefined;
-                const dropDigit =
-                  dropTargetState === "valid" ? dragState?.digit : undefined;
+            // Drag-related render flags
+            const isDragSource =
+              dragState?.source.kind === "cell" &&
+              dragState.source.row === rowIdx &&
+              dragState.source.col === colIdx;
+            const isDropTarget =
+              dragState?.target?.row === rowIdx &&
+              dragState?.target?.col === colIdx;
+            const dropTargetState =
+              isDropTarget && dragState
+                ? dragState.invalidTarget
+                  ? "invalid"
+                  : "valid"
+                : null;
+            const dropMode =
+              dropTargetState === "valid" ? dragState?.mode : undefined;
+            const dropDigit =
+              dropTargetState === "valid" ? dragState?.digit : undefined;
 
-                return (
-                  <Cell
-                    key={cellKey(rowIdx, colIdx)}
-                    cell={cell}
-                    row={rowIdx}
-                    col={colIdx}
-                    isSelected={isSelected}
-                    isMultiSelected={isMultiSelected}
-                    isHighlighted={isHighlighted && !isSelected}
-                    isSameNumber={isSameNumber}
-                    isConflict={isConflict}
-                    isHintRelated={isHintRelated}
-                    isSameNumberRowCol={isSameNumberRowCol}
-                    assistLevel={assistLevel}
-                    onSelect={onSelectCell}
-                    revealDelay={
-                      animateReveal && cell.isGiven
-                        ? (rowIdx * 9 + colIdx) * 6
-                        : undefined
-                    }
-                    chargingDigit={
-                      isSelected && chargingDigit != null
-                        ? chargingDigit
-                        : undefined
-                    }
-                    isDragSource={isDragSource}
-                    dropTargetState={dropTargetState}
-                    dropMode={dropMode}
-                    dropDigit={dropDigit}
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
+            return (
+              <Cell
+                key={cellKey(rowIdx, colIdx)}
+                cell={cell}
+                row={rowIdx}
+                col={colIdx}
+                isSelected={isSelected}
+                isMultiSelected={isMultiSelected}
+                isHighlighted={isHighlighted && !isSelected}
+                isSameNumber={isSameNumber}
+                isConflict={isConflict}
+                isHintRelated={isHintRelated}
+                isSameNumberRowCol={isSameNumberRowCol}
+                assistLevel={assistLevel}
+                onSelect={onSelectCell}
+                revealDelay={
+                  animateReveal && cell.isGiven
+                    ? (rowIdx * 9 + colIdx) * 6
+                    : undefined
+                }
+                chargingDigit={
+                  isSelected && chargingDigit != null
+                    ? chargingDigit
+                    : undefined
+                }
+                isDragSource={isDragSource}
+                dropTargetState={dropTargetState}
+                dropMode={dropMode}
+                dropDigit={dropDigit}
+              />
+            );
+          })}
+        </div>
+        <RoughGrid cellPx={cellPx} pad={BOARD_PAD} />
       </div>
     </div>
   );
