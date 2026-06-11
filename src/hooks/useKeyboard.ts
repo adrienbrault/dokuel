@@ -35,6 +35,11 @@ export function useKeyboard({
     if (!enabled) return;
 
     const handler = (e: KeyboardEvent) => {
+      // Bail out if another handler (Radix Dialog/Popover) already
+      // consumed this event — without this guard, Escape closes the
+      // overlay AND deselects the cell behind it.
+      if (e.defaultPrevented) return;
+
       // Escape to deselect
       if (e.key === "Escape") {
         e.preventDefault();

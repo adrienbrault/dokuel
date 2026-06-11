@@ -4,6 +4,9 @@ import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
+import { Button } from "./ui/button.tsx";
+import { Card } from "./ui/card.tsx";
+import { Input } from "./ui/input.tsx";
 
 type LobbyProps = {
   roomState: RoomState;
@@ -89,13 +92,9 @@ export function Lobby({
             {roomState.roomId}
           </span>
         </button>
-        <button
-          type="button"
-          className="btn btn-md btn-primary"
-          onClick={handleShare}
-        >
+        <Button type="button" onClick={handleShare}>
           {copied ? "Link Copied!" : "Share Invite Link"}
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col gap-3 w-full">
@@ -103,16 +102,16 @@ export function Lobby({
         {roomState.players.map((player) => {
           const isMe = player.id === playerId;
           return (
-            <div
+            <Card
               key={player.id}
-              className="card flex items-center gap-3 px-4 py-3"
+              className="flex-row items-center gap-3 px-4 py-3"
             >
               <div
                 className="w-3 h-3 rounded-full shrink-0"
                 style={{ backgroundColor: player.color }}
               />
               {isMe && editingName ? (
-                <input
+                <Input
                   ref={inputRef}
                   type="text"
                   value={nameInput}
@@ -123,7 +122,7 @@ export function Lobby({
                     if (e.key === "Escape") setEditingName(false);
                   }}
                   maxLength={24}
-                  className="font-medium text-text-primary bg-transparent border-b-2 border-accent outline-none min-w-0 flex-1"
+                  className="h-auto p-0 border-0 border-b-2 border-accent rounded-none bg-transparent font-medium text-text-primary shadow-none focus-visible:ring-0 focus-visible:border-accent min-w-0 flex-1"
                 />
               ) : (
                 <button
@@ -152,7 +151,7 @@ export function Lobby({
                   Host
                 </span>
               )}
-            </div>
+            </Card>
           );
         })}
         {waiting && (
@@ -189,9 +188,9 @@ export function Lobby({
             ariaLabel="Difficulty"
           />
         ) : (
-          <div className="card px-4 py-2.5 text-center text-sm font-semibold text-text-primary capitalize">
+          <Card className="px-4 py-2.5 text-center text-sm font-semibold text-text-primary capitalize">
             {roomState.difficulty}
-          </div>
+          </Card>
         )}
       </div>
 
@@ -206,25 +205,23 @@ export function Lobby({
       )}
 
       <div className="flex flex-col gap-3 w-full">
-        <button
+        <Button
           type="button"
+          size="lg"
           disabled={!canStart}
-          className={`btn btn-lg w-full transition-all duration-100 ${
-            canStart
-              ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled cursor-not-allowed"
-          }`}
+          className="w-full"
           onClick={onStart}
         >
           Start Game
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn-ghost mt-2 touch-manipulation"
+          variant="ghost"
+          className="mt-2 touch-manipulation"
           onClick={onBack}
         >
           ← Back
-        </button>
+        </Button>
       </div>
     </div>
   );

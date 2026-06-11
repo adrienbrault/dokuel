@@ -1,5 +1,6 @@
 import { Eraser, Lightbulb, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { Button } from "./ui/button.tsx";
 
 type GameControlsProps = {
   onErase: () => void;
@@ -47,19 +48,17 @@ function ControlButton({
   children: ReactNode;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="secondary"
+      size="sm"
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
-        disabled
-          ? "text-text-disabled opacity-50 cursor-default"
-          : "text-text-secondary hover:bg-surface-hover press-spring-soft"
-      }`}
+      className="gap-1.5 touch-manipulation"
       onClick={onClick}
       aria-label={label}
     >
       <span aria-hidden="true">{children}</span>
       <span className="text-xs font-semibold leading-none">{label}</span>
-    </button>
+    </Button>
   );
 }

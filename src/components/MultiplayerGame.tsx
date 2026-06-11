@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
-import { Toast } from "./Toast.tsx";
+import { Button } from "./ui/button.tsx";
 
 type MultiplayerGameProps = {
   playerId: string;
@@ -22,14 +23,10 @@ export function MultiplayerGame({
   onBack,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
-  const [toast, setToast] = useState<string | null>(null);
 
   // Show errors as transient toasts instead of replacing the UI
   useEffect(() => {
-    if (!mp.error) return;
-    setToast(mp.error);
-    const id = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(id);
+    if (mp.error) toast.error(mp.error);
   }, [mp.error]);
 
   // Once we've started a game and have a puzzle, keep the board mounted
@@ -64,7 +61,6 @@ export function MultiplayerGame({
             }}
           />
         )}
-        {toast && <Toast message={toast} />}
       </>
     );
   }
@@ -92,7 +88,6 @@ export function MultiplayerGame({
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
-        {toast && <Toast message={toast} />}
       </div>
     );
   }
@@ -130,13 +125,9 @@ function DisconnectOverlay({ onClaimWin }: { onClaimWin: () => void }) {
             <span className="font-mono tabular-nums">{seconds}s</span>
           </p>
         ) : (
-          <button
-            type="button"
-            className="btn btn-md btn-primary mt-3"
-            onClick={onClaimWin}
-          >
+          <Button type="button" className="mt-3" onClick={onClaimWin}>
             Claim Win
-          </button>
+          </Button>
         )}
       </div>
     </div>

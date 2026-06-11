@@ -1,3 +1,5 @@
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.tsx";
+
 type Option<T extends string> = {
   value: T;
   label: string;
@@ -16,63 +18,38 @@ export function SlidingRadioGroup<T extends string>({
   options,
   value,
   onChange,
-  name,
   ariaLabel,
 }: SlidingRadioGroupProps<T>) {
-  const activeIndex = options.findIndex((o) => o.value === value);
-  const count = options.length;
-
   return (
-    <div
-      role="radiogroup"
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(next) => {
+        // Radix emits "" when toggling the active item off in single
+        // mode — the picker is meant to always have a selection, so
+        // suppress that path.
+        if (next && next !== value) onChange(next as T);
+      }}
       aria-label={ariaLabel}
-      className="relative flex w-full rounded-xl bg-bg-inset p-1"
+      role="radiogroup"
+      className="w-full rounded-xl bg-muted p-1 gap-0"
     >
-      <div
-        className="absolute top-1 bottom-1 rounded-lg bg-accent shadow-sm transition-transform duration-200 ease-out"
-        style={{
-          width: `calc((100% - 0.5rem) / ${count})`,
-          transform: `translateX(calc(${activeIndex} * 100%))`,
-        }}
-        aria-hidden="true"
-      />
-
-      {options.map((option) => {
-        const isActive = option.value === value;
-        return (
-          <label
-            key={option.value}
-            className={`relative z-10 flex flex-1 ${
-              option.description ? "flex-col" : "items-center justify-center"
-            } items-center gap-0.5 rounded-lg py-2 cursor-pointer select-none touch-manipulation transition-colors duration-200 ${
-              isActive ? "text-text-on-accent" : "text-text-secondary"
-            }`}
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option.value}
-              checked={isActive}
-              onChange={() => {
-                if (!isActive) onChange(option.value);
-              }}
-              className="sr-only"
-            />
-            <span className="text-sm font-semibold leading-none">
-              {option.label}
+      {options.map((option) => (
+        <ToggleGroupItem
+          key={option.value}
+          value={option.value}
+          className="flex-1 flex flex-col gap-0.5 px-3 py-2 rounded-lg data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+        >
+          <span className="text-sm font-semibold leading-none">
+            {option.label}
+          </span>
+          {option.description && (
+            <span className="text-[0.625rem] leading-none opacity-70">
+              {option.description}
             </span>
-            {option.description && (
-              <span
-                className={`text-[0.625rem] leading-none transition-colors duration-200 ${
-                  isActive ? "text-text-on-accent/70" : "text-text-muted"
-                }`}
-              >
-                {option.description}
-              </span>
-            )}
-          </label>
-        );
-      })}
-    </div>
+          )}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }

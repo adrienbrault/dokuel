@@ -91,6 +91,27 @@
   },
   "overrides": [
     {
+      "includes": ["src/components/ui/**"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off",
+            "noReExportAll": "off",
+            "noNamespaceImport": "off"
+          },
+          "style": {
+            "noRestrictedImports": "off"
+          },
+          "security": {
+            "noSecrets": "off"
+          },
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/**/*.css"],
       "linter": {
         "rules": {
