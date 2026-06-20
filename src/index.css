@@ -152,8 +152,11 @@ body {
   min-height: 100dvh;
   font-family: "DM Sans", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* Safe-area insets live on the full-screen containers (.screen,
+   * GameLayout), not here, so each screen's background bleeds edge-to-edge
+   * under the iOS status bar and home indicator. Padding on <body> instead
+   * left a flat bg-primary frame above the .screen glow gradient — a visible
+   * seam under the status bar. Content clearance is handled per-screen. */
 }
 
 @keyframes pop-in {
@@ -572,6 +575,11 @@ body {
 }
 .screen {
   @apply flex min-h-dvh items-center justify-center;
+  /* Inset content from the notch / home indicator while the background
+   * (below) still paints the full viewport, so the glow meets the browser
+   * edge instead of leaving a flat band under the iOS status bar. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
   background-color: var(--color-bg-primary);
   background-image: radial-gradient(
     125% 60% at 50% -12%,
