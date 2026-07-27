@@ -10,6 +10,7 @@ import { useNumPadSkim } from "../hooks/useNumPadSkim.ts";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
+import { NumPadKey } from "./NumPadKey.tsx";
 
 const LONG_PRESS_MS = 200;
 // Pointer must travel this far from the original button center before
@@ -270,74 +271,25 @@ export function NumPad({
         const remaining = remainingCounts[n];
         const isComplete = remaining === 0;
         const isSelected = selectedValue === n;
-        // Press state overrides selectedValue so the visual follows
-        // the finger across skim transitions.
-        const isAccented =
-          pressedDigit !== null ? pressedDigit === n : isSelected;
-        const isDone = (showRemainingCounts || disableCompleted) && isComplete;
-
         return (
-          <button
+          <NumPadKey
             key={n}
-            type="button"
-            data-numpad-digit={n}
-            data-done={isDone ? "true" : undefined}
-            disabled={isDone}
-            className={`relative flex flex-col items-center justify-center rounded-control select-none touch-none font-bold ${
-              isVertical ? "h-12 w-13 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"
-            } ${
-              isDone
-                ? "bg-bg-inset text-text-disabled cursor-default"
-                : isAccented
-                  ? "bg-accent text-text-on-accent press-spring"
-                  : "bg-surface text-text-primary border border-border-default press-spring"
-            }`}
-            style={
-              isDone
-                ? undefined
-                : {
-                    boxShadow: isAccented
-                      ? "var(--elevation-accent)"
-                      : "var(--elevation-1)",
-                  }
-            }
+            digit={n}
+            remaining={remaining}
+            showRemaining={showRemainingCounts}
+            isDone={(showRemainingCounts || disableCompleted) && isComplete}
+            // Press state overrides selectedValue so the visual follows the
+            // finger across skim transitions.
+            isAccented={pressedDigit !== null ? pressedDigit === n : isSelected}
+            isSelected={isSelected}
+            isVertical={isVertical}
             onPointerDown={handlePointerDown(n)}
             onPointerMove={handlePointerMove}
             onPointerUp={() => endPress(true)}
             onPointerLeave={() => endPress(false)}
             onPointerCancel={() => endPress(false)}
             onClick={handleClick(n)}
-            aria-label={
-              showRemainingCounts
-                ? `${n}, ${remaining} remaining${isSelected ? ", selected" : ""}`
-                : `${n}${isSelected ? ", selected" : ""}`
-            }
-          >
-            <span
-              className={`text-xl lg:text-2xl leading-none ${isDone ? "opacity-35" : ""}`}
-            >
-              {n}
-            </span>
-            {/* A finished digit keeps its key rather than vanishing: a
-                hole in the row reads as a rendering bug, and "this one is
-                done" is itself useful information mid-puzzle. */}
-            {isDone ? (
-              <span
-                className="absolute inset-x-3 h-px bg-current opacity-45"
-                aria-hidden="true"
-              />
-            ) : (
-              showRemainingCounts && (
-                <span
-                  className={`text-[0.6875rem] lg:text-xs font-semibold leading-none mt-1 tabular-nums ${
-                    isAccented ? "text-text-on-accent/75" : "text-text-muted"
-                  }`}
-                >
-                  {remaining}
-                </span>
-              )
-            )}
-          </button>
+          />
         );
       })}
     </div>
