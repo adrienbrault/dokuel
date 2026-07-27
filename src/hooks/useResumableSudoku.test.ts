@@ -58,6 +58,33 @@ describe("useResumableSudoku", () => {
     expect(result.current.initialTimerSeconds).toBe(0);
   });
 
+  // Puzzles generated before the uniqueness fix can still be sitting in
+  // a player's localStorage. For those, solvePuzzle picks an arbitrary
+  // one of several valid grids on every mount, so recomputing on resume
+  // would mark correctly-entered digits as errors. The saved solution
+  // pins the grid the player has been solving against.
+  it("reuses the saved solution instead of recomputing it on resume", () => {
+    // Every 1 and 2 erased: those digits are interchangeable, so this
+    // puzzle has two solutions and the solver may return either.
+    const ambiguous = SOLVED.replace(/[12]/g, ".");
+    const swapped = SOLVED.replace(/[12]/g, (d) => (d === "1" ? "2" : "1"));
+    saveGame(
+      "ambiguous-key",
+      savedGame({ puzzle: ambiguous, solution: swapped }),
+    );
+
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "ambiguous-key",
+        difficulty: "expert",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+      }),
+    );
+
+    expect(result.current.solution).toBe(swapped);
+  });
+
   it("resumes puzzle, timer, and assistLevel from a saved game", () => {
     saveGame(
       "test-key",

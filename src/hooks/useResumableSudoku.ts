@@ -54,7 +54,14 @@ export function useResumableSudoku({
     return generatePuzzle(difficulty);
   }, [difficulty, initialPuzzle, saved]);
 
-  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
+  // Prefer the solution the save was made against. Recomputing is only
+  // safe when the puzzle has a single solution; older saves may hold an
+  // ambiguous puzzle, where the solver returns an arbitrary valid grid
+  // and correctly-entered digits would start reading as errors.
+  const solution = useMemo(
+    () => saved?.solution ?? solvePuzzle(puzzle),
+    [puzzle, saved],
+  );
 
   const savedBoard = useMemo(
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
@@ -78,6 +85,7 @@ export function useResumableSudoku({
       timer: getTimerSeconds(),
       difficulty,
       assistLevel,
+      solution,
     };
     saveGame(gameKey, data);
   }, [
@@ -85,6 +93,7 @@ export function useResumableSudoku({
     game.status,
     gameKey,
     puzzle,
+    solution,
     difficulty,
     assistLevel,
     getTimerSeconds,
@@ -125,6 +134,7 @@ export function useResumableSudoku({
   return {
     game,
     puzzle,
+    solution,
     initialTimerSeconds: saved?.timer ?? 0,
     assistLevel,
     setAssistLevel,
