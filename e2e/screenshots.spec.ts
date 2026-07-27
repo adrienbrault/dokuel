@@ -182,18 +182,20 @@ test.describe("dark mode", () => {
 				"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
 			bars.innerHTML = `
 				<div class="flex items-center gap-2">
-					<span class="text-xs text-text-secondary w-24 truncate">You</span>
-					<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
+					<span class="text-xs font-medium text-text-secondary w-24 truncate">You</span>
+					<div class="relative flex-1 h-[3px] rounded-full bg-bg-raised">
 						<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
+						<span class="absolute top-1/2 w-[7px] h-[7px] -translate-y-1/2 -translate-x-1/2 rounded-full bg-accent ring-2 ring-surface" style="left: 42%"></span>
 					</div>
-					<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
+					<span class="font-mono text-[0.6875rem] text-text-muted tabular-nums w-8 text-right">42%</span>
 				</div>
 				<div class="flex items-center gap-2">
-					<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
-					<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-						<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
+					<span class="text-xs font-medium text-text-secondary w-24 truncate">Opponent</span>
+					<div class="relative flex-1 h-[3px] rounded-full bg-bg-raised">
+						<div class="h-full rounded-full bg-cell-conflict transition-all duration-300" style="width: 67%"></div>
+						<span class="absolute top-1/2 w-[7px] h-[7px] -translate-y-1/2 -translate-x-1/2 rounded-full bg-cell-conflict ring-2 ring-surface" style="left: 67%"></span>
 					</div>
-					<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
+					<span class="font-mono text-[0.6875rem] text-text-muted tabular-nums w-8 text-right">67%</span>
 				</div>
 			`;
 			header.after(bars);
@@ -457,19 +459,19 @@ test("solo game - win modal", async ({ page }, testInfo) => {
 				<span></span><span></span><span></span><span></span><span></span>
 				<span></span><span></span><span></span><span></span><span></span>
 			</div>
-			<div class="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full relative">
-				<div class="flex flex-col items-center gap-2">
-					<span class="text-5xl animate-emoji-bounce">🎉</span>
-					<h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">You Won!</h2>
-					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Easy</span>
+			<div class="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
+				<div class="flex flex-col items-center gap-2.5">
+					<span class="flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce bg-accent-light">🎉</span>
+					<h2 class="heading text-[1.75rem]">You Won!</h2>
+					<span class="text-xs font-bold px-3 py-1 rounded-full bg-difficulty-easy-bg text-difficulty-easy-text">Easy</span>
 				</div>
-				<div class="flex flex-col items-center gap-1">
-					<span class="text-3xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100">03:42</span>
-					<span class="text-sm font-semibold text-green-600 dark:text-green-400">New Best!</span>
+				<div class="flex flex-col items-center gap-2 w-full border-y border-border-default py-4">
+					<span class="font-display text-[3.25rem] font-semibold tabular-nums text-text-primary leading-none [font-variation-settings:'opsz'_72]">03:42</span>
+					<span class="font-mono text-xs tracking-[0.08em] uppercase text-accent">New Personal Best!</span>
 				</div>
 				<div class="flex flex-col gap-3 w-full">
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white select-none touch-manipulation">Play Again</button>
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 select-none touch-manipulation">New Game</button>
+					<button type="button" class="btn btn-primary w-full py-3 text-lg">Play Again</button>
+					<button type="button" class="btn btn-secondary w-full py-3 text-lg">New Game</button>
 				</div>
 			</div>
 		`;
@@ -500,18 +502,20 @@ test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
 			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
 		bars.innerHTML = `
 			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">You</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
+				<span class="text-xs font-medium text-text-secondary w-24 truncate">You</span>
+				<div class="relative flex-1 h-[3px] rounded-full bg-bg-raised">
 					<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
+					<span class="absolute top-1/2 w-[7px] h-[7px] -translate-y-1/2 -translate-x-1/2 rounded-full bg-accent ring-2 ring-surface" style="left: 42%"></span>
 				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
+				<span class="font-mono text-[0.6875rem] text-text-muted tabular-nums w-8 text-right">42%</span>
 			</div>
 			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-					<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
+				<span class="text-xs font-medium text-text-secondary w-24 truncate">Opponent</span>
+				<div class="relative flex-1 h-[3px] rounded-full bg-bg-raised">
+					<div class="h-full rounded-full bg-cell-conflict transition-all duration-300" style="width: 67%"></div>
+					<span class="absolute top-1/2 w-[7px] h-[7px] -translate-y-1/2 -translate-x-1/2 rounded-full bg-cell-conflict ring-2 ring-surface" style="left: 67%"></span>
 				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
+				<span class="font-mono text-[0.6875rem] text-text-muted tabular-nums w-8 text-right">67%</span>
 			</div>
 		`;
 		header.after(bars);
@@ -538,7 +542,7 @@ test("multiplayer - opponent finished banner", async ({ page }, testInfo) => {
 		banner.className =
 			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2 mx-auto";
 		banner.innerHTML = `
-			<div class="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
+			<div class="px-3 py-2 rounded-[10px] bg-surface border border-border-default text-sm text-text-secondary text-center">
 				<span class="font-semibold text-text-primary">Alice</span>
 				finished first — keep going to complete your puzzle.
 			</div>
