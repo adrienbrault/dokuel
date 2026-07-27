@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { countSolutions } from "./solver.ts";
 import {
   cellKey,
   generatePuzzle,
+  generatePuzzleWithSolution,
   getConflicts,
   getErrors,
   isBoardComplete,
@@ -9,6 +11,14 @@ import {
   solvePuzzle,
 } from "./sudoku.ts";
 import type { Board } from "./types.ts";
+
+function seededRng(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) | 0;
+    return (state >>> 0) / 0x100000000;
+  };
+}
 
 // A known valid puzzle and its solution — avoids calling generatePuzzle in every test
 const KNOWN_PUZZLE =
@@ -20,6 +30,33 @@ describe("generatePuzzle", () => {
   it("returns an 81-character string", () => {
     const puzzle = generatePuzzle("medium");
     expect(puzzle).toHaveLength(81);
+  });
+
+  it("generates uniquely-solvable puzzles at every difficulty", () => {
+    // The old clue-stripping approach produced multi-solution boards for
+    // 45% of hard and 100% of expert puzzles. Uniqueness is the contract
+    // that makes error-highlighting and hints trustworthy.
+    for (const difficulty of ["easy", "medium", "hard", "expert"] as const) {
+      for (let i = 0; i < 3; i++) {
+        expect(countSolutions(generatePuzzle(difficulty))).toBe(1);
+      }
+    }
+  });
+
+  it("respects the clue bands per difficulty", () => {
+    const bands = {
+      easy: { min: 36, max: 45 },
+      medium: { min: 28, max: 35 },
+      hard: { min: 24, max: 27 },
+      // Expert digs to a minimal puzzle; random digging exhausts at
+      // roughly 22-28 clues, always above the theoretical floor of 17.
+      expert: { min: 17, max: 28 },
+    } as const;
+    for (const difficulty of ["easy", "medium", "hard", "expert"] as const) {
+      const clues = generatePuzzle(difficulty).replace(/\./g, "").length;
+      expect(clues).toBeGreaterThanOrEqual(bands[difficulty].min);
+      expect(clues).toBeLessThanOrEqual(bands[difficulty].max);
+    }
   });
 
   it("contains only digits 0-9 and dots for empty cells", () => {
@@ -40,9 +77,37 @@ describe("generatePuzzle", () => {
     const b = generatePuzzle("medium");
     expect(a).not.toBe(b);
   });
+
+  it("is deterministic when given a seeded rng", () => {
+    expect(generatePuzzle("hard", seededRng(5))).toBe(
+      generatePuzzle("hard", seededRng(5)),
+    );
+  });
+});
+
+describe("generatePuzzleWithSolution", () => {
+  it("returns the solution the puzzle was dug from", () => {
+    const { puzzle, solution } = generatePuzzleWithSolution("medium");
+    expect(solution).toMatch(/^[1-9]{81}$/);
+    for (let i = 0; i < 81; i++) {
+      if (puzzle[i] !== ".") {
+        expect(puzzle[i]).toBe(solution[i]);
+      }
+    }
+    expect(countSolutions(solution)).toBe(1);
+  });
 });
 
 describe("solvePuzzle", () => {
+  it("returns null for malformed input instead of throwing", () => {
+    expect(solvePuzzle("123")).toBeNull();
+    expect(solvePuzzle(`x${".".repeat(80)}`)).toBeNull();
+  });
+
+  it("returns null for an unsolvable puzzle", () => {
+    expect(solvePuzzle(`55${".".repeat(79)}`)).toBeNull();
+  });
+
   it("returns a valid 81-character solution", () => {
     const solution = solvePuzzle(KNOWN_PUZZLE);
     expect(solution).toHaveLength(81);
