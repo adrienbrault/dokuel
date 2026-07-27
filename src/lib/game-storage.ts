@@ -110,3 +110,23 @@ export function deleteGame(key: string): void {
     // silently ignore
   }
 }
+
+/**
+ * Remove every saved game (including dailies) but nothing else — the
+ * error boundary's recovery action for corrupted saves. Stats and
+ * streak keys live outside the prefix and are untouched.
+ */
+export function clearAllSavedGames(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) keys.push(key);
+    }
+    for (const key of keys) {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // localStorage unavailable
+  }
+}
