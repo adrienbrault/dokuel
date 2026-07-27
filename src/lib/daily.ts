@@ -1,3 +1,4 @@
+import { todayLocalISO } from "./date.ts";
 import { generatePuzzleWithSolution } from "./sudoku.ts";
 import type { Difficulty } from "./types.ts";
 
@@ -18,7 +19,7 @@ function seededRandom(seed: number): () => number {
 }
 
 export function getDailyPuzzle(
-  date: string = new Date().toISOString().slice(0, 10),
+  date: string = todayLocalISO(),
   difficulty: Difficulty = "medium",
 ): { puzzle: string; solution: string; date: string } {
   const seed = hashCode(`sudoku-daily-${date}-${difficulty}`);

@@ -15,6 +15,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
+import { todayLocalISO } from "../lib/date.ts";
 import { formatShortDate, formatTime } from "../lib/format.ts";
 import {
   deleteGame,
@@ -41,7 +42,7 @@ export function Landing({
   onContinue,
   onStats,
 }: LandingProps) {
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => todayLocalISO(), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
   const [savedGames, setSavedGames] = useState(() => listSavedGames());
