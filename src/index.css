@@ -754,3 +754,46 @@ body {
 .text-mono {
   @apply font-mono text-sm text-text-secondary tabular-nums;
 }
+
+/* Every interactive element gets the same visible keyboard ring.
+   :focus-visible only, so pointer users never see it. */
+:where(
+    button,
+    a,
+    input,
+    [role="radio"],
+    [role="switch"],
+    [tabindex]
+  ):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ─── Reduced motion ───
+   Users who ask for less motion get none of the decorative work: the
+   perpetual selection-glow pulse on :root, confetti, celebration wobble,
+   entrance springs. Functional transitions (colour) are left alone so
+   state changes stay readable. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .confetti-container {
+    display: none;
+  }
+  .btn:active,
+  .btn:hover,
+  .icon-btn:active,
+  .press-spring:active,
+  .press-spring:hover,
+  .press-spring-soft:active,
+  .press-spring-soft:hover {
+    transform: none;
+  }
+}
