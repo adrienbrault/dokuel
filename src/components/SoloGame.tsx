@@ -19,6 +19,7 @@ import { GameResult } from "./GameResult.tsx";
 import { GameStatus } from "./GameStatus.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad, type NumPadHandle } from "./NumPad.tsx";
+import { PauseOverlay } from "./PauseOverlay.tsx";
 import { Timer } from "./Timer.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
@@ -183,7 +184,10 @@ export function SoloGame({
       onDeselectCell={highlight.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
-        <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+        <>
+          <p className="label mb-2">Assistance</p>
+          <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+        </>
       }
       timer={
         <GameStatus
@@ -246,18 +250,7 @@ export function SoloGame({
             onStartCellDrag={paused ? undefined : startCellDrag}
           />
           <DigitDragIndicator state={paused ? null : dragState} />
-          {paused && (
-            <button
-              type="button"
-              className="absolute inset-0 flex items-center justify-center bg-bg-primary/80 backdrop-blur-md rounded-lg"
-              onClick={() => setPaused(false)}
-              aria-label="Resume game"
-            >
-              <span className="text-xl font-semibold text-text-muted">
-                Paused — tap to resume
-              </span>
-            </button>
-          )}
+          {paused && <PauseOverlay onResume={() => setPaused(false)} />}
         </div>
       }
       headerExtra={

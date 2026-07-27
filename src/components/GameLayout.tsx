@@ -169,7 +169,9 @@ function SettingsButton({
             />
           </SettingsRow>
 
-          {extra && <div className="pt-3">{extra}</div>}
+          {extra && (
+            <div className="pt-3 border-t border-border-default">{extra}</div>
+          )}
 
           {/* Gestures. The number pad carries three distinct actions and
               nothing on the pad itself can explain them without shouting;
