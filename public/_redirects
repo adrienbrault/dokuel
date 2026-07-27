@@ -1,0 +1,4 @@
+# SPA fallback: /{roomId} invite links and /solo//daily//stats deep
+# links are client-routed by App.tsx. Explicit so deep-link survival
+# doesn't ride on Cloudflare Pages' implicit not-found behavior.
+/*  /index.html  200
