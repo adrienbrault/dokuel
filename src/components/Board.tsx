@@ -167,7 +167,7 @@ export function Board({
           gridTemplateColumns: `repeat(3, ${boxPx}px)`,
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
         }}
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        className="grid gap-[2px] rounded-lg overflow-hidden bg-board-border p-[2px] shadow-[0_1px_2px_oklch(0.25_0.02_264/0.06)] dark:shadow-[0_1px_2px_oklch(0_0_0/0.3),0_0_60px_-8px_oklch(0.5_0.12_264/0.4)] touch-none"
         role="region"
         aria-label="Sudoku board"
         onPointerDown={

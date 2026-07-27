@@ -122,12 +122,21 @@ export const Cell = memo(function Cell({
       aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
     >
       {cell.value ? (
-        <span
-          key={cell.value}
-          className={`text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
-        >
-          {cell.value}
-        </span>
+        <>
+          <span
+            key={cell.value}
+            className={`text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
+          >
+            {cell.value}
+          </span>
+          {!cell.isGiven && (
+            <span
+              key={`ring-${cell.value}`}
+              className="absolute inset-0 pointer-events-none animate-place-ring"
+              aria-hidden="true"
+            />
+          )}
+        </>
       ) : cell.notes.size > 0 ? (
         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]">
           {DIGITS.map((n) => (
