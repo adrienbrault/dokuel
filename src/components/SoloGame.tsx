@@ -16,6 +16,7 @@ import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
+import { GameStatus } from "./GameStatus.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad, type NumPadHandle } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
@@ -177,34 +178,28 @@ export function SoloGame({
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       }
       timer={
-        <button
-          type="button"
-          className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm press-spring-soft touch-manipulation"
+        <GameStatus
+          time={
+            <Timer
+              running={game.status === "playing" && !paused && revealed}
+              initialSeconds={initialTimerSeconds}
+              onTick={(s) => {
+                timerSecondsRef.current = s;
+              }}
+              className="font-mono text-xl font-bold tabular-nums text-text-primary leading-none"
+            />
+          }
+          filled={81 - game.cellsRemaining}
           onClick={() => game.status === "playing" && setPaused((p) => !p)}
-          aria-label={paused ? "Resume" : "Pause"}
-        >
-          <Timer
-            running={game.status === "playing" && !paused && revealed}
-            initialSeconds={initialTimerSeconds}
-            onTick={(s) => {
-              timerSecondsRef.current = s;
-            }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
-          />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
-            {paused ? (
-              "Paused"
-            ) : (
-              <>
-                <span className="text-accent font-medium">
-                  {81 - game.cellsRemaining}
-                </span>
-                /81
-                {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
-              </>
-            )}
-          </span>
-        </button>
+          ariaLabel={paused ? "Resume" : "Pause"}
+          note={
+            paused
+              ? "Paused"
+              : personalBest !== null
+                ? `PB ${formatTime(personalBest)}`
+                : undefined
+          }
+        />
       }
       numPad={
         <NumPad
