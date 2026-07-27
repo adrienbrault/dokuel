@@ -11,6 +11,13 @@
    Given digits are "printed" ink-black serifs; user digits are cobalt
    "pen". Dark mode is the same paper photographed at night. */
 @theme {
+  /* Three strictly-cast typographic voices: Fraunces for ceremony
+     (wordmark, headings, the win time), Inter for everything human,
+     DM Mono for everything that is data (timer, counts, room codes). */
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter Variable", system-ui, -apple-system, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
   /* Board & cell */
   --color-board-bg: oklch(0.965 0.008 85);
   --color-board-border: oklch(0.46 0.022 264);
@@ -637,10 +644,14 @@ body {
 
 /* Typography */
 .heading-xl {
-  @apply text-5xl font-extrabold tracking-tight text-text-primary;
+  @apply text-5xl font-semibold tracking-tight text-text-primary;
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 40;
 }
 .heading {
-  @apply text-2xl font-bold tracking-tight text-text-primary;
+  @apply text-2xl font-semibold tracking-tight text-text-primary;
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 40;
 }
 .label {
   @apply text-xs font-semibold text-text-muted uppercase tracking-wider;
@@ -650,4 +661,19 @@ body {
 }
 .text-mono {
   @apply font-mono text-sm text-text-secondary tabular-nums;
+}
+
+/* Board digits — givens are "printed" by the paper in a text-optical-size
+   serif, exactly how newspapers set sudoku; user entries are "penned" in
+   Inter. Different hand, different color: given-vs-user reads by shape,
+   weight, and ink simultaneously. */
+.digit-given {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 14;
+  font-weight: 500;
+}
+.digit-user {
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum";
+  font-weight: 600;
 }

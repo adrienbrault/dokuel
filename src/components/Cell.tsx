@@ -88,10 +88,10 @@ export const Cell = memo(function Cell({
                 : "bg-cell-bg";
 
   const textClass = cell.isGiven
-    ? "text-cell-given font-bold"
+    ? "text-cell-given digit-given"
     : isConflict
-      ? "text-cell-conflict font-semibold"
-      : "text-cell-user font-semibold";
+      ? "text-cell-conflict digit-user"
+      : "text-cell-user digit-user";
 
   return (
     <button
@@ -154,7 +154,7 @@ export const Cell = memo(function Cell({
           data-testid="drop-preview"
           data-mode={dropMode}
           aria-hidden="true"
-          className="absolute flex items-center justify-center font-bold leading-none text-accent pointer-events-none animate-drop-preview"
+          className="absolute flex items-center justify-center digit-user leading-none text-accent pointer-events-none animate-drop-preview"
           style={
             dropMode === "value"
               ? {
@@ -184,7 +184,7 @@ export const Cell = memo(function Cell({
         <span
           data-testid="note-charge"
           aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
+          className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] digit-user text-cell-user leading-none pointer-events-none animate-note-charge"
           style={
             {
               "--charge-dx": NOTE_OFFSETS[(chargingDigit - 1) % 3]!,
