@@ -12,6 +12,7 @@ const DIFFICULTIES: {
   value: Difficulty;
   label: string;
   description: string;
+  clues: string;
   level: number;
   chip: string;
   text: string;
@@ -21,6 +22,7 @@ const DIFFICULTIES: {
     value: "easy",
     label: "Easy",
     description: "Great for warming up",
+    clues: "~45 clues",
     level: 1,
     chip: "bg-difficulty-easy-bg",
     text: "text-difficulty-easy-text",
@@ -30,6 +32,7 @@ const DIFFICULTIES: {
     value: "medium",
     label: "Medium",
     description: "A fair challenge",
+    clues: "~35 clues",
     level: 2,
     chip: "bg-difficulty-medium-bg",
     text: "text-difficulty-medium-text",
@@ -39,6 +42,7 @@ const DIFFICULTIES: {
     value: "hard",
     label: "Hard",
     description: "For experienced players",
+    clues: "~28 clues",
     level: 3,
     chip: "bg-difficulty-hard-bg",
     text: "text-difficulty-hard-text",
@@ -48,6 +52,7 @@ const DIFFICULTIES: {
     value: "expert",
     label: "Expert",
     description: "The ultimate test",
+    clues: "~22 clues",
     level: 4,
     chip: "bg-difficulty-expert-bg",
     text: "text-difficulty-expert-text",
@@ -87,7 +92,7 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
           <button
             key={d.value}
             type="button"
-            className="card w-full flex items-center gap-3.5 px-4 py-3.5 press-spring-soft select-none touch-manipulation focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            className="card w-full flex items-center gap-3.5 px-4 py-3.5 press-spring-soft select-none touch-manipulation"
             onClick={() => onSelect(d.value, assistLevel)}
           >
             <span
@@ -96,15 +101,20 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
             >
               <LevelBars level={d.level} color={d.bar} />
             </span>
-            <span className="flex-1 text-left">
-              <span className={`block text-lg font-bold ${d.text}`}>
-                {d.label}
+            <span className="flex-1 text-left min-w-0">
+              <span className="flex items-baseline gap-2">
+                <span className={`text-lg font-bold ${d.text}`}>{d.label}</span>
+                {/* The clue count is the concrete fact behind the label —
+                    "Hard" means nothing on its own, 28 given cells does. */}
+                <span className="text-[0.6875rem] font-medium text-text-muted tabular-nums">
+                  {d.clues}
+                </span>
               </span>
-              <span className="block caption">{d.description}</span>
+              <span className="block caption truncate">{d.description}</span>
             </span>
             <ChevronRight
               size={18}
-              className="text-text-muted"
+              className="text-text-muted shrink-0"
               aria-hidden="true"
             />
           </button>
