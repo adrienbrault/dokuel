@@ -204,3 +204,52 @@ describe("SoloGame numpad selection", () => {
     expect(three.className).not.toContain("bg-accent");
   });
 });
+
+describe("SoloGame result panel", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    localStorage.clear();
+  });
+
+  // One blank cell, so a single tap finishes the puzzle.
+  const ALMOST_DONE = `.${SOLVED.slice(1)}`;
+
+  function winTheGame() {
+    render(
+      <SoloGame
+        difficulty="easy"
+        gameKey="result-panel"
+        initialPuzzle={ALMOST_DONE}
+        onBack={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
+    const five = screen.getByRole("button", { name: "5" });
+    fireEvent.pointerDown(five, { pointerType: "touch" });
+    fireEvent.pointerUp(five, { pointerType: "touch" });
+    // The panel is deliberately delayed so the last digit lands first.
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+  }
+
+  it("counts the game just won in the games-played total", () => {
+    winTheGame();
+
+    expect(screen.getByText("You Won!")).toBeInTheDocument();
+    // The win is recorded before the panel appears, so the total it
+    // reports has to include it — a first-time winner is on 1, not 0.
+    const played = screen.getByText("Played").parentElement;
+    expect(played).toHaveTextContent("1");
+  });
+
+  it("reports the finishing time as the new best", () => {
+    winTheGame();
+
+    expect(screen.getByText("New personal best")).toBeInTheDocument();
+  });
+});
