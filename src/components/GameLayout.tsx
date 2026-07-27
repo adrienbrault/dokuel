@@ -196,9 +196,9 @@ function SettingsButton({
         <Settings size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
+        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-[16px] shadow-[0_2px_6px_oklch(0.25_0.02_264/0.06),0_20px_48px_-16px_oklch(0.25_0.02_264/0.22)] dark:shadow-[0_2px_6px_oklch(0_0_0/0.12),0_20px_48px_-16px_oklch(0_0_0/0.45)] p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-text-muted font-medium">
+            <p className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-text-muted">
               Numpad position
             </p>
             <button
@@ -215,7 +215,9 @@ function SettingsButton({
             onChange={onPositionChange}
           />
           <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
-            <p className="text-xs text-text-muted font-medium">Dark mode</p>
+            <p className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-text-muted">
+              Dark mode
+            </p>
             <DarkModeToggle
               isDark={darkMode.isDark}
               onToggle={darkMode.toggle}
@@ -227,7 +229,7 @@ function SettingsButton({
             </div>
           )}
           <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
-            <p className="text-xs text-text-muted mb-2 font-medium">
+            <p className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-text-muted mb-2">
               Keyboard shortcuts
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
@@ -245,7 +247,7 @@ function SettingsButton({
 function Shortcut({ keys, label }: { keys: string; label: string }) {
   return (
     <>
-      <kbd className="font-mono text-text-primary bg-bg-raised px-1 rounded text-center">
+      <kbd className="font-mono text-text-primary bg-bg-inset border border-border-default px-1.5 rounded-[5px] text-center">
         {keys}
       </kbd>
       <span className="text-text-muted">{label}</span>
