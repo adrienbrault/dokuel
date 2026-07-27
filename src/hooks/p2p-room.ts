@@ -66,6 +66,7 @@ export function initializeRoom(
     roomMap.set("solution", null);
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
+    roomMap.set("winnerBoard", null);
     roomMap.set("gameNumber", 0);
   });
 }
@@ -117,6 +118,7 @@ export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
     roomMap.set("status", "playing");
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
+    roomMap.set("winnerBoard", null);
     roomMap.set("gameNumber", ((roomMap.get("gameNumber") as number) || 0) + 1);
 
     const players = room.doc.getMap("players");
@@ -175,17 +177,36 @@ export function getOpponentProgress(
   return null;
 }
 
+/**
+ * Write a win claim into the room. `board` is the claimant's completed
+ * board for a solved win, or null for a forfeit (opponent gone —
+ * nothing to verify). The first claim normally wins, with one
+ * exception: an existing solved-claim whose board does NOT match the
+ * room's solution is forged, and a later claim may overwrite it so a
+ * cheater cannot lock the real winner out.
+ */
 export function claimWinner(
   room: P2PRoom,
   playerId: string,
   playerName: string,
+  board: string | null,
 ): boolean {
   const roomMap = room.doc.getMap("room");
-  if (roomMap.get("winnerId") !== null) return false;
+  const existingWinner = roomMap.get("winnerId");
+  if (existingWinner !== null && existingWinner !== undefined) {
+    const existingBoard = roomMap.get("winnerBoard");
+    const solution = roomMap.get("solution");
+    const existingIsForged =
+      typeof existingBoard === "string" &&
+      typeof solution === "string" &&
+      existingBoard !== solution;
+    if (!existingIsForged) return false;
+  }
 
   room.doc.transact(() => {
     roomMap.set("winnerId", playerId);
     roomMap.set("winnerName", playerName);
+    roomMap.set("winnerBoard", board);
     roomMap.set("status", "finished");
   });
   return true;
@@ -227,6 +248,7 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     solution: (roomMap.get("solution") as string) || null,
     winnerId: (roomMap.get("winnerId") as string) || null,
     winnerName: (roomMap.get("winnerName") as string) || null,
+    winnerBoard: (roomMap.get("winnerBoard") as string) || null,
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
     events: [],
   };

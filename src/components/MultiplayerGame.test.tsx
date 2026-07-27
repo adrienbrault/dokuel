@@ -34,6 +34,7 @@ const roomState: RoomState = {
   solution: SOLUTION,
   winnerId: null,
   winnerName: null,
+  winnerBoard: null,
   gameNumber: 1,
   events: [],
 };
@@ -52,6 +53,7 @@ function makeMp() {
     sendStartGame: vi.fn(),
     sendProgress: vi.fn(),
     sendComplete: vi.fn(),
+    claimForfeitWin: vi.fn(),
     sendRematch: vi.fn(),
     updateName: vi.fn(),
     setAssistLevel: vi.fn(),

@@ -29,6 +29,7 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
     solution: "1".repeat(81),
     winnerId: null,
     winnerName: null,
+    winnerBoard: null,
     gameNumber: 1,
     events: [],
     ...overrides,

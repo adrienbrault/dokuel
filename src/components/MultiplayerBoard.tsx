@@ -126,11 +126,12 @@ export function MultiplayerBoard({
     }
   }, [game.cellsRemaining, onProgress, puzzle]);
 
-  // Check completion
+  // Check completion — the claim ships the actual filled board so the
+  // opponent's client can verify it against the room's solution.
   useEffect(() => {
     if (game.status !== "completed") return;
-    onComplete(puzzle);
-  }, [game.status, onComplete, puzzle]);
+    onComplete(serializeBoard(game.board as Cell[][]).values);
+  }, [game.status, game.board, onComplete]);
 
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries

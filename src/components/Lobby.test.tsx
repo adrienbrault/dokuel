@@ -24,6 +24,7 @@ const BASE_STATE: RoomState = {
   solution: null,
   winnerId: null,
   winnerName: null,
+  winnerBoard: null,
   gameNumber: 0,
   events: [],
 };
