@@ -19,10 +19,22 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  /* ── Accent ramp ── */
+  /* ── Accent ramp ──
+     Two jobs, two tokens. --color-accent is the FOREGROUND ramp: entered
+     digits, icons, links, borders. Dark mode lifts it so it stays legible
+     against a dark page.
+
+     --color-accent-surface is the BACKGROUND behind --color-text-on-accent
+     — primary buttons, the selected number-pad key, the active segment. It
+     is deliberately identical in both schemes and fixed at a lightness
+     where white clears WCAG AA (5.55:1), because a token lifted for
+     legibility *on* dark is far too light to sit *under* white text:
+     the previous shared token measured 2.40:1 in dark mode. */
   --color-accent: oklch(0.55 0.19 278);
   --color-accent-bright: oklch(0.63 0.19 277);
   --color-accent-deep: oklch(0.47 0.18 281);
+  --color-accent-surface: oklch(0.53 0.19 278);
+  --color-accent-surface-hover: oklch(0.58 0.19 278);
   /* Tinted fills — chips, icon backplates, selected cells */
   --color-accent-light: oklch(0.945 0.032 278);
   --color-accent-soft: oklch(0.9 0.06 278);
@@ -39,7 +51,7 @@
   --color-cell-match-row-col: oklch(0.978 0.011 278);
   --color-cell-given: oklch(0.24 0.015 275);
   --color-cell-user: oklch(0.5 0.2 278);
-  --color-cell-conflict: oklch(0.55 0.22 22);
+  --color-cell-conflict: oklch(0.51 0.22 22);
   --color-cell-conflict-bg: oklch(0.935 0.05 22);
   --color-cell-note: oklch(0.55 0.02 275);
 
@@ -66,8 +78,13 @@
   /* ── Semantic text ── */
   --color-text-primary: oklch(0.22 0.015 275);
   --color-text-secondary: oklch(0.45 0.013 275);
-  --color-text-muted: oklch(0.565 0.013 275);
+  /* AA against the darkest surface it lands on (bg-raised): 4.74:1. It was
+     0.565, which measured 3.92:1 there and 4.09:1 on bg-inset. */
+  --color-text-muted: oklch(0.52 0.013 275);
   --color-text-on-accent: oklch(0.995 0 0);
+  /* Secondary copy on an accent fill. A solid tint rather than white at
+     70-75% opacity, which never cleared 3.4:1 against the fill. */
+  --color-text-on-accent-muted: oklch(0.93 0.04 278);
 
   /* ── Semantic interactive ── */
   --color-bg-disabled: oklch(0.925 0.006 275);
@@ -632,16 +649,15 @@ body {
 }
 .btn-primary {
   @apply text-text-on-accent;
-  background-image: linear-gradient(
-    180deg,
-    var(--color-accent-bright),
-    var(--color-accent-deep)
-  );
+  /* Flat, not a gradient. A vertical gradient means the button has a
+     range of contrast ratios rather than one, and its lightest stop
+     decided the worst case — 3.63:1 under white even in light mode. */
+  background-color: var(--color-accent-surface);
   box-shadow: var(--elevation-accent), var(--hairline-top);
 }
 @media (hover: hover) {
   .btn-primary:hover {
-    filter: brightness(1.06);
+    background-color: var(--color-accent-surface-hover);
   }
 }
 .btn-primary:active {

@@ -20,7 +20,7 @@ export function Logo({ size = 40 }: { size?: number }) {
         width="44"
         height="44"
         rx="11"
-        className="fill-accent"
+        className="fill-accent-surface"
       />
       {[0, 1, 2].map((row) =>
         [0, 1, 2].map((col) => (

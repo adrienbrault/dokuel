@@ -39,7 +39,7 @@ export function DigitDragIndicator({ state }: Props) {
       className={`fixed z-50 pointer-events-none select-none flex items-center justify-center font-bold rounded-md shadow-lg ${
         isInvalid
           ? "bg-cell-conflict-bg text-cell-conflict shadow-cell-conflict/40"
-          : "bg-accent text-text-on-accent shadow-accent/40"
+          : "bg-accent-surface text-text-on-accent shadow-accent/40"
       }`}
       style={{
         left: state.x,

@@ -231,7 +231,7 @@ function ActionRow({
           {label}
         </span>
         <span
-          className={`block text-xs leading-tight mt-0.5 truncate ${primary ? "text-text-on-accent/75" : "text-text-muted"}`}
+          className={`block text-xs leading-tight mt-0.5 truncate ${primary ? "text-text-on-accent-muted" : "text-text-muted"}`}
         >
           {sublabel}
         </span>
@@ -239,7 +239,7 @@ function ActionRow({
       {accessory}
       <ChevronRight
         size={18}
-        className={primary ? "text-text-on-accent/55" : "text-text-muted"}
+        className={primary ? "text-text-on-accent-muted" : "text-text-muted"}
         aria-hidden="true"
       />
     </button>
@@ -285,7 +285,7 @@ function ContinueRow({
         onClick={onClick}
       >
         <span
-          className="icon-chip w-11 h-11 bg-accent text-text-on-accent"
+          className="icon-chip w-11 h-11 bg-accent-surface text-text-on-accent"
           aria-hidden="true"
         >
           <Play size={20} />

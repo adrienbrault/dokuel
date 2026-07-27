@@ -53,7 +53,7 @@ export function NumPadKey({
         isDone
           ? "bg-bg-inset text-text-disabled cursor-default"
           : isAccented
-            ? "bg-accent text-text-on-accent press-spring"
+            ? "bg-accent-surface text-text-on-accent press-spring"
             : "bg-surface text-text-primary border border-border-default press-spring"
       }`}
       style={
@@ -94,7 +94,7 @@ export function NumPadKey({
         showRemaining && (
           <span
             className={`text-[0.6875rem] lg:text-xs font-semibold leading-none mt-1 tabular-nums ${
-              isAccented ? "text-text-on-accent/75" : "text-text-muted"
+              isAccented ? "text-text-on-accent-muted" : "text-text-muted"
             }`}
           >
             {remaining}

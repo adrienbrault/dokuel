@@ -15,7 +15,7 @@ export function PauseOverlay({ onResume }: { onResume: () => void }) {
       aria-label="Resume game"
     >
       <span
-        className="icon-chip w-14 h-14 rounded-full bg-accent text-text-on-accent"
+        className="icon-chip w-14 h-14 rounded-full bg-accent-surface text-text-on-accent"
         style={{ boxShadow: "var(--elevation-accent)" }}
         aria-hidden="true"
       >

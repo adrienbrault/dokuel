@@ -268,7 +268,10 @@ describe("NumPad", () => {
   });
 
   function hasAccent(el: HTMLElement) {
-    return el.classList.contains("bg-accent");
+    // The accent fill a key carries while pressed or active. Named
+    // separately from --color-accent because it sits *under* white text
+    // and so must stay dark enough for AA in both colour schemes.
+    return el.classList.contains("bg-accent-surface");
   }
 
   it("transfers the press visual to the digit currently under the finger during skim", () => {
