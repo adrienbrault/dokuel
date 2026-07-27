@@ -606,3 +606,47 @@ describe("MultiplayerBoard digit drag", () => {
     expect(three.className).not.toContain("bg-accent");
   });
 });
+
+describe("MultiplayerBoard keyboard", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("places a digit into the selected cell from the keyboard", () => {
+    render(<MultiplayerBoard {...baseProps()} />);
+
+    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
+    fireEvent.keyDown(window, { key: "5" });
+
+    expect(
+      screen.getByLabelText("Cell row 1 column 1, value 5"),
+    ).toBeInTheDocument();
+  });
+
+  it("moves the selection with the arrow keys", () => {
+    render(<MultiplayerBoard {...baseProps()} />);
+
+    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    fireEvent.keyDown(window, { key: "3" });
+
+    expect(
+      screen.getByLabelText("Cell row 1 column 2, value 3"),
+    ).toBeInTheDocument();
+  });
+
+  it("erases the selected cell with Backspace", () => {
+    render(<MultiplayerBoard {...baseProps()} />);
+
+    fireEvent.click(screen.getByLabelText("Cell row 1 column 1, empty"));
+    fireEvent.keyDown(window, { key: "5" });
+    fireEvent.keyDown(window, { key: "Backspace" });
+
+    expect(
+      screen.getByLabelText("Cell row 1 column 1, empty"),
+    ).toBeInTheDocument();
+  });
+});
