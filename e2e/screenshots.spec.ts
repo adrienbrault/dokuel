@@ -509,6 +509,11 @@ test.describe("win modal", () => {
 });
 
 // --- Multiplayer progress bar mockups ---
+//
+// These inject a copy of MultiplayerHeaderExtra's markup into a solo
+// board, because a real 1v1 needs two peers and a signalling server.
+// The copy has to be kept in step with the component by hand — hence the
+// hard failure above if the anchor ever moves again.
 
 test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
 	await page.goto("/");
@@ -517,14 +522,15 @@ test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
 	await page.evaluate(() => {
-		const header = document.querySelector(
-			".flex.items-center.justify-between.w-full",
-		);
-		if (!header) return;
+		const header = document.querySelector("header");
+		// Fail loudly rather than screenshotting a board with no bars on
+		// it: this markup is a stand-in for MultiplayerHeaderExtra, and a
+		// silent miss here is how it drifts out of date unnoticed.
+		if (!header) throw new Error("game header not found");
 
 		const bars = document.createElement("div");
 		bars.className =
-			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
+			"w-full max-w-game mt-3 flex flex-col gap-1.5 mx-auto";
 		bars.innerHTML = `
 			<div class="flex items-center gap-2">
 				<span class="text-xs text-text-secondary w-24 truncate">You</span>
@@ -556,14 +562,15 @@ test("multiplayer - opponent finished banner", async ({ page }, testInfo) => {
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
 	await page.evaluate(() => {
-		const header = document.querySelector(
-			".flex.items-center.justify-between.w-full",
-		);
-		if (!header) return;
+		const header = document.querySelector("header");
+		// Fail loudly rather than screenshotting a board with no bars on
+		// it: this markup is a stand-in for MultiplayerHeaderExtra, and a
+		// silent miss here is how it drifts out of date unnoticed.
+		if (!header) throw new Error("game header not found");
 
 		const banner = document.createElement("div");
 		banner.className =
-			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2 mx-auto";
+			"w-full max-w-game mt-3 flex flex-col gap-2 mx-auto";
 		banner.innerHTML = `
 			<div class="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
 				<span class="font-semibold text-text-primary">Alice</span>
