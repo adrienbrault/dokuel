@@ -87,7 +87,7 @@
     }
   },
   "files": {
-    "includes": ["src/**", "*.ts", "*.json"]
+    "includes": ["src/**", "signaling/src/**", "*.ts", "*.json"]
   },
   "overrides": [
     {

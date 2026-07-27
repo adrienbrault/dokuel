@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "signaling"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,11 +17,12 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "diff-coverage": "bun scripts/diff-coverage.ts",
-    "ci": "bun run lint && bun run typecheck && bun run test",
+    "ci": "bun run lint && bun run typecheck && bun run typecheck:signaling && bun run test",
     "e2e": "vite build && bunx playwright test",
     "screenshots": "vite build && bunx playwright test e2e/screenshots.spec.ts --reporter=line && bun run screenshots:combine",
     "screenshots:combine": "bun run scripts/combine-screenshots.ts",
-    "screenshots:readme": "bun run screenshots && bun run scripts/update-readme-screenshots.ts"
+    "screenshots:readme": "bun run screenshots && bun run scripts/update-readme-screenshots.ts",
+    "typecheck:signaling": "tsc --noEmit -p signaling/tsconfig.json"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

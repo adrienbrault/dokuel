@@ -95,7 +95,8 @@ export class SignalingRoom extends DurableObject {
         // Forward to all other clients subscribed to this topic
         for (const peer of this.ctx.getWebSockets()) {
           if (peer === ws) continue;
-          const attachment = peer.deserializeAttachment() as WsAttachment | null;
+          const attachment =
+            peer.deserializeAttachment() as WsAttachment | null;
           if (attachment?.topics.includes(topic)) {
             try {
               peer.send(data);
