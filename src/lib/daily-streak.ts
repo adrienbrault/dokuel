@@ -15,7 +15,20 @@ const DEFAULT_STREAK: DailyStreak = {
 export function getDailyStreak(): DailyStreak {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { ...DEFAULT_STREAK };
+    if (!raw) return { ...DEFAULT_STREAK };
+    const parsed: unknown = JSON.parse(raw);
+    // JSON.parse happily returns null/numbers/objects of the wrong
+    // shape; recordDailyCompletion does arithmetic on these fields.
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as DailyStreak).currentStreak !== "number" ||
+      typeof (parsed as DailyStreak).longestStreak !== "number" ||
+      typeof (parsed as DailyStreak).lastCompletedDate !== "string"
+    ) {
+      return { ...DEFAULT_STREAK };
+    }
+    return parsed as DailyStreak;
   } catch {
     return { ...DEFAULT_STREAK };
   }
