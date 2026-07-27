@@ -57,7 +57,10 @@ export function MultiplayerGame({
           onRematch={mp.sendRematch}
           onBack={onBack}
         />
-        {!mp.connected && (
+        {/* opponentDisconnected is awareness-based — the only signal
+            that reflects the opponent. provider.connected is local
+            intent and goes false on our own tab-hide teardown. */}
+        {mp.opponentDisconnected && !mp.gameOver && (
           <DisconnectOverlay
             onClaimWin={() => {
               mp.sendComplete("");
