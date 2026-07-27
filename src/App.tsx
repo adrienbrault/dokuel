@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
 import { JoinScreen } from "./components/JoinScreen.tsx";
 import { Landing } from "./components/Landing.tsx";
-import { MultiplayerScreen } from "./components/MultiplayerScreen.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
@@ -14,6 +20,15 @@ import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { AssistLevel, Difficulty } from "./lib/types.ts";
 import "./index.css";
+
+// The multiplayer screen pulls in yjs + y-webrtc + y-indexeddb —
+// none of which solo/daily players need. Splitting it keeps that
+// stack out of the entry chunk.
+const MultiplayerScreen = lazy(() =>
+  import("./components/MultiplayerScreen.tsx").then((m) => ({
+    default: m.MultiplayerScreen,
+  })),
+);
 
 type Screen =
   | { name: "landing" }
@@ -217,11 +232,19 @@ function App() {
 
     case "multiplayer":
       return (
-        <MultiplayerScreen
-          roomId={screen.roomId}
-          difficulty={screen.difficulty}
-          onBack={() => navigate({ name: "landing" })}
-        />
+        <Suspense
+          fallback={
+            <div className="screen">
+              <p className="caption">Connecting...</p>
+            </div>
+          }
+        >
+          <MultiplayerScreen
+            roomId={screen.roomId}
+            difficulty={screen.difficulty}
+            onBack={() => navigate({ name: "landing" })}
+          />
+        </Suspense>
       );
 
     case "stats":
