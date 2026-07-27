@@ -71,6 +71,9 @@ export function initializeRoom(
   });
 }
 
+/** 1v1: a room holds exactly two players. */
+export const MAX_PLAYERS = 2;
+
 export function joinRoom(
   room: P2PRoom,
   playerId: string,
@@ -78,6 +81,11 @@ export function joinRoom(
 ): void {
   const players = room.doc.getMap("players");
   if (players.has(playerId)) return;
+  // Best-effort cap: catches the common sequential case where the
+  // room synced before this join. Two truly concurrent joins can
+  // still overflow via CRDT merge — the hook detects that post-merge
+  // and flags the excess player (roomFull).
+  if (players.size >= MAX_PLAYERS) return;
 
   const joinOrder = players.size;
 
@@ -287,11 +295,18 @@ export function getPlayers(room: P2PRoom): Player[] {
     });
   }
 
-  result.sort(
-    (a, b) =>
-      ((players.get(a.id) as Y.Map<unknown>).get("joinOrder") as number) -
-      ((players.get(b.id) as Y.Map<unknown>).get("joinOrder") as number),
-  );
+  // joinOrder first, playerId as tiebreak: concurrent joiners can both
+  // read size 0 and claim the same joinOrder, and every peer must agree
+  // on seat order (it decides who the excess player is in an overflow).
+  result.sort((a, b) => {
+    const orderA = (players.get(a.id) as Y.Map<unknown>).get(
+      "joinOrder",
+    ) as number;
+    const orderB = (players.get(b.id) as Y.Map<unknown>).get(
+      "joinOrder",
+    ) as number;
+    return orderA - orderB || a.id.localeCompare(b.id);
+  });
 
   return result;
 }

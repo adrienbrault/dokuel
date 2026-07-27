@@ -32,6 +32,27 @@ export function MultiplayerGame({
     return () => clearTimeout(id);
   }, [mp.error]);
 
+  if (mp.roomFull) {
+    return (
+      <div className="screen">
+        <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
+          <h1 className="heading">Game is full</h1>
+          <p className="caption max-w-sm">
+            This room already has two players. Ask your friend for a new invite,
+            or create your own game.
+          </p>
+          <button
+            type="button"
+            className="btn btn-lg btn-primary"
+            onClick={onBack}
+          >
+            ← Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Once we've started a game and have a puzzle, keep the board mounted
   // even if mp.roomState or mp.puzzle briefly flicker during Yjs sync —
   // the local board state (cells, notes, progress) lives in
