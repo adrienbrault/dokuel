@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   getDailyStreak,
   isDailyCompleted,
@@ -8,6 +8,32 @@ import {
 describe("daily-streak", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  describe("across DST transitions", () => {
+    const originalTz = process.env.TZ;
+
+    afterEach(() => {
+      process.env.TZ = originalTz;
+    });
+
+    it("keeps the streak across spring-forward (23h local day)", () => {
+      // US DST starts 2026-03-08 02:00, so midnight Mar 8 → midnight
+      // Mar 9 is 23h — an exact 24h-delta comparison rejects it.
+      process.env.TZ = "America/Los_Angeles";
+      recordDailyCompletion("2026-03-08");
+      const result = recordDailyCompletion("2026-03-09");
+      expect(result.currentStreak).toBe(2);
+    });
+
+    it("keeps the streak across fall-back (25h local day)", () => {
+      // US DST ends 2026-11-01 02:00, so midnight Nov 1 → midnight
+      // Nov 2 is 25h.
+      process.env.TZ = "America/Los_Angeles";
+      recordDailyCompletion("2026-11-01");
+      const result = recordDailyCompletion("2026-11-02");
+      expect(result.currentStreak).toBe(2);
+    });
   });
 
   describe("getDailyStreak", () => {
