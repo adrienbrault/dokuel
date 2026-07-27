@@ -442,42 +442,69 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	});
 });
 
-test("solo game - win modal", async ({ page }, testInfo) => {
-	await page.goto("/");
-	await page.getByRole("button", { name: "Start Solo" }).click();
-	await page.getByRole("button", { name: "Easy" }).click();
-	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+// A complete, valid grid. Seeding a save built from this lets the win
+// modal be reached by placing one digit, so the screenshot shows the real
+// GameResult component rather than a hand-written stand-in that drifts
+// away from it.
+const SOLVED_GRID =
+	"534678912" +
+	"672195348" +
+	"198342567" +
+	"859761423" +
+	"426853791" +
+	"713924856" +
+	"961537284" +
+	"287419635" +
+	"345286179";
 
-	await page.evaluate(() => {
-		const overlay = document.createElement("div");
-		overlay.className =
-			"fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6";
-		overlay.innerHTML = `
-			<div class="confetti-container">
-				<span></span><span></span><span></span><span></span><span></span>
-				<span></span><span></span><span></span><span></span><span></span>
-			</div>
-			<div class="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full relative">
-				<div class="flex flex-col items-center gap-2">
-					<span class="text-5xl animate-emoji-bounce">🎉</span>
-					<h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">You Won!</h2>
-					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Easy</span>
-				</div>
-				<div class="flex flex-col items-center gap-1">
-					<span class="text-3xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100">03:42</span>
-					<span class="text-sm font-semibold text-green-600 dark:text-green-400">New Best!</span>
-				</div>
-				<div class="flex flex-col gap-3 w-full">
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white select-none touch-manipulation">Play Again</button>
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 select-none touch-manipulation">New Game</button>
-				</div>
-			</div>
-		`;
-		document.body.appendChild(overlay);
+// Blank out enough cells to look like a real puzzle mid-solve, then fill
+// every one of them back in except the last — one tap from a win.
+const GIVEN_MASK = new Set([
+	0, 2, 4, 6, 8, 10, 12, 14, 16, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39,
+	41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75, 77,
+	79,
+]);
+const LAST_CELL = 80;
+
+function nearlyWonSave() {
+	const puzzle = [...SOLVED_GRID]
+		.map((ch, i) => (GIVEN_MASK.has(i) ? ch : "."))
+		.join("");
+	const values = [...SOLVED_GRID]
+		.map((ch, i) => (i === LAST_CELL ? "." : ch))
+		.join("");
+	return JSON.stringify({
+		puzzle,
+		values,
+		notes: Array.from({ length: 81 }, () => []),
+		timer: 222,
+		difficulty: "easy",
+		assistLevel: "standard",
+	});
+}
+
+test.describe("win modal", () => {
+	test.use({
+		storage: { "sudoku_save_screenshot-win": nearlyWonSave() },
 	});
 
-	await page.screenshot({
-		path: screenshotPath("solo-win-modal", testInfo.project.name),
+	test("solo game - win modal", async ({ page }, testInfo) => {
+		await page.goto("/solo/easy/screenshot-win");
+		await page.waitForSelector(
+			'[role="group"][aria-label="Number pad"]:visible',
+		);
+
+		// Place the one remaining digit — the real completion path.
+		await page.locator('button[aria-label*=", empty"]').first().click();
+		await page
+			.locator('[role="group"][aria-label="Number pad"]:visible')
+			.getByRole("button", { name: /^9(,|$)/ })
+			.click();
+
+		await page.getByText("You Won!").waitFor();
+		await page.screenshot({
+			path: screenshotPath("solo-win-modal", testInfo.project.name),
+		});
 	});
 });
 
