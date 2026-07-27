@@ -696,3 +696,105 @@ describe("Board pixel snapping", () => {
     expect((boardPx - BOARD_FRAME_PX) / 9).toBeGreaterThanOrEqual(20);
   });
 });
+
+describe("Board keyboard focus", () => {
+  function cells() {
+    return screen.getAllByRole("button", { name: /^Cell row/ });
+  }
+
+  it("exposes exactly one cell to the tab order", () => {
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    // 81 natural tab stops would make Tab a 90-press journey from the
+    // header to the number pad. The grid takes one stop; the arrow keys
+    // move within it.
+    const tabbable = cells().filter((c) => c.tabIndex === 0);
+    expect(tabbable).toHaveLength(1);
+    expect(cells()).toHaveLength(81);
+  });
+
+  it("puts the tab stop on the first cell when nothing is selected", () => {
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Cell row 1 column 1, empty").tabIndex).toBe(
+      0,
+    );
+  });
+
+  it("moves the tab stop to the selected cell", () => {
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={{ row: 4, col: 6 }}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Cell row 5 column 7, empty").tabIndex).toBe(
+      0,
+    );
+    expect(screen.getByLabelText("Cell row 1 column 1, empty").tabIndex).toBe(
+      -1,
+    );
+    expect(cells().filter((c) => c.tabIndex === 0)).toHaveLength(1);
+  });
+
+  it("follows the selection with DOM focus once the board has focus", () => {
+    const { rerender } = render(
+      <Board
+        board={makeBoard()}
+        selectedCell={{ row: 0, col: 0 }}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+    screen.getByLabelText("Cell row 1 column 1, empty").focus();
+
+    // Arrow keys move the selection through a reducer, not through the DOM.
+    // Without this the focus ring stays behind on the old cell while the
+    // selection walks away, and a screen reader is told nothing moved.
+    rerender(
+      <Board
+        board={makeBoard()}
+        selectedCell={{ row: 0, col: 1 }}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Cell row 1 column 2, empty")).toHaveFocus();
+  });
+
+  it("does not steal focus when the board does not have it", () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    outside.focus();
+
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={{ row: 3, col: 3 }}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    expect(outside).toHaveFocus();
+    outside.remove();
+  });
+});
