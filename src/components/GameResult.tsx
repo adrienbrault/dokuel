@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -68,6 +68,36 @@ export function GameResult({
   onDismissTip,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const primaryRef = useRef<HTMLButtonElement>(null);
+
+  // The panel renders last in the DOM, after the board and the number pad,
+  // so without moving focus a keyboard user had to tab past ~95 controls
+  // to reach "Play Again". Focusing the primary action on mount also gives
+  // a screen reader the dialog's name and its first control at once.
+  useEffect(() => {
+    primaryRef.current?.focus();
+  }, []);
+
+  // Keep Tab inside the panel while it is up. The board behind it is still
+  // in the accessibility tree, and tabbing into a board you have already
+  // finished — and can no longer change — is a dead end.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab") return;
+    const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+      "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+    );
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const handleShare = () => {
     const text = buildShareText({
@@ -84,7 +114,15 @@ export function GameResult({
   };
 
   return (
-    <div className="modal-overlay p-6">
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the key
+    // handler implements the focus trap the dialog role requires.
+    <div
+      className="modal-overlay p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="game-result-title"
+      onKeyDown={handleKeyDown}
+    >
       {isWinner && (
         <div className="confetti-container">
           <span />
@@ -99,7 +137,10 @@ export function GameResult({
           <span />
         </div>
       )}
-      <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
+      <div
+        ref={panelRef}
+        className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative"
+      >
         <div className="flex flex-col items-center gap-2.5">
           <span
             className={`flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce ${
@@ -108,7 +149,7 @@ export function GameResult({
           >
             {isWinner ? "🎉" : "👏"}
           </span>
-          <h2 className="heading">
+          <h2 className="heading" id="game-result-title">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
           {difficulty && (
@@ -164,6 +205,7 @@ export function GameResult({
         <div className="flex flex-col gap-3 w-full">
           {onRematch && (
             <button
+              ref={primaryRef}
               type="button"
               className="btn btn-lg btn-primary w-full"
               onClick={onRematch}
@@ -173,6 +215,7 @@ export function GameResult({
           )}
           <div className="flex gap-3">
             <button
+              ref={onRematch ? undefined : primaryRef}
               type="button"
               className="btn btn-secondary flex-1 py-3"
               onClick={onNewGame}
