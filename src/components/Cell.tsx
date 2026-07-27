@@ -133,7 +133,7 @@ export const Cell = memo(function Cell({
           {DIGITS.map((n) => (
             <span
               key={n}
-              className="flex items-center justify-center text-[clamp(0.80859375rem,3.1625vw,1.078125rem)] text-text-secondary font-medium leading-none"
+              className="flex items-center justify-center text-[clamp(0.80859375rem,3.1625vw,1.078125rem)] text-cell-note font-semibold leading-none"
             >
               {cell.notes.has(n) && chargingDigit !== n ? n : ""}
             </span>
