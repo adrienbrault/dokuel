@@ -202,7 +202,6 @@ export function MultiplayerBoard({
       position={position}
       onPositionChange={setPosition}
       onDeselectCell={highlight.deselectCell}
-      headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
         <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm">
           <Timer

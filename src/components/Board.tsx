@@ -173,7 +173,7 @@ export function Board({
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
+      className="w-full aspect-square flex items-center justify-center"
     >
       <div
         ref={gridRef}

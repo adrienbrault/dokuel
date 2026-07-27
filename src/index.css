@@ -91,6 +91,10 @@
   --color-difficulty-hard-text: oklch(0.44 0.14 45);
   --color-difficulty-expert-text: oklch(0.45 0.17 20);
 
+  /* Width of the whole play area: board + rail + the gap between them.
+     The board takes whatever the rail leaves. */
+  --container-game: 54rem;
+
   /* ── Radius scale ── */
   --radius-field: 0.875rem;
   --radius-control: 1rem;
@@ -736,6 +740,90 @@ body {
 /* Small pill that carries a status or count */
 .chip {
   @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
+}
+
+/* ─── Play-area grid ───
+   Three children — board, number pad, and the control rail — placed by
+   named areas so each one renders exactly once and only its position
+   changes across breakpoints and pad positions.
+
+   Phone: the rail is a horizontal strip pinned between the board and the
+   pad, which puts Undo/Erase/Hint in the same thumb zone as the digits
+   instead of at the top of the screen.
+
+   Desktop (>=1024px): the rail stands up into a column beside the board,
+   which is what fills the horizontal space a 9x9 grid leaves over. */
+.game-grid {
+  --rail-width: 13rem;
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+  align-content: end;
+  justify-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "board"
+    "rail"
+    "pad";
+}
+.game-grid[data-pad="left"] {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "pad board"
+    "rail rail";
+}
+.game-grid[data-pad="right"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "board pad"
+    "rail rail";
+}
+.game-area-board {
+  grid-area: board;
+  width: 100%;
+}
+.game-area-pad {
+  grid-area: pad;
+  width: 100%;
+}
+.game-grid[data-pad="left"] .game-area-pad,
+.game-grid[data-pad="right"] .game-area-pad {
+  width: auto;
+}
+.game-rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .game-grid {
+    gap: 1rem 1.5rem;
+    align-content: center;
+    grid-template-columns: minmax(0, 1fr) var(--rail-width);
+    grid-template-areas:
+      "board rail"
+      "pad   rail";
+  }
+  .game-grid[data-pad="left"] {
+    grid-template-columns: auto minmax(0, 1fr) var(--rail-width);
+    grid-template-areas: "pad board rail";
+  }
+  .game-grid[data-pad="right"] {
+    grid-template-columns: var(--rail-width) minmax(0, 1fr) auto;
+    grid-template-areas: "rail board pad";
+  }
+  .game-rail {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: start;
+    align-self: center;
+    gap: 0.5rem;
+  }
 }
 
 /* Typography */

@@ -1,4 +1,4 @@
-import { ArrowLeft, Settings, X } from "lucide-react";
+import { ArrowLeft, Keyboard, Settings, X } from "lucide-react";
 import {
   type PointerEvent,
   type ReactNode,
@@ -24,7 +24,6 @@ type GameLayoutProps = {
   headerExtra?: ReactNode | undefined;
   footer?: ReactNode | undefined;
   boardClassName?: string | undefined;
-  headerClassName?: string | undefined;
   onDeselectCell?: (() => void) | undefined;
   settingsExtra?: ReactNode | undefined;
 };
@@ -41,7 +40,6 @@ export function GameLayout({
   headerExtra,
   footer,
   boardClassName = "",
-  headerClassName = "max-w-lg",
   onDeselectCell,
   settingsExtra,
 }: GameLayoutProps) {
@@ -54,82 +52,53 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center min-h-dvh bg-bg-primary px-3 pt-3 pb-4 sm:px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
-      {title && (
-        <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
-      )}
-
-      {/* Header */}
-      <div
-        className={`flex items-center justify-between w-full ${headerClassName} mb-4`}
-      >
+      {/* Top bar. Spans the same width as the play area below so it reads
+          as the header of that block rather than floating over the page. */}
+      <header className="flex items-center gap-3 w-full max-w-game shrink-0">
         <button
           type="button"
-          className="icon-btn w-10 h-10 touch-manipulation"
+          className="icon-btn w-10 h-10 shrink-0 touch-manipulation"
           onClick={onBack}
           aria-label="Back"
         >
           <ArrowLeft size={18} aria-hidden="true" />
         </button>
-        {timer}
+        <div className="flex-1 min-w-0 flex flex-col items-center">
+          {title && (
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-text-muted truncate max-w-full">
+              {title}
+            </p>
+          )}
+          {timer}
+        </div>
         <SettingsButton
           position={position}
           onPositionChange={onPositionChange}
           extra={settingsExtra}
         />
-      </div>
+      </header>
 
       {headerExtra}
 
-      {/* Main game area — the numpad sits in its chosen position at every
-          breakpoint: "bottom" stacks a full-width digit row under the board,
-          "left"/"right" place a vertical column beside it. Keeping the layout
-          identical on mobile and desktop means dragging a digit toward the
-          board is always a perpendicular gesture. */}
       <div
-        className={`
-          flex gap-3 w-full justify-center flex-1
-          ${position === "left" ? "flex-row items-end lg:items-center" : ""}
-          ${position === "right" ? "flex-row-reverse items-end lg:items-center" : ""}
-          ${position === "bottom" ? "flex-col items-center" : ""}
-        `}
+        className={`game-grid max-w-game flex-1 mt-3 ${boardClassName}`}
+        data-pad={position}
       >
-        {/* Side numpad (left / right positions) */}
-        {position !== "bottom" && numPad}
-        <div
-          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
-        >
-          <div className="flex flex-col items-center gap-3 w-full">
-            {controls}
-          </div>
-          <div
-            style={{
-              width:
-                position === "bottom"
-                  ? "calc(100% + 1rem)"
-                  : "calc(100% + 0.5rem)",
-            }}
-            className={`flex justify-center lg:!w-full lg:mx-0 ${
-              position === "bottom"
-                ? "-mx-2"
-                : position === "left"
-                  ? "-mr-2"
-                  : "-ml-2"
-            }`}
-          >
+        {/* The board is square, so its width is also its height budget.
+            Capping against the viewport height keeps a wide desktop column
+            from growing a board that pushes the number pad off-screen. */}
+        <div className="game-area-board flex justify-center">
+          <div className="w-full max-w-[min(100%,calc(100dvh-13rem))]">
             {board}
           </div>
-          {/* Bottom numpad — widened to span the board on mobile, where the
-              board itself runs edge-to-edge; reset to the board width on
-              desktop where the board is capped. */}
-          {position === "bottom" && (
-            <div className="flex justify-center -mx-2 w-[calc(100%+1rem)] lg:mx-0 lg:w-full">
-              {numPad}
-            </div>
-          )}
         </div>
+
+        <div className="game-rail">{controls}</div>
+
+        <div className="game-area-pad flex justify-center">{numPad}</div>
       </div>
 
       {footer}
@@ -162,7 +131,7 @@ function SettingsButton({
   }, [open]);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <button
         type="button"
         className="icon-btn w-10 h-10 touch-manipulation"
@@ -173,39 +142,52 @@ function SettingsButton({
         <Settings size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-text-muted font-medium">
-              Numpad position
-            </p>
+        <div className="absolute right-0 top-full mt-2 card p-4 z-50 animate-fade-in w-[19rem] max-w-[calc(100vw-1.5rem)]">
+          <div className="flex items-center justify-between mb-3">
+            <p className="label">Settings</p>
             <button
               type="button"
-              className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-text-primary transition-colors"
               onClick={() => setOpen(false)}
               aria-label="Close settings"
             >
               <X size={14} aria-hidden="true" />
             </button>
           </div>
-          <NumPadPositionToggle
-            position={position}
-            onChange={onPositionChange}
-          />
-          <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
-            <p className="text-xs text-text-muted font-medium">Dark mode</p>
+
+          <SettingsRow label="Number pad">
+            <NumPadPositionToggle
+              position={position}
+              onChange={onPositionChange}
+            />
+          </SettingsRow>
+
+          <SettingsRow label="Dark mode">
             <DarkModeToggle
               isDark={darkMode.isDark}
               onToggle={darkMode.toggle}
             />
+          </SettingsRow>
+
+          {extra && <div className="pt-3">{extra}</div>}
+
+          {/* Gestures. The number pad carries three distinct actions and
+              nothing on the pad itself can explain them without shouting;
+              this is where a player goes looking. */}
+          <div className="mt-3 pt-3 border-t border-border-default">
+            <p className="label mb-2">Number pad gestures</p>
+            <dl className="grid grid-cols-[3.25rem_1fr] gap-x-3 gap-y-1.5 text-xs">
+              <Gesture verb="Tap" meaning="enter the digit" />
+              <Gesture verb="Hold" meaning="add a pencil note" />
+              <Gesture verb="Drag" meaning="drop onto any cell" />
+              <Gesture verb="Slide" meaning="skim across digits" />
+            </dl>
           </div>
-          {extra && (
-            <div className="mt-3 pt-3 border-t border-border-default">
-              {extra}
-            </div>
-          )}
+
           <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
-            <p className="text-xs text-text-muted mb-2 font-medium">
-              Keyboard shortcuts
+            <p className="label mb-2 flex items-center gap-1.5">
+              <Keyboard size={13} aria-hidden="true" />
+              Keyboard
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
               {KEYBOARD_SHORTCUTS.map((s) => (
@@ -219,10 +201,34 @@ function SettingsButton({
   );
 }
 
+function SettingsRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 border-t border-border-default first-of-type:border-t-0">
+      <p className="text-sm font-medium text-text-secondary">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+function Gesture({ verb, meaning }: { verb: string; meaning: string }) {
+  return (
+    <>
+      <dt className="font-semibold text-text-primary">{verb}</dt>
+      <dd className="text-text-muted">{meaning}</dd>
+    </>
+  );
+}
+
 function Shortcut({ keys, label }: { keys: string; label: string }) {
   return (
     <>
-      <kbd className="font-mono text-text-primary bg-bg-raised px-1 rounded text-center">
+      <kbd className="font-mono text-text-primary bg-bg-raised border border-border-default px-1.5 rounded text-center">
         {keys}
       </kbd>
       <span className="text-text-muted">{label}</span>

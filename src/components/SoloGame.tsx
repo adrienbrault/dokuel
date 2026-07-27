@@ -257,18 +257,18 @@ export function SoloGame({
           )}
         </div>
       }
+      headerExtra={
+        game.activeHint ? (
+          <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
+        ) : undefined
+      }
       controls={
-        <>
-          {game.activeHint && (
-            <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
-          )}
-          <GameControls
-            onErase={game.erase}
-            onUndo={game.undo}
-            historyLength={game.historyLength}
-            onHint={game.hint}
-          />
-        </>
+        <GameControls
+          onErase={game.erase}
+          onUndo={game.undo}
+          historyLength={game.historyLength}
+          onHint={game.hint}
+        />
       }
       footer={
         showResult ? (

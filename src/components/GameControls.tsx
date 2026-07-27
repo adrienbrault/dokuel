@@ -8,6 +8,12 @@ type GameControlsProps = {
   onHint?: (() => void) | undefined;
 };
 
+/**
+ * Undo / Erase / Hint. Lives in GameLayout's rail, which is a horizontal
+ * strip between the board and the number pad on a phone and a vertical
+ * column beside the board on desktop — so these lay themselves out along
+ * whichever axis the rail is using.
+ */
 export function GameControls({
   onErase,
   onUndo,
@@ -15,11 +21,12 @@ export function GameControls({
   onHint,
 }: GameControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex flex-row lg:flex-col items-stretch justify-center gap-2 w-full">
       <ControlButton
         label="Undo"
         onClick={onUndo}
         disabled={!historyLength || historyLength === 0}
+        badge={historyLength ? String(historyLength) : undefined}
       >
         <Undo2 size={17} strokeWidth={2.25} aria-hidden="true" />
       </ControlButton>
@@ -39,27 +46,37 @@ function ControlButton({
   label,
   onClick,
   disabled,
+  badge,
   children,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean | undefined;
+  badge?: string | undefined;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
+      className={`relative flex flex-1 lg:flex-none items-center justify-center lg:justify-start gap-2 px-3.5 lg:px-3 h-11 rounded-control border border-border-default bg-surface select-none touch-manipulation transition-colors ${
         disabled
-          ? "text-text-disabled opacity-50 cursor-default"
-          : "text-text-secondary hover:bg-surface-hover press-spring-soft"
+          ? "text-text-disabled opacity-60 cursor-default"
+          : "text-text-secondary hover:bg-surface-hover hover:text-text-primary press-spring-soft"
       }`}
       onClick={onClick}
       aria-label={label}
     >
       <span aria-hidden="true">{children}</span>
-      <span className="text-xs font-semibold leading-none">{label}</span>
+      <span className="text-sm font-semibold leading-none">{label}</span>
+      {badge && (
+        <span
+          className="ml-auto hidden lg:inline-block text-[0.6875rem] font-bold tabular-nums text-text-muted"
+          aria-hidden="true"
+        >
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
