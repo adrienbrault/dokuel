@@ -265,7 +265,7 @@ export function NumPad({
     >
       {/* Legend: one-liner for the horizontal pad, stacked words for sides */}
       <p
-        className={`text-[0.625rem] lg:text-xs text-text-muted leading-tight select-none ${isVertical ? "text-center whitespace-pre-line" : ""}`}
+        className={`font-mono text-[0.625rem] lg:text-xs tracking-[0.02em] text-text-muted leading-tight select-none ${isVertical ? "text-center whitespace-pre-line" : ""}`}
         aria-hidden="true"
       >
         {isVertical
@@ -293,7 +293,7 @@ export function NumPad({
               type="button"
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
+              className={`relative flex flex-col items-center justify-center rounded-[10px] select-none touch-none ${isVertical ? "h-11 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent border border-transparent translate-y-px shadow-[0_1px_0_oklch(0.3_0.14_264/0.5)]" : "keycap"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={() => endPress(true)}
@@ -306,10 +306,12 @@ export function NumPad({
                   : `${n}${isSelected ? ", selected" : ""}`
               }
             >
-              <span className="text-lg lg:text-2xl leading-none">{n}</span>
+              <span className="text-xl lg:text-2xl leading-none font-semibold">
+                {n}
+              </span>
               {showRemainingCounts && (
                 <span
-                  className={`text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
+                  className={`font-mono text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : remaining === 1 ? "text-accent" : "text-text-muted"}`}
                 >
                   {remaining}
                 </span>
