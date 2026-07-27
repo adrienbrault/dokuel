@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { countSolutions, solve } from "./solver.ts";
+import {
+  countSolutions,
+  digPuzzle,
+  generateSolvedGrid,
+  solve,
+} from "./solver.ts";
 
 // The canonical Wikipedia example puzzle — unique solution, verified by hand.
 const WIKI_PUZZLE =
@@ -56,5 +61,75 @@ describe("countSolutions", () => {
 
   it("returns 1 for a fully solved grid", () => {
     expect(countSolutions(WIKI_SOLUTION)).toBe(1);
+  });
+});
+
+function seededRng(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) | 0;
+    return (state >>> 0) / 0x100000000;
+  };
+}
+
+describe("generateSolvedGrid", () => {
+  it("produces a complete valid grid", () => {
+    const grid = generateSolvedGrid(seededRng(1));
+    expect(grid).toMatch(/^[1-9]{81}$/);
+    expect(countSolutions(grid)).toBe(1);
+  });
+
+  it("is deterministic for the same rng seed", () => {
+    expect(generateSolvedGrid(seededRng(42))).toBe(
+      generateSolvedGrid(seededRng(42)),
+    );
+  });
+
+  it("produces different grids for different seeds", () => {
+    expect(generateSolvedGrid(seededRng(1))).not.toBe(
+      generateSolvedGrid(seededRng(2)),
+    );
+  });
+});
+
+describe("digPuzzle", () => {
+  const solved = generateSolvedGrid(seededRng(7));
+
+  it("keeps every remaining clue equal to the solved grid", () => {
+    const puzzle = digPuzzle(solved, 40, seededRng(7));
+    for (let i = 0; i < 81; i++) {
+      if (puzzle[i] !== ".") {
+        expect(puzzle[i]).toBe(solved[i]);
+      }
+    }
+  });
+
+  it("stops at the target clue count when reachable", () => {
+    const puzzle = digPuzzle(solved, 40, seededRng(7));
+    expect(puzzle.replace(/\./g, "").length).toBe(40);
+  });
+
+  it("always preserves solution uniqueness", () => {
+    for (let seed = 1; seed <= 5; seed++) {
+      const grid = generateSolvedGrid(seededRng(seed));
+      const puzzle = digPuzzle(grid, 17, seededRng(seed + 100));
+      expect(countSolutions(puzzle)).toBe(1);
+    }
+  });
+
+  it("digs to a minimal puzzle when the target is unreachable", () => {
+    // 17 clues is the theoretical minimum for uniqueness; random digging
+    // exhausts well above it but must stay unique and above the floor.
+    const puzzle = digPuzzle(solved, 0, seededRng(3));
+    const clues = puzzle.replace(/\./g, "").length;
+    expect(clues).toBeGreaterThanOrEqual(17);
+    expect(clues).toBeLessThan(35);
+    expect(countSolutions(puzzle)).toBe(1);
+  });
+
+  it("is deterministic for the same rng seed", () => {
+    expect(digPuzzle(solved, 30, seededRng(9))).toBe(
+      digPuzzle(solved, 30, seededRng(9)),
+    );
   });
 });
