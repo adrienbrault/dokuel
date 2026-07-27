@@ -200,8 +200,15 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 - **Component classes** defined in `src/index.css` — use `btn btn-lg btn-primary`, `card`, `heading`, `screen`, `modal-overlay`, etc.
 - **Never hardcode `dark:` for common text/bg colors** — use semantic tokens so dark mode is handled in one place
 - **Override with Tailwind** when needed — e.g., `btn btn-primary w-full` adds width on top of the base class
-- **Token reference**: surfaces (`bg-primary`, `bg-inset`, `bg-raised`, `bg-overlay`), text (`text-primary`, `text-secondary`, `text-muted`, `text-on-accent`), borders (`border-default`), interactive (`bg-disabled`, `text-disabled`)
-- **Class reference**: buttons (`btn`, `btn-lg`, `btn-md`, `btn-primary`, `btn-secondary`, `btn-ghost`), surfaces (`card`, `modal-overlay`, `modal-panel`, `screen`, `screen-content`), typography (`heading-xl`, `heading`, `label`, `caption`, `text-mono`)
+- **Token reference**: surfaces (`bg-primary`, `bg-inset`, `bg-raised`, `bg-overlay`, `surface`, `surface-hover`), text (`text-primary`, `text-secondary`, `text-muted`, `text-on-accent`, `text-on-accent-muted`), borders (`border-default`, `border-strong`), interactive (`bg-disabled`, `text-disabled`)
+- **Class reference**: buttons (`btn`, `btn-lg`, `btn-md`, `btn-primary`, `btn-secondary`, `btn-ghost`), surfaces (`card`, `modal-overlay`, `modal-panel`, `screen`, `screen-content`), inputs (`field`), pills (`chip`), typography (`heading-xl`, `heading`, `label`, `caption`, `text-mono`)
+- **Scales, not literals**: radius (`rounded-field/control/panel/sheet`), motion (`--duration-fast/base/slow`, `--ease-spring/out-soft`), elevation (`var(--elevation-1..4)`, `var(--elevation-accent)`). Reach for these instead of writing a one-off `box-shadow` or `0.15s` — elevation in particular adapts per colour scheme.
+- **Two accent tokens, not one**:
+  - `accent` is the **foreground** ramp — entered digits, icons, links, thin graphics. Dark mode lifts it so it reads against a dark page.
+  - `accent-surface` is the **background** behind `text-on-accent` — primary buttons, the active numpad key, the active segment. Identical in both schemes and fixed at a lightness where white clears AA.
+  - Putting `text-on-accent` over `bg-accent` is the bug this split exists to prevent; it measured 2.4:1 in dark mode.
+- **Contrast is enforced**: `src/lib/contrast.test.ts` parses the tokens out of `index.css` and fails if a text/background pair drops below WCAG AA in either scheme. Add a case there when introducing a new pairing.
+- **Never use translucent text on a coloured fill** (`text-text-on-accent/70`) — the composite never reaches AA. Use `text-text-on-accent-muted`.
 
 ### State Management
 - React hooks (useState, useReducer) — no external state library
@@ -233,8 +240,8 @@ bun run e2e                 # Run all Playwright tests
 
 ### Agent-friendly contact sheets
 `bun run screenshots` writes 14 combined sheets under `e2e/screenshots/combined/`
-alongside the 72 individual PNGs. **Read these first** — they let you scan the
-whole app in a handful of images instead of opening 72 PNGs one at a time, with
+alongside the individual PNGs. **Read these first** — they let you scan the
+whole app in a handful of images instead of opening every PNG one at a time, with
 cells big enough to read button text and sudoku digits after vision-pipeline
 downscaling:
 
@@ -270,6 +277,14 @@ true`, so a preview server you already have running is reused).
 
 ### Adding New Screenshot Tests
 When adding new screens or significant UI features, add a test case to `e2e/screenshots.spec.ts` that navigates to the new screen and captures it. Each test saves PNGs named `{screen}--{device}.png`.
+
+**Drive the real app — never inject markup.** Several scenes used to build their
+subject with `page.evaluate` + `innerHTML`, and every one of them silently
+drifted away from the component it claimed to show: stale classes, a layout the
+app never rendered, and in two cases an anchor selector that stopped matching so
+the screenshot captured nothing at all while still passing. Reach the state the
+way a player does — seed `localStorage` via the `storage` fixture and navigate —
+so the screenshot tracks the component automatically.
 
 ### Key Principle
 You cannot judge visual quality from code alone. **Always screenshot, always review the images.** This catches: misalignment, overflow, wrong spacing, broken responsive layouts, elements off-screen, text truncation, and more.
