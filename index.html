@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- No maximum-scale / user-scalable=no: blocking pinch-zoom fails WCAG
+         1.4.4, and this app renders 10px labels and ~20px board digits on a
+         small phone. The double-tap-zoom delay those were guarding against
+         is already handled by `touch-action: manipulation` on <html> and
+         `touch-none` on the board grid. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="Race a friend in real-time 1v1 sudoku — or play solo. Free, no account needed. Daily challenges, 4 difficulty levels, dark mode. Works on any device." />
