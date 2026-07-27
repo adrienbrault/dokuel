@@ -283,9 +283,7 @@ function MultiplayerDifficultyStats({
 }
 
 function RecentMatchRow({ match }: { match: MultiplayerGameRecord }) {
-  const outcomeColor = match.won
-    ? "text-success"
-    : "text-cell-conflict";
+  const outcomeColor = match.won ? "text-success" : "text-cell-conflict";
   return (
     <li className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="flex flex-col min-w-0">
