@@ -169,8 +169,10 @@ describe("useYjsMultiplayer", () => {
 
     const puzzle = doc.getMap("room").get("puzzle") as string;
     expect(puzzle).toBeTruthy();
+    // Expert digs to a minimal puzzle (~22-28 clues) — well below the
+    // easy band (36-45) the local prop would have produced.
     expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(21);
+    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
   });
 
   it("setDifficulty updates the Yjs room difficulty", async () => {
@@ -296,8 +298,10 @@ describe("useYjsMultiplayer", () => {
     });
 
     const puzzle = doc.getMap("room").get("puzzle") as string;
+    // Expert digs to a minimal puzzle (~22-28 clues) — well below the
+    // easy band (36-45) the local prop would have produced.
     expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(21);
+    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
   });
 
   it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {

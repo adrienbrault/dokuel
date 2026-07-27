@@ -1,4 +1,4 @@
-import { generatePuzzle, solvePuzzle } from "./sudoku.ts";
+import { generatePuzzleWithSolution } from "./sudoku.ts";
 import type { Difficulty } from "./types.ts";
 
 function hashCode(str: string): number {
@@ -23,15 +23,6 @@ export function getDailyPuzzle(
 ): { puzzle: string; solution: string; date: string } {
   const seed = hashCode(`sudoku-daily-${date}-${difficulty}`);
   const rng = seededRandom(seed);
-
-  // Override Math.random temporarily for deterministic generation
-  const originalRandom = Math.random;
-  Math.random = rng;
-  try {
-    const puzzle = generatePuzzle(difficulty);
-    const solution = solvePuzzle(puzzle);
-    return { puzzle, solution, date };
-  } finally {
-    Math.random = originalRandom;
-  }
+  const { puzzle, solution } = generatePuzzleWithSolution(difficulty, rng);
+  return { puzzle, solution, date };
 }

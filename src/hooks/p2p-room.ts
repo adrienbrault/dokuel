@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
+import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -107,8 +107,7 @@ export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
   const roomMap = room.doc.getMap("room");
   const actualDifficulty =
     difficulty ?? ((roomMap.get("difficulty") as Difficulty) || "medium");
-  const puzzle = generatePuzzle(actualDifficulty);
-  const solution = solvePuzzle(puzzle);
+  const { puzzle, solution } = generatePuzzleWithSolution(actualDifficulty);
   const clueCount = puzzle.split("").filter((c) => c !== ".").length;
 
   room.doc.transact(() => {

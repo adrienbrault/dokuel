@@ -115,7 +115,7 @@ describe("solvePuzzle", () => {
   });
 
   it("solution contains all digits 1-9 in each row", () => {
-    const solution = solvePuzzle(KNOWN_PUZZLE);
+    const solution = solvePuzzle(KNOWN_PUZZLE)!;
     for (let row = 0; row < 9; row++) {
       const digits = solution.slice(row * 9, row * 9 + 9).split("");
       expect(new Set(digits).size).toBe(9);
@@ -123,7 +123,7 @@ describe("solvePuzzle", () => {
   });
 
   it("solution contains all digits 1-9 in each column", () => {
-    const solution = solvePuzzle(KNOWN_PUZZLE);
+    const solution = solvePuzzle(KNOWN_PUZZLE)!;
     for (let col = 0; col < 9; col++) {
       const digits: string[] = [];
       for (let row = 0; row < 9; row++) {
@@ -134,7 +134,7 @@ describe("solvePuzzle", () => {
   });
 
   it("preserves given clues from the puzzle", () => {
-    const solution = solvePuzzle(KNOWN_PUZZLE);
+    const solution = solvePuzzle(KNOWN_PUZZLE)!;
     for (let i = 0; i < 81; i++) {
       if (KNOWN_PUZZLE[i] !== ".") {
         expect(solution[i]).toBe(KNOWN_PUZZLE[i]);

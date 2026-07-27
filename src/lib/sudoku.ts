@@ -1,54 +1,88 @@
-import * as sudokuLib from "sudoku";
+import { digPuzzle, generateSolvedGrid, type Rng, solve } from "./solver.ts";
 import type { Board, Cell, Difficulty } from "./types.ts";
 
-const DIFFICULTY_CLUES: Record<Difficulty, { min: number; max: number }> = {
+// Bands reflect what uniqueness-preserving digging can actually reach:
+// random digging exhausts at roughly 22-28 clues, so expert digs to a
+// minimal puzzle (every remaining clue is necessary) instead of chasing
+// a fixed count near the theoretical 17-clue floor.
+const DIFFICULTY_CLUES: Record<
+  Exclude<Difficulty, "expert">,
+  { min: number; max: number }
+> = {
   easy: { min: 36, max: 45 },
   medium: { min: 28, max: 35 },
-  hard: { min: 22, max: 27 },
-  expert: { min: 17, max: 21 },
+  hard: { min: 24, max: 27 },
 };
 
-export function generatePuzzle(difficulty: Difficulty): string {
-  const { min, max } = DIFFICULTY_CLUES[difficulty];
-  const targetClues = min + Math.floor(Math.random() * (max - min + 1));
+const MAX_ATTEMPTS = 4;
+const EXPERT_ATTEMPTS = 3;
 
-  const raw = sudokuLib.makepuzzle() as (number | null)[];
-  const solution = sudokuLib.solvepuzzle(raw) as number[];
-
-  const givenIndices: number[] = [];
-  const emptyIndices: number[] = [];
+function countClues(puzzle: string): number {
+  let clues = 0;
   for (let i = 0; i < 81; i++) {
-    if (raw[i] !== null) {
-      givenIndices.push(i);
-    } else {
-      emptyIndices.push(i);
-    }
+    if (puzzle[i] !== ".") clues++;
   }
-
-  // Remove clues if we have too many
-  while (givenIndices.length > targetClues) {
-    const removeIdx = Math.floor(Math.random() * givenIndices.length);
-    const cellIdx = givenIndices[removeIdx]!;
-    raw[cellIdx] = null;
-    givenIndices.splice(removeIdx, 1);
-  }
-
-  // Add clues from solution if we have too few
-  while (givenIndices.length < targetClues && emptyIndices.length > 0) {
-    const addIdx = Math.floor(Math.random() * emptyIndices.length);
-    const cellIdx = emptyIndices[addIdx]!;
-    raw[cellIdx] = solution[cellIdx]!;
-    givenIndices.push(cellIdx);
-    emptyIndices.splice(addIdx, 1);
-  }
-
-  return raw.map((v) => (v === null ? "." : String(v + 1))).join("");
+  return clues;
 }
 
-export function solvePuzzle(puzzle: string): string {
-  const raw = puzzle.split("").map((c) => (c === "." ? null : Number(c) - 1));
-  const solution = sudokuLib.solvepuzzle(raw) as number[];
-  return solution.map((v) => String(v + 1)).join("");
+/**
+ * Generate a puzzle together with the solved grid it was dug from.
+ * Every puzzle has exactly one solution by construction — digPuzzle
+ * re-verifies uniqueness after each clue removal — so the returned
+ * solution is THE solution, safe for error-highlighting and hints.
+ */
+export function generatePuzzleWithSolution(
+  difficulty: Difficulty,
+  rng: Rng = Math.random,
+): { puzzle: string; solution: string } {
+  if (difficulty === "expert") {
+    // Minimal puzzles: dig each grid to exhaustion, keep the sparsest.
+    let best: { puzzle: string; solution: string } | null = null;
+    let bestClues = 82;
+    for (let attempt = 0; attempt < EXPERT_ATTEMPTS; attempt++) {
+      const solution = generateSolvedGrid(rng);
+      const puzzle = digPuzzle(solution, 17, rng);
+      const clues = countClues(puzzle);
+      if (clues < bestClues) {
+        best = { puzzle, solution };
+        bestClues = clues;
+      }
+    }
+    return best!;
+  }
+
+  const { min, max } = DIFFICULTY_CLUES[difficulty];
+  const target = min + Math.floor(rng() * (max - min + 1));
+  let best: { puzzle: string; solution: string } | null = null;
+  let bestClues = 82;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const solution = generateSolvedGrid(rng);
+    const puzzle = digPuzzle(solution, target, rng);
+    const clues = countClues(puzzle);
+    if (clues < bestClues) {
+      best = { puzzle, solution };
+      bestClues = clues;
+    }
+    // Digging stops exactly at the target unless it exhausted above it.
+    if (clues <= target) break;
+  }
+  return best!;
+}
+
+export function generatePuzzle(
+  difficulty: Difficulty,
+  rng: Rng = Math.random,
+): string {
+  return generatePuzzleWithSolution(difficulty, rng).puzzle;
+}
+
+/**
+ * Solve an arbitrary puzzle string. Returns null when the input is
+ * malformed or unsolvable — callers treat that as a corrupt save or
+ * corrupt room state, never as a crash.
+ */
+export function solvePuzzle(puzzle: string): string | null {
+  return solve(puzzle);
 }
 
 export function parsePuzzle(puzzle: string): Board {
