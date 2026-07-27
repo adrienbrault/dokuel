@@ -21,10 +21,11 @@ export const DIFFICULTY_CLUES: Record<
 };
 
 // How many minimal puzzles to draw looking for one already inside the
-// target band. Only Expert and Hard can miss (a draw sparser than the
-// band cannot be thinned without breaking uniqueness), and the miss
-// rate is low, so a handful of draws is plenty. Bounded so generation
-// stays fast even in the unlucky tail.
+// target band. Only Expert can miss: every other band tops out at or
+// above the ~28 clues makepuzzle() produces at its densest, so their
+// first draw always fits. Bounded so generation stays fast even in the
+// unlucky tail — an over-band draw is still uniquely solvable, just
+// slightly easier than asked for.
 const MAX_DRAWS = 8;
 
 function countClues(raw: (number | null)[]): number {
