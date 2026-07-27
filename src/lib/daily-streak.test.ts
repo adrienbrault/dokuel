@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getDailyStreak,
   isDailyCompleted,
@@ -53,6 +53,45 @@ describe("daily-streak", () => {
       expect(result.currentStreak).toBe(2);
       expect(result.lastCompletedDate).toBe("2026-03-08");
       expect(result.longestStreak).toBe(2);
+    });
+
+    // Days are calendar days, not 24-hour spans. A local-time
+    // millisecond delta makes a spring-forward day 23h and a fall-back
+    // day 25h, which silently ended the streak of every player in a
+    // DST-observing timezone twice a year.
+    describe.each([
+      {
+        zone: "Europe/Paris",
+        label: "spring forward",
+        days: ["2026-03-29", "2026-03-30"],
+      },
+      {
+        zone: "Europe/Paris",
+        label: "fall back",
+        days: ["2026-10-25", "2026-10-26"],
+      },
+      {
+        zone: "America/Los_Angeles",
+        label: "spring forward",
+        days: ["2026-03-08", "2026-03-09"],
+      },
+      {
+        zone: "America/Los_Angeles",
+        label: "fall back",
+        days: ["2026-11-01", "2026-11-02"],
+      },
+    ])("across $zone $label", ({ zone, days }) => {
+      beforeEach(() => {
+        vi.stubEnv("TZ", zone);
+      });
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      it("continues the streak", () => {
+        recordDailyCompletion(days[0]!);
+        expect(recordDailyCompletion(days[1]!).currentStreak).toBe(2);
+      });
     });
 
     it("is a no-op on same day", () => {
