@@ -55,6 +55,7 @@ const NOUNS = [
 ];
 
 // No 0/1/i/l/o — codes get read aloud and hand-copied.
+// biome-ignore lint/security/noSecrets: an alphabet, not a credential
 const SUFFIX_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 const SUFFIX_LENGTH = 4;
 
