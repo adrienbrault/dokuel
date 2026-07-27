@@ -68,7 +68,6 @@ const DEVICE_PARTS: { part: string; title: string; scenes: string[] }[] = [
 			"multiplayer-progress-bars",
 			"multiplayer-progress-bars-dark",
 			"multiplayer-progress-hidden",
-			"multiplayer-settings-toggle",
 		],
 	},
 ];
@@ -110,7 +109,6 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
 			"multiplayer-progress-bars",
 			"multiplayer-progress-bars-dark",
 			"multiplayer-progress-hidden",
-			"multiplayer-settings-toggle",
 		],
 	},
 	{
