@@ -176,10 +176,11 @@ export function SoloGame({
       settingsExtra={
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       }
+      progressPercent={Math.round(((81 - game.cellsRemaining) / 81) * 100)}
       timer={
         <button
           type="button"
-          className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm press-spring-soft touch-manipulation"
+          className="flex flex-col items-center px-4 py-1 rounded-[10px] press-spring-soft touch-manipulation"
           onClick={() => game.status === "playing" && setPaused((p) => !p)}
           aria-label={paused ? "Resume" : "Pause"}
         >
@@ -189,16 +190,14 @@ export function SoloGame({
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
+            className="font-mono text-[1.35rem] tracking-[0.04em] tabular-nums text-text-primary leading-none"
           />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
+          <span className="font-mono text-[0.6875rem] text-text-muted tabular-nums mt-1">
             {paused ? (
               "Paused"
             ) : (
               <>
-                <span className="text-accent font-medium">
-                  {81 - game.cellsRemaining}
-                </span>
+                <span className="text-accent">{81 - game.cellsRemaining}</span>
                 /81
                 {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
               </>

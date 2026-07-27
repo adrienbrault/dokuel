@@ -27,6 +27,11 @@ type GameLayoutProps = {
   headerClassName?: string | undefined;
   onDeselectCell?: (() => void) | undefined;
   settingsExtra?: ReactNode | undefined;
+  /**
+   * Fill of the masthead rule, 0–100. When set, a thin cobalt line
+   * inks along the header's hairline as the puzzle fills in.
+   */
+  progressPercent?: number | undefined;
 };
 
 export function GameLayout({
@@ -44,6 +49,7 @@ export function GameLayout({
   headerClassName = "max-w-lg",
   onDeselectCell,
   settingsExtra,
+  progressPercent,
 }: GameLayoutProps) {
   const handleBackgroundPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (!onDeselectCell) return;
@@ -58,12 +64,16 @@ export function GameLayout({
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
-        <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
+        <p className="font-mono text-xs tracking-[0.08em] uppercase text-text-muted mb-2">
+          {title}
+        </p>
       )}
 
-      {/* Header */}
+      {/* Masthead — back, timer, and settings sit on a single hairline
+          rule like a newspaper folio; the rule doubles as a progress
+          bar, inking in as the puzzle fills. */}
       <div
-        className={`flex items-center justify-between w-full ${headerClassName} mb-4`}
+        className={`relative flex items-center justify-between w-full ${headerClassName} pb-2.5 border-b border-border-default mb-4`}
       >
         <button
           type="button"
@@ -79,6 +89,13 @@ export function GameLayout({
           onPositionChange={onPositionChange}
           extra={settingsExtra}
         />
+        {progressPercent !== undefined && (
+          <span
+            aria-hidden="true"
+            className="absolute left-0 -bottom-px h-[2px] rounded-full bg-accent transition-[width] duration-500 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        )}
       </div>
 
       {headerExtra}
