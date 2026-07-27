@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBoardKeyboard } from "../hooks/useBoardKeyboard.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
-import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
@@ -93,16 +93,6 @@ export function SoloGame({
     [showResult, difficulty, assistLevel],
   );
 
-  // Keyboard digit follows the current notesMode flag (N toggles it),
-  // preserving the established "press N then 1" pencil-mark workflow.
-  const handleKeyboardNumber = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      const wasNoteMode = game.notesMode;
-      game.placeNumber(n, assistLevel !== "paper");
-      if (wasNoteMode) game.deselectCell();
-    }
-  };
-
   // Touch numpad: a quick tap commits the value into the selected empty
   // cell; on a filled cell it highlights the digit instead, and a hold
   // adds a pencil note (see useDigitHighlight). With no cell selected, a
@@ -155,14 +145,9 @@ export function SoloGame({
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [game.status]);
 
-  useKeyboard({
-    selectedCell: game.selectedCell,
-    onSelectCell: game.selectCell,
-    onDeselectCell: game.deselectCell,
-    onPlaceNumber: handleKeyboardNumber,
-    onErase: game.erase,
-    onUndo: game.undo,
-    onToggleNotes: game.toggleNotesMode,
+  useBoardKeyboard({
+    game,
+    autoEliminateNotes: assistLevel !== "paper",
     enabled: game.status === "playing" && !paused,
   });
 
