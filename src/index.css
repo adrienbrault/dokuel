@@ -693,8 +693,11 @@ body {
   );
   animation: screen-enter var(--duration-base) ease-out;
 }
+/* Menu screens are a single centred column. It widens once past a phone
+   so a tablet is not showing a 24rem strip down the middle of 768px, but
+   stays a readable measure rather than stretching to the viewport. */
 .screen-content {
-  @apply flex flex-col items-center w-full max-w-sm px-6;
+  @apply flex flex-col items-center w-full max-w-sm sm:max-w-md px-6;
 }
 
 /* Icon chip — rounded square that holds an icon inside menu rows */

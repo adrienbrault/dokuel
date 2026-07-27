@@ -110,7 +110,7 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
                   {d.clues}
                 </span>
               </span>
-              <span className="block caption truncate">{d.description}</span>
+              <span className="block caption">{d.description}</span>
             </span>
             <ChevronRight
               size={18}
