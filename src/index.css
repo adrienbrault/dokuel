@@ -696,11 +696,15 @@ body {
 }
 .modal-overlay {
   @apply fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md;
+  /* A tall panel on a short phone has to scroll, or its last row is simply
+     cut off by the viewport — on an iPhone SE the result panel's footer
+     was below the fold with no way to reach it. */
+  @apply overflow-y-auto overscroll-contain;
   background-color: oklch(0.16 0.02 275 / 0.55);
   animation: modal-backdrop-in var(--duration-base) ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-surface border border-border-default p-7;
+  @apply flex flex-col items-center gap-6 bg-surface border border-border-default p-7 my-auto;
   border-radius: var(--radius-sheet);
   box-shadow: var(--elevation-4);
   animation: modal-content-in 0.25s var(--ease-spring);
