@@ -84,6 +84,14 @@ export function SoloGame({
   );
   const personalBest = priorStats?.bestTime ?? null;
 
+  // Re-read once the result panel is due. The win has been written to
+  // storage by then, so the panel reports totals that include this game —
+  // reusing priorStats would tell a first-time winner they have played 0.
+  const resultStats = useMemo(
+    () => (showResult ? getStatsForDifficulty(difficulty, assistLevel) : null),
+    [showResult, difficulty, assistLevel],
+  );
+
   // Keyboard digit follows the current notesMode flag (N toggles it),
   // preserving the established "press N then 1" pencil-mark workflow.
   const handleKeyboardNumber = (n: number) => {
@@ -275,8 +283,8 @@ export function SoloGame({
             onNewGame={onBack}
             onRematch={onRematch}
             stats={
-              priorStats ?? {
-                gamesPlayed: 0,
+              resultStats ?? {
+                gamesPlayed: 1,
                 bestTime: timerSecondsRef.current,
                 averageTime: timerSecondsRef.current,
               }
