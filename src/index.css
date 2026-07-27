@@ -597,12 +597,13 @@ body {
 
 /* Buttons */
 .btn {
-  @apply rounded-2xl font-semibold select-none touch-manipulation;
+  @apply flex items-center justify-center gap-2 font-semibold select-none touch-manipulation;
+  border-radius: var(--radius-control);
   transition:
-    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.2s ease,
-    filter 0.2s ease,
-    background-color 0.2s ease;
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-base) ease,
+    filter var(--duration-base) ease,
+    background-color var(--duration-base) ease;
 }
 .btn:active {
   transform: scale(0.97);
@@ -612,8 +613,15 @@ body {
     transform: translateY(-1px);
   }
 }
+.btn:disabled {
+  @apply bg-bg-disabled text-text-disabled cursor-not-allowed;
+  background-image: none;
+  box-shadow: none;
+  transform: none;
+}
 .btn-lg {
-  @apply py-4 text-lg;
+  @apply py-3.5 text-base;
+  border-radius: var(--radius-panel);
 }
 .btn-md {
   @apply px-4 py-2.5 text-sm font-semibold;
@@ -629,7 +637,7 @@ body {
 }
 @media (hover: hover) {
   .btn-primary:hover {
-    filter: brightness(1.05);
+    filter: brightness(1.06);
   }
 }
 .btn-primary:active {
@@ -637,42 +645,49 @@ body {
 }
 .btn-secondary {
   @apply bg-surface text-text-primary border border-border-default;
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+  box-shadow: var(--elevation-1);
 }
 @media (hover: hover) {
   .btn-secondary:hover {
     background-color: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
   }
 }
 .btn-ghost {
   @apply text-sm font-medium text-text-muted;
 }
+@media (hover: hover) {
+  .btn-ghost:hover {
+    color: var(--color-text-primary);
+  }
+}
 
 /* Surfaces */
 .card {
-  @apply rounded-2xl bg-surface border border-border-default;
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.03),
-    0 8px 24px -14px oklch(0 0 0 / 0.18);
+  @apply bg-surface border border-border-default;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--elevation-2);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
-  animation: modal-backdrop-in 0.2s ease-out;
+  @apply fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md;
+  background-color: oklch(0.16 0.02 275 / 0.55);
+  animation: modal-backdrop-in var(--duration-base) ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-surface border border-border-default rounded-3xl p-8;
-  box-shadow: 0 24px 60px -16px oklch(0 0 0 / 0.4);
-  animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  @apply flex flex-col items-center gap-6 bg-surface border border-border-default p-7;
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--elevation-4);
+  animation: modal-content-in 0.25s var(--ease-spring);
 }
 .screen {
   @apply flex min-h-dvh items-center justify-center;
   background-color: var(--color-bg-primary);
   background-image: radial-gradient(
-    125% 60% at 50% -12%,
+    120% 55% at 50% -10%,
     var(--color-screen-glow),
-    transparent 62%
+    transparent 60%
   );
-  animation: screen-enter 0.2s ease-out;
+  animation: screen-enter var(--duration-base) ease-out;
 }
 .screen-content {
   @apply flex flex-col items-center w-full max-w-sm px-6;
@@ -686,10 +701,11 @@ body {
 /* Circular icon button — used for header controls (back, settings) */
 .icon-btn {
   @apply flex items-center justify-center rounded-full bg-surface border border-border-default text-text-secondary;
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+  box-shadow: var(--elevation-1);
   transition:
-    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 0.2s ease;
+    transform var(--duration-fast) var(--ease-spring),
+    color var(--duration-base) ease,
+    background-color var(--duration-base) ease;
 }
 .icon-btn:active {
   transform: scale(0.92);
@@ -697,8 +713,31 @@ body {
 @media (hover: hover) {
   .icon-btn:hover {
     background-color: var(--color-surface-hover);
+    color: var(--color-text-primary);
   }
 }
+
+/* Text field — room codes, player names */
+.field {
+  @apply w-full bg-surface border text-text-primary transition-colors;
+  border-color: var(--color-border-strong);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--elevation-1);
+}
+.field:focus {
+  @apply outline-none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-light);
+}
+.field::placeholder {
+  color: var(--color-text-disabled);
+}
+
+/* Small pill that carries a status or count */
+.chip {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
+}
+
 
 /* Typography */
 .heading-xl {
