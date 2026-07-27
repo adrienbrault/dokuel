@@ -75,11 +75,12 @@ export function Landing({
 
   return (
     <div className="screen-content gap-7 py-10 sm:gap-9">
-      <header className="flex flex-col items-center gap-2">
-        <h1 className="text-[3.25rem] leading-none font-extrabold tracking-tight bg-gradient-to-br from-text-primary to-accent bg-clip-text text-transparent">
+      <header className="flex flex-col items-center gap-3">
+        <DuelGridMark />
+        <h1 className="font-display text-[3.4rem] leading-none font-semibold tracking-[-0.01em] text-text-primary [font-variation-settings:'opsz'_72,'WONK'_1]">
           Dokuel
         </h1>
-        <p className="text-sm text-text-muted">
+        <p className="font-mono text-[0.8125rem] text-text-muted">
           1v1 sudoku duel — no account needed.
         </p>
       </header>
@@ -122,6 +123,7 @@ export function Landing({
           icon={<CalendarHeart size={20} aria-hidden="true" />}
           label="Daily Challenge"
           sublabel={dailySub}
+          iconTint="text-difficulty-medium-text"
           onClick={onDaily}
           accessory={
             completed ? (
@@ -143,12 +145,14 @@ export function Landing({
           icon={<Swords size={20} aria-hidden="true" />}
           label="Create Game"
           sublabel="Host a 1v1 room"
+          iconTint="text-difficulty-expert-text"
           onClick={onCreate}
         />
         <ActionRow
           icon={<LogIn size={20} aria-hidden="true" />}
           label="Join Game"
           sublabel="Enter a friend's room code"
+          iconTint="text-success"
           onClick={onJoin}
         />
       </div>
@@ -176,11 +180,46 @@ export function Landing({
   );
 }
 
+/* The whole brand in nine cells: a hairline sudoku box with two inks
+   claiming opposite corners — cobalt (you) vs vermilion (the rival). */
+function DuelGridMark() {
+  return (
+    <svg
+      width="30"
+      height="30"
+      viewBox="0 0 30 30"
+      fill="none"
+      aria-hidden="true"
+      className="text-text-primary"
+    >
+      <rect x="1" y="1" width="9.33" height="9.33" fill="var(--color-accent)" />
+      <rect
+        x="19.67"
+        y="19.67"
+        width="9.33"
+        height="9.33"
+        fill="var(--color-difficulty-expert)"
+      />
+      <path
+        d="M1 1h28v28H1z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.33 1v28M19.67 1v28M1 10.33h28M1 19.67h28"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-3">
       <span
-        className="icon-chip w-8 h-8 bg-accent-light text-accent"
+        className="flex items-center justify-center w-8 h-8 shrink-0 text-accent"
         aria-hidden="true"
       >
         {icon}
@@ -197,6 +236,7 @@ function ActionRow({
   onClick,
   variant,
   accessory,
+  iconTint = "text-accent",
 }: {
   icon: React.ReactNode;
   label: string;
@@ -204,6 +244,7 @@ function ActionRow({
   onClick: () => void;
   variant?: "primary" | undefined;
   accessory?: React.ReactNode;
+  iconTint?: string;
 }) {
   const primary = variant === "primary";
   return (
@@ -213,7 +254,7 @@ function ActionRow({
       onClick={onClick}
     >
       <span
-        className={`icon-chip w-11 h-11 ${primary ? "bg-white/20 text-text-on-accent" : "bg-accent-light text-accent"}`}
+        className={`icon-chip w-11 h-11 ${primary ? "bg-white/20 text-text-on-accent" : `border border-border-default bg-transparent ${iconTint}`}`}
       >
         {icon}
       </span>
@@ -302,7 +343,7 @@ function ContinueRow({
         <Trash2 size={17} aria-hidden="true" />
       </button>
       <span
-        className="absolute bottom-0 left-0 h-1 bg-accent rounded-r-full transition-all"
+        className="absolute bottom-0 left-0 h-[2px] bg-accent rounded-r-full transition-all"
         style={{ width: `${pct}%` }}
         aria-hidden="true"
       />
