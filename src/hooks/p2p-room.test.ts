@@ -73,6 +73,30 @@ describe("p2p-room", () => {
       expect(p1.get("color")).not.toBe(p2.get("color"));
     });
 
+    it("does not add a third player to a full room", () => {
+      // Spec: 1v1 rooms hold two players; a third joiner gets the
+      // "Game is full" screen. Without the cap the Start button's
+      // players.length === 2 check could never pass again.
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      joinRoom(room, "player3", "Carol");
+
+      expect(getPlayers(room)).toHaveLength(2);
+      expect(room.doc.getMap("players").has("player3")).toBe(false);
+    });
+
+    it("still recognizes an already-joined player when the room is full", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      // Re-join (e.g. reconnect) must stay a no-op, not be treated as
+      // a third player.
+      joinRoom(room, "player1", "Alice");
+
+      expect(getPlayers(room)).toHaveLength(2);
+    });
+
     it("does not claim host on join", () => {
       // Host is claimed only by initializeRoom (creator-only). joinRoom
       // never writes hostId — see the deterministic race test below

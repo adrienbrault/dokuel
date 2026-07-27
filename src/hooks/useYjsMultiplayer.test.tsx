@@ -343,6 +343,51 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomState?.players).toHaveLength(2);
   });
 
+  it("flags roomFull for a third player arriving at a full room", async () => {
+    // Seed IDB with a room that already has two other players, so the
+    // join attempt no-ops and this client learns it is the odd one out.
+    const seedDoc = new Doc();
+    const seedRoom = { doc: seedDoc, roomId: "room-full" };
+    initializeRoom(seedRoom, "p2", "medium");
+    joinRoom(seedRoom, "p2", "Bob");
+    joinRoom(seedRoom, "p3", "Carol");
+    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-full",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: null,
+      }),
+    );
+
+    await flushSync();
+    expect(result.current.roomFull).toBe(true);
+    expect(result.current.roomState?.players).toHaveLength(2);
+  });
+
+  it("does not flag roomFull for a player already in the room", async () => {
+    const seedDoc = new Doc();
+    const seedRoom = { doc: seedDoc, roomId: "room-notfull" };
+    initializeRoom(seedRoom, "p1", "medium");
+    joinRoom(seedRoom, "p1", "Alice");
+    joinRoom(seedRoom, "p2", "Bob");
+    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-notfull",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: null,
+      }),
+    );
+
+    await flushSync();
+    expect(result.current.roomFull).toBe(false);
+  });
+
   describe("win claims", () => {
     async function setupStartedGame(roomId: string) {
       const { result } = renderHook(() =>

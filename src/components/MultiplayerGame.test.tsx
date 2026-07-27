@@ -49,6 +49,7 @@ function makeMp() {
     opponentDisconnected: false,
     gameOver: null as { winnerId: string; winnerName: string } | null,
     hasStartedGame: true,
+    roomFull: false,
     error: null,
     sendStartGame: vi.fn(),
     sendProgress: vi.fn(),
@@ -78,6 +79,21 @@ function renderGame() {
     />,
   );
 }
+
+describe("MultiplayerGame full room", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+  });
+
+  it("shows the Game is full screen to an excess joiner", () => {
+    mockMp.roomFull = true;
+    mockMp.hasStartedGame = false;
+    renderGame();
+    expect(screen.getByText("Game is full")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+  });
+});
 
 describe("MultiplayerGame disconnect overlay", () => {
   beforeEach(() => {
