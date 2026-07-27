@@ -262,7 +262,7 @@ export function NumPad({
   return (
     <div
       ref={groupRef}
-      className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full"}`}
+      className={`flex gap-1.5 ${isVertical ? "flex-col w-13 lg:w-16" : "flex-row justify-center w-full"}`}
       role="group"
       aria-label="Number pad"
     >
@@ -274,14 +274,33 @@ export function NumPad({
         // the finger across skim transitions.
         const isAccented =
           pressedDigit !== null ? pressedDigit === n : isSelected;
+        const isDone = (showRemainingCounts || disableCompleted) && isComplete;
 
         return (
           <button
             key={n}
             type="button"
             data-numpad-digit={n}
-            disabled={(showRemainingCounts || disableCompleted) && isComplete}
-            className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
+            data-done={isDone ? "true" : undefined}
+            disabled={isDone}
+            className={`relative flex flex-col items-center justify-center rounded-control select-none touch-none font-bold ${
+              isVertical ? "h-12 w-13 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"
+            } ${
+              isDone
+                ? "bg-bg-inset text-text-disabled cursor-default"
+                : isAccented
+                  ? "bg-accent text-text-on-accent press-spring"
+                  : "bg-surface text-text-primary border border-border-default press-spring"
+            }`}
+            style={
+              isDone
+                ? undefined
+                : {
+                    boxShadow: isAccented
+                      ? "var(--elevation-accent)"
+                      : "var(--elevation-1)",
+                  }
+            }
             onPointerDown={handlePointerDown(n)}
             onPointerMove={handlePointerMove}
             onPointerUp={() => endPress(true)}
@@ -294,13 +313,29 @@ export function NumPad({
                 : `${n}${isSelected ? ", selected" : ""}`
             }
           >
-            <span className="text-lg lg:text-2xl leading-none">{n}</span>
-            {showRemainingCounts && (
+            <span
+              className={`text-xl lg:text-2xl leading-none ${isDone ? "opacity-35" : ""}`}
+            >
+              {n}
+            </span>
+            {/* A finished digit keeps its key rather than vanishing: a
+                hole in the row reads as a rendering bug, and "this one is
+                done" is itself useful information mid-puzzle. */}
+            {isDone ? (
               <span
-                className={`text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
-              >
-                {remaining}
-              </span>
+                className="absolute inset-x-3 h-px bg-current opacity-45"
+                aria-hidden="true"
+              />
+            ) : (
+              showRemainingCounts && (
+                <span
+                  className={`text-[0.6875rem] lg:text-xs font-semibold leading-none mt-1 tabular-nums ${
+                    isAccented ? "text-text-on-accent/75" : "text-text-muted"
+                  }`}
+                >
+                  {remaining}
+                </span>
+              )
             )}
           </button>
         );
