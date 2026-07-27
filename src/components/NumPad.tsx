@@ -261,63 +261,50 @@ export function NumPad({
 
   return (
     <div
-      className={`flex flex-col items-center gap-1 lg:gap-2 ${isVertical ? "w-12 lg:w-16" : "w-full"}`}
+      ref={groupRef}
+      className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full"}`}
+      role="group"
+      aria-label="Number pad"
     >
-      {/* Legend: one-liner for the horizontal pad, stacked words for sides */}
-      <p
-        className={`text-[0.625rem] lg:text-xs text-text-muted leading-tight select-none ${isVertical ? "text-center whitespace-pre-line" : ""}`}
-        aria-hidden="true"
-      >
-        {isVertical
-          ? "tap\nenter\n· · ·\nhold\nnote\n· · ·\ndrag\nplace"
-          : "tap = enter · hold = note · drag = place"}
-      </p>
-      <div
-        ref={groupRef}
-        className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full"}`}
-        role="group"
-        aria-label="Number pad"
-      >
-        {DIGITS.map((n) => {
-          const remaining = remainingCounts[n];
-          const isComplete = remaining === 0;
-          const isSelected = selectedValue === n;
-          // Press state overrides selectedValue so the visual follows
-          // the finger across skim transitions.
-          const isAccented =
-            pressedDigit !== null ? pressedDigit === n : isSelected;
+      {DIGITS.map((n) => {
+        const remaining = remainingCounts[n];
+        const isComplete = remaining === 0;
+        const isSelected = selectedValue === n;
+        // Press state overrides selectedValue so the visual follows
+        // the finger across skim transitions.
+        const isAccented =
+          pressedDigit !== null ? pressedDigit === n : isSelected;
 
-          return (
-            <button
-              key={n}
-              type="button"
-              data-numpad-digit={n}
-              disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
-              onPointerDown={handlePointerDown(n)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={() => endPress(true)}
-              onPointerLeave={() => endPress(false)}
-              onPointerCancel={() => endPress(false)}
-              onClick={handleClick(n)}
-              aria-label={
-                showRemainingCounts
-                  ? `${n}, ${remaining} remaining${isSelected ? ", selected" : ""}`
-                  : `${n}${isSelected ? ", selected" : ""}`
-              }
-            >
-              <span className="text-lg lg:text-2xl leading-none">{n}</span>
-              {showRemainingCounts && (
-                <span
-                  className={`text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
-                >
-                  {remaining}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+        return (
+          <button
+            key={n}
+            type="button"
+            data-numpad-digit={n}
+            disabled={(showRemainingCounts || disableCompleted) && isComplete}
+            className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
+            onPointerDown={handlePointerDown(n)}
+            onPointerMove={handlePointerMove}
+            onPointerUp={() => endPress(true)}
+            onPointerLeave={() => endPress(false)}
+            onPointerCancel={() => endPress(false)}
+            onClick={handleClick(n)}
+            aria-label={
+              showRemainingCounts
+                ? `${n}, ${remaining} remaining${isSelected ? ", selected" : ""}`
+                : `${n}${isSelected ? ", selected" : ""}`
+            }
+          >
+            <span className="text-lg lg:text-2xl leading-none">{n}</span>
+            {showRemainingCounts && (
+              <span
+                className={`text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
+              >
+                {remaining}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -194,18 +194,6 @@ describe("NumPad", () => {
     expect(onPressEnd).toHaveBeenCalled();
   });
 
-  it("renders the discoverability caption above the digits", () => {
-    render(
-      <NumPad
-        position="bottom"
-        remainingCounts={ZERO_REMAINING}
-        onTapNumber={vi.fn()}
-        onHoldNumber={vi.fn()}
-      />,
-    );
-    expect(screen.getByText(/tap = enter · hold = note/i)).toBeInTheDocument();
-  });
-
   it("starts a drag when the pan is perpendicular to the numpad axis", () => {
     const onStartDrag = vi.fn();
     const onSkimDigit = vi.fn();
