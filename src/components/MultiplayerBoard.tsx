@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBoardKeyboard } from "../hooks/useBoardKeyboard.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
@@ -183,6 +184,16 @@ export function MultiplayerBoard({
   const handlePressEnd = () => {
     setChargingDigit(null);
   };
+
+  // The settings popover advertises the keyboard shortcuts on every board;
+  // without this they did nothing in a duel, leaving a desktop player on
+  // the mouse in the one mode where being slower than the opponent is the
+  // entire cost.
+  useBoardKeyboard({
+    game,
+    autoEliminateNotes: assistLevel !== "paper",
+    enabled: game.status === "playing",
+  });
 
   // Digit drag-and-drop: drop commits the value, mirroring solo play.
   // Keyed off local status only — the loser keeps interacting until they
