@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Self-hosted DM Sans (variable). Bundled rather than fetched from Google
+   Fonts so the first paint never waits on a third-party render-blocking
+   stylesheet — and so the app works offline and in locked-down networks. */
+@import "@fontsource-variable/dm-sans";
 
 @theme {
   /* Board & cell */
@@ -150,7 +154,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  font-family: "DM Sans Variable", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
