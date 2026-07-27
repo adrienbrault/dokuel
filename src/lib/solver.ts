@@ -164,3 +164,93 @@ export function solve(puzzle: string): string | null {
   if (found === 0) return null;
   return toPuzzleString(out);
 }
+
+function shuffle<T>(items: T[], rng: Rng): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = items[i]!;
+    items[i] = items[j]!;
+    items[j] = tmp;
+  }
+  return items;
+}
+
+function fillGrid(
+  grid: Uint8Array,
+  masks: Masks,
+  cell: number,
+  rng: Rng,
+): boolean {
+  if (cell === 81) return true;
+  const r = Math.floor(cell / 9);
+  const c = cell % 9;
+  const b = boxIndex(cell);
+  const avail =
+    ALL_DIGITS & ~(masks.rows[r]! | masks.cols[c]! | masks.boxes[b]!);
+  if (avail === 0) return false;
+  const digits: number[] = [];
+  for (let v = 1; v <= 9; v++) {
+    if (avail & (1 << v)) digits.push(v);
+  }
+  shuffle(digits, rng);
+  for (const v of digits) {
+    const bit = 1 << v;
+    grid[cell] = v;
+    masks.rows[r]! |= bit;
+    masks.cols[c]! |= bit;
+    masks.boxes[b]! |= bit;
+    if (fillGrid(grid, masks, cell + 1, rng)) return true;
+    grid[cell] = 0;
+    masks.rows[r]! &= ~bit;
+    masks.cols[c]! &= ~bit;
+    masks.boxes[b]! &= ~bit;
+  }
+  return false;
+}
+
+/** Generate a complete valid grid, cell by cell with rng-shuffled digits. */
+export function generateSolvedGrid(rng: Rng = Math.random): string {
+  const grid = new Uint8Array(81);
+  const masks: Masks = {
+    rows: new Uint16Array(9),
+    cols: new Uint16Array(9),
+    boxes: new Uint16Array(9),
+  };
+  // A full backtracking fill from an empty grid always succeeds.
+  fillGrid(grid, masks, 0, rng);
+  return toPuzzleString(grid);
+}
+
+/**
+ * Remove clues from a solved grid in rng-shuffled order, keeping the
+ * puzzle uniquely solvable after every removal. Stops once targetClues
+ * is reached, or when no further clue can be removed without creating
+ * a second solution (a minimal puzzle). The result may therefore hold
+ * more clues than requested — 17 is the theoretical floor and random
+ * digging exhausts well above it.
+ */
+export function digPuzzle(
+  solved: string,
+  targetClues: number,
+  rng: Rng = Math.random,
+): string {
+  const grid = toGrid(solved);
+  if (!grid) throw new Error("digPuzzle requires a valid 81-char grid");
+
+  const positions = shuffle(
+    Array.from({ length: 81 }, (_, i) => i),
+    rng,
+  );
+  let clues = 81;
+  for (const pos of positions) {
+    if (clues <= targetClues) break;
+    const value = grid[pos]!;
+    grid[pos] = 0;
+    if (countSolutionsGrid(grid, 2) === 1) {
+      clues--;
+    } else {
+      grid[pos] = value;
+    }
+  }
+  return toPuzzleString(grid);
+}
