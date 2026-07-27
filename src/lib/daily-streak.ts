@@ -21,12 +21,24 @@ export function getDailyStreak(): DailyStreak {
   }
 }
 
-/** Check if the given date string is exactly one day after the other. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Check if the given date string is exactly one calendar day after the
+ * other. Compares in UTC so local DST transitions (23h/25h days) can't
+ * break the comparison.
+ */
 function isConsecutiveDay(prev: string, next: string): boolean {
-  const prevDate = new Date(prev + "T00:00:00");
-  const nextDate = new Date(next + "T00:00:00");
-  const diffMs = nextDate.getTime() - prevDate.getTime();
-  return diffMs === 24 * 60 * 60 * 1000;
+  const prevUtc = parseDateUTC(prev);
+  const nextUtc = parseDateUTC(next);
+  if (prevUtc === null || nextUtc === null) return false;
+  return nextUtc - prevUtc === DAY_MS;
+}
+
+function parseDateUTC(date: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return null;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
 export function recordDailyCompletion(date: string): DailyStreak {
