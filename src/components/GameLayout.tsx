@@ -8,9 +8,11 @@ import {
 } from "react";
 import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
+import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
+import { SoundToggle } from "./SoundToggle.tsx";
 
 type GameLayoutProps = {
   onBack: () => void;
@@ -118,6 +120,7 @@ function SettingsButton({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const darkMode = useDarkMode();
+  const [soundOn, setSoundOn] = useState(getSoundEnabled);
 
   useEffect(() => {
     if (!open) return;
@@ -166,6 +169,19 @@ function SettingsButton({
             <DarkModeToggle
               isDark={darkMode.isDark}
               onToggle={darkMode.toggle}
+            />
+          </SettingsRow>
+
+          {/* Sound used to be reachable only from the landing page, which
+              is the one screen that never plays any. */}
+          <SettingsRow label="Sound">
+            <SoundToggle
+              enabled={soundOn}
+              onToggle={() => {
+                const next = !soundOn;
+                setSoundOn(next);
+                setSoundEnabled(next);
+              }}
             />
           </SettingsRow>
 
