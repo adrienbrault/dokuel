@@ -38,19 +38,21 @@ export function JoinScreen({
         <input
           ref={inputRef}
           type="text"
-          placeholder="e.g. loud-duck-38"
+          inputMode="text"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="loud-duck-38"
+          aria-label="Room code"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="w-full px-4 py-3.5 rounded-2xl bg-surface border-2 border-border-default text-text-primary text-center text-lg font-mono shadow-sm transition-colors focus:border-accent focus:outline-none"
+          className="field px-4 py-3.5 text-center text-lg font-mono tracking-wide"
         />
         <button
           type="submit"
           disabled={!code.trim()}
-          className={`btn btn-lg w-full transition-all ${
-            code.trim()
-              ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled cursor-not-allowed"
-          }`}
+          className="btn btn-lg btn-primary w-full"
         >
           Join
         </button>

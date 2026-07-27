@@ -209,11 +209,7 @@ export function Lobby({
         <button
           type="button"
           disabled={!canStart}
-          className={`btn btn-lg w-full transition-all duration-100 ${
-            canStart
-              ? "btn-primary"
-              : "bg-bg-disabled text-text-disabled cursor-not-allowed"
-          }`}
+          className="btn btn-lg btn-primary w-full"
           onClick={onStart}
         >
           Start Game
