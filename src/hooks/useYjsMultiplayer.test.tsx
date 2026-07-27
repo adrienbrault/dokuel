@@ -76,9 +76,8 @@ vi.mock("y-indexeddb", () => {
 });
 
 const { useYjsMultiplayer } = await import("./useYjsMultiplayer.ts");
-const { initializeRoom, joinRoom, setDifficulty, startGame } = await import(
-  "./p2p-room.ts"
-);
+const { claimWinner, initializeRoom, joinRoom, setDifficulty, startGame } =
+  await import("./p2p-room.ts");
 
 // Flush the whenSynced microtask + resulting React effect so post-sync
 // init has run before tests assert on state.
@@ -342,6 +341,93 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomState?.gameNumber).toBe(seedGameNumber);
     expect(result.current.roomState?.status).toBe("playing");
     expect(result.current.roomState?.players).toHaveLength(2);
+  });
+
+  describe("win claims", () => {
+    async function setupStartedGame(roomId: string) {
+      const { result } = renderHook(() =>
+        useYjsMultiplayer({
+          roomId,
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await flushSync();
+      const doc = mocks.lastDoc!;
+      const fakeRoom = { doc, roomId };
+      act(() => {
+        joinRoom(fakeRoom, "p2", "Bob");
+        startGame(fakeRoom);
+      });
+      await flushSync();
+      const solution = doc.getMap("room").get("solution") as string;
+      return { result, doc, fakeRoom, solution };
+    }
+
+    it("rejects a completion claim whose board does not match the solution", async () => {
+      const { result, doc } = await setupStartedGame("room-claim-bad");
+      act(() => {
+        result.current.sendComplete("1".repeat(81));
+      });
+      expect(doc.getMap("room").get("winnerId")).toBeNull();
+    });
+
+    it("claims the win when the submitted board matches the solution", async () => {
+      const { result, doc, solution } = await setupStartedGame("room-claim-ok");
+      act(() => {
+        result.current.sendComplete(solution);
+      });
+      expect(doc.getMap("room").get("winnerId")).toBe("p1");
+      expect(doc.getMap("room").get("winnerBoard")).toBe(solution);
+    });
+
+    it("ignores a remote solved-claim whose board is forged", async () => {
+      // A peer can write any winnerId it likes into the CRDT; the claim
+      // only counts here if the board it ships actually solves the
+      // puzzle.
+      const { result, fakeRoom } = await setupStartedGame("room-claim-forged");
+      act(() => {
+        claimWinner(fakeRoom, "p2", "Bob", "1".repeat(81));
+      });
+      await flushSync();
+      expect(result.current.gameOver).toBeNull();
+    });
+
+    it("accepts a remote claim whose board matches the solution", async () => {
+      const { result, fakeRoom, solution } =
+        await setupStartedGame("room-claim-valid");
+      act(() => {
+        claimWinner(fakeRoom, "p2", "Bob", solution);
+      });
+      await flushSync();
+      expect(result.current.gameOver).toEqual({
+        winnerId: "p2",
+        winnerName: "Bob",
+      });
+    });
+
+    it("lets the real winner claim over a forged claim", async () => {
+      const { result, doc, fakeRoom, solution } = await setupStartedGame(
+        "room-claim-override",
+      );
+      act(() => {
+        claimWinner(fakeRoom, "p2", "Bob", "1".repeat(81));
+      });
+      act(() => {
+        result.current.sendComplete(solution);
+      });
+      expect(doc.getMap("room").get("winnerId")).toBe("p1");
+    });
+
+    it("claimForfeitWin records a win with no board", async () => {
+      const { result, doc } = await setupStartedGame("room-claim-forfeit");
+      act(() => {
+        result.current.claimForfeitWin();
+      });
+      expect(doc.getMap("room").get("winnerId")).toBe("p1");
+      expect(doc.getMap("room").get("winnerBoard")).toBeNull();
+    });
   });
 
   describe("visibility-driven WebRTC lifecycle", () => {
