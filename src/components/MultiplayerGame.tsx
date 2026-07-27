@@ -69,6 +69,29 @@ export function MultiplayerGame({
     );
   }
 
+  // Checked before the board and lobby: a third arrival has no seat, so
+  // there is nothing for them to play or wait for.
+  if (mp.roomFull) {
+    return (
+      <div className="screen">
+        <div className="screen-content gap-6 py-10 text-center">
+          <h2 className="heading">Game is full</h2>
+          <p className="caption">
+            This duel already has two players. Start your own and share the
+            link.
+          </p>
+          <button
+            type="button"
+            className="btn btn-lg btn-primary"
+            onClick={onBack}
+          >
+            Create New Game
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!mp.roomState) {
     return (
       <div className="screen">

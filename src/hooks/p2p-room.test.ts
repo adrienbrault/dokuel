@@ -11,6 +11,7 @@ import {
   getRoomStatus,
   hydrateRoomFromSnapshot,
   initializeRoom,
+  isRoomFull,
   joinRoom,
   observeRoomChanges,
   type P2PRoom,
@@ -83,6 +84,47 @@ describe("p2p-room", () => {
       joinRoom(room, "player2", "Bob");
 
       expect(room.doc.getMap("room").get("hostId")).toBe("player1");
+    });
+
+    // A duel seats two. Without a cap a third tap on a shared invite
+    // link lands in the players map and the lobby can never start.
+    it("refuses a third player", () => {
+      const room = createTestRoom();
+      expect(joinRoom(room, "player1", "Alice")).toBe(true);
+      expect(joinRoom(room, "player2", "Bob")).toBe(true);
+      expect(joinRoom(room, "player3", "Carol")).toBe(false);
+
+      expect(room.doc.getMap("players").size).toBe(2);
+    });
+
+    it("still admits a returning player when the room is at capacity", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+
+      // A refresh re-runs joinRoom for a player already seated.
+      expect(joinRoom(room, "player2", "Bob")).toBe(true);
+      expect(room.doc.getMap("players").size).toBe(2);
+    });
+
+    it("marks the odd one out as full after a partitioned join merges", () => {
+      // Two people tap the invite while partitioned: each seats itself
+      // against a doc that still looks half-empty, so the local cap
+      // cannot fire. After merge the room holds three.
+      const [docA, docB] = [new Y.Doc(), new Y.Doc()];
+      const roomA = createRoomFromDoc(docA, "test-room");
+      const roomB = createRoomFromDoc(docB, "test-room");
+      joinRoom(roomA, "host", "Alice");
+      Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+      joinRoom(roomA, "guest1", "Bob");
+      joinRoom(roomB, "guest2", "Carol");
+      Y.applyUpdate(docA, Y.encodeStateAsUpdate(docB));
+
+      expect(getPlayers(roomA)).toHaveLength(3);
+      // Everyone agrees on which two hold the seats.
+      expect(isRoomFull(roomA, "host")).toBe(false);
+      expect(isRoomFull(roomA, "guest1")).toBe(false);
+      expect(isRoomFull(roomA, "guest2")).toBe(true);
     });
 
     it("initializes player with zero progress", () => {

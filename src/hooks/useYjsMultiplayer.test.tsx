@@ -306,6 +306,55 @@ describe("useYjsMultiplayer", () => {
     expect(countClues(puzzle)).toBeLessThanOrEqual(EXPERT_CLUES.max);
   });
 
+  it("reports the room as full to a third arrival", async () => {
+    // Two players are already seated when this player opens the link —
+    // a shared invite tapped by more people than a duel can hold.
+    const seedDoc = new Doc();
+    const seedRoom = { doc: seedDoc, roomId: "room-full" };
+    initializeRoom(seedRoom, "p1", "medium");
+    joinRoom(seedRoom, "p1", "Alice");
+    joinRoom(seedRoom, "p2", "Bob");
+    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-full",
+        playerId: "p3",
+        playerName: "Carol",
+        difficulty: null,
+      }),
+    );
+
+    await flushSync();
+
+    expect(result.current.roomFull).toBe(true);
+    // The third player must not take a seat, or the two who have one
+    // would be left unable to start.
+    expect(seedDoc.getMap("players").size).toBe(2);
+  });
+
+  it("does not report the room as full to a returning player", async () => {
+    const seedDoc = new Doc();
+    const seedRoom = { doc: seedDoc, roomId: "room-return" };
+    initializeRoom(seedRoom, "p1", "medium");
+    joinRoom(seedRoom, "p1", "Alice");
+    joinRoom(seedRoom, "p2", "Bob");
+    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-return",
+        playerId: "p2",
+        playerName: "Bob",
+        difficulty: null,
+      }),
+    );
+
+    await flushSync();
+
+    expect(result.current.roomFull).toBe(false);
+  });
+
   it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {
     // Build a seed update representing a previously-saved doc: a
     // started game with two players. Without the whenSynced gate, the

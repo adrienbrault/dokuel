@@ -2,6 +2,9 @@ import type { AssistLevel, Difficulty } from "./types.ts";
 
 export const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
+/** A duel seats exactly two. */
+export const ROOM_CAPACITY = 2;
+
 export const DIFFICULTIES: readonly Difficulty[] = [
   "easy",
   "medium",

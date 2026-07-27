@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { ROOM_CAPACITY } from "../lib/constants.ts";
 import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
@@ -70,13 +71,22 @@ export function initializeRoom(
   });
 }
 
+/**
+ * Seat a player in the room. Returns false when the room is already
+ * full, so the caller can show a "game is full" screen instead of
+ * silently adding a spectator the lobby can never start with.
+ *
+ * Re-joining as a player who already holds a seat always succeeds —
+ * that is what a refresh looks like.
+ */
 export function joinRoom(
   room: P2PRoom,
   playerId: string,
   playerName: string,
-): void {
+): boolean {
   const players = room.doc.getMap("players");
-  if (players.has(playerId)) return;
+  if (players.has(playerId)) return true;
+  if (players.size >= ROOM_CAPACITY) return false;
 
   const joinOrder = players.size;
 
@@ -89,6 +99,25 @@ export function joinRoom(
     playerMap.set("joinOrder", joinOrder);
     players.set(playerId, playerMap);
   });
+  return true;
+}
+
+/**
+ * True when this player has no seat in a room that already holds its
+ * full complement.
+ *
+ * The local capacity check in {@link joinRoom} cannot be the only
+ * guard: two people can tap a shared link while partitioned, each seat
+ * themselves against a doc that looks half-empty, and CRDT merge then
+ * yields three players. Ranking by joinOrder gives every peer the same
+ * answer about who holds the two seats.
+ */
+export function isRoomFull(room: P2PRoom, playerId: string): boolean {
+  const players = getPlayers(room);
+  if (players.length <= ROOM_CAPACITY) return false;
+  return !players
+    .slice(0, ROOM_CAPACITY)
+    .some((player) => player.id === playerId);
 }
 
 export function setAssistLevel(room: P2PRoom, level: AssistLevel): void {

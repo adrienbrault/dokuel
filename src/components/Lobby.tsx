@@ -1,6 +1,6 @@
 import { Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
+import { DIFFICULTY_OPTIONS, ROOM_CAPACITY } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
@@ -25,8 +25,11 @@ export function Lobby({
   onBack,
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
-  const canStart = roomState.players.length === 2;
-  const waiting = roomState.players.length < 2;
+  // At-least, not exactly: joinRoom caps seats at two, but a pair of
+  // partitioned joins can still merge into a third player, and the two
+  // who hold seats must not be left with a dead Start button.
+  const canStart = roomState.players.length >= ROOM_CAPACITY;
+  const waiting = roomState.players.length < ROOM_CAPACITY;
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [editingName, setEditingName] = useState(false);
