@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import {
+  BOX_GAP_PX,
+  FRAME_PX,
+  THIN_GAP_PX,
+  useBoardGeometry,
+} from "../hooks/useBoardGeometry.ts";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { cellKey } from "../lib/sudoku.ts";
@@ -8,28 +14,6 @@ import type {
   Position,
 } from "../lib/types.ts";
 import { Cell } from "./Cell.tsx";
-
-/**
- * Grid geometry, in device pixels.
- *
- * The grid has no cell borders — it paints its rules by letting the
- * container background show through gaps between the cells. A hairline
- * separates cells inside a 3x3 box; a heavier rule separates the boxes
- * from each other and frames the whole grid.
- *
- * The board is snapped to a size where all of these land on whole device
- * pixels: a sub-pixel cell width makes adjacent gaps anti-alias to
- * different widths, so some rules render 1px and others 2px and the grid
- * looks subtly warped.
- */
-const THIN_GAP_PX = 1;
-const BOX_GAP_PX = 3;
-const FRAME_PX = 3;
-const MIN_CELL_PX = 20;
-
-/** Every pixel of a rendered board that is not a cell: 2 outer frame
- *  edges + 2 box gaps + 6 hairlines per axis. */
-export const BOARD_FRAME_PX = FRAME_PX * 2 + BOX_GAP_PX * 2 + THIN_GAP_PX * 6;
 
 type BoardProps = {
   board: BoardType;
@@ -141,23 +125,9 @@ export function Board({
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [cellPx, setCellPx] = useState(32);
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => {
-      const w = el.clientWidth;
-      if (w === 0) return;
-      setCellPx(Math.max(MIN_CELL_PX, Math.floor((w - BOARD_FRAME_PX) / 9)));
-    };
-    update();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  const boxPx = cellPx * 3 + THIN_GAP_PX * 2;
-  const boardPx = cellPx * 9 + BOARD_FRAME_PX;
+  const { cellPx, boxPx, boardPx } = useBoardGeometry(containerRef);
+
+  const gridRef = useRef<HTMLDivElement>(null);
 
   // Block iOS Safari's swipe-from-edge back gesture for drags that
   // originate inside the board. touch-action: none on the cell isn't
@@ -165,7 +135,6 @@ export function Board({
   // system back-swipe. A non-passive touchstart preventDefault is the
   // only block that works across iOS versions. React's onTouchStart is
   // passive (preventDefault is a no-op), so we attach it natively.
-  const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;

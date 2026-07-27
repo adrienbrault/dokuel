@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { BOARD_FRAME_PX } from "../hooks/useBoardGeometry.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Cell } from "../lib/types.ts";
-import { BOARD_FRAME_PX, Board } from "./Board.tsx";
+import { Board } from "./Board.tsx";
 
 function emptyCell(value: number | null = null): Cell {
   return { value, isGiven: value !== null, notes: new Set() };
