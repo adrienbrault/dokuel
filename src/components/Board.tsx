@@ -115,6 +115,12 @@ export function Board({
   // only runs when a cell is actually selected.
   const hasSelection = selectedCell !== null || (selectedCells?.size ?? 0) > 0;
 
+  // Roving tab index: the grid is one tab stop, not eighty-one. Without
+  // this, Tab from the header ran through every cell before reaching the
+  // number pad. The stop sits on the selected cell so returning to the
+  // board lands where the player left off.
+  const tabStop = selectedCell ?? { row: 0, col: 0 };
+
   const dragHandlers = useDragSelect({
     board,
     selectedCell,
@@ -127,7 +133,25 @@ export function Board({
   const containerRef = useRef<HTMLDivElement>(null);
   const { cellPx, boxPx, boardPx } = useBoardGeometry(containerRef);
 
+  // Arrow keys move the selection through a reducer, so DOM focus has to
+  // be brought along or the focus ring is left behind on the cell the
+  // player started from and assistive tech is told nothing moved. Only
+  // when the board already holds focus — otherwise selecting a cell with
+  // the mouse, or restoring a saved game, would yank focus to the board.
   const gridRef = useRef<HTMLDivElement>(null);
+  const selectedKey = selectedCell
+    ? cellKey(selectedCell.row, selectedCell.col)
+    : null;
+  useEffect(() => {
+    const root = gridRef.current;
+    if (selectedKey === null || !root) return;
+    if (!root.contains(document.activeElement)) return;
+    root
+      .querySelector<HTMLElement>(
+        `[data-row="${Math.floor(selectedKey / 9)}"][data-col="${selectedKey % 9}"]`,
+      )
+      ?.focus();
+  }, [selectedKey]);
 
   // Block iOS Safari's swipe-from-edge back gesture for drags that
   // originate inside the board. touch-action: none on the cell isn't
@@ -270,6 +294,9 @@ export function Board({
                       isSelected && chargingDigit != null
                         ? chargingDigit
                         : undefined
+                    }
+                    tabIndex={
+                      rowIdx === tabStop.row && colIdx === tabStop.col ? 0 : -1
                     }
                     isDragSource={isDragSource}
                     dropTargetState={dropTargetState}

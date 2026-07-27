@@ -47,6 +47,12 @@ type CellProps = {
   dropMode?: "value" | "note" | undefined;
   /** The digit currently being dragged — drawn in both preview slots. */
   dropDigit?: number | undefined;
+  /**
+   * Roving tab index. Exactly one cell on the board carries 0; the other
+   * eighty carry -1, so the grid is a single tab stop and the arrow keys
+   * move within it.
+   */
+  tabIndex?: number | undefined;
 };
 
 export const Cell = memo(function Cell({
@@ -68,6 +74,7 @@ export const Cell = memo(function Cell({
   dropTargetState,
   dropMode,
   dropDigit,
+  tabIndex,
 }: CellProps) {
   const isPaper = assistLevel === "paper";
   const bgClass =
@@ -102,7 +109,6 @@ export const Cell = memo(function Cell({
 					${bgClass}
 					transition-colors duration-100
 					select-none touch-none
-					outline-none focus-visible:ring-2 focus-visible:ring-accent
 					${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
 					${revealDelay !== undefined ? "animate-cell-reveal" : ""}
 				`}
@@ -111,6 +117,7 @@ export const Cell = memo(function Cell({
           ? { animationDelay: `${revealDelay}ms` }
           : undefined
       }
+      tabIndex={tabIndex}
       data-row={row}
       data-col={col}
       data-drag-source={isDragSource ? "true" : undefined}
