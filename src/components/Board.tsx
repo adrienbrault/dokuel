@@ -9,6 +9,28 @@ import type {
 } from "../lib/types.ts";
 import { Cell } from "./Cell.tsx";
 
+/**
+ * Grid geometry, in device pixels.
+ *
+ * The grid has no cell borders — it paints its rules by letting the
+ * container background show through gaps between the cells. A hairline
+ * separates cells inside a 3x3 box; a heavier rule separates the boxes
+ * from each other and frames the whole grid.
+ *
+ * The board is snapped to a size where all of these land on whole device
+ * pixels: a sub-pixel cell width makes adjacent gaps anti-alias to
+ * different widths, so some rules render 1px and others 2px and the grid
+ * looks subtly warped.
+ */
+const THIN_GAP_PX = 1;
+const BOX_GAP_PX = 3;
+const FRAME_PX = 3;
+const MIN_CELL_PX = 20;
+
+/** Every pixel of a rendered board that is not a cell: 2 outer frame
+ *  edges + 2 box gaps + 6 hairlines per axis. */
+export const BOARD_FRAME_PX = FRAME_PX * 2 + BOX_GAP_PX * 2 + THIN_GAP_PX * 6;
+
 type BoardProps = {
   board: BoardType;
   selectedCell: Position | null;
@@ -114,12 +136,6 @@ export function Board({
     onSelectCell,
   });
 
-  // Snap the board to an integer-pixel size so every cell and every gap
-  // renders at exact device pixels. Sub-pixel cell widths cause adjacent
-  // gaps to anti-alias to different widths (some 1px, some 2px); flooring
-  // to an integer cell size makes that impossible.
-  // Total board = 9 cells + 6 thin gaps (1px) + 2 thick gaps (2px) + 2 outer
-  // pads (2px) = 9 * cellPx + 14.
   const containerRef = useRef<HTMLDivElement>(null);
   const [cellPx, setCellPx] = useState(32);
   useLayoutEffect(() => {
@@ -128,7 +144,7 @@ export function Board({
     const update = () => {
       const w = el.clientWidth;
       if (w === 0) return;
-      setCellPx(Math.max(20, Math.floor((w - 14) / 9)));
+      setCellPx(Math.max(MIN_CELL_PX, Math.floor((w - BOARD_FRAME_PX) / 9)));
     };
     update();
     if (typeof ResizeObserver === "undefined") return;
@@ -136,8 +152,8 @@ export function Board({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const boxPx = cellPx * 3 + 2;
-  const boardPx = cellPx * 9 + 14;
+  const boxPx = cellPx * 3 + THIN_GAP_PX * 2;
+  const boardPx = cellPx * 9 + BOARD_FRAME_PX;
 
   // Block iOS Safari's swipe-from-edge back gesture for drags that
   // originate inside the board. touch-action: none on the cell isn't
@@ -164,10 +180,13 @@ export function Board({
         style={{
           width: boardPx,
           height: boardPx,
+          gap: BOX_GAP_PX,
+          padding: FRAME_PX,
           gridTemplateColumns: `repeat(3, ${boxPx}px)`,
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
+          boxShadow: "var(--elevation-3)",
         }}
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        className="grid bg-board-border rounded-panel overflow-hidden touch-none"
         role="region"
         aria-label="Sudoku board"
         onPointerDown={
@@ -188,10 +207,11 @@ export function Board({
             <div
               key={boxIdx}
               style={{
+                gap: THIN_GAP_PX,
                 gridTemplateColumns: `repeat(3, ${cellPx}px)`,
                 gridTemplateRows: `repeat(3, ${cellPx}px)`,
               }}
-              className="grid gap-px bg-border-default"
+              className="grid bg-border-default"
             >
               {Array.from({ length: 9 }, (_, cellIdx) => {
                 const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);

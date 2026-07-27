@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Cell } from "../lib/types.ts";
-import { Board } from "./Board.tsx";
+import { BOARD_FRAME_PX, Board } from "./Board.tsx";
 
 function emptyCell(value: number | null = null): Cell {
   return { value, isGiven: value !== null, notes: new Set() };
@@ -650,5 +650,48 @@ describe("Board filled-cell drag gating", () => {
     fireEvent.click(cell33);
 
     expect(onSelectCell).toHaveBeenCalledWith(3, 3);
+  });
+});
+
+describe("Board pixel snapping", () => {
+  // The grid paints its gaps by letting the container background show
+  // through, so a sub-pixel cell width makes adjacent gaps anti-alias to
+  // different widths — some render 1px, some 2px. The board is snapped to
+  // a size where every cell and every gap lands on a whole device pixel.
+  function renderAtContainerWidth(width: number) {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(width);
+    try {
+      render(
+        <Board
+          board={makeBoard()}
+          selectedCell={null}
+          conflicts={new Set()}
+          onSelectCell={vi.fn()}
+        />,
+      );
+    } finally {
+      spy.mockRestore();
+    }
+    const grid = screen.getByRole("region", { name: "Sudoku board" });
+    return {
+      boardPx: Number.parseFloat(grid.style.width),
+      heightPx: grid.style.height,
+    };
+  }
+
+  it.each([
+    320, 375, 390, 500, 512, 640, 741,
+  ])("leaves a whole number of pixels per cell at a %ipx container", (containerWidth) => {
+    const { boardPx, heightPx } = renderAtContainerWidth(containerWidth);
+    expect((boardPx - BOARD_FRAME_PX) % 9).toBe(0);
+    expect(boardPx).toBeLessThanOrEqual(containerWidth);
+    expect(heightPx).toBe(`${boardPx}px`);
+  });
+
+  it("keeps cells at a usable size even in a container too small for them", () => {
+    const { boardPx } = renderAtContainerWidth(40);
+    expect((boardPx - BOARD_FRAME_PX) / 9).toBeGreaterThanOrEqual(20);
   });
 });
