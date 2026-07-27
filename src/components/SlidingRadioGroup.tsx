@@ -26,10 +26,10 @@ export function SlidingRadioGroup<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="relative flex w-full rounded-xl bg-bg-inset p-1"
+      className="relative flex w-full rounded-[12px] bg-bg-inset border border-border-default p-1"
     >
       <div
-        className="absolute top-1 bottom-1 rounded-lg bg-accent shadow-sm transition-transform duration-200 ease-out"
+        className="absolute top-1 bottom-1 rounded-[9px] bg-surface border border-border-default shadow-[0_1px_2px_oklch(0.25_0.02_264/0.05)] transition-transform duration-200 ease-out"
         style={{
           width: `calc((100% - 0.5rem) / ${count})`,
           transform: `translateX(calc(${activeIndex} * 100%))`,
@@ -44,8 +44,8 @@ export function SlidingRadioGroup<T extends string>({
             key={option.value}
             className={`relative z-10 flex flex-1 ${
               option.description ? "flex-col" : "items-center justify-center"
-            } items-center gap-0.5 rounded-lg py-2 cursor-pointer select-none touch-manipulation transition-colors duration-200 ${
-              isActive ? "text-text-on-accent" : "text-text-secondary"
+            } items-center gap-0.5 rounded-[9px] py-2 cursor-pointer select-none touch-manipulation transition-colors duration-200 ${
+              isActive ? "text-text-primary" : "text-text-secondary"
             }`}
           >
             <input
@@ -64,7 +64,7 @@ export function SlidingRadioGroup<T extends string>({
             {option.description && (
               <span
                 className={`text-[0.625rem] leading-none transition-colors duration-200 ${
-                  isActive ? "text-text-on-accent/70" : "text-text-muted"
+                  isActive ? "text-text-secondary" : "text-text-muted"
                 }`}
               >
                 {option.description}
