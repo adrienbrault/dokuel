@@ -95,6 +95,9 @@ export function MultiplayerBoard({
     if (gameNumber === prevGameNumberRef.current) return;
     prevGameNumberRef.current = gameNumber;
     game.reset(puzzle, solution ?? undefined, savedBoard);
+    // The new game starts from zero; without this the recorded match
+    // time for game 2 includes game 1's clock.
+    timerSecondsRef.current = 0;
   }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
@@ -207,6 +210,7 @@ export function MultiplayerBoard({
       timer={
         <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm">
           <Timer
+            key={gameNumber}
             running={game.status === "playing"}
             initialSeconds={initialTimerSeconds}
             onTick={(s) => {
