@@ -1,6 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate } from "yjs";
+import { DIFFICULTY_CLUES } from "../lib/sudoku.ts";
+
+// Read the band rather than restating it: these tests assert the puzzle
+// came from the room's expert setting instead of the local prop, and
+// should not need editing when the bands are retuned.
+const EXPERT_CLUES = DIFFICULTY_CLUES.expert;
 
 type FakeProvider = {
   connected: boolean;
@@ -169,8 +175,8 @@ describe("useYjsMultiplayer", () => {
 
     const puzzle = doc.getMap("room").get("puzzle") as string;
     expect(puzzle).toBeTruthy();
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(21);
+    expect(countClues(puzzle)).toBeGreaterThanOrEqual(EXPERT_CLUES.min);
+    expect(countClues(puzzle)).toBeLessThanOrEqual(EXPERT_CLUES.max);
   });
 
   it("setDifficulty updates the Yjs room difficulty", async () => {
@@ -296,8 +302,8 @@ describe("useYjsMultiplayer", () => {
     });
 
     const puzzle = doc.getMap("room").get("puzzle") as string;
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(21);
+    expect(countClues(puzzle)).toBeGreaterThanOrEqual(EXPERT_CLUES.min);
+    expect(countClues(puzzle)).toBeLessThanOrEqual(EXPERT_CLUES.max);
   });
 
   it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {

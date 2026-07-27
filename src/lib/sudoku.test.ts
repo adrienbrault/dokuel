@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DIFFICULTIES } from "./constants.ts";
 import {
   cellKey,
   countSolutions,
@@ -40,6 +41,16 @@ describe("generatePuzzle", () => {
     const a = generatePuzzle("medium");
     const b = generatePuzzle("medium");
     expect(a).not.toBe(b);
+  });
+
+  // The invariant the whole game rests on. A puzzle with two solutions
+  // is not solvable by deduction, and error highlighting compares
+  // against one arbitrarily-chosen solution — so a player's valid digit
+  // turns red. Expert regressed here first; sample every difficulty.
+  it.each(DIFFICULTIES)("generates a unique solution for %s", (difficulty) => {
+    for (let i = 0; i < 3; i++) {
+      expect(countSolutions(generatePuzzle(difficulty))).toBe(1);
+    }
   });
 });
 
