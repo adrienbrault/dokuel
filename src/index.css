@@ -760,6 +760,11 @@ body {
   width: 100%;
   align-content: end;
   justify-items: center;
+  /* Nine stacked 44px keys are taller than the board is wide once a side
+     pad has eaten into the width, so on a phone the pad column always
+     outgrows the board. Centring the board against it beats letting it
+     hang from the top of an over-tall row. */
+  align-items: center;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "board"
