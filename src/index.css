@@ -317,10 +317,16 @@ body {
   }
 }
 
-/* Animate the shared variable once on the root so every selected cell
-   reads from the same source — they pulse in unison regardless of when
-   each one becomes selected. */
-:root {
+/* Animate the shared variable on the board, not the document root.
+   Every selected cell inherits it from the same element, so they still
+   pulse in unison regardless of when each became selected — but the
+   animation only exists while a board is mounted *and* something is
+   selected, rather than running forever on the landing page and the
+   stats screen where nothing reads it.
+
+   With the animation absent the property falls back to its registered
+   initial-value, so an unselected board still renders a static ring. */
+.cell-glow-sync {
   animation: cell-glow-pulse 2s ease-in-out infinite;
 }
 

@@ -127,6 +127,10 @@ export function Board({
       : null;
   })();
 
+  // Drives the selection-glow pulse. Scoped to the board so the animation
+  // only runs when a cell is actually selected.
+  const hasSelection = selectedCell !== null || (selectedCells?.size ?? 0) > 0;
+
   const dragHandlers = useDragSelect({
     board,
     selectedCell,
@@ -186,7 +190,9 @@ export function Board({
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
           boxShadow: "var(--elevation-3)",
         }}
-        className="grid bg-board-border rounded-panel overflow-hidden touch-none"
+        className={`grid bg-board-border rounded-panel overflow-hidden touch-none ${
+          hasSelection ? "cell-glow-sync" : ""
+        }`}
         role="region"
         aria-label="Sudoku board"
         onPointerDown={
