@@ -46,7 +46,7 @@ export function GameLayout({
   headerExtra,
   footer,
   boardClassName = "",
-  headerClassName = "max-w-lg",
+  headerClassName = "max-w-lg lg:max-w-[35rem]",
   onDeselectCell,
   settingsExtra,
   progressPercent,
@@ -60,7 +60,7 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter lg:bg-bg-inset lg:[background-image:radial-gradient(120%_70%_at_50%_-20%,var(--color-screen-glow),transparent_60%)]"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
@@ -104,10 +104,16 @@ export function GameLayout({
           breakpoint: "bottom" stacks a full-width digit row under the board,
           "left"/"right" place a vertical column beside it. Keeping the layout
           identical on mobile and desktop means dragging a digit toward the
-          board is always a perpendicular gesture. */}
+          board is always a perpendicular gesture.
+          On desktop the whole area becomes a paper sheet resting on the
+          tinted desk (the lg: root background above), so the board,
+          controls, and numpad stop floating in dead space. */}
       <div
         className={`
           flex gap-3 w-full justify-center flex-1
+          lg:w-auto lg:flex-none lg:my-auto lg:gap-6 lg:bg-surface lg:border lg:border-border-default lg:rounded-[20px] lg:p-6
+          lg:shadow-[0_2px_6px_oklch(0.25_0.02_264/0.05),0_24px_56px_-24px_oklch(0.25_0.02_264/0.18)]
+          dark:lg:shadow-[0_2px_6px_oklch(0_0_0/0.12),0_24px_56px_-24px_oklch(0_0_0/0.45)]
           ${position === "left" ? "flex-row items-end lg:items-center" : ""}
           ${position === "right" ? "flex-row-reverse items-end lg:items-center" : ""}
           ${position === "bottom" ? "flex-col items-center" : ""}
@@ -116,7 +122,7 @@ export function GameLayout({
         {/* Side numpad (left / right positions) */}
         {position !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center lg:w-[32rem]" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
         >
           <div className="flex flex-col items-center gap-3 w-full">
             {controls}
