@@ -32,6 +32,15 @@ describe("multiplayer-stats", () => {
       localStorage.setItem("sudoku_multiplayer_stats", "{not json");
       expect(getMultiplayerStats()).toEqual([]);
     });
+
+    it("returns empty array for parseable non-array data", () => {
+      // "{}" parses fine; the old code returned it and every caller's
+      // .some/.filter then threw.
+      for (const bad of ["{}", "null", "42", '"x"']) {
+        localStorage.setItem("sudoku_multiplayer_stats", bad);
+        expect(getMultiplayerStats()).toEqual([]);
+      }
+    });
   });
 
   describe("saveMultiplayerGameResult", () => {

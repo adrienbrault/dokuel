@@ -63,6 +63,19 @@ describe("daily-streak", () => {
         longestStreak: 0,
       });
     });
+
+    it("returns default on parseable-but-wrong-shape data", () => {
+      // "null" is valid JSON; the old code returned it verbatim and
+      // recordDailyCompletion then crashed on streak.lastCompletedDate.
+      for (const bad of ["null", "3", '"x"', '{"currentStreak":"3"}']) {
+        localStorage.setItem("sudoku_daily_streak", bad);
+        expect(getDailyStreak()).toEqual({
+          currentStreak: 0,
+          lastCompletedDate: "",
+          longestStreak: 0,
+        });
+      }
+    });
   });
 
   describe("recordDailyCompletion", () => {
