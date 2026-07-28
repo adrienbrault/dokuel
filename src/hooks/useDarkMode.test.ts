@@ -3,12 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDarkMode } from "./useDarkMode.ts";
 
 let listeners: Array<() => void> = [];
+const systemPreference = { dark: false };
 
 function mockMatchMedia(prefersDark: boolean) {
+  systemPreference.dark = prefersDark;
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockReturnValue({
-      matches: prefersDark,
+      get matches() {
+        return systemPreference.dark;
+      },
       addEventListener: (_event: string, handler: () => void) => {
         listeners.push(handler);
       },
@@ -17,6 +21,11 @@ function mockMatchMedia(prefersDark: boolean) {
       },
     }),
   });
+}
+
+function fireSystemPreferenceChange(prefersDark: boolean) {
+  systemPreference.dark = prefersDark;
+  for (const handler of [...listeners]) handler();
 }
 
 function getOverrideThemeColor(): string | null {
@@ -65,6 +74,28 @@ describe("useDarkMode", () => {
     act(() => result.current.setTheme("dark"));
     expect(result.current.theme).toBe("dark");
     expect(localStorage.getItem("sudoku_theme")).toBe("dark");
+  });
+
+  it("reports isDark in the same render pass as the toggle", () => {
+    // isDark used to be read from the DOM class during render, but the
+    // class is applied in an effect AFTER that render — so the toggle
+    // icon and its aria-label showed the previous state until some
+    // unrelated re-render happened by.
+    const { result } = renderHook(() => useDarkMode());
+    act(() => result.current.toggle());
+    expect(result.current.isDark).toBe(true);
+    act(() => result.current.toggle());
+    expect(result.current.isDark).toBe(false);
+  });
+
+  it("updates isDark when the OS preference flips in system mode", () => {
+    const { result } = renderHook(() => useDarkMode());
+    expect(result.current.isDark).toBe(false);
+
+    act(() => fireSystemPreferenceChange(true));
+
+    expect(result.current.isDark).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
   it("toggle switches from light to dark", () => {
