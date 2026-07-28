@@ -1,6 +1,11 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { holdNumpadDigit, test } from "./fixtures.ts";
+import {
+	holdNumpadDigit,
+	nearlyWonSave,
+	priorEasyStats,
+	test,
+} from "./fixtures.ts";
 
 const SCREENSHOT_DIR = join(import.meta.dirname, "screenshots");
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -400,42 +405,33 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	});
 });
 
-test("solo game - win modal", async ({ page }, testInfo) => {
-	await page.goto("/");
-	await page.getByRole("button", { name: "Start Solo" }).click();
-	await page.getByRole("button", { name: "Easy" }).click();
-	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
-
-	await page.evaluate(() => {
-		const overlay = document.createElement("div");
-		overlay.className =
-			"fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6";
-		overlay.innerHTML = `
-			<div class="confetti-container">
-				<span></span><span></span><span></span><span></span><span></span>
-				<span></span><span></span><span></span><span></span><span></span>
-			</div>
-			<div class="flex flex-col items-center gap-5 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl max-w-sm sm:max-w-md w-full relative">
-				<div class="flex flex-col items-center gap-2">
-					<span class="text-5xl animate-emoji-bounce">🎉</span>
-					<h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">You Won!</h2>
-					<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Easy</span>
-				</div>
-				<div class="flex flex-col items-center gap-1">
-					<span class="text-3xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100">03:42</span>
-					<span class="text-sm font-semibold text-green-600 dark:text-green-400">New Best!</span>
-				</div>
-				<div class="flex flex-col gap-3 w-full">
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-accent text-white select-none touch-manipulation">Play Again</button>
-					<button type="button" class="w-full py-3 rounded-xl text-lg font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 select-none touch-manipulation">New Game</button>
-				</div>
-			</div>
-		`;
-		document.body.appendChild(overlay);
+test.describe("solo win modal", () => {
+	// Seed a real save one cell from done plus two slower prior wins, so
+	// a single keypress produces the genuine GameResult dialog — real
+	// markup, "New Personal Best!" line, and populated stat tiles.
+	test.use({
+		storage: {
+			"sudoku_save_e2e-win": nearlyWonSave,
+			sudoku_stats: priorEasyStats,
+		},
 	});
 
-	await page.screenshot({
-		path: screenshotPath("solo-win-modal", testInfo.project.name),
+	test("solo game - win modal", async ({ page }, testInfo) => {
+		await page.goto("/solo/easy/e2e-win");
+		await page.waitForSelector(
+			'[role="group"][aria-label="Number pad"]:visible',
+		);
+
+		await page.locator('button[aria-label*=", empty"]').click();
+		await page.keyboard.press("5");
+
+		const dialog = page.getByRole("dialog");
+		await dialog.getByText("You Won!").waitFor();
+		await dialog.getByText("New Personal Best!").waitFor();
+
+		await page.screenshot({
+			path: screenshotPath("solo-win-modal", testInfo.project.name),
+		});
 	});
 });
 
