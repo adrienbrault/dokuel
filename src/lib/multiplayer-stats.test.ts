@@ -66,6 +66,17 @@ describe("multiplayer-stats", () => {
       expect(all[0]!.time).toBe(240);
     });
 
+    it("corrects the outcome when the same game is re-reported with a different winner", () => {
+      // A near-simultaneous finish records optimistically on both
+      // sides; when the CRDT merge settles the loser must be able to
+      // overwrite its own premature won:true.
+      saveMultiplayerGameResult(BASE_RECORD);
+      saveMultiplayerGameResult({ ...BASE_RECORD, won: false, time: 251 });
+      const all = getMultiplayerStats();
+      expect(all).toHaveLength(1);
+      expect(all[0]!.won).toBe(false);
+    });
+
     it("trims to the last 100 entries", () => {
       for (let i = 0; i < 105; i++) {
         saveMultiplayerGameResult({

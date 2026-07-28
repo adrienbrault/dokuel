@@ -537,6 +537,31 @@ describe("MultiplayerBoard after opponent wins", () => {
     expect(all[0]?.won).toBe(true);
   });
 
+  it("corrects the recorded outcome when the winner flips after a CRDT merge", () => {
+    // Photo finish: both clients momentarily see themselves as winner,
+    // then the merged doc settles on one. The optimistic record must be
+    // corrected — otherwise both players' stores keep won:true forever.
+    const props = baseProps();
+    const { rerender } = render(
+      <MultiplayerBoard
+        {...props}
+        gameOver={{ winnerId: "p1", winnerName: "Me" }}
+      />,
+    );
+    expect(getMultiplayerStats()[0]?.won).toBe(true);
+
+    rerender(
+      <MultiplayerBoard
+        {...props}
+        gameOver={{ winnerId: "p2", winnerName: "Brave Otter" }}
+      />,
+    );
+
+    const all = getMultiplayerStats();
+    expect(all).toHaveLength(1);
+    expect(all[0]?.won).toBe(false);
+  });
+
   it("does not record a duplicate record on remount for the same gameNumber", () => {
     const props = {
       ...baseProps(),
