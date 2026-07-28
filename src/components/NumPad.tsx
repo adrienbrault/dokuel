@@ -10,6 +10,7 @@ import { useNumPadSkim } from "../hooks/useNumPadSkim.ts";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
+import { NumPadLegend } from "./NumPadLegend.tsx";
 
 const LONG_PRESS_MS = 200;
 // Pointer must travel this far FROM THE POINTERDOWN POINT before we
@@ -264,15 +265,7 @@ export function NumPad({
     <div
       className={`flex flex-col items-center gap-1 lg:gap-2 ${isVertical ? "w-12 lg:w-16" : "w-full lg:w-auto"}`}
     >
-      {/* Legend: one-liner for the horizontal pad, stacked words for sides */}
-      <p
-        className={`text-[0.625rem] lg:text-xs text-text-muted leading-tight select-none ${isVertical ? "text-center whitespace-pre-line short:hidden" : ""}`}
-        aria-hidden="true"
-      >
-        {isVertical
-          ? "tap\nenter\n· · ·\nhold\nnote\n· · ·\ndrag\nplace"
-          : "tap = enter · hold = note · drag = place"}
-      </p>
+      <NumPadLegend isVertical={isVertical} />
       <div
         ref={groupRef}
         className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full lg:grid lg:grid-cols-3 lg:w-auto lg:gap-2"}`}
