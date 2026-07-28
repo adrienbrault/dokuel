@@ -31,7 +31,7 @@
   --color-cell-conflict: oklch(0.53 0.19 30);
   --color-cell-conflict-bg: oklch(0.945 0.03 30);
   --color-cell-hint-bg: oklch(0.945 0.045 85);
-  --color-success: oklch(0.58 0.15 150);
+  --color-success: oklch(0.5 0.14 150);
   --color-accent: oklch(0.45 0.16 264);
   --color-accent-bright: oklch(0.53 0.17 264);
   --color-accent-deep: oklch(0.38 0.15 264);
@@ -54,7 +54,7 @@
   /* Semantic text */
   --color-text-primary: oklch(0.235 0.02 264);
   --color-text-secondary: oklch(0.44 0.018 264);
-  --color-text-muted: oklch(0.545 0.015 264);
+  --color-text-muted: oklch(0.52 0.015 264);
   --color-text-on-accent: oklch(0.985 0.005 85);
 
   /* Semantic interactive */
@@ -90,7 +90,7 @@
   --color-board-bg: oklch(0.225 0.018 264);
   --color-board-border: oklch(0.62 0.02 264);
   --color-cell-bg: oklch(0.205 0.015 264);
-  --color-cell-selected: oklch(0.37 0.09 264);
+  --color-cell-selected: oklch(0.35 0.09 264);
   --color-cell-highlight: oklch(0.265 0.035 264);
   --color-cell-same-number: oklch(0.415 0.1 264);
   --color-cell-match-row-col: oklch(0.235 0.025 264);
@@ -122,7 +122,7 @@
   /* Semantic text */
   --color-text-primary: oklch(0.9 0.012 85);
   --color-text-secondary: oklch(0.73 0.014 85);
-  --color-text-muted: oklch(0.585 0.014 264);
+  --color-text-muted: oklch(0.63 0.014 264);
   --color-text-on-accent: oklch(0.13 0.02 264);
 
   /* Semantic interactive */
@@ -511,7 +511,9 @@ body {
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    /* Trough kept at 0.55 so the colon never dips below large-text
+       contrast mid-breath. */
+    opacity: 0.55;
   }
 }
 .timer-colon {

@@ -311,7 +311,7 @@ export function NumPad({
               </span>
               {showRemainingCounts && (
                 <span
-                  className={`font-mono text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : remaining === 1 ? "text-accent" : "text-text-muted"}`}
+                  className={`font-mono text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/80" : remaining === 1 ? "text-accent" : "text-text-muted"}`}
                 >
                   {remaining}
                 </span>
