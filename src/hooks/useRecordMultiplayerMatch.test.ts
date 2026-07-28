@@ -1,5 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+// biome-ignore lint/performance/noNamespaceImport: vi.spyOn needs the module namespace object
 import * as dateModule from "../lib/date.ts";
 import { getMultiplayerStats } from "../lib/multiplayer-stats.ts";
 import { useRecordMultiplayerMatch } from "./useRecordMultiplayerMatch.ts";

@@ -142,13 +142,12 @@ function App() {
   // Canonicalize the address bar once on load: an invalid solo path
   // falls back to the landing screen, a room code gets lowercased —
   // without this the broken URL survives and re-parses on refresh.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only by design — navigate() already writes canonical paths
   useEffect(() => {
     const canonical = screenToPath(screen);
     if (canonical !== window.location.pathname) {
       window.history.replaceState(null, "", canonical);
     }
-    // Mount-only by design: navigate() already writes canonical paths.
-    // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only canonicalization
   }, []);
 
   const darkMode = useDarkMode();

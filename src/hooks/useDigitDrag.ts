@@ -251,7 +251,7 @@ export function useDigitDrag({
       document.removeEventListener("pointercancel", onCancel);
       document.removeEventListener("keydown", onKey);
     };
-  }, [activePointerId, end]);
+  }, [activePointerId, end, applyState]);
 
   const start = useCallback(
     ({ digit, source, x, y, pointerId, pointerType }: StartParams) => {

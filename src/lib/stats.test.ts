@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+// biome-ignore lint/performance/noNamespaceImport: vi.spyOn needs the module namespace object
 import * as dateModule from "./date.ts";
 import {
   getStats,

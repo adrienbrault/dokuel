@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
+import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
@@ -172,7 +172,15 @@ export function MultiplayerBoard({
       assistLevel,
       hintsUsed: game.hintsUsed,
     });
-  }, [game.board, game.status, gameKey, puzzle, difficulty, assistLevel]);
+  }, [
+    game.board,
+    game.status,
+    game.hintsUsed,
+    gameKey,
+    puzzle,
+    difficulty,
+    assistLevel,
+  ]);
 
   // Clear the save once this player finishes — keyed off local status so
   // the loser's in-progress save survives the opponent's win.
@@ -193,12 +201,18 @@ export function MultiplayerBoard({
 
   // Keyed off local status only — the loser keeps interacting until they
   // finish their own board.
-  const { highlight, chargingDigit, numPadRef, numPadProps, dragState, startCellDrag } =
-    useNumpadInteractions({
-      game,
-      disabled: game.status !== "playing",
-      assistLevel,
-    });
+  const {
+    highlight,
+    chargingDigit,
+    numPadRef,
+    numPadProps,
+    dragState,
+    startCellDrag,
+  } = useNumpadInteractions({
+    game,
+    disabled: game.status !== "playing",
+    assistLevel,
+  });
 
   return (
     <GameLayout
