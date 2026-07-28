@@ -100,6 +100,19 @@ export function joinRoom(
   });
 }
 
+/**
+ * Remove a player's entry. Used by the overflow client after a
+ * concurrent-join merge left more than MAX_PLAYERS entries: deleting
+ * itself returns the room to a startable two-player lobby.
+ */
+export function leaveRoom(room: P2PRoom, playerId: string): void {
+  const players = room.doc.getMap("players");
+  if (!players.has(playerId)) return;
+  room.doc.transact(() => {
+    players.delete(playerId);
+  });
+}
+
 export function setAssistLevel(room: P2PRoom, level: AssistLevel): void {
   room.doc.transact(() => {
     room.doc.getMap("room").set("assistLevel", level);

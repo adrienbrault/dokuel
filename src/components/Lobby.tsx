@@ -25,7 +25,10 @@ export function Lobby({
   onBack,
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
-  const canStart = roomState.players.length === 2;
+  // >= not ===: a concurrent-join merge can briefly hold a third entry
+  // until the overflow client evicts itself — the seated pair must
+  // still be able to start.
+  const canStart = roomState.players.length >= 2;
   const waiting = roomState.players.length < 2;
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);

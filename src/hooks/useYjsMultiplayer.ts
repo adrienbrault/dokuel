@@ -16,6 +16,7 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  leaveRoom,
   MAX_PLAYERS,
   observeRoomChanges,
   type P2PRoom,
@@ -82,6 +83,9 @@ export function useYjsMultiplayer({
   // The puzzle we latched for lastGameNumberRef — lets the observer
   // spot a same-number/different-puzzle merge after a start collision.
   const latchedPuzzleRef = useRef<string | null>(null);
+  // One-shot: this client removed its own overflow entry after losing
+  // a concurrent-join seat race.
+  const evictedSelfRef = useRef(false);
   // Tracks whether this client actually went away (WebRTC dropped for a
   // hidden tab, or the signaling connection fell over). A remote
   // forfeit claim asserts that we did — it is only honored when this
@@ -193,6 +197,17 @@ export function useYjsMultiplayer({
       // (joinRoom no-oped), or sorted into the overflow after a
       // concurrent-join merge.
       const seat = state.players.findIndex((p) => p.id === playerId);
+      if (
+        state.players.length > MAX_PLAYERS &&
+        seat >= MAX_PLAYERS &&
+        !evictedSelfRef.current
+      ) {
+        // We hold an entry but lost the seat race — delete it so the
+        // two seated players get their startable lobby back instead of
+        // a ghost row and a disabled Start button.
+        evictedSelfRef.current = true;
+        leaveRoom(room, playerId);
+      }
       setRoomFull(
         state.players.length >= MAX_PLAYERS &&
           (seat === -1 || seat >= MAX_PLAYERS),
