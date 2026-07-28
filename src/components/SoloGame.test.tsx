@@ -28,6 +28,21 @@ describe("SoloGame numpad selection", () => {
       null) as typeof document.elementFromPoint;
   });
 
+  it("closes the settings popover on Escape and returns focus to the gear", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    const gear = screen.getByRole("button", { name: "Settings" });
+    fireEvent.click(gear);
+    expect(screen.getByText("Numpad position")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByText("Numpad position")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(gear);
+  });
+
   it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
