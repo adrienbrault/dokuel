@@ -316,6 +316,36 @@ describe("p2p-room", () => {
       expect(claimed).toBe(false);
       expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
     });
+
+    it("lets a verified solved claim displace a forfeit claim", () => {
+      // A forfeit only means anything while the "absent" player never
+      // finishes. If they complete the real board, the forfeit was
+      // premature or fabricated — the solve wins.
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "medium");
+
+      const solution = room.doc.getMap("room").get("solution") as string;
+      claimWinner(room, "player2", "Bob", null);
+      const claimed = claimWinner(room, "player1", "Alice", solution);
+
+      expect(claimed).toBe(true);
+      expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
+    });
+
+    it("does not let a wrong board displace a forfeit claim", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "medium");
+
+      claimWinner(room, "player2", "Bob", null);
+      const claimed = claimWinner(room, "player1", "Alice", "1".repeat(81));
+
+      expect(claimed).toBe(false);
+      expect(room.doc.getMap("room").get("winnerId")).toBe("player2");
+    });
   });
 
   describe("requestRematch", () => {

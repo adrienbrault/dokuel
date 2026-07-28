@@ -499,6 +499,20 @@ describe("useYjsMultiplayer", () => {
       expect(doc.getMap("room").get("winnerId")).toBe("p1");
       expect(doc.getMap("room").get("winnerBoard")).toBeNull();
     });
+
+    it("ignores a forfeit claim received while we were continuously present", async () => {
+      // A forfeit claim asserts that WE left. This client has been
+      // connected and visible the whole game, so the claim is
+      // fabricated (the one-liner devtools cheat) — don't lose on it.
+      const { result, fakeRoom } = await setupStartedGame(
+        "room-forfeit-present",
+      );
+      act(() => {
+        claimWinner(fakeRoom, "p2", "Bob", null);
+      });
+      await flushSync();
+      expect(result.current.gameOver).toBeNull();
+    });
   });
 
   describe("visibility-driven WebRTC lifecycle", () => {
@@ -641,6 +655,52 @@ describe("useYjsMultiplayer", () => {
       expect(provider.awareness.getLocalState()?.user).toEqual({
         id: "p1",
         name: "Alice",
+      });
+    });
+
+    it("accepts a forfeit claim after we really were away", async () => {
+      const { result } = renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-forfeit-away",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const doc = mocks.lastDoc!;
+      const fakeRoom = { doc, roomId: "room-forfeit-away" };
+      act(() => {
+        joinRoom(fakeRoom, "p2", "Bob");
+        startGame(fakeRoom);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      // We disappear long enough for the WebRTC drop, then return; the
+      // opponent's forfeit claim lands right after. That absence was
+      // real, so the claim must be honored.
+      act(() => {
+        setTabHidden(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      act(() => {
+        setTabHidden(false);
+      });
+      act(() => {
+        claimWinner(fakeRoom, "p2", "Bob", null);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.gameOver).toEqual({
+        winnerId: "p2",
+        winnerName: "Bob",
       });
     });
 
