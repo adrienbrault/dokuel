@@ -1,13 +1,10 @@
 import { getErrors } from "./sudoku.ts";
-import type { Board, Position } from "./types.ts";
+import type { ActiveHint, Board, Position } from "./types.ts";
 
-export type HintExplanation = {
-  position: Position;
-  value: number;
-  technique: "naked-single" | "hidden-single" | "mistake" | "reveal";
-  explanation: string;
-  relatedCells: Position[];
-};
+// Alias, not a parallel definition: board-engine stores findHint's
+// result in an ActiveHint field, and two structurally-identical types
+// only stay identical by luck.
+export type HintExplanation = ActiveHint;
 
 function peersOf(row: number, col: number): Position[] {
   const peers: Position[] = [];
