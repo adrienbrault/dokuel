@@ -36,6 +36,18 @@ describe("pathToScreen", () => {
     });
   });
 
+  it("rejects room codes longer than the signaling shard key", () => {
+    // The worker truncates its Durable Object key at 64 chars, so an
+    // oversized code would silently split players across shards (and a
+    // multi-KB path would become a Yjs room name). Overlong codes are
+    // a 404, not a room.
+    const oversized = `/${"a".repeat(40)}-${"b".repeat(40)}`;
+    expect(pathToScreen(oversized)).toEqual({
+      name: "notFound",
+      path: oversized,
+    });
+  });
+
   it("does not turn arbitrary junk paths into rooms", () => {
     // Every typo'd URL used to boot the whole WebRTC stack and open a
     // signaling connection for a room named after the typo.
