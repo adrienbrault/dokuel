@@ -69,7 +69,10 @@ export function useYjsMultiplayer({
   const [opponentProgress, setOpponentProgress] =
     useState<OpponentProgress | null>(null);
   const [gameOver, setGameOver] = useState<GameOverInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Fresh object per raise (not a bare string): consumers toast off
+  // this value, and a repeat of the same message must still re-fire
+  // their effect.
+  const [error, setError] = useState<{ message: string } | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   // True when this client is the odd one out of a full 1v1 room —
   // either it arrived after two players had joined (its joinRoom
@@ -412,7 +415,7 @@ export function useYjsMultiplayer({
 
     const players = getPlayers(room);
     if (players.length < 2) {
-      setError("Need 2 players to start");
+      setError({ message: "Need 2 players to start" });
       return;
     }
     startGame(room);

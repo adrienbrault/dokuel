@@ -24,10 +24,12 @@ export function MultiplayerGame({
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const [toast, setToast] = useState<string | null>(null);
 
-  // Show errors as transient toasts instead of replacing the UI
+  // Show errors as transient toasts instead of replacing the UI. The
+  // hook raises a fresh object per error, so a repeat of the same
+  // message re-fires this effect and the toast shows again.
   useEffect(() => {
     if (!mp.error) return;
-    setToast(mp.error);
+    setToast(mp.error.message);
     const id = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(id);
   }, [mp.error]);
