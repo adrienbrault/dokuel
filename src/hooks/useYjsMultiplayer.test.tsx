@@ -511,6 +511,26 @@ describe("useYjsMultiplayer", () => {
     }
   });
 
+  it("scopes the signaling connection to the room via the URL path", async () => {
+    // The worker shards rooms into separate Durable Objects keyed by
+    // the URL path. A bare host would land every player in one global
+    // object — a single point of contention and a cross-room fanout
+    // surface — so the client must address its room explicitly.
+    renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "brave-otter-1a2b",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+    await flushSync();
+
+    expect(mocks.lastProviderOptions?.signaling).toEqual([
+      "wss://signal.dokuel.com/brave-otter-1a2b",
+    ]);
+  });
+
   it("re-raises an identical error so the toast can show again", async () => {
     // "Need 2 players to start" twice in a row: a string state field
     // is Object.is-equal on the second set, so the consumer's effect
