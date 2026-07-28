@@ -97,15 +97,15 @@ test("the daily challenge regenerates the same board after storage is cleared", 
   expect(await readBoard(page)).toBe(firstBoard);
 });
 
-test("clicking digits notes a drag-selected range and keeps the selection", async ({
+test("tapping a digit notes a drag-selected range, then hands off to highlights", async ({
   page,
 }) => {
-  // The desktop bug this pins: gesture slop was measured from the
-  // numpad button's center, so an off-center click with a few pixels
-  // of mouse wobble misfired a drag/skim instead of tapping — and the
-  // tap itself used to discard a multi-cell selection. Both clicks
-  // here land off-center with wobble; the second landing proves the
-  // selection survived the first.
+  // Pins the range-noting rhythm end to end with the misfire geometry
+  // (off-center clicks with mouse wobble, which center-relative slop
+  // used to misread as drags): tap notes the range and releases it,
+  // the next tap is the grid-highlight gesture and must not scribble
+  // more notes, and hold is the stacking gesture that keeps the
+  // selection.
   await page.goto("/");
   await page.getByRole("button", { name: "Start Solo" }).click();
   await page.getByRole("button", { name: "Easy" }).click();
@@ -141,28 +141,47 @@ test("clicking digits notes a drag-selected range and keeps the selection", asyn
     page.getByText("tap = note · hold = note · drag = place"),
   ).toBeVisible();
 
-  // Click two numpad digits, each off-center with 2px of wobble.
+  // Off-center click with 2px of wobble — the geometry that used to
+  // misfire a drag under center-relative slop.
   const pad = page.locator('[role="group"][aria-label="Number pad"]:visible');
-  const digits: number[] = [];
-  for (const name of [/^1(,|$)/, /^2(,|$)/]) {
+  const wobblyClick = async (name: RegExp) => {
     const btn = pad.getByRole("button", { name });
     const box = await btn.boundingBox();
     if (!box) throw new Error("digit not visible");
-    digits.push(Number((await btn.textContent())?.trim()[0]));
     await page.mouse.move(box.x + box.width - 8, box.y + box.height / 2 + 5);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width - 6, box.y + box.height / 2 + 6);
     await page.mouse.up();
+  };
+
+  // Tap 1: the note lands in both cells and the selection is released
+  // (legend back to enter-mode).
+  await wobblyClick(/^1(,|$)/);
+  for (const idx of [start, start + 1]) {
+    await expect(cellAt(idx)).toHaveAttribute("aria-label", /notes 1$/);
+  }
+  await expect(
+    page.getByText("tap = enter · hold = note · drag = place"),
+  ).toBeVisible();
+
+  // Tap 2: with the selection released this is the grid-highlight
+  // gesture — it must NOT pencil more notes into the old range.
+  await wobblyClick(/^2(,|$)/);
+  for (const idx of [start, start + 1]) {
+    await expect(cellAt(idx)).toHaveAttribute("aria-label", /notes 1$/);
   }
 
-  // Both cells carry both digits as notes — the range got the first
-  // note AND stayed selected for the second.
-  const notes = `notes ${digits.sort((a, b) => a - b).join(" ")}`;
+  // Stacking a pair uses hold, the gesture that keeps the selection:
+  // re-select the range and hold 2 → both cells carry {1,2}.
+  await page.mouse.move(boxA.x + boxA.width / 2, boxA.y + boxA.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(boxB.x + boxB.width / 2, boxB.y + boxB.height / 2, {
+    steps: 6,
+  });
+  await page.mouse.up();
+  await holdNumpadDigit(page, pad.getByRole("button", { name: /^2(,|$)/ }));
   for (const idx of [start, start + 1]) {
-    await expect(cellAt(idx)).toHaveAttribute(
-      "aria-label",
-      new RegExp(`${notes}$`),
-    );
+    await expect(cellAt(idx)).toHaveAttribute("aria-label", /notes 1 2$/);
   }
 });
 
