@@ -90,8 +90,23 @@ export const Cell = memo(function Cell({
   const textClass = cell.isGiven
     ? "text-cell-given font-bold"
     : isConflict
-      ? "text-cell-conflict font-semibold"
+      ? // Wavy underline: a non-color conflict marker for colorblind
+        // players — the red alone is ambiguous next to given digits.
+        "text-cell-conflict font-semibold underline decoration-wavy decoration-from-font underline-offset-4"
       : "text-cell-user font-semibold";
+
+  // The accessible name carries every state the colors encode: screen
+  // readers hear position, value/emptiness, givenness, conflicts, and
+  // pencil notes instead of just "row/column".
+  const labelParts = [
+    `Cell row ${row + 1} column ${col + 1}`,
+    cell.value ? `value ${cell.value}` : "empty",
+  ];
+  if (cell.isGiven) labelParts.push("given");
+  if (isConflict && cell.value) labelParts.push("conflict");
+  if (!cell.value && cell.notes.size > 0) {
+    labelParts.push(`notes ${[...cell.notes].sort((a, b) => a - b).join(" ")}`);
+  }
 
   return (
     <button
@@ -119,7 +134,7 @@ export const Cell = memo(function Cell({
         dropTargetState === "valid" ? (dropMode ?? undefined) : undefined
       }
       onClick={() => onSelect(row, col)}
-      aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
+      aria-label={labelParts.join(", ")}
     >
       {cell.value ? (
         <span

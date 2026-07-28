@@ -38,11 +38,11 @@ describe("Board same-number row/col highlighting (full assist)", () => {
 
     // Cell (4,0) is in row 4 (same row as matching 5 at (4,6)), not in selected row/col/box
     // It should get the match-row-col highlight
-    const cell40 = screen.getByLabelText("Cell row 5 column 1, empty");
+    const cell40 = screen.getByLabelText(/^Cell\ row\ 5\ column\ 1,\ empty/);
     expect(cell40.className).toContain("bg-cell-match-row-col");
 
     // Cell (0,6) is in col 6 (same col as matching 5 at (4,6)), not in selected row/col/box
-    const cell06 = screen.getByLabelText("Cell row 1 column 7, empty");
+    const cell06 = screen.getByLabelText(/^Cell\ row\ 1\ column\ 7,\ empty/);
     expect(cell06.className).toContain("bg-cell-match-row-col");
   });
 
@@ -63,7 +63,7 @@ describe("Board same-number row/col highlighting (full assist)", () => {
     );
 
     // Cell (4,0) should NOT have match-row-col in standard mode
-    const cell40 = screen.getByLabelText("Cell row 5 column 1, empty");
+    const cell40 = screen.getByLabelText(/^Cell\ row\ 5\ column\ 1,\ empty/);
     expect(cell40.className).not.toContain("bg-cell-match-row-col");
   });
 
@@ -83,7 +83,7 @@ describe("Board same-number row/col highlighting (full assist)", () => {
       />,
     );
 
-    const cell40 = screen.getByLabelText("Cell row 5 column 1, empty");
+    const cell40 = screen.getByLabelText(/^Cell\ row\ 5\ column\ 1,\ empty/);
     expect(cell40.className).not.toContain("bg-cell-match-row-col");
   });
 
@@ -104,7 +104,7 @@ describe("Board same-number row/col highlighting (full assist)", () => {
     );
 
     // (3,7) shares box (1,2) with matching 5 at (4,6); not in row 4 or col 6
-    const cell37 = screen.getByLabelText("Cell row 4 column 8, empty");
+    const cell37 = screen.getByLabelText(/^Cell\ row\ 4\ column\ 8,\ empty/);
     expect(cell37.className).toContain("bg-cell-match-row-col");
   });
 });
@@ -130,17 +130,17 @@ describe("Board highlightedDigit", () => {
     );
 
     expect(
-      screen.getByLabelText("Cell row 1 column 1, value 7").className,
+      screen.getByLabelText(/^Cell\ row\ 1\ column\ 1,\ value\ 7/).className,
     ).toContain("bg-cell-same-number");
     expect(
-      screen.getByLabelText("Cell row 4 column 4, value 7").className,
+      screen.getByLabelText(/^Cell\ row\ 4\ column\ 4,\ value\ 7/).className,
     ).toContain("bg-cell-same-number");
     expect(
-      screen.getByLabelText("Cell row 6 column 9, value 7").className,
+      screen.getByLabelText(/^Cell\ row\ 6\ column\ 9,\ value\ 7/).className,
     ).toContain("bg-cell-same-number");
     // Non-matching value cell does not get same-number bg
     expect(
-      screen.getByLabelText("Cell row 5 column 5, value 2").className,
+      screen.getByLabelText(/^Cell\ row\ 5\ column\ 5,\ value\ 2/).className,
     ).not.toContain("bg-cell-same-number");
   });
 
@@ -164,7 +164,7 @@ describe("Board highlightedDigit", () => {
     // The 7 at (3,3) should NOT highlight as same-number because the
     // selected cell's value (5) takes precedence
     expect(
-      screen.getByLabelText("Cell row 4 column 4, value 7").className,
+      screen.getByLabelText(/^Cell\ row\ 4\ column\ 4,\ value\ 7/).className,
     ).not.toContain("bg-cell-same-number");
   });
 
@@ -189,15 +189,15 @@ describe("Board highlightedDigit", () => {
     );
 
     // Cell (1,0) shares row 1 with the 5 at (1,2)
-    const cell10 = screen.getByLabelText("Cell row 2 column 1, empty");
+    const cell10 = screen.getByLabelText(/^Cell\ row\ 2\ column\ 1,\ empty/);
     expect(cell10.className).toContain("bg-cell-match-row-col");
 
     // Cell (0,6) shares col 6 with the 5 at (4,6)
-    const cell06 = screen.getByLabelText("Cell row 1 column 7, empty");
+    const cell06 = screen.getByLabelText(/^Cell\ row\ 1\ column\ 7,\ empty/);
     expect(cell06.className).toContain("bg-cell-match-row-col");
 
     // Cell (3,7) shares box (1,2) with the 5 at (4,6)
-    const cell37 = screen.getByLabelText("Cell row 4 column 8, empty");
+    const cell37 = screen.getByLabelText(/^Cell\ row\ 4\ column\ 8,\ empty/);
     expect(cell37.className).toContain("bg-cell-match-row-col");
   });
 
@@ -218,7 +218,7 @@ describe("Board highlightedDigit", () => {
       />,
     );
 
-    const cell10 = screen.getByLabelText("Cell row 2 column 1, empty");
+    const cell10 = screen.getByLabelText(/^Cell\ row\ 2\ column\ 1,\ empty/);
     expect(cell10.className).not.toContain("bg-cell-match-row-col");
   });
 });
