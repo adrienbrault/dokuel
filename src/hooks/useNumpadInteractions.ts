@@ -56,6 +56,10 @@ export function useNumpadInteractions({
 
   // Prop bag for <NumPad {...numPadProps} ref={numPadRef} position=.../>.
   const numPadProps = {
+    // With a range selected, a tap pencils notes — the legend says so.
+    tapAction: (game.selectedCells.size > 1 ? "note" : "enter") as
+      | "note"
+      | "enter",
     remainingCounts: game.remainingCounts,
     selectedValue: game.selectedCell
       ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value

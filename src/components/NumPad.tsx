@@ -53,6 +53,8 @@ type NumPadProps = {
     | undefined;
   /** Fires when an ALONG-axis skim crosses into another digit's button. */
   onSkimDigit?: ((n: number) => void) | undefined;
+  /** What a tap currently does; drives the legend wording. */
+  tapAction?: "enter" | "note" | undefined;
   /** Imperative handle — see NumPadHandle. */
   ref?: Ref<NumPadHandle> | undefined;
 };
@@ -86,6 +88,7 @@ export function NumPad({
   onPressEnd,
   onStartDrag,
   onSkimDigit,
+  tapAction,
   ref,
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
@@ -265,7 +268,7 @@ export function NumPad({
     <div
       className={`flex flex-col items-center gap-1 lg:gap-2 ${isVertical ? "w-12 lg:w-16" : "w-full lg:w-auto"}`}
     >
-      <NumPadLegend isVertical={isVertical} />
+      <NumPadLegend isVertical={isVertical} tapAction={tapAction} />
       <div
         ref={groupRef}
         className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full lg:grid lg:grid-cols-3 lg:w-auto lg:gap-2"}`}
