@@ -35,6 +35,11 @@ type UseYjsMultiplayerOptions = {
   difficulty: Difficulty | null;
 };
 
+// How long after our own absence ended a remote forfeit claim is still
+// honored. Covers the opponent's 60s countdown plus sync latency for
+// the case where we return just as their claim lands.
+const FORFEIT_TRUST_WINDOW_MS = 120_000;
+
 type OpponentProgress = {
   cellsRemaining: number;
   completionPercent: number;
@@ -74,6 +79,14 @@ export function useYjsMultiplayer({
   const roomRef = useRef<P2PRoom | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
   const lastGameNumberRef = useRef<number>(0);
+  // Tracks whether this client actually went away (WebRTC dropped for a
+  // hidden tab, or the signaling connection fell over). A remote
+  // forfeit claim asserts that we did — it is only honored when this
+  // record backs it up, otherwise it's the one-liner devtools cheat.
+  const absenceRef = useRef<{ ongoing: boolean; endedAt: number }>({
+    ongoing: false,
+    endedAt: 0,
+  });
   // Mirrors the room's current solution so the sendComplete callback
   // (stable identity, created once) can validate claims without a
   // stale closure over the `solution` state.
@@ -130,14 +143,21 @@ export function useYjsMultiplayer({
 
       // Detect winner. A remote solved-claim only counts when the
       // board it ships actually equals the solution — a peer can write
-      // anything into the CRDT. Forfeit claims (null board) have
-      // nothing to verify; our own claims were validated before
-      // writing.
+      // anything into the CRDT. A forfeit claim (null board) asserts
+      // that WE went away, so it only counts when our own absence
+      // record agrees; a fabricated forfeit is ignored and later
+      // displaced by our verified solve. Our own claims were validated
+      // before writing.
       if (state.winnerId && state.winnerName) {
+        const absence = absenceRef.current;
+        const forfeitBackedByAbsence =
+          absence.ongoing ||
+          Date.now() - absence.endedAt < FORFEIT_TRUST_WINDOW_MS;
         const claimValid =
           state.winnerId === playerId ||
-          state.winnerBoard === null ||
-          state.winnerBoard === state.solution;
+          (state.winnerBoard === null
+            ? forfeitBackedByAbsence
+            : state.winnerBoard === state.solution);
         if (claimValid) {
           setGameOver({
             winnerId: state.winnerId,
@@ -181,9 +201,23 @@ export function useYjsMultiplayer({
 
     awareness.on("change", updatePresence);
 
+    const markAbsent = () => {
+      absenceRef.current = { ongoing: true, endedAt: 0 };
+    };
+    const markPresentAgain = () => {
+      if (absenceRef.current.ongoing) {
+        absenceRef.current = { ongoing: false, endedAt: Date.now() };
+      }
+    };
+
     // Track connection status via provider
     const onStatus = ({ connected: isConnected }: { connected: boolean }) => {
       setConnected(isConnected);
+      if (isConnected) {
+        markPresentAgain();
+      } else {
+        markAbsent();
+      }
     };
     provider.on("status", onStatus);
 
@@ -215,6 +249,7 @@ export function useYjsMultiplayer({
         if (hideTimer === null) {
           hideTimer = setTimeout(() => {
             provider.disconnect();
+            markAbsent();
             hideTimer = null;
           }, HIDE_DEBOUNCE_MS);
         }
@@ -227,6 +262,7 @@ export function useYjsMultiplayer({
           provider.connect();
           announcePresence(awareness, playerId, playerNameRef.current);
         }
+        markPresentAgain();
       }
       updatePresence();
     };

@@ -188,10 +188,12 @@ export function getOpponentProgress(
 /**
  * Write a win claim into the room. `board` is the claimant's completed
  * board for a solved win, or null for a forfeit (opponent gone —
- * nothing to verify). The first claim normally wins, with one
- * exception: an existing solved-claim whose board does NOT match the
- * room's solution is forged, and a later claim may overwrite it so a
- * cheater cannot lock the real winner out.
+ * nothing to verify). The first claim normally wins, with two
+ * exceptions that keep a cheater from locking the real winner out:
+ * an existing solved-claim whose board does NOT match the room's
+ * solution is forged and may be overwritten, and an existing forfeit
+ * claim yields to a verified solved board — a forfeit only means
+ * anything while the supposedly absent player never finishes.
  */
 export function claimWinner(
   room: P2PRoom,
@@ -208,7 +210,11 @@ export function claimWinner(
       typeof existingBoard === "string" &&
       typeof solution === "string" &&
       existingBoard !== solution;
-    if (!existingIsForged) return false;
+    const solvedBeatsForfeit =
+      (existingBoard === null || existingBoard === undefined) &&
+      typeof solution === "string" &&
+      board === solution;
+    if (!existingIsForged && !solvedBeatsForfeit) return false;
   }
 
   room.doc.transact(() => {
