@@ -14,7 +14,10 @@ export type MultiplayerGameRecord = {
 
 const STORAGE_KEY = "sudoku_multiplayer_stats";
 
-const MAX_RECORDS = 100;
+// Per-difficulty cap: a global ring let a run of medium matches evict
+// an easy best-win record (getMultiplayerStatsForDifficulty derives
+// bestWinTime from stored records).
+const MAX_RECORDS_PER_DIFFICULTY = 100;
 
 export function getMultiplayerStats(): MultiplayerGameRecord[] {
   try {
@@ -45,8 +48,27 @@ export function saveMultiplayerGameResult(record: MultiplayerGameRecord) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(corrected));
     return;
   }
-  const next = [...all, record].slice(-MAX_RECORDS);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const next = [...all, record];
+  const counts = new Map<string, number>();
+  for (const r of next) {
+    counts.set(r.difficulty, (counts.get(r.difficulty) ?? 0) + 1);
+  }
+  const excess = new Map<string, number>();
+  for (const [difficulty, count] of counts) {
+    if (count > MAX_RECORDS_PER_DIFFICULTY) {
+      excess.set(difficulty, count - MAX_RECORDS_PER_DIFFICULTY);
+    }
+  }
+  const trimmed =
+    excess.size === 0
+      ? next
+      : next.filter((r) => {
+          const over = excess.get(r.difficulty) ?? 0;
+          if (over === 0) return true;
+          excess.set(r.difficulty, over - 1);
+          return false;
+        });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
 }
 
 export type MultiplayerSummary = {

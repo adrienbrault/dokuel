@@ -12,6 +12,13 @@ export type GameStats = {
 
 const STORAGE_KEY = "sudoku_stats";
 
+// History cap per (difficulty, assistLevel) bucket. Eviction must be
+// scoped to the bucket the stats read over: a global ring let 100
+// medium games evict an easy PB record, silently regressing the
+// displayed best. 12 buckets × 100 small records stays well under any
+// localStorage quota.
+const MAX_GAMES_PER_BUCKET = 100;
+
 export function getStats(): GameStats[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -44,9 +51,34 @@ export function saveGameResult(
     won,
     hintsUsed: hintsUsed ?? 0,
   });
-  // Keep last 100 games
-  const trimmed = stats.slice(-100);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(evictPerBucket(stats, (s) => s.difficulty + s.assistLevel)),
+  );
+}
+
+/** Drop the oldest entries of any bucket that exceeds the cap,
+ *  preserving overall insertion order. */
+function evictPerBucket<T>(entries: T[], bucketOf: (entry: T) => string): T[] {
+  const counts = new Map<string, number>();
+  for (const entry of entries) {
+    const bucket = bucketOf(entry);
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+  }
+  const excess = new Map<string, number>();
+  for (const [bucket, count] of counts) {
+    if (count > MAX_GAMES_PER_BUCKET) {
+      excess.set(bucket, count - MAX_GAMES_PER_BUCKET);
+    }
+  }
+  if (excess.size === 0) return entries;
+  return entries.filter((entry) => {
+    const bucket = bucketOf(entry);
+    const over = excess.get(bucket) ?? 0;
+    if (over === 0) return true;
+    excess.set(bucket, over - 1);
+    return false;
+  });
 }
 
 export function getStatsForDifficulty(
