@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
-import { clearSnapshot, loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
+import {
+  clearSnapshot,
+  loadSnapshot,
+  saveSnapshot,
+  sweepStaleSnapshots,
+} from "./mp-snapshot.ts";
 
 function makeState(overrides: Partial<RoomState> = {}): RoomState {
   return {
@@ -88,5 +93,28 @@ describe("mp-snapshot", () => {
   it("returns null when stored JSON is malformed", () => {
     localStorage.setItem("dokuel_mp_snap_room-bad", "{not-json");
     expect(loadSnapshot("room-bad")).toBeNull();
+  });
+
+  it("sweeps expired and malformed snapshot keys, keeping fresh ones", () => {
+    // loadSnapshot treats an over-age snapshot as absent but leaves the
+    // key in place — every room ever visited parked ~2KB in
+    // localStorage forever. The sweep removes what load would refuse,
+    // and returns the rooms it dropped so IDB cleanup can follow.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    saveSnapshot("room-old", makeState());
+    localStorage.setItem("dokuel_mp_snap_room-junk", "{not-json");
+    localStorage.setItem("unrelated_key", "keep-me");
+
+    vi.setSystemTime(new Date("2026-01-01T14:00:00Z")); // +2h
+    saveSnapshot("room-fresh", makeState());
+
+    const swept = sweepStaleSnapshots();
+
+    expect(swept.sort()).toEqual(["room-junk", "room-old"]);
+    expect(localStorage.getItem("dokuel_mp_snap_room-old")).toBeNull();
+    expect(localStorage.getItem("dokuel_mp_snap_room-junk")).toBeNull();
+    expect(loadSnapshot("room-fresh")).not.toBeNull();
+    expect(localStorage.getItem("unrelated_key")).toBe("keep-me");
   });
 });
