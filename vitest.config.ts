@@ -6,6 +6,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // A spy left installed by a failing test must not cascade into the
+    // next test's failure — restore all mocks between tests.
+    restoreMocks: true,
     coverage: {
       provider: "v8",
       include: ["src/lib/**", "src/hooks/**"],
