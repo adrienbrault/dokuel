@@ -467,6 +467,21 @@ export function useYjsMultiplayer({
   const claimForfeitWin = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
+    // Recheck at claim time: the countdown was armed from stale state
+    // and the opponent may have reconnected in the meantime — don't
+    // steamroll a player who just came back.
+    const provider = providerRef.current;
+    if (
+      provider &&
+      presenceHasOpponent(
+        provider.awareness,
+        room.doc.clientID,
+        playerId,
+        getPlayers(room).length,
+      )
+    ) {
+      return;
+    }
     claimWinner(room, playerId, playerNameRef.current, null);
   }, [playerId]);
 
