@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { formatTime } from "../lib/format.ts";
 
 type TimerProps = {
@@ -30,9 +30,21 @@ export function Timer({
     return () => clearInterval(interval);
   }, [running]);
 
+  // The colon breathes (see .timer-colon) — the digits themselves stay
+  // still, so the running state shows without the numbers jittering.
+  // Gated on `running`: a paused or finished clock must not signal life.
+  const parts = formatTime(seconds).split(":");
   return (
     <span className={className ?? "text-mono text-base"}>
-      {formatTime(seconds)}
+      {parts.map((part, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: positional segments
+        <Fragment key={i}>
+          {i > 0 && (
+            <span className={running ? "timer-colon" : undefined}>:</span>
+          )}
+          {part}
+        </Fragment>
+      ))}
     </span>
   );
 }

@@ -91,13 +91,13 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
             onClick={() => onSelect(d.value, assistLevel)}
           >
             <span
-              className={`icon-chip w-12 h-12 ${d.chip} ${d.text}`}
+              className={`icon-chip w-12 h-12 border border-border-default ${d.text}`}
               aria-hidden="true"
             >
               <LevelBars level={d.level} color={d.bar} />
             </span>
             <span className="flex-1 text-left">
-              <span className={`block text-lg font-bold ${d.text}`}>
+              <span className="block text-[1.05rem] font-semibold text-text-primary">
                 {d.label}
               </span>
               <span className="block caption">{d.description}</span>

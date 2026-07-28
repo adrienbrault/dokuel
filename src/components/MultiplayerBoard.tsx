@@ -202,21 +202,20 @@ export function MultiplayerBoard({
       position={position}
       onPositionChange={setPosition}
       onDeselectCell={highlight.deselectCell}
-      headerClassName="max-w-[min(100vw-2rem,28rem)]"
+      headerClassName="max-w-[min(100vw-2rem,28rem)] lg:max-w-[35rem]"
+      progressPercent={myPercent}
       timer={
-        <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm">
+        <div className="flex flex-col items-center px-4 py-1">
           <Timer
             running={game.status === "playing"}
             initialSeconds={initialTimerSeconds}
             onTick={(s) => {
               timerSecondsRef.current = s;
             }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
+            className="font-mono text-[1.35rem] tracking-[0.04em] tabular-nums text-text-primary leading-none"
           />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
-            <span className="text-accent font-medium">
-              {81 - game.cellsRemaining}
-            </span>
+          <span className="font-mono text-[0.6875rem] text-text-muted tabular-nums mt-1">
+            <span className="text-accent">{81 - game.cellsRemaining}</span>
             /81
           </span>
         </div>

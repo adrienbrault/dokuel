@@ -108,7 +108,7 @@ export function GameResult({
           >
             {isWinner ? "🎉" : "👏"}
           </span>
-          <h2 className="heading">
+          <h2 className="heading text-[1.75rem]">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
           {difficulty && (
@@ -119,12 +119,14 @@ export function GameResult({
             </span>
           )}
         </div>
-        <div className="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
-          <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
+        {/* The solve time as a pull-quote: display serif between two
+            hairline rules, like a quotation the paper is proud of. */}
+        <div className="flex flex-col items-center gap-2 w-full border-y border-border-default py-4">
+          <span className="font-display text-[3.25rem] font-semibold tabular-nums text-text-primary leading-none [font-variation-settings:'opsz'_72]">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
-            <span className="text-sm font-bold text-accent">
+            <span className="font-mono text-xs tracking-[0.08em] uppercase text-accent">
               New Personal Best!
             </span>
           )}
@@ -193,11 +195,11 @@ export function GameResult({
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-bg-inset py-2.5">
-      <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
+    <div className="rounded-[10px] bg-bg-inset py-2.5">
+      <div className="text-lg font-medium text-text-primary font-mono tabular-nums">
         {value}
       </div>
-      <div className="text-xs text-text-muted">{label}</div>
+      <div className="text-[0.6875rem] text-text-muted">{label}</div>
     </div>
   );
 }

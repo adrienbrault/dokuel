@@ -75,7 +75,7 @@ export function Lobby({
         <h2 className="heading">Game Lobby</h2>
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-bg-inset border border-border-default cursor-pointer touch-manipulation press-spring-soft"
+          className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-bg-inset border border-border-default cursor-pointer touch-manipulation press-spring-soft"
           onClick={async () => {
             await navigator.clipboard.writeText(roomState.roomId);
             setCodeCopied(true);
@@ -85,7 +85,7 @@ export function Lobby({
         >
           <Copy size={14} className="text-text-muted" aria-hidden="true" />
           <span className="caption">{codeCopied ? "Copied!" : "Room"}</span>
-          <span className="font-mono font-bold text-text-primary">
+          <span className="font-mono font-medium tracking-[0.03em] text-text-primary">
             {roomState.roomId}
           </span>
         </button>
@@ -156,7 +156,7 @@ export function Lobby({
           );
         })}
         {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
+          <div className="flex items-center justify-center gap-2 py-3 rounded-[14px] border-2 border-dashed border-border-default animate-pulse">
             <span className="text-sm text-text-muted">
               Waiting for opponent
             </span>

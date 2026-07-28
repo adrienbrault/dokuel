@@ -27,6 +27,11 @@ type GameLayoutProps = {
   headerClassName?: string | undefined;
   onDeselectCell?: (() => void) | undefined;
   settingsExtra?: ReactNode | undefined;
+  /**
+   * Fill of the masthead rule, 0–100. When set, a thin cobalt line
+   * inks along the header's hairline as the puzzle fills in.
+   */
+  progressPercent?: number | undefined;
 };
 
 export function GameLayout({
@@ -41,9 +46,10 @@ export function GameLayout({
   headerExtra,
   footer,
   boardClassName = "",
-  headerClassName = "max-w-lg",
+  headerClassName = "max-w-lg lg:max-w-[35rem]",
   onDeselectCell,
   settingsExtra,
+  progressPercent,
 }: GameLayoutProps) {
   const handleBackgroundPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (!onDeselectCell) return;
@@ -54,16 +60,20 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter lg:bg-bg-inset lg:[background-image:radial-gradient(120%_70%_at_50%_-20%,var(--color-screen-glow),transparent_60%)]"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
-        <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
+        <p className="font-mono text-xs tracking-[0.08em] uppercase text-text-muted mb-2">
+          {title}
+        </p>
       )}
 
-      {/* Header */}
+      {/* Masthead — back, timer, and settings sit on a single hairline
+          rule like a newspaper folio; the rule doubles as a progress
+          bar, inking in as the puzzle fills. */}
       <div
-        className={`flex items-center justify-between w-full ${headerClassName} mb-4`}
+        className={`relative flex items-center justify-between w-full ${headerClassName} pb-2.5 border-b border-border-default mb-4`}
       >
         <button
           type="button"
@@ -79,6 +89,13 @@ export function GameLayout({
           onPositionChange={onPositionChange}
           extra={settingsExtra}
         />
+        {progressPercent !== undefined && (
+          <span
+            aria-hidden="true"
+            className="absolute left-0 -bottom-px h-[2px] rounded-full bg-accent transition-[width] duration-500 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        )}
       </div>
 
       {headerExtra}
@@ -87,10 +104,16 @@ export function GameLayout({
           breakpoint: "bottom" stacks a full-width digit row under the board,
           "left"/"right" place a vertical column beside it. Keeping the layout
           identical on mobile and desktop means dragging a digit toward the
-          board is always a perpendicular gesture. */}
+          board is always a perpendicular gesture.
+          On desktop the whole area becomes a paper sheet resting on the
+          tinted desk (the lg: root background above), so the board,
+          controls, and numpad stop floating in dead space. */}
       <div
         className={`
           flex gap-3 w-full justify-center flex-1
+          lg:w-auto lg:flex-none lg:my-auto lg:gap-6 lg:bg-surface lg:border lg:border-border-default lg:rounded-[20px] lg:p-6
+          lg:shadow-[0_2px_6px_oklch(0.25_0.02_264/0.05),0_24px_56px_-24px_oklch(0.25_0.02_264/0.18)]
+          dark:lg:shadow-[0_2px_6px_oklch(0_0_0/0.12),0_24px_56px_-24px_oklch(0_0_0/0.45)]
           ${position === "left" ? "flex-row items-end lg:items-center" : ""}
           ${position === "right" ? "flex-row-reverse items-end lg:items-center" : ""}
           ${position === "bottom" ? "flex-col items-center" : ""}
@@ -99,7 +122,7 @@ export function GameLayout({
         {/* Side numpad (left / right positions) */}
         {position !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center lg:w-[32rem]" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
         >
           <div className="flex flex-col items-center gap-3 w-full">
             {controls}
@@ -173,9 +196,9 @@ function SettingsButton({
         <Settings size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
+        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-[16px] shadow-[0_2px_6px_oklch(0.25_0.02_264/0.06),0_20px_48px_-16px_oklch(0.25_0.02_264/0.22)] dark:shadow-[0_2px_6px_oklch(0_0_0/0.12),0_20px_48px_-16px_oklch(0_0_0/0.45)] p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-text-muted font-medium">
+            <p className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-text-muted">
               Numpad position
             </p>
             <button
@@ -192,7 +215,9 @@ function SettingsButton({
             onChange={onPositionChange}
           />
           <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
-            <p className="text-xs text-text-muted font-medium">Dark mode</p>
+            <p className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-text-muted">
+              Dark mode
+            </p>
             <DarkModeToggle
               isDark={darkMode.isDark}
               onToggle={darkMode.toggle}
@@ -204,7 +229,7 @@ function SettingsButton({
             </div>
           )}
           <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
-            <p className="text-xs text-text-muted mb-2 font-medium">
+            <p className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-text-muted mb-2">
               Keyboard shortcuts
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
@@ -222,7 +247,7 @@ function SettingsButton({
 function Shortcut({ keys, label }: { keys: string; label: string }) {
   return (
     <>
-      <kbd className="font-mono text-text-primary bg-bg-raised px-1 rounded text-center">
+      <kbd className="font-mono text-text-primary bg-bg-inset border border-border-default px-1.5 rounded-[5px] text-center">
         {keys}
       </kbd>
       <span className="text-text-muted">{label}</span>

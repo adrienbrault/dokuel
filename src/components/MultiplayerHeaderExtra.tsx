@@ -19,8 +19,8 @@ export function MultiplayerHeaderExtra({
 }: MultiplayerHeaderExtraProps) {
   if (gameOver && !iFinished) {
     return (
-      <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2">
-        <div className="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
+      <div className="w-full max-w-[min(100vw-2rem,28rem)] lg:max-w-[35rem] mb-3 flex flex-col gap-2">
+        <div className="px-3 py-2 rounded-[10px] bg-surface border border-border-default text-sm text-text-secondary text-center">
           <span className="font-semibold text-text-primary">
             {gameOver.winnerName}
           </span>{" "}
@@ -32,7 +32,7 @@ export function MultiplayerHeaderExtra({
             <ProgressBar
               label="Opponent"
               percent={opponentProgress.completionPercent}
-              color="bg-rose-400"
+              color="bg-cell-conflict"
             />
           </div>
         )}
@@ -42,14 +42,14 @@ export function MultiplayerHeaderExtra({
 
   if (showOpponentProgress && opponentProgress) {
     return (
-      <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
+      <div className="w-full max-w-[min(100vw-2rem,28rem)] lg:max-w-[35rem] mb-3 flex flex-col gap-1.5">
         <ProgressBar label="You" percent={myPercent} color="bg-accent" />
         <ProgressBar
           label={
             opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
           }
           percent={opponentProgress.completionPercent}
-          color="bg-rose-400"
+          color="bg-cell-conflict"
         />
       </div>
     );

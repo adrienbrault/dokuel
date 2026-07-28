@@ -15,6 +15,15 @@ const SOLVED =
   "287419635" +
   "345286179";
 
+// The timer splits its colon into a child span (the breathing colon), so
+// plain text matchers can't see "MM:SS" as one node. Match the timer root:
+// the only element whose full textContent is the time and that owns the
+// colon span.
+function timerShowing(re: RegExp) {
+  return (_: string, el: Element | null) =>
+    re.test(el?.textContent ?? "") && el?.querySelector(".timer-colon") != null;
+}
+
 // Three empty cells so placing one does not complete the puzzle and trigger
 // the autosave cleanup path.
 const PUZZLE = `...${SOLVED.slice(3)}`;
@@ -97,7 +106,7 @@ describe("MultiplayerBoard local autosave", () => {
       unmount();
       render(<MultiplayerBoard {...props} />);
 
-      expect(screen.getByText(/^00:0[7-9]$/)).toBeTruthy();
+      expect(screen.getByText(timerShowing(/^00:0[7-9]$/))).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }
@@ -446,7 +455,7 @@ describe("MultiplayerBoard after opponent wins", () => {
       });
 
       // Timer kept ticking past 0:00 — loser is still in their game.
-      expect(screen.getByText(/^00:0[4-9]$/)).toBeTruthy();
+      expect(screen.getByText(timerShowing(/^00:0[4-9]$/))).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }

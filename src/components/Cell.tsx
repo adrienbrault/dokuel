@@ -78,7 +78,7 @@ export const Cell = memo(function Cell({
       : isConflict
         ? "bg-cell-conflict-bg"
         : isHintRelated
-          ? "bg-amber-100 dark:bg-amber-900/40"
+          ? "bg-cell-hint-bg"
           : isSameNumber
             ? "bg-cell-same-number"
             : isHighlighted
@@ -88,10 +88,10 @@ export const Cell = memo(function Cell({
                 : "bg-cell-bg";
 
   const textClass = cell.isGiven
-    ? "text-cell-given font-bold"
+    ? "text-cell-given digit-given"
     : isConflict
-      ? "text-cell-conflict font-semibold"
-      : "text-cell-user font-semibold";
+      ? "text-cell-conflict digit-user"
+      : "text-cell-user digit-user";
 
   return (
     <button
@@ -102,7 +102,7 @@ export const Cell = memo(function Cell({
 					${bgClass}
 					transition-colors duration-100
 					select-none touch-none
-					outline-none focus-visible:ring-2 focus-visible:ring-accent
+					outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent
 					${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
 					${revealDelay !== undefined ? "animate-cell-reveal" : ""}
 				`}
@@ -122,12 +122,21 @@ export const Cell = memo(function Cell({
       aria-label={`Cell row ${row + 1} column ${col + 1}${cell.value ? `, value ${cell.value}` : ", empty"}`}
     >
       {cell.value ? (
-        <span
-          key={cell.value}
-          className={`text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
-        >
-          {cell.value}
-        </span>
+        <>
+          <span
+            key={cell.value}
+            className={`text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
+          >
+            {cell.value}
+          </span>
+          {!cell.isGiven && (
+            <span
+              key={`ring-${cell.value}`}
+              className="absolute inset-0 pointer-events-none animate-place-ring"
+              aria-hidden="true"
+            />
+          )}
+        </>
       ) : cell.notes.size > 0 ? (
         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]">
           {DIGITS.map((n) => (
@@ -154,7 +163,7 @@ export const Cell = memo(function Cell({
           data-testid="drop-preview"
           data-mode={dropMode}
           aria-hidden="true"
-          className="absolute flex items-center justify-center font-bold leading-none text-accent pointer-events-none animate-drop-preview"
+          className="absolute flex items-center justify-center digit-user leading-none text-accent pointer-events-none animate-drop-preview"
           style={
             dropMode === "value"
               ? {
@@ -184,7 +193,7 @@ export const Cell = memo(function Cell({
         <span
           data-testid="note-charge"
           aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
+          className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] digit-user text-cell-user leading-none pointer-events-none animate-note-charge"
           style={
             {
               "--charge-dx": NOTE_OFFSETS[(chargingDigit - 1) % 3]!,

@@ -25,7 +25,7 @@ export function JoinScreen({
       <form className="screen-content gap-6 py-10" onSubmit={handleSubmit}>
         <header className="flex flex-col items-center gap-3">
           <span
-            className="icon-chip w-14 h-14 bg-accent-light text-accent"
+            className="icon-chip w-14 h-14 border border-border-default text-accent"
             aria-hidden="true"
           >
             <LogIn size={26} />
@@ -41,7 +41,7 @@ export function JoinScreen({
           placeholder="e.g. loud-duck-38"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="w-full px-4 py-3.5 rounded-2xl bg-surface border-2 border-border-default text-text-primary text-center text-lg font-mono shadow-sm transition-colors focus:border-accent focus:outline-none"
+          className="w-full px-4 py-3.5 rounded-[14px] bg-surface border-2 border-border-default text-text-primary text-center text-lg font-mono tracking-[0.02em] transition-all focus:border-accent focus:ring-2 focus:ring-accent/25 focus:outline-none"
         />
         <button
           type="submit"

@@ -50,9 +50,9 @@ function ControlButton({
     <button
       type="button"
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
+      className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-[10px] select-none touch-manipulation transition-colors ${
         disabled
-          ? "text-text-disabled opacity-50 cursor-default"
+          ? "text-text-disabled cursor-default"
           : "text-text-secondary hover:bg-surface-hover press-spring-soft"
       }`}
       onClick={onClick}

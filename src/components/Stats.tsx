@@ -52,13 +52,13 @@ export function Stats({ onBack }: StatsProps) {
         <div className="card p-4 w-full">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
+              <div className="text-2xl font-medium text-text-primary font-mono tabular-nums">
                 {streak.currentStreak}
               </div>
               <div className="text-xs text-text-muted">Current Streak</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
+              <div className="text-2xl font-medium text-text-primary font-mono tabular-nums">
                 {streak.longestStreak}
               </div>
               <div className="text-xs text-text-muted">Longest Streak</div>
@@ -190,7 +190,7 @@ function AssistModeRow({ stats }: { stats: AssistLevelStats }) {
 function ModeStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-base font-bold text-text-primary font-mono tabular-nums">
+      <div className="text-base font-medium text-text-primary font-mono tabular-nums">
         {value}
       </div>
       <div className="text-[10px] text-text-muted uppercase tracking-wide">
@@ -232,7 +232,7 @@ function SummaryStat({
 }) {
   return (
     <div>
-      <div className="text-xl font-bold text-text-primary font-mono tabular-nums">
+      <div className="text-xl font-medium text-text-primary font-mono tabular-nums">
         {value}
       </div>
       <div className="text-[10px] text-text-muted uppercase tracking-wide">
@@ -283,9 +283,7 @@ function MultiplayerDifficultyStats({
 }
 
 function RecentMatchRow({ match }: { match: MultiplayerGameRecord }) {
-  const outcomeColor = match.won
-    ? "text-emerald-600 dark:text-emerald-400"
-    : "text-rose-600 dark:text-rose-400";
+  const outcomeColor = match.won ? "text-success" : "text-cell-conflict";
   return (
     <li className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="flex flex-col min-w-0">
