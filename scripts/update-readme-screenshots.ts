@@ -3,9 +3,9 @@
  * Rewrites the screenshot sections of README.md from the PNGs in
  * the (gitignored) capture directory. Emits absolute URLs pointing
  * at the GitHub Pages site that hosts the PNGs — the workflow at
- * .github/workflows/screenshots.yml force-publishes them to the
- * `gh-pages` branch on every push to main, so they never live in
- * main's history.
+ * .github/workflows/screenshots.yml deploys them via
+ * actions/deploy-pages (no branch involved) on every push to main,
+ * so they never live in any git history.
  *
  * Markers in README.md (kept verbatim, only the body is rewritten):
  *   <!-- hero-screenshots:start --> ... <!-- hero-screenshots:end -->
