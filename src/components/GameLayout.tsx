@@ -54,7 +54,13 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="flex flex-col items-center min-h-dvh bg-bg-primary animate-screen-enter"
+      style={{
+        paddingTop: "calc(env(safe-area-inset-top) + 1rem)",
+        paddingRight: "calc(env(safe-area-inset-right) + 1rem)",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)",
+        paddingLeft: "calc(env(safe-area-inset-left) + 1rem)",
+      }}
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (

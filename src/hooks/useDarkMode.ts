@@ -6,11 +6,14 @@ function getSystemPreference(): boolean {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-// Hex matches --color-bg-primary from src/index.css. Kept in sync manually
-// because <meta name="theme-color"> needs a parseable color, and JSDOM's
+// Matches the .screen glow gradient's color at its top edge (bg-primary
+// blended with the radial screen-glow), not the flat bg-primary, so iOS
+// Safari's top chrome blends into the page top instead of leaving a seam.
+// Kept in sync manually with the media <meta> tags in index.html because
+// <meta name="theme-color"> needs a parseable color, and JSDOM's
 // getComputedStyle does not convert oklch for us to read at runtime.
-const THEME_COLOR_LIGHT = "#fdfbf9";
-const THEME_COLOR_DARK = "#0b0906";
+const THEME_COLOR_LIGHT = "#e4f4eb";
+const THEME_COLOR_DARK = "#11140f";
 
 function syncThemeColorMeta(theme: Theme, isDark: boolean) {
   // System mode is handled by the media-query <meta> tags in index.html.
