@@ -4,32 +4,45 @@ import { generatePlayerName } from "../lib/name-generator.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
 
+// Storage access is guarded and the write happens best-effort: these
+// run from render-phase initializers (identity must exist before the
+// first render), so a throwing localStorage (blocked storage) must not
+// crash the screen, and StrictMode's double render makes the writes
+// idempotent by construction — the second pass reads the value the
+// first one stored.
 function getPlayerId() {
-  let id = localStorage.getItem("sudoku_player_id");
-  if (!id) {
-    id = sessionStorage.getItem("sudoku_player_id");
+  try {
+    let id = localStorage.getItem("sudoku_player_id");
     if (!id) {
-      id = generateId();
+      id = sessionStorage.getItem("sudoku_player_id") ?? generateId();
+      localStorage.setItem("sudoku_player_id", id);
     }
-    localStorage.setItem("sudoku_player_id", id);
+    return id;
+  } catch {
+    return generateId();
   }
-  return id;
 }
 
 function getPlayerName() {
-  let name = localStorage.getItem("sudoku_player_name");
-  if (!name) {
-    name = sessionStorage.getItem("sudoku_player_name");
+  try {
+    let name = localStorage.getItem("sudoku_player_name");
     if (!name) {
-      name = generatePlayerName();
+      name =
+        sessionStorage.getItem("sudoku_player_name") ?? generatePlayerName();
+      localStorage.setItem("sudoku_player_name", name);
     }
-    localStorage.setItem("sudoku_player_name", name);
+    return name;
+  } catch {
+    return generatePlayerName();
   }
-  return name;
 }
 
 function persistPlayerName(name: string) {
-  localStorage.setItem("sudoku_player_name", name);
+  try {
+    localStorage.setItem("sudoku_player_name", name);
+  } catch {
+    // Storage unavailable — the rename still applies for this session.
+  }
 }
 
 export function MultiplayerScreen({
