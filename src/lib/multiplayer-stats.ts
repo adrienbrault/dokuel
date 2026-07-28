@@ -1,3 +1,4 @@
+import { readJson, writeJson } from "./storage.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type MultiplayerGameRecord = {
@@ -20,16 +21,11 @@ const STORAGE_KEY = "sudoku_multiplayer_stats";
 const MAX_RECORDS_PER_DIFFICULTY = 100;
 
 export function getMultiplayerStats(): MultiplayerGameRecord[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    // Callers iterate immediately; a parseable non-array ("{}", "null")
-    // must not escape this reader.
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  // Callers iterate immediately; a parseable non-array ("{}", "null")
+  // must not escape this reader.
+  return readJson<MultiplayerGameRecord[]>(STORAGE_KEY, [], (parsed) =>
+    Array.isArray(parsed) ? (parsed as MultiplayerGameRecord[]) : null,
+  );
 }
 
 export function saveMultiplayerGameResult(record: MultiplayerGameRecord) {
@@ -45,7 +41,7 @@ export function saveMultiplayerGameResult(record: MultiplayerGameRecord) {
     if (all[existingIndex]!.won === record.won) return;
     const corrected = [...all];
     corrected[existingIndex] = record;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(corrected));
+    writeJson(STORAGE_KEY, corrected);
     return;
   }
   const next = [...all, record];
@@ -68,7 +64,7 @@ export function saveMultiplayerGameResult(record: MultiplayerGameRecord) {
           excess.set(r.difficulty, over - 1);
           return false;
         });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  writeJson(STORAGE_KEY, trimmed);
 }
 
 export type MultiplayerSummary = {

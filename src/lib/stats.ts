@@ -1,4 +1,5 @@
 import { todayLocalISO } from "./date.ts";
+import { readJson, writeJson } from "./storage.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type GameStats = {
@@ -20,19 +21,15 @@ const STORAGE_KEY = "sudoku_stats";
 const MAX_GAMES_PER_BUCKET = 100;
 
 export function getStats(): GameStats[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as GameStats[];
+  return readJson<GameStats[]>(STORAGE_KEY, [], (parsed) => {
+    if (!Array.isArray(parsed)) return null;
     // Entries saved before assist-level tracking default to "standard",
     // the only mode the game offered at the time.
-    return parsed.map((s) => ({
+    return (parsed as GameStats[]).map((s) => ({
       ...s,
       assistLevel: s.assistLevel ?? "standard",
     }));
-  } catch {
-    return [];
-  }
+  });
 }
 
 export function saveGameResult(
@@ -51,9 +48,9 @@ export function saveGameResult(
     won,
     hintsUsed: hintsUsed ?? 0,
   });
-  localStorage.setItem(
+  writeJson(
     STORAGE_KEY,
-    JSON.stringify(evictPerBucket(stats, (s) => s.difficulty + s.assistLevel)),
+    evictPerBucket(stats, (s) => s.difficulty + s.assistLevel),
   );
 }
 

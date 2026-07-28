@@ -1,3 +1,5 @@
+import { readJson, writeJson } from "./storage.ts";
+
 export type DailyStreak = {
   currentStreak: number;
   lastCompletedDate: string;
@@ -13,10 +15,7 @@ const DEFAULT_STREAK: DailyStreak = {
 };
 
 export function getDailyStreak(): DailyStreak {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_STREAK };
-    const parsed: unknown = JSON.parse(raw);
+  return readJson<DailyStreak>(STORAGE_KEY, { ...DEFAULT_STREAK }, (parsed) => {
     // JSON.parse happily returns null/numbers/objects of the wrong
     // shape; recordDailyCompletion does arithmetic on these fields.
     if (
@@ -26,12 +25,10 @@ export function getDailyStreak(): DailyStreak {
       typeof (parsed as DailyStreak).longestStreak !== "number" ||
       typeof (parsed as DailyStreak).lastCompletedDate !== "string"
     ) {
-      return { ...DEFAULT_STREAK };
+      return null;
     }
     return parsed as DailyStreak;
-  } catch {
-    return { ...DEFAULT_STREAK };
-  }
+  });
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -72,7 +69,7 @@ export function recordDailyCompletion(date: string): DailyStreak {
   streak.lastCompletedDate = date;
   streak.longestStreak = Math.max(streak.longestStreak, streak.currentStreak);
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(streak));
+  writeJson(STORAGE_KEY, streak);
   return streak;
 }
 
