@@ -256,7 +256,12 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     solution: (roomMap.get("solution") as string) || null,
     winnerId: (roomMap.get("winnerId") as string) || null,
     winnerName: (roomMap.get("winnerName") as string) || null,
-    winnerBoard: (roomMap.get("winnerBoard") as string) || null,
+    // No || coercion here: "" must stay a string (a forged solved-claim
+    // the receiver rejects), while null/undefined mean forfeit/legacy.
+    winnerBoard:
+      typeof roomMap.get("winnerBoard") === "string"
+        ? (roomMap.get("winnerBoard") as string)
+        : null,
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
     events: [],
   };
