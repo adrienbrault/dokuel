@@ -18,6 +18,40 @@ import { DurableObject } from "cloudflare:workers";
 
 const MAX_ROOM_KEY_LENGTH = 64;
 
+// Abuse caps. y-webrtc signaling frames are small JSON (SDP offers top
+// out around a few KB); topics are room names.
+const MAX_MESSAGE_CHARS = 65_536;
+const MAX_TOPICS_PER_SOCKET = 16;
+const MAX_TOPIC_LENGTH = 256;
+
+// Browsers always send Origin on WebSocket upgrades; this is abuse
+// mitigation (stops third-party sites from borrowing the server), not
+// authentication.
+const ALLOWED_ORIGINS = new Set([
+  "https://dokuel.com",
+  "https://sudoku-4cc.pages.dev",
+]);
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
+  }
+  // Cloudflare Pages preview deployments
+  if (
+    url.protocol === "https:" &&
+    url.hostname.endsWith(".sudoku-4cc.pages.dev")
+  ) {
+    return true;
+  }
+  // Local development
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+}
+
 type Env = {
   SIGNALING_ROOM: DurableObjectNamespace;
 };
@@ -33,6 +67,9 @@ export default {
 
     // WebSocket upgrade
     if (request.headers.get("Upgrade") === "websocket") {
+      if (!isAllowedOrigin(request.headers.get("Origin"))) {
+        return new Response("Forbidden", { status: 403 });
+      }
       const url = new URL(request.url);
       const roomKey =
         url.pathname.slice(1).slice(0, MAX_ROOM_KEY_LENGTH) || "global";
@@ -85,7 +122,7 @@ export class SignalingRoom extends DurableObject {
   }
 
   async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer) {
-    if (typeof data !== "string") return;
+    if (typeof data !== "string" || data.length > MAX_MESSAGE_CHARS) return;
 
     let msg: Record<string, unknown>;
     try {
@@ -95,40 +132,15 @@ export class SignalingRoom extends DurableObject {
     }
 
     switch (msg.type) {
-      case "subscribe": {
-        const topics = msg.topics as string[] | undefined;
-        if (!Array.isArray(topics)) return;
-        const attachment = ws.deserializeAttachment() as WsAttachment;
-        const updated = new Set([...attachment.topics, ...topics]);
-        ws.serializeAttachment({ topics: [...updated] } satisfies WsAttachment);
+      case "subscribe":
+        this.subscribe(ws, msg.topics);
         break;
-      }
-      case "unsubscribe": {
-        const topics = msg.topics as string[] | undefined;
-        if (!Array.isArray(topics)) return;
-        const attachment = ws.deserializeAttachment() as WsAttachment;
-        const updated = attachment.topics.filter((t) => !topics.includes(t));
-        ws.serializeAttachment({ topics: updated } satisfies WsAttachment);
+      case "unsubscribe":
+        this.unsubscribe(ws, msg.topics);
         break;
-      }
-      case "publish": {
-        const topic = msg.topic as string | undefined;
-        if (!topic) return;
-        // Forward to all other clients subscribed to this topic
-        for (const peer of this.ctx.getWebSockets()) {
-          if (peer === ws) continue;
-          const attachment =
-            peer.deserializeAttachment() as WsAttachment | null;
-          if (attachment?.topics.includes(topic)) {
-            try {
-              peer.send(data);
-            } catch {
-              // Client disconnected
-            }
-          }
-        }
+      case "publish":
+        this.publish(ws, msg.topic, data);
         break;
-      }
       case "ping": {
         // Fallback for ping payloads that don't byte-match the
         // auto-response pair (e.g. different whitespace).
@@ -138,6 +150,52 @@ export class SignalingRoom extends DurableObject {
           // ignore
         }
         break;
+      }
+    }
+  }
+
+  /** Sanitize a client-supplied topic list: strings only, bounded
+   *  length — attachments are capped at 2 KiB serialized, so unbounded
+   *  topics would throw on serializeAttachment. */
+  private sanitizeTopics(raw: unknown): string[] | null {
+    if (!Array.isArray(raw)) return null;
+    return raw.filter(
+      (t): t is string =>
+        typeof t === "string" && t.length > 0 && t.length <= MAX_TOPIC_LENGTH,
+    );
+  }
+
+  private subscribe(ws: WebSocket, rawTopics: unknown): void {
+    const topics = this.sanitizeTopics(rawTopics);
+    if (!topics) return;
+    const attachment = ws.deserializeAttachment() as WsAttachment;
+    const updated = [...new Set([...attachment.topics, ...topics])].slice(
+      0,
+      MAX_TOPICS_PER_SOCKET,
+    );
+    ws.serializeAttachment({ topics: updated } satisfies WsAttachment);
+  }
+
+  private unsubscribe(ws: WebSocket, rawTopics: unknown): void {
+    const topics = this.sanitizeTopics(rawTopics);
+    if (!topics) return;
+    const attachment = ws.deserializeAttachment() as WsAttachment;
+    const updated = attachment.topics.filter((t) => !topics.includes(t));
+    ws.serializeAttachment({ topics: updated } satisfies WsAttachment);
+  }
+
+  private publish(ws: WebSocket, topic: unknown, data: string): void {
+    if (typeof topic !== "string" || topic.length > MAX_TOPIC_LENGTH) return;
+    // Forward to all other clients subscribed to this topic
+    for (const peer of this.ctx.getWebSockets()) {
+      if (peer === ws) continue;
+      const attachment = peer.deserializeAttachment() as WsAttachment | null;
+      if (attachment?.topics.includes(topic)) {
+        try {
+          peer.send(data);
+        } catch {
+          // Client disconnected
+        }
       }
     }
   }
