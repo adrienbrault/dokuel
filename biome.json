@@ -92,6 +92,8 @@
       "signaling/src/**",
       "scripts/**",
       "e2e/**",
+      "!e2e/results",
+      "!e2e/screenshots",
       "*.ts",
       "*.json"
     ]
