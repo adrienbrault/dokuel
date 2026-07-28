@@ -49,7 +49,7 @@ function getChangedLines(file: string, base: string, staged: boolean): Set<numbe
   for (const line of output.split("\n")) {
     // Parse @@ -a,b +c,d @@ hunks
     const match = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
-    if (match) {
+    if (match?.[1]) {
       const start = Number.parseInt(match[1], 10);
       const count = match[2] !== undefined ? Number.parseInt(match[2], 10) : 1;
       for (let i = start; i < start + count; i++) {
@@ -104,7 +104,6 @@ type UncoveredLine = {
 };
 
 function findUncoveredChangedLines(
-  filePath: string,
   changedLines: Set<number>,
   coverage: CoverageEntry,
 ): UncoveredLine[] {
@@ -113,7 +112,7 @@ function findUncoveredChangedLines(
 
   // Check statements
   for (const [id, loc] of Object.entries(coverage.statementMap)) {
-    if (coverage.s[id] > 0) continue;
+    if ((coverage.s[id] ?? 0) > 0) continue;
     for (let line = loc.start.line; line <= loc.end.line; line++) {
       if (changedLines.has(line) && !seenLines.has(line)) {
         seenLines.add(line);
@@ -126,8 +125,9 @@ function findUncoveredChangedLines(
   for (const [id, branch] of Object.entries(coverage.branchMap)) {
     const hits = coverage.b[id];
     for (let i = 0; i < branch.locations.length; i++) {
-      if (hits[i] > 0) continue;
+      if ((hits?.[i] ?? 0) > 0) continue;
       const loc = branch.locations[i];
+      if (!loc) continue;
       for (let line = loc.start.line; line <= loc.end.line; line++) {
         if (changedLines.has(line) && !seenLines.has(line)) {
           seenLines.add(line);
@@ -139,7 +139,7 @@ function findUncoveredChangedLines(
 
   // Check functions
   for (const [id, fn] of Object.entries(coverage.fnMap)) {
-    if (coverage.f[id] > 0) continue;
+    if ((coverage.f[id] ?? 0) > 0) continue;
     const loc = fn.loc;
     for (let line = loc.start.line; line <= loc.end.line; line++) {
       if (changedLines.has(line) && !seenLines.has(line)) {
@@ -217,7 +217,7 @@ for (const file of filesWithTests) {
   const entry = coverageData[absPath] ?? coverageData[file];
   if (!entry) continue;
 
-  const uncovered = findUncoveredChangedLines(file, changedLines, entry);
+  const uncovered = findUncoveredChangedLines(changedLines, entry);
   totalChanged += changedLines.size;
   totalUncovered += uncovered.length;
 

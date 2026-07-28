@@ -203,8 +203,8 @@ async function writeSheet(
 	const colCount = Math.max(...rows.map((r) => r.length));
 	const colWidths = new Array<number>(colCount).fill(0);
 	for (const row of rows) {
-		for (let c = 0; c < row.length; c++) {
-			colWidths[c] = Math.max(colWidths[c], row[c].width);
+		for (const [c, cell] of row.entries()) {
+			colWidths[c] = Math.max(colWidths[c] ?? 0, cell.width);
 		}
 	}
 	const rowHeights = rows.map((row) =>
@@ -223,17 +223,16 @@ async function writeSheet(
 	];
 
 	let y = HEADER_HEIGHT + GUTTER;
-	for (let r = 0; r < rows.length; r++) {
+	for (const [r, row] of rows.entries()) {
 		let x = GUTTER;
-		for (let c = 0; c < rows[r].length; c++) {
-			const cell = rows[r][c];
+		for (const [c, cell] of row.entries()) {
 			// Center cell within its column slot if narrower than the slot.
-			const slotW = colWidths[c];
+			const slotW = colWidths[c] ?? cell.width;
 			const offsetX = x + Math.floor((slotW - cell.width) / 2);
 			composites.push({ input: cell.buf, top: y, left: offsetX });
 			x += slotW + GUTTER;
 		}
-		y += rowHeights[r] + GUTTER;
+		y += (rowHeights[r] ?? 0) + GUTTER;
 	}
 
 	const outPath = join(COMBINED_DIR, outName);

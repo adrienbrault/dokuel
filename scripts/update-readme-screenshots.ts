@@ -79,7 +79,7 @@ function combinedUrl(file: string): string {
 	return `${BASE_URL}/combined/${file}`;
 }
 
-const DEVICE_PART_TITLES: Record<string, string> = {
+const DEVICE_PART_TITLES = {
 	a: "Menus & entry",
 	b: "Active gameplay",
 };

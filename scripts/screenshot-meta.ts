@@ -67,7 +67,7 @@ export function listCombinedSheets(): CombinedSheet[] {
 function titleCase(s: string): string {
 	return s
 		.split("-")
-		.map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
+		.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
 		.join(" ");
 }
 

@@ -357,7 +357,6 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 	const enabledNumpad = page.locator(
 		'[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
 	);
-	const enabledCount = await enabledNumpad.count();
 
 	// Fill the first few empty cells with values via the keyboard.
 	for (let i = 0; i < 5; i++) {
