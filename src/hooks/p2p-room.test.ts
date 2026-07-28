@@ -621,6 +621,30 @@ describe("p2p-room", () => {
     });
   });
 
+  describe("seat ordering", () => {
+    it("breaks joinOrder ties by codepoint, not locale collation", () => {
+      // Every peer must sort players identically to agree on who holds
+      // a seat. localeCompare("a", "B") is locale-dependent (-1 in en,
+      // codepoint order says "B" < "a") — a mismatch would make two
+      // clients evict different overflow players.
+      const room = createTestRoom();
+      const players = room.doc.getMap("players");
+      for (const id of ["a", "B"]) {
+        const pm = new Y.Map<unknown>();
+        pm.set("name", id);
+        pm.set("color", "blue");
+        pm.set("cellsRemaining", 81);
+        pm.set("completionPercent", 0);
+        pm.set("joinOrder", 0);
+        players.set(id, pm);
+      }
+
+      const ordered = getPlayers(room).map((p) => p.id);
+
+      expect(ordered).toEqual(["B", "a"]);
+    });
+  });
+
   describe("leaveRoom", () => {
     it("removes the player's entry from the room", () => {
       const room = createTestRoom();
