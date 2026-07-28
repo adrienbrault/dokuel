@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "sudoku",
+      "name": "dokuel",
       "dependencies": {
         "@fontsource-variable/dm-sans": "^5.3.0",
         "lucide-react": "^1.16.0",
