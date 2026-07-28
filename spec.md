@@ -22,6 +22,11 @@ Four primary actions, always visible:
 3. **Create Game** — create a 1v1 room, get a share link
 4. **Join Game** — join from invite link (or manual room code)
 
+Plus contextual entries:
+- **Continue** — resume the most recent in-progress solo game
+- **View Stats** — per-difficulty solo stats and multiplayer match history
+- Current daily streak indicator
+
 ### Difficulty Selection
 Available before every game (solo or multiplayer):
 - Easy (~45 clues)
@@ -29,18 +34,31 @@ Available before every game (solo or multiplayer):
 - Hard (~28 clues)
 - Expert (~22 clues)
 
-Optional **show conflicts** toggle — when off, conflict highlighting is disabled for a harder experience.
+**Assistance selector** (three levels, also switchable mid-game from the
+settings popover):
+- **Paper** — no help at all: no conflict marks, no auto-cleared notes
+- **Standard** — conflicts highlighted, resolved pencil notes auto-cleared
+- **Full** — Standard plus remaining-digit counts on the numpad and
+  row/column/box halos for the highlighted digit
 
 ### Solo Game
 - Standard sudoku with timer
 - Notes mode (with subtle board ring indicator when active), erase, undo (with move count badge)
-- Hint system — lightbulb button reveals one cell's correct value
-- Pause functionality — overlay hides the board while paused
-- Soft validation: conflicts shown, not blocked (can be toggled during gameplay)
+- Hint system — surfaces the next logical step (naked or hidden single) with
+  an explanation and the proving cells highlighted; if the board contains a
+  wrong entry, the hint points at the mistake first. Falls back to revealing
+  the selected cell's correct value when no deduction applies.
+- Pause functionality — overlay hides the board while paused; auto-pauses
+  when the tab is hidden
+- Soft validation: conflicts shown, not blocked (per the assist level)
 - Auto-save — game progress persists across browser sessions via localStorage
+- Shareable board URLs — `/solo/<difficulty>/<key>` seeds generation, so the
+  same link reproduces the same board on any device
 - Personal best time shown near timer during gameplay; PB indicator on win
+  (hint-assisted games are excluded from PB tracking)
 - Completion when all cells filled and valid
-- Per-difficulty stats tracking (best time, average, games played) in localStorage
+- Per-difficulty stats tracking (best time, average, games played) in
+  localStorage, kept per assist level
 - Win modal with stats summary, personal best indicator, and share button
 - Confetti celebration animation on completion
 
@@ -58,35 +76,41 @@ Optional **show conflicts** toggle — when off, conflict highlighting is disabl
 5. When opponent joins, either player can start the game
 
 ### Join Game Flow
-1. Recipient opens invite link (`/{roomId}`)
-2. Enters nickname
-3. Joins lobby directly
-4. If room full: "Game is full" screen
-5. If room expired: "Game ended" with "Create New" button
+1. Recipient opens invite link (`/{roomId}`) — codes are normalized to
+   lowercase, so links mangled by messaging apps still land in the room
+2. Joins the lobby directly under their auto-generated name (rename inline)
+3. If room full: "Game is full" screen
+4. If nothing answers within ~12 seconds: "Still trying to connect…" screen
+   with Retry and Back — the room may have ended or the network can't get
+   through
+5. Junk paths never open rooms: only room-code-shaped URLs boot the
+   multiplayer stack; anything else is a 404 page
 
 ### 1v1 Race Mode
 - Both players get the same puzzle
 - Each has their own separate board
 - First to valid completion wins
-- Live opponent progress visible (cells remaining, completion %)
+- Live opponent progress visible (completion %), hideable via settings
 
 ## Game Board
 
 ### Interactions
 - Tap cell to select
-- Tap numpad number to place/toggle note
 - Selected cell highlights entire row, column, and 3x3 box
 - Same-number highlighting across board
-- Conflicts shown in red background (soft validation — not blocked)
+- Conflicts marked in red with a wavy underline (soft validation — not
+  blocked; the underline keeps the state readable without color)
 - Given cells visually distinct (bold, darker color), non-editable
 - Notes rendered as small 3x3 grid within cell
+- Drag across cells to select a range for bulk note placement/erase
+- Dragging from a filled cell carries its digit to another cell
 
 ### Controls
 - **Notes toggle**: Switch between place mode and notes mode (board ring indicator when active)
 - **Erase**: Clear selected non-given cell (value + notes)
 - **Undo**: Revert last action (multi-level), with move count badge
-- **Hint**: Reveal the correct value for the selected cell (solo only)
-- **Errors toggle**: Show/hide conflict highlighting during gameplay
+- **Hint**: Reveal the next logical step (solo only)
+- **Settings popover**: numpad position, assistance level, dark mode, sound
 
 ### Number Pad
 Core UX differentiator. Three layout positions:
@@ -98,59 +122,66 @@ Purpose of side layouts: enable two-finger mobile play — one finger holds nump
 
 Setting persists in localStorage across sessions. Position is configurable via a settings popover accessed from the game header.
 
-**Fill mode**: Tap a number on the pad, then tap multiple cells to place that number. Tap the number again or another number to change.
-
-## Board Sharing Mechanic
-
-Social catch-up mechanic for multiplayer games:
-1. Either player taps "Share Progress"
-2. Opponent sees accept/decline prompt
-3. If accepted: sharer's filled cells become locked (given) cells on BOTH boards
-4. Notes are NOT shared
-5. Event logged in match timeline (e.g. "Adrien shared progress")
-
-One-sentence explanation: "Share your filled cells as hints for both players."
+Gesture model (`tap = enter · hold = note · drag = place`):
+- **Tap** a digit with a cell selected: commit the value
+- **Tap** with no cell selected: toggle board-wide highlight of that digit
+- **Hold** a digit: pencil it as a note into the selected cell(s)
+- **Drag** a digit onto the board: drop on the top half of a cell to commit
+  the value, bottom half to add a note; dragging back over the numpad
+  resumes skimming
 
 ## Real-time Multiplayer
 
 ### Architecture
 - Peer-to-peer via Yjs CRDTs + y-webrtc — game data flows directly between players
-- Self-hosted Cloudflare Worker at `signal.dokuel.com` used only for WebRTC peer discovery
+- Self-hosted Cloudflare Worker at `signal.dokuel.com` used only for WebRTC
+  peer discovery; each room is sharded to its own Durable Object via the
+  URL path
 - Game state syncs directly between players via CRDTs
+- Optional TURN relay injected at build time (`VITE_TURN_URL` /
+  `VITE_TURN_USERNAME` / `VITE_TURN_CREDENTIAL`) for symmetric-NAT
+  traversal; STUN-only by default
 
 ### Player Identity
 - Auto-generated fun names (adjective + animal, e.g. "Swift Panda")
 - Inline name editing in lobby — players can rename themselves
-- Player names persisted in localStorage across sessions
+- Player id and name persisted in localStorage (sessionStorage fallback)
 
 ### Opponent Visibility
 - Nickname + assigned color
-- Cells remaining count
-- Completion percentage
+- Completion percentage progress bar (toggleable in settings)
 - Online/reconnecting status indicator
 
 ### Reconnect Handling
-- sessionStorage stores playerId + roomId
+- The synced game is persisted locally (IndexedDB) plus a synchronous
+  localStorage snapshot flushed on tab-hide, so a refresh or iOS tab
+  eviction resumes cleanly
 - On reconnect, Yjs CRDT state merges automatically
-- "Reconnecting..." overlay during reconnect
-- Opponent sees "Opponent reconnecting..." status
+- Presence is re-announced after every reconnect cycle
+- Opponent sees "Opponent (reconnecting...)" on the progress bar
 
 ### Disconnect Handling
-- Opponent disconnect shows status indicator
-- 60-second grace period for reconnect
-- After grace period: option to claim win
+- Opponent disconnect shows a non-blocking status banner — the board stays
+  fully playable underneath
+- 60-second countdown, then the remaining player may claim the win
+- Claim validation: a remote forfeit claim is only honored if this client
+  actually witnessed its own absence (connection drop/hidden tab), with a
+  2-minute trust window after returning — a fabricated claim from devtools
+  is ignored
 
 ### Post-Game
 - Winner announcement with confetti celebration
-- Stats: time, cells filled, personal best indicator
+- Stats: time, personal best indicator
 - Share result button
 - "Rematch" button (same players, new puzzle, same difficulty)
 - "New Game" button (back to landing)
+- Match recorded to multiplayer history (opponent, outcome, time) shown on
+  the Stats screen
 
 ## Validation Rules
 
 **Soft validation** (default):
-- Conflicting moves highlighted visually (red background)
+- Conflicting moves highlighted visually (red + wavy underline)
 - Moves are NOT blocked
 - Player can leave wrong numbers
 - Completion only accepted when board is fully valid and all cells filled
@@ -159,7 +190,8 @@ One-sentence explanation: "Share your filled cells as hints for both players."
 
 - Minimalist, clean, modern game UI
 - Soft surfaces, clear typography, high contrast
-- Subtle animations with restraint (cell reveal, spring press, glow, confetti)
+- Subtle animations with restraint (cell reveal, spring press, glow, confetti);
+  disabled under `prefers-reduced-motion`
 - Dark mode from day one (system preference + manual toggle)
 - Responsive desktop layout — side-by-side board and numpad on wide screens
 - Large touch targets (minimum 44px)
@@ -167,12 +199,14 @@ One-sentence explanation: "Share your filled cells as hints for both players."
 - Haptic feedback where supported (number place, erase, note toggle, conflict, completion)
 - Synthesized sound effects via Web Audio API (toggleable)
 - URL reflects current screen state (solo, daily, join) for bookmarking and refresh
+- Installable: web app manifest + home-screen icons; invite links unfurl
+  with a rich preview card (og:image)
 
 ### Color Palette
-- Neutral backgrounds
-- Blue accent for selection/highlights
+- Warm neutral backgrounds (cream light theme, deep charcoal dark theme)
+- Teal accent for selection/highlights and primary actions
 - Red for conflicts
-- Green for completion/success
+- Semantic tokens defined once in CSS; no per-component dark variants
 
 ## Technical Constraints
 
@@ -183,3 +217,18 @@ One-sentence explanation: "Share your filled cells as hints for both players."
 - Biome for lint/format
 - Vitest for testing
 - Strict TDD: every feature gets tests first
+
+## Backlog
+
+Speced or desired, deliberately not built yet:
+
+- **Board Sharing mechanic** — social catch-up for multiplayer: either
+  player offers their filled cells; on accept they become given cells on
+  BOTH boards (notes not shared). One-sentence pitch: "Share your filled
+  cells as hints for both players."
+- **Service worker / offline play** — the manifest already makes the app
+  installable; offline caching needs careful interplay with live WebRTC
+  rooms before it ships
+- **Technique-graded difficulty** — grade generated puzzles by the solving
+  techniques they require instead of clue count; needs a versioned rollout
+  because the daily challenge pins golden vectors for reproducibility
