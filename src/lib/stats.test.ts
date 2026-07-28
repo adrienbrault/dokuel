@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as dateModule from "./date.ts";
 import {
   getStats,
   getStatsByAssistLevel,
@@ -9,6 +10,21 @@ import {
 describe("stats", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  it("stamps records with the app's local calendar date", () => {
+    // date.ts is the single source of "today": toISOString() reports
+    // the UTC date, which is tomorrow for an evening game in any
+    // western timezone — the history list then shows the wrong day.
+    const spy = vi
+      .spyOn(dateModule, "todayLocalISO")
+      .mockReturnValue("2001-02-03");
+    try {
+      saveGameResult("easy", "standard", 120, true);
+      expect(getStats()[0]!.date).toBe("2001-02-03");
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   describe("getStats", () => {
