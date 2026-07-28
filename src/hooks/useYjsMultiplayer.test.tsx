@@ -804,9 +804,9 @@ describe("useYjsMultiplayer", () => {
       localStorage.clear();
     });
 
-    it("hydrates from snapshot when IndexedDB returns no started game", async () => {
+    function seedSnapshot(roomId: string) {
       localStorage.setItem(
-        "dokuel_mp_snap_room-hydrate",
+        `dokuel_mp_snap_${roomId}`,
         JSON.stringify({
           gameNumber: 4,
           puzzle: ".".repeat(81),
@@ -835,22 +835,83 @@ describe("useYjsMultiplayer", () => {
           savedAt: Date.now(),
         }),
       );
+    }
 
-      const { result } = renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-hydrate",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: null,
-        }),
-      );
+    it("hydrates from snapshot when IndexedDB returns no started game", async () => {
+      vi.useFakeTimers();
+      try {
+        seedSnapshot("room-hydrate");
 
-      await flushSync();
+        const { result } = renderHook(() =>
+          useYjsMultiplayer({
+            roomId: "room-hydrate",
+            playerId: "p1",
+            playerName: "Alice",
+            difficulty: null,
+          }),
+        );
 
-      expect(result.current.hasStartedGame).toBe(true);
-      expect(result.current.puzzle).toBe(".".repeat(81));
-      expect(result.current.roomState?.gameNumber).toBe(4);
-      expect(result.current.roomState?.difficulty).toBe("hard");
+        // The snapshot is applied only after a grace window in which no
+        // live peer state arrived.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3_000);
+        });
+
+        expect(result.current.hasStartedGame).toBe(true);
+        expect(result.current.puzzle).toBe(".".repeat(81));
+        expect(result.current.roomState?.gameNumber).toBe(4);
+        expect(result.current.roomState?.difficulty).toBe("hard");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("prefers live peer state that arrives during the hydration grace window", async () => {
+      // Hydrating a ≤1h-old snapshot into a FRESH doc makes every key
+      // causally concurrent with the live room — per-key LWW can then
+      // roll a finished/advanced game back for both peers. When real
+      // state arrives first, the snapshot must stay unapplied.
+      vi.useFakeTimers();
+      try {
+        seedSnapshot("room-snap-race");
+
+        const { result } = renderHook(() =>
+          useYjsMultiplayer({
+            roomId: "room-snap-race",
+            playerId: "p1",
+            playerName: "Alice",
+            difficulty: null,
+          }),
+        );
+        // Make our writes win LWW ties so a premature hydration is
+        // deterministically visible instead of a clientID coin flip.
+        mocks.lastDoc!.clientID = 0x7fffffff;
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1_000);
+        });
+
+        // The peer's real room arrives over WebRTC: game 7, different
+        // puzzle, already finished.
+        const seedDoc = new Doc();
+        const seedRoom = { doc: seedDoc, roomId: "room-snap-race" };
+        initializeRoom(seedRoom, "p2", "medium");
+        joinRoom(seedRoom, "p2", "Bob");
+        joinRoom(seedRoom, "p1", "Alice");
+        for (let i = 0; i < 7; i++) startGame(seedRoom);
+        act(() => {
+          applyUpdate(mocks.lastDoc!, encodeStateAsUpdate(seedDoc));
+        });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5_000);
+        });
+
+        expect(result.current.roomState?.gameNumber).toBe(7);
+        expect(result.current.roomState?.difficulty).toBe("medium");
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("does not hydrate when IndexedDB already has a started game", async () => {
