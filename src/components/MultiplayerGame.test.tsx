@@ -41,9 +41,9 @@ const roomState: RoomState = {
 function makeMp() {
   return {
     connected: true,
-    roomState,
-    puzzle: PUZZLE,
-    solution: SOLUTION,
+    roomState: roomState as RoomState | null,
+    puzzle: PUZZLE as string | null,
+    solution: SOLUTION as string | null,
     opponentProgress: null,
     opponentDisconnected: false,
     gameOver: null as { winnerId: string; winnerName: string } | null,
@@ -91,6 +91,43 @@ describe("MultiplayerGame full room", () => {
     renderGame();
     expect(screen.getByText("Game is full")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+  });
+});
+
+describe("MultiplayerGame connecting state", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = null;
+    mockMp.puzzle = null;
+    mockMp.solution = null;
+    mockMp.hasStartedGame = false;
+  });
+
+  it("shows a plain connecting note at first", () => {
+    renderGame();
+    expect(screen.getByText(/connecting/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+  });
+
+  it("offers troubleshooting after the connection stalls", () => {
+    // Symmetric-NAT pairs (mobile carriers), a typo'd code, or an
+    // expired room all used to present the same infinite spinner with
+    // zero feedback and no way out.
+    vi.useFakeTimers();
+    try {
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(12_500);
+      });
+      expect(screen.getByText(/still trying to connect/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /retry/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -15,6 +15,7 @@ type FakeProvider = {
 const mocks = vi.hoisted(() => ({
   lastDoc: null as Doc | null,
   lastProvider: null as FakeProvider | null,
+  lastProviderOptions: null as Record<string, unknown> | null,
   lastIdbName: null as string | null,
   lastIdbDoc: null as Doc | null,
   idbDestroyed: false,
@@ -40,9 +41,10 @@ vi.mock("y-webrtc", async () => {
     connectCount = 0;
     disconnectCount = 0;
     #doc: Doc;
-    constructor(_roomId: string, doc: Doc) {
+    constructor(_roomId: string, doc: Doc, options?: Record<string, unknown>) {
       mocks.lastDoc = doc;
       mocks.lastProvider = this;
+      mocks.lastProviderOptions = options ?? null;
       this.#doc = doc;
       this.awareness = new Awareness(doc);
     }
@@ -439,6 +441,42 @@ describe("useYjsMultiplayer", () => {
 
     await flushSync();
     expect(result.current.roomFull).toBe(false);
+  });
+
+  it("passes TURN servers to the provider when configured", async () => {
+    // simple-peer's default is STUN-only, which cannot traverse
+    // symmetric NAT (mobile carriers) — two phones on different
+    // carriers hang on "Connecting..." forever. A deployment that
+    // provisions TURN credentials must be able to inject them.
+    vi.stubEnv("VITE_TURN_URL", "turn:turn.example.com:3478");
+    vi.stubEnv("VITE_TURN_USERNAME", "user");
+    vi.stubEnv("VITE_TURN_CREDENTIAL", "pass");
+    try {
+      renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-turn",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await flushSync();
+
+      const peerOpts = mocks.lastProviderOptions?.peerOpts as
+        | { config?: { iceServers?: unknown[] } }
+        | undefined;
+      expect(peerOpts?.config?.iceServers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            urls: "turn:turn.example.com:3478",
+            username: "user",
+            credential: "pass",
+          }),
+        ]),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("re-raises an identical error so the toast can show again", async () => {
