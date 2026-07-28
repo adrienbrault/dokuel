@@ -1,8 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Awareness } from "y-protocols/awareness";
 import { applyUpdate, Doc, encodeStateAsUpdate } from "yjs";
 
 type FakeProvider = {
+  awareness: Awareness;
   connected: boolean;
   connectCount: number;
   disconnectCount: number;
@@ -23,20 +25,26 @@ const mocks = vi.hoisted(() => ({
   idbSeedUpdate: null as Uint8Array | null,
 }));
 
-vi.mock("y-webrtc", () => {
+vi.mock("y-webrtc", async () => {
+  // Awareness is the REAL y-protocols implementation — its semantics
+  // (notably: setLocalStateField silently no-ops while local state is
+  // null) are exactly what presence bugs hide behind, so faking it
+  // would fake away the risk. Imported inside the factory because
+  // vi.mock is hoisted above module imports.
+  const { Awareness, removeAwarenessStates } = await import(
+    "y-protocols/awareness"
+  );
   class FakeWebrtcProvider implements FakeProvider {
-    awareness = {
-      setLocalStateField: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-      getStates: () => new Map(),
-    };
+    awareness: Awareness;
     connected = false;
     connectCount = 0;
     disconnectCount = 0;
+    #doc: Doc;
     constructor(_roomId: string, doc: Doc) {
       mocks.lastDoc = doc;
       mocks.lastProvider = this;
+      this.#doc = doc;
+      this.awareness = new Awareness(doc);
     }
     on() {}
     off() {}
@@ -47,8 +55,13 @@ vi.mock("y-webrtc", () => {
     disconnect() {
       this.connected = false;
       this.disconnectCount += 1;
+      // Mirror y-webrtc Room.disconnect(): the local client's awareness
+      // entry is removed, leaving local state null until re-announced.
+      removeAwarenessStates(this.awareness, [this.#doc.clientID], "disconnect");
     }
-    destroy() {}
+    destroy() {
+      this.awareness.destroy();
+    }
   }
   return { WebrtcProvider: FakeWebrtcProvider };
 });
@@ -495,8 +508,12 @@ describe("useYjsMultiplayer", () => {
     });
 
     afterEach(() => {
+      // The hook is still mounted here (RTL auto-cleanup runs after
+      // this), and un-hiding dispatches visibilitychange into it.
+      act(() => {
+        setTabHidden(false);
+      });
       vi.useRealTimers();
-      setTabHidden(false);
     });
 
     it("disconnects the WebRTC provider after the hide debounce", async () => {
@@ -588,6 +605,43 @@ describe("useYjsMultiplayer", () => {
       });
       expect(provider.connectCount).toBe(1);
       expect(provider.connected).toBe(true);
+    });
+
+    it("re-announces presence after the reconnect", async () => {
+      renderHook(() =>
+        useYjsMultiplayer({
+          roomId: "room-reannounce",
+          playerId: "p1",
+          playerName: "Alice",
+          difficulty: "easy",
+        }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const provider = mocks.lastProvider!;
+      provider.connected = true;
+
+      act(() => {
+        setTabHidden(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      // The disconnect wiped our awareness entry — from the opponent's
+      // point of view we vanished.
+      expect(provider.awareness.getLocalState()).toBeNull();
+
+      act(() => {
+        setTabHidden(false);
+      });
+      // Without a working re-announce the opponent keeps seeing us as
+      // disconnected forever and is offered a forfeit win while we are
+      // actively playing.
+      expect(provider.awareness.getLocalState()?.user).toEqual({
+        id: "p1",
+        name: "Alice",
+      });
     });
 
     it("does not flag opponent as disconnected while we are the hidden one", async () => {
