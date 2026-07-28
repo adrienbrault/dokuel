@@ -1,11 +1,4 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
@@ -36,7 +29,6 @@ type Screen =
   | {
       name: "solo";
       difficulty: Difficulty;
-      gameId: number;
       gameKey: string;
       assistLevel: AssistLevel;
     }
@@ -47,7 +39,8 @@ type Screen =
       difficulty: Difficulty | null;
     }
   | { name: "join" }
-  | { name: "stats" };
+  | { name: "stats" }
+  | { name: "notFound"; path: string };
 
 const VALID_DIFFICULTIES = new Set<string>([
   "easy",
@@ -56,7 +49,11 @@ const VALID_DIFFICULTIES = new Set<string>([
   "expert",
 ]);
 
-function screenToPath(screen: Screen): string {
+// Invite codes are word-word-xxxx (see room-code.ts); the two-word
+// form covers links minted before the entropy suffix existed.
+const ROOM_CODE_RE = /^[a-z]+-[a-z]+(-[a-z0-9]{4})?$/;
+
+export function screenToPath(screen: Screen): string {
   switch (screen.name) {
     case "landing":
     case "difficulty":
@@ -71,10 +68,12 @@ function screenToPath(screen: Screen): string {
       return "/stats";
     case "multiplayer":
       return `/${screen.roomId}`;
+    case "notFound":
+      return screen.path;
   }
 }
 
-function pathToScreen(pathname: string): Screen {
+export function pathToScreen(pathname: string): Screen {
   const path = pathname.replace(/^\/+|\/+$/g, "");
 
   if (path === "") return { name: "landing" };
@@ -90,7 +89,6 @@ function pathToScreen(pathname: string): Screen {
       return {
         name: "solo",
         difficulty: difficulty as Difficulty,
-        gameId: 1,
         gameKey,
         assistLevel: "standard",
       };
@@ -98,13 +96,21 @@ function pathToScreen(pathname: string): Screen {
     return { name: "landing" };
   }
 
-  // Everything else is treated as a multiplayer roomId. Difficulty
-  // is unknown to the joiner until Yjs syncs from the host.
-  return {
-    name: "multiplayer",
-    roomId: path,
-    difficulty: null,
-  };
+  // Only a room-code-shaped path is a multiplayer room. Pasted links
+  // arrive capitalized (messaging apps, mobile keyboards) while Yjs
+  // room names are case-sensitive — normalize instead of dropping the
+  // joiner into a different, empty room. Anything else is a 404, not
+  // an excuse to boot the WebRTC stack.
+  const candidate = path.toLowerCase();
+  if (ROOM_CODE_RE.test(candidate)) {
+    return {
+      name: "multiplayer",
+      roomId: candidate,
+      difficulty: null,
+    };
+  }
+
+  return { name: "notFound", path: pathname };
 }
 
 function App() {
@@ -133,7 +139,18 @@ function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const gameIdRef = useRef(screen.name === "solo" ? screen.gameId : 0);
+  // Canonicalize the address bar once on load: an invalid solo path
+  // falls back to the landing screen, a room code gets lowercased —
+  // without this the broken URL survives and re-parses on refresh.
+  useEffect(() => {
+    const canonical = screenToPath(screen);
+    if (canonical !== window.location.pathname) {
+      window.history.replaceState(null, "", canonical);
+    }
+    // Mount-only by design: navigate() already writes canonical paths.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only canonicalization
+  }, []);
+
   const darkMode = useDarkMode();
   const [soundOn, setSoundOn] = useState(getSoundEnabled);
 
@@ -162,11 +179,9 @@ function App() {
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
             onContinue={(gameKey, difficulty) => {
-              gameIdRef.current++;
               navigate({
                 name: "solo",
                 difficulty: difficulty as Difficulty,
-                gameId: gameIdRef.current,
                 gameKey,
                 assistLevel: "standard",
               });
@@ -181,11 +196,9 @@ function App() {
           <DifficultyPicker
             onSelect={(difficulty, assistLevel) => {
               if (screen.mode === "solo") {
-                gameIdRef.current++;
                 navigate({
                   name: "solo",
                   difficulty,
-                  gameId: gameIdRef.current,
                   gameKey: generateId(),
                   assistLevel,
                 });
@@ -212,12 +225,10 @@ function App() {
           assistLevel={screen.assistLevel}
           onBack={() => navigate({ name: "landing" })}
           onRematch={() => {
-            gameIdRef.current++;
             navigate(
               {
                 name: "solo",
                 difficulty: screen.difficulty,
-                gameId: gameIdRef.current,
                 gameKey: generateId(),
                 assistLevel: screen.assistLevel,
               },
@@ -262,6 +273,37 @@ function App() {
           }}
           onBack={() => navigate({ name: "landing" })}
         />
+      );
+
+    case "notFound":
+      return (
+        <div className="screen">
+          <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
+            <h1 className="heading">Page not found</h1>
+            <p className="caption max-w-sm">
+              Nothing lives at{" "}
+              <span className="text-mono break-all">{screen.path}</span>. If a
+              friend sent you an invite, double-check the link or enter the room
+              code by hand.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                className="btn btn-lg btn-primary"
+                onClick={() => navigate({ name: "landing" })}
+              >
+                Go to Dokuel
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => navigate({ name: "join" })}
+              >
+                Enter a room code
+              </button>
+            </div>
+          </div>
+        </div>
       );
   }
 }
