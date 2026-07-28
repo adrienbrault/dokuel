@@ -29,12 +29,31 @@ function playTone(frequency: number, duration: number, volume = 0.1) {
 
 const STORAGE_KEY = "sudoku_sound";
 
+// In-memory cache doubles as the storage-denied fallback: this getter
+// runs inside every placement/erase/note (via game-feedback), and in
+// browsers with storage access blocked localStorage.getItem THROWS —
+// which used to crash input handling before the move dispatched.
+let soundEnabledCache: boolean | null = null;
+
 export function getSoundEnabled(): boolean {
-  return localStorage.getItem(STORAGE_KEY) !== "false";
+  if (soundEnabledCache === null) {
+    try {
+      soundEnabledCache = localStorage.getItem(STORAGE_KEY) !== "false";
+    } catch {
+      soundEnabledCache = true;
+    }
+  }
+  return soundEnabledCache;
 }
 
 export function setSoundEnabled(enabled: boolean) {
-  localStorage.setItem(STORAGE_KEY, String(enabled));
+  soundEnabledCache = enabled;
+  try {
+    localStorage.setItem(STORAGE_KEY, String(enabled));
+  } catch {
+    // Storage unavailable — the in-memory value still applies for this
+    // session.
+  }
 }
 
 export const sounds = {
