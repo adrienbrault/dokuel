@@ -122,6 +122,25 @@ describe("daily-streak", () => {
       expect(stored.currentStreak).toBe(1);
       expect(stored.lastCompletedDate).toBe("2026-03-08");
     });
+
+    it("keeps the streak when days complete out of order (timezone travel)", () => {
+      // Finish Jul 29's daily in Tokyo, fly west where it is still Jul
+      // 28, finish that one too. Both days are genuinely done — a
+      // single lastCompletedDate scalar saw 29→28 as a broken chain and
+      // reset the streak the player just extended.
+      recordDailyCompletion("2026-07-29");
+      const result = recordDailyCompletion("2026-07-28");
+      expect(result.currentStreak).toBe(2);
+    });
+
+    it("does not double-count a day recompleted after backwards clock travel", () => {
+      recordDailyCompletion("2026-07-29");
+      recordDailyCompletion("2026-07-28");
+      recordDailyCompletion("2026-07-29");
+      const result = recordDailyCompletion("2026-07-28");
+      expect(result.currentStreak).toBe(2);
+      expect(result.longestStreak).toBe(2);
+    });
   });
 
   describe("isDailyCompleted", () => {
