@@ -152,6 +152,7 @@ function SettingsButton({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const darkMode = useDarkMode();
   // Sound was only reachable from the landing screen; mid-game is
   // where players actually decide they want silence.
@@ -164,18 +165,31 @@ function SettingsButton({
         setOpen(false);
       }
     }
+    // Keyboard users need a way out too; hand focus back to the
+    // trigger so it doesn't fall to <body>.
+    function handleKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
     document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("pointerdown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [open]);
 
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         className="icon-btn w-10 h-10 touch-manipulation"
         onClick={() => setOpen((v) => !v)}
         aria-label="Settings"
         aria-expanded={open}
+        aria-haspopup="dialog"
       >
         <Settings size={18} aria-hidden="true" />
       </button>
