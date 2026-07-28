@@ -322,6 +322,8 @@ export function getPlayers(room: P2PRoom): Player[] {
   // joinOrder first, playerId as tiebreak: concurrent joiners can both
   // read size 0 and claim the same joinOrder, and every peer must agree
   // on seat order (it decides who the excess player is in an overflow).
+  // Codepoint comparison, NOT localeCompare — collation varies by
+  // locale and this order has to be identical on every client.
   result.sort((a, b) => {
     const orderA = (players.get(a.id) as Y.Map<unknown>).get(
       "joinOrder",
@@ -329,7 +331,10 @@ export function getPlayers(room: P2PRoom): Player[] {
     const orderB = (players.get(b.id) as Y.Map<unknown>).get(
       "joinOrder",
     ) as number;
-    return orderA - orderB || a.id.localeCompare(b.id);
+    if (orderA !== orderB) return orderA - orderB;
+    if (a.id < b.id) return -1;
+    if (a.id > b.id) return 1;
+    return 0;
   });
 
   return result;
