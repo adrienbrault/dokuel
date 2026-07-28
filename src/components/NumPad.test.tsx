@@ -252,6 +252,37 @@ describe("NumPad", () => {
     expect(onSkimDigit).not.toHaveBeenCalled();
   });
 
+  it("legend switches to note-mode wording when a tap pencils notes", () => {
+    // With a multi-cell selection active, a tap pencils notes (same as
+    // hold) — "tap = enter" would promise the wrong thing at exactly
+    // the moment the player is looking for confirmation of their
+    // range. The legend follows the live tap action.
+    const { rerender } = render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        tapAction="note"
+      />,
+    );
+    expect(
+      screen.getByText("tap = note · hold = note · drag = place"),
+    ).toBeInTheDocument();
+
+    // Selection cleared → back to the default wording.
+    rerender(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        tapAction="enter"
+      />,
+    );
+    expect(
+      screen.getByText("tap = enter · hold = note · drag = place"),
+    ).toBeInTheDocument();
+  });
+
   it("keeps an off-center click with slight wobble a tap", () => {
     // Desktop bug: gesture slop was measured from the BUTTON CENTER,
     // so on a 64px button any click landing >12px off-center (~87% of
