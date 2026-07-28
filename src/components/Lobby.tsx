@@ -156,7 +156,7 @@ export function Lobby({
           );
         })}
         {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
+          <div className="flex items-center justify-center gap-2 py-3 rounded-[14px] border-2 border-dashed border-border-default animate-pulse">
             <span className="text-sm text-text-muted">
               Waiting for opponent
             </span>

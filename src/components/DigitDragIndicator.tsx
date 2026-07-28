@@ -36,10 +36,10 @@ export function DigitDragIndicator({ state }: Props) {
       data-testid="digit-drag-indicator"
       data-pose={pose}
       aria-hidden="true"
-      className={`fixed z-50 pointer-events-none select-none flex items-center justify-center font-bold rounded-md shadow-lg ${
+      className={`fixed z-50 pointer-events-none select-none flex items-center justify-center font-bold rounded-[6px] shadow-[0_1px_0_oklch(0.25_0.02_264/0.1),0_1px_2px_oklch(0.25_0.02_264/0.04)] ${
         isInvalid
-          ? "bg-cell-conflict-bg text-cell-conflict shadow-cell-conflict/40"
-          : "bg-accent text-text-on-accent shadow-accent/40"
+          ? "bg-cell-conflict-bg text-cell-conflict"
+          : "bg-accent text-text-on-accent"
       }`}
       style={{
         left: state.x,
