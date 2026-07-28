@@ -32,6 +32,29 @@ describe("GameResult", () => {
     expect(screen.getByText("Hard")).toBeInTheDocument();
   });
 
+  it("announces as a modal dialog labelled by the outcome", () => {
+    // Without dialog semantics a screen-reader user who finishes the
+    // puzzle hears nothing, and Tab keeps cycling the covered board.
+    render(<GameResult isWinner={true} time="03:42" onNewGame={vi.fn()} />);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveAccessibleName(/you won/i);
+  });
+
+  it("moves focus onto the primary action when it opens", () => {
+    render(
+      <GameResult
+        isWinner={true}
+        time="03:42"
+        onRematch={vi.fn()}
+        onNewGame={vi.fn()}
+      />,
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: /play again/i }),
+    );
+  });
+
   it("only shows Copied! after the clipboard write succeeds", async () => {
     // navigator.clipboard.writeText returns a promise that rejects on
     // iOS when transient activation is lost; flipping the label before
