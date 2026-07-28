@@ -167,8 +167,11 @@ export function useYjsMultiplayer({
     // background tab eviction doesn't lose progress. The `dokuel_`
     // prefix scopes our DBs apart from anything else on the origin.
     const persistence = new IndexeddbPersistence(`dokuel_${roomId}`, doc);
+    // Room in the signaling URL path: the worker shards rooms into
+    // separate Durable Objects keyed by it, so peers only ever share a
+    // socket fanout with their own room.
     const provider = new WebrtcProvider(roomId, doc, {
-      signaling: ["wss://signal.dokuel.com"],
+      signaling: [`wss://signal.dokuel.com/${roomId}`],
       maxConns: 4,
       filterBcConns: true,
       ...webrtcPeerOptions(),
