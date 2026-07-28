@@ -77,6 +77,56 @@ describe("useResumableSudoku", () => {
     expect(result.current.assistLevel).toBe("full");
   });
 
+  it("does not rewrite the save when only the timer callback identity changes", () => {
+    // SoloGame passes an inline getTimerSeconds closure — new identity
+    // per render. With it in the save-effect deps, every render (up to
+    // ~60/s during a drag) serialized the board and hit localStorage.
+    const puzzle = puzzleMissingOneCell();
+    const { rerender } = renderHook(
+      ({ getTimerSeconds }: { getTimerSeconds: () => number }) =>
+        useResumableSudoku({
+          gameKey: "identity-key",
+          initialPuzzle: puzzle,
+          difficulty: "easy",
+          initialAssistLevel: "standard",
+          getTimerSeconds,
+        }),
+      { initialProps: { getTimerSeconds: () => 1 } },
+    );
+
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    try {
+      rerender({ getTimerSeconds: () => 2 });
+      rerender({ getTimerSeconds: () => 3 });
+      expect(setItem).not.toHaveBeenCalled();
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
+  it("saves on pagehide so idle thinking time survives a refresh", () => {
+    // The save effect fires on board changes; five minutes of thinking
+    // without a move used to be lost on refresh, rewinding the timer.
+    const puzzle = puzzleMissingOneCell();
+    let seconds = 0;
+    renderHook(() =>
+      useResumableSudoku({
+        gameKey: "pagehide-key",
+        initialPuzzle: puzzle,
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => seconds,
+      }),
+    );
+    seconds = 300;
+
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+
+    expect(loadGame("pagehide-key")?.timer).toBe(300);
+  });
+
   it("persists hintsUsed in the autosave and restores it on resume", () => {
     // Without this, close-and-reopen laundered a hint-assisted game
     // into a hint-free one: the PB filter and the in-game PB gate both
