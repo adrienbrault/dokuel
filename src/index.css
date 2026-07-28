@@ -663,3 +663,22 @@ body {
 .text-mono {
   @apply font-mono text-sm text-text-secondary tabular-nums;
 }
+
+/* Respect prefers-reduced-motion: the app leans on confetti, board
+   shakes, staggered cell reveals, spring presses, and screen
+   transitions — all decorative. Vestibular-disorder users get the
+   same UI with instant state changes instead. The glow pulse and
+   loading pulses are covered by the wildcard. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .confetti-container {
+    display: none;
+  }
+}
