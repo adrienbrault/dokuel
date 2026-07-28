@@ -51,6 +51,38 @@ const HYDRATE_GRACE_MS = 3_000;
 const VALID_PUZZLE_RE = /^[1-9.]{81}$/;
 const VALID_SOLUTION_RE = /^[1-9]{81}$/;
 
+/**
+ * Optional TURN relay via env config. simple-peer's default is
+ * STUN-only, which cannot traverse symmetric NAT — two phones on
+ * different mobile carriers never connect. Deployments that provision
+ * relay credentials (e.g. Cloudflare Calls TURN) set VITE_TURN_URL /
+ * VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL at build time; without
+ * them the provider keeps its defaults.
+ */
+function webrtcPeerOptions():
+  | { peerOpts: { config: { iceServers: RTCIceServer[] } } }
+  | Record<string, never> {
+  const url = import.meta.env.VITE_TURN_URL;
+  if (!url) return {};
+  const turn: RTCIceServer = {
+    urls: url,
+    username: import.meta.env.VITE_TURN_USERNAME ?? "",
+    credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
+  };
+  return {
+    peerOpts: {
+      config: {
+        iceServers: [
+          // Keep STUN for the direct-connection happy path; the relay
+          // is the fallback.
+          { urls: "stun:stun.l.google.com:19302" },
+          turn,
+        ],
+      },
+    },
+  };
+}
+
 type OpponentProgress = {
   cellsRemaining: number;
   completionPercent: number;
@@ -137,6 +169,7 @@ export function useYjsMultiplayer({
       signaling: ["wss://signal.dokuel.com"],
       maxConns: 4,
       filterBcConns: true,
+      ...webrtcPeerOptions(),
     });
 
     const room = createRoomFromDoc(doc, roomId);

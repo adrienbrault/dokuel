@@ -30,6 +30,13 @@ export function MultiplayerGame({
     mp.opponentDisconnected && !mp.gameOver,
     2_000,
   );
+  // "Connecting..." with no room state after this long means the room
+  // ended, the code is wrong, or ICE can't get through — surface an
+  // explanation and a way out instead of an infinite spinner.
+  const connectionStalled = useDelayedFlag(
+    !mp.roomState && !mp.hasStartedGame,
+    12_000,
+  );
 
   // Show errors as transient toasts instead of replacing the UI. The
   // hook raises a fresh object per error, so a repeat of the same
@@ -102,6 +109,32 @@ export function MultiplayerGame({
   }
 
   if (!mp.roomState) {
+    if (connectionStalled) {
+      return (
+        <div className="screen">
+          <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
+            <h1 className="heading">Still trying to connect…</h1>
+            <p className="caption max-w-sm">
+              The room may have ended, or the connection can't get through.
+              Double-check the code with the host, make sure both of you are
+              online, or try joining from the same Wi-Fi network.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                className="btn btn-lg btn-primary"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+              <button type="button" className="btn-ghost" onClick={onBack}>
+                ← Back
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="screen">
         <p className="caption">Connecting...</p>
