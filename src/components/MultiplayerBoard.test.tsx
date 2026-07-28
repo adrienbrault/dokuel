@@ -213,7 +213,7 @@ describe("MultiplayerBoard local autosave", () => {
 
       // Select a filled cell, then tap a numpad digit — a tap can't
       // overwrite it, so it highlights the digit instead.
-      const filled = screen.getByLabelText(/^Cell\ row\ 1\ column\ 5,\ value\ 7/);
+      const filled = screen.getByLabelText(/^Cell row 1 column 5, value 7/);
       fireEvent.click(filled);
       expect(filled.className).toContain("cell-selected-glow");
 
@@ -224,10 +224,10 @@ describe("MultiplayerBoard local autosave", () => {
       // The cell is no longer selected, and the digit drives the board's
       // same-number highlight.
       expect(
-        screen.getByLabelText(/^Cell\ row\ 1\ column\ 5,\ value\ 7/).className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).not.toContain("cell-selected-glow");
       expect(
-        screen.getByLabelText(/^Cell\ row\ 2\ column\ 7,\ value\ 3/).className,
+        screen.getByLabelText(/^Cell row 2 column 7, value 3/).className,
       ).toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -272,13 +272,15 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.pointerUp(seven, { pointerType: "touch" });
 
       // (0,4) holds 7 in PUZZLE.
-      const cell04 = screen.getByLabelText(/^Cell\ row\ 1\ column\ 5,\ value\ 7/);
+      const cell04 = screen.getByLabelText(/^Cell row 1 column 5, value 7/);
       expect(cell04.className).toContain("bg-cell-same-number");
 
       // Tap "7" again → toggles the highlight off.
       fireEvent.pointerDown(seven, { pointerType: "touch" });
       fireEvent.pointerUp(seven, { pointerType: "touch" });
-      const cell04After = screen.getByLabelText(/^Cell\ row\ 1\ column\ 5,\ value\ 7/);
+      const cell04After = screen.getByLabelText(
+        /^Cell row 1 column 5, value 7/,
+      );
       expect(cell04After.className).not.toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -300,11 +302,11 @@ describe("MultiplayerBoard local autosave", () => {
 
       // 7 should no longer highlight; 8 should.
       expect(
-        screen.getByLabelText(/^Cell\ row\ 1\ column\ 5,\ value\ 7/).className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).not.toContain("bg-cell-same-number");
       // (0,5)=8 in PUZZLE
       expect(
-        screen.getByLabelText(/^Cell\ row\ 1\ column\ 6,\ value\ 8/).className,
+        screen.getByLabelText(/^Cell row 1 column 6, value 8/).className,
       ).toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -320,7 +322,7 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.pointerDown(seven, { pointerType: "touch" });
       fireEvent.pointerUp(seven, { pointerType: "touch" });
       expect(
-        screen.getByLabelText(/^Cell\ row\ 1\ column\ 5,\ value\ 7/).className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).toContain("bg-cell-same-number");
 
       // Click an empty cell — selection clears the digit highlight so the
@@ -329,7 +331,7 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.click(empty);
 
       expect(
-        screen.getByLabelText(/^Cell\ row\ 1\ column\ 5,\ value\ 7/).className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).not.toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -658,7 +660,7 @@ describe("MultiplayerBoard digit drag", () => {
 
     const three = screen.getByRole("button", { name: "3" });
     const five = screen.getByRole("button", { name: "5" });
-    const boardCell = screen.getByLabelText(/^Cell\ row\ 1\ column\ 1,\ empty/);
+    const boardCell = screen.getByLabelText(/^Cell row 1 column 1, empty/);
 
     // Press digit 3 and pan straight off the numpad → drag-to-place.
     fireEvent.pointerDown(three, {

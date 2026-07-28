@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
-import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
+import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
@@ -95,12 +95,18 @@ export function SoloGame({
     }
   };
 
-  const { highlight, chargingDigit, numPadRef, numPadProps, dragState, startCellDrag } =
-    useNumpadInteractions({
-      game,
-      disabled: paused || game.status !== "playing",
-      assistLevel,
-    });
+  const {
+    highlight,
+    chargingDigit,
+    numPadRef,
+    numPadProps,
+    dragState,
+    startCellDrag,
+  } = useNumpadInteractions({
+    game,
+    disabled: paused || game.status !== "playing",
+    assistLevel,
+  });
 
   const handleBack = () => {
     if (
