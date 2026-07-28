@@ -443,6 +443,38 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomFull).toBe(false);
   });
 
+  it("keeps roomState identity stable across no-op doc fires", async () => {
+    // The observer fires for every transaction — including our own
+    // keystrokes' progress writes and same-value sets — and rebuilding
+    // roomState each time re-rendered the whole game tree per
+    // keystroke on both sides. Unchanged content must keep identity.
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-stable-identity",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+    await flushSync();
+    const doc = mocks.lastDoc!;
+    act(() => {
+      joinRoom({ doc, roomId: "room-stable-identity" }, "p2", "Bob");
+    });
+    await flushSync();
+    const before = result.current.roomState;
+    expect(before).not.toBeNull();
+
+    act(() => {
+      doc.transact(() => {
+        doc.getMap("room").set("difficulty", "easy");
+      });
+    });
+    await flushSync();
+
+    expect(result.current.roomState).toBe(before);
+  });
+
   it("passes TURN servers to the provider when configured", async () => {
     // simple-peer's default is STUN-only, which cannot traverse
     // symmetric NAT (mobile carriers) — two phones on different
