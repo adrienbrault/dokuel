@@ -439,6 +439,19 @@ describe("useYjsMultiplayer", () => {
       expect(result.current.gameOver).toBeNull();
     });
 
+    it("treats an empty-string winner board as forged, not forfeit", async () => {
+      // getRoomState must not coerce "" to null: null means an explicit
+      // forfeit claim, while "" is just a solved-claim with no board —
+      // the original one-liner cheat. If "" collapses to null it gets
+      // accepted down the forfeit path.
+      const { result, fakeRoom } = await setupStartedGame("room-claim-empty");
+      act(() => {
+        claimWinner(fakeRoom, "p2", "Bob", "");
+      });
+      await flushSync();
+      expect(result.current.gameOver).toBeNull();
+    });
+
     it("accepts a remote claim whose board matches the solution", async () => {
       const { result, fakeRoom, solution } =
         await setupStartedGame("room-claim-valid");
