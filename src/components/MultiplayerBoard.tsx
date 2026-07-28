@@ -150,6 +150,19 @@ export function MultiplayerBoard({
   // the puzzle + opponent progress; the filled cells live here.
   useEffect(() => {
     if (game.status === "completed") return;
+    // On rematch this effect and the RESET dispatch share a commit: the
+    // reducer still holds the OLD game's board while gameKey already
+    // points at the new one. Writing that mix would resume game 2
+    // wearing game 1's cells if the tab dies before the next render.
+    const boardMatchesPuzzle = game.board.every((boardRow, r) =>
+      boardRow.every((boardCell, c) => {
+        const ch = puzzle[r * 9 + c];
+        return ch === "."
+          ? !boardCell.isGiven
+          : boardCell.isGiven && boardCell.value === Number(ch);
+      }),
+    );
+    if (!boardMatchesPuzzle) return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
     saveGame(gameKey, {
       puzzle,
