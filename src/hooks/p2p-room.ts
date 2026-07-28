@@ -361,7 +361,8 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
  * one place. The hook just hands the awareness object in.
  */
 type Awareness = {
-  setLocalStateField: (field: string, value: unknown) => void;
+  getLocalState: () => Record<string, unknown> | null;
+  setLocalState: (state: Record<string, unknown>) => void;
   getStates: () => Map<number, { user?: { id: string; name: string } }>;
 };
 
@@ -370,7 +371,14 @@ export function announcePresence(
   playerId: string,
   playerName: string,
 ): void {
-  awareness.setLocalStateField("user", { id: playerId, name: playerName });
+  // Not setLocalStateField: that helper silently no-ops while the local
+  // state is null — which is what y-webrtc's disconnect() leaves behind
+  // after we drop WebRTC for a backgrounded tab. Rebuilding the state
+  // object makes re-announcing work from any starting point.
+  awareness.setLocalState({
+    ...(awareness.getLocalState() ?? {}),
+    user: { id: playerId, name: playerName },
+  });
 }
 
 /**
