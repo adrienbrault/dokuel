@@ -125,10 +125,12 @@ Setting persists in localStorage across sessions. Position is configurable via a
 Gesture model (`tap = enter · hold = note · drag = place`):
 - **Tap** a digit with a cell selected: commit the value
 - **Tap** with a multi-cell selection: pencil the digit as a note into
-  every selected cell, keeping the selection (a range exists for bulk
-  notes — same action as hold)
+  every selected cell, then release the selection and highlight the
+  noted digit board-wide (same semantics as dropping a note from a
+  drag) — the next tap toggles another digit's highlight
 - **Tap** with no cell selected: toggle board-wide highlight of that digit
-- **Hold** a digit: pencil it as a note into the selected cell(s)
+- **Hold** a digit: pencil it as a note into the selected cell(s),
+  keeping the selection — the stacking gesture for pairs/triples
 - **Drag** a digit onto the board: drop on the top half of a cell to commit
   the value, bottom half to add a note; dragging back over the numpad
   resumes skimming
