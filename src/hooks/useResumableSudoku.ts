@@ -81,6 +81,13 @@ export function useResumableSudoku({
     saved?.assistLevel ?? initialAssistLevel,
   );
 
+  // Callers pass inline closures (new identity per render); read via a
+  // ref so the save effect keys on game state, not render churn — with
+  // the callback in the deps, a digit drag re-rendered SoloGame per
+  // pointermove and wrote localStorage up to ~60 times a second.
+  const getTimerSecondsRef = useRef(getTimerSeconds);
+  getTimerSecondsRef.current = getTimerSeconds;
+
   // Auto-save on every board / hint / assist-level change while playing
   useEffect(() => {
     if (!gameKey || game.status === "completed") return;
@@ -89,7 +96,7 @@ export function useResumableSudoku({
       puzzle,
       values,
       notes,
-      timer: getTimerSeconds(),
+      timer: getTimerSecondsRef.current(),
       difficulty,
       assistLevel,
       hintsUsed: game.hintsUsed,
@@ -103,7 +110,43 @@ export function useResumableSudoku({
     puzzle,
     difficulty,
     assistLevel,
-    getTimerSeconds,
+  ]);
+
+  // Flush on pagehide/tab-hide: the effect above only fires on state
+  // changes, so idle thinking time between moves would otherwise be
+  // lost on refresh and the resumed timer would rewind.
+  useEffect(() => {
+    if (!gameKey) return;
+    const flush = () => {
+      if (game.status === "completed") return;
+      const { values, notes } = serializeBoard(game.board as Cell[][]);
+      saveGame(gameKey, {
+        puzzle,
+        values,
+        notes,
+        timer: getTimerSecondsRef.current(),
+        difficulty,
+        assistLevel,
+        hintsUsed: game.hintsUsed,
+      });
+    };
+    const onVisibility = () => {
+      if (document.hidden) flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [
+    game.board,
+    game.status,
+    game.hintsUsed,
+    gameKey,
+    puzzle,
+    difficulty,
+    assistLevel,
   ]);
 
   // On completion: orchestrate side effects via completeGame, notify caller.
