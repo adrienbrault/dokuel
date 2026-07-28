@@ -17,15 +17,20 @@ export function Timer({
   const [seconds, setSeconds] = useState(initialSeconds);
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
+  // Live mirror owned by the interval, so onTick fires from the tick
+  // callback instead of inside the updater — updaters must stay pure
+  // (StrictMode double-invokes them; here that double-reported ticks
+  // to the parent in dev). Not render-synced: several ticks can fire
+  // before React renders once.
+  const secondsRef = useRef(initialSeconds);
 
   useEffect(() => {
     if (!running) return;
     const interval = setInterval(() => {
-      setSeconds((s) => {
-        const next = s + 1;
-        onTickRef.current?.(next);
-        return next;
-      });
+      const next = secondsRef.current + 1;
+      secondsRef.current = next;
+      setSeconds(next);
+      onTickRef.current?.(next);
     }, 1000);
     return () => clearInterval(interval);
   }, [running]);

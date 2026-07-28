@@ -137,10 +137,19 @@ export function useDigitDrag({
   onDropRef.current = onDrop;
   isDroppableRef.current = isDroppable;
   onReturnToNumpadRef.current = onReturnToNumpad;
-  // Mirror of `state` for the document listeners, plus the pointerType
-  // they need to hand a returning drag back to the numpad skim.
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  // Live mirror of `state` for the document listeners (and the drop
+  // logic), updated at every transition rather than on render: a final
+  // pointermove and the pointerup can land inside one React batch, and
+  // a render-synced ref would still hold the previous target then.
+  const stateRef = useRef<DigitDragState | null>(null);
+  const applyState = useCallback(
+    (updater: (prev: DigitDragState | null) => DigitDragState | null): void => {
+      const next = updater(stateRef.current);
+      stateRef.current = next;
+      setState(next);
+    },
+    [],
+  );
   const pointerTypeRef = useRef("touch");
   // Latches true once the drag's finger has been seen off the numpad.
   // Only then does a return over the numpad demote the drag — a drag
@@ -148,9 +157,15 @@ export function useDigitDrag({
   // otherwise cancel itself on the very next move.
   const leftNumpadRef = useRef(false);
 
-  const end = useCallback((commit: boolean) => {
-    setActivePointerId(null);
-    setState((current) => {
+  const end = useCallback(
+    (commit: boolean) => {
+      setActivePointerId(null);
+      // Side effects stay OUT of setState: updaters are double-invoked
+      // under StrictMode, and the note drop is a toggle — calling
+      // onDrop inside the updater made dropped pencil marks vanish in
+      // dev builds.
+      const current = stateRef.current;
+      applyState(() => null);
       if (current && commit && current.target && !current.invalidTarget) {
         onDropRef.current(
           current.digit,
@@ -159,9 +174,9 @@ export function useDigitDrag({
           current.mode,
         );
       }
-      return null;
-    });
-  }, []);
+    },
+    [applyState],
+  );
 
   useEffect(() => {
     if (activePointerId === null) return;
@@ -199,7 +214,7 @@ export function useDigitDrag({
           hit.position.col,
           current.digit,
         );
-      setState((prev) => {
+      applyState((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
@@ -247,7 +262,7 @@ export function useDigitDrag({
       const invalid =
         hit !== null &&
         !isDroppableRef.current(hit.position.row, hit.position.col, digit);
-      setState({
+      applyState(() => ({
         digit,
         source,
         x,
@@ -256,10 +271,10 @@ export function useDigitDrag({
         invalidTarget: invalid,
         mode: hit?.mode ?? "value",
         lift,
-      });
+      }));
       setActivePointerId(pointerId);
     },
-    [],
+    [applyState],
   );
 
   return { state, start };
