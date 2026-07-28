@@ -1,7 +1,10 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const SRC = "src";
+// Everything vite build consumes. A change to the HTML shell, static
+// assets, or the build config produces a different bundle just as
+// surely as a src/ edit does.
+const INPUTS = ["src", "index.html", "public", "vite.config.ts"];
 const DIST_INDEX = "dist/index.html";
 
 function maxMtime(dir: string): number {
@@ -14,6 +17,11 @@ function maxMtime(dir: string): number {
   return max;
 }
 
+function mtimeOf(path: string): number {
+  const stat = statSync(path);
+  return stat.isDirectory() ? maxMtime(path) : stat.mtimeMs;
+}
+
 export default function checkBuildFresh() {
   let distMtime: number;
   try {
@@ -24,11 +32,18 @@ export default function checkBuildFresh() {
         `or \`bunx vite build\` before invoking playwright directly.`,
     );
   }
-  const srcMtime = maxMtime(SRC);
-  if (srcMtime > distMtime) {
-    throw new Error(
-      `Stale build: ${SRC}/ has files newer than ${DIST_INDEX}. ` +
-        `Run \`bun run screenshots\` (it builds first) or \`bunx vite build\` to refresh.`,
-    );
+  for (const input of INPUTS) {
+    let inputMtime: number;
+    try {
+      inputMtime = mtimeOf(input);
+    } catch {
+      continue; // optional inputs (e.g. public/) may not exist
+    }
+    if (inputMtime > distMtime) {
+      throw new Error(
+        `Stale build: ${input} is newer than ${DIST_INDEX}. ` +
+          `Run \`bun run screenshots\` (it builds first) or \`bunx vite build\` to refresh.`,
+      );
+    }
   }
 }
