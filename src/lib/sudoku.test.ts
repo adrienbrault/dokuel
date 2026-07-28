@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededRandom } from "./daily.ts";
 import { countSolutions } from "./solver.ts";

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
 import { parsePuzzle } from "./sudoku.ts";
