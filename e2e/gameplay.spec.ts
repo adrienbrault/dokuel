@@ -97,6 +97,69 @@ test("the daily challenge regenerates the same board after storage is cleared", 
   expect(await readBoard(page)).toBe(firstBoard);
 });
 
+test("clicking digits notes a drag-selected range and keeps the selection", async ({
+  page,
+}) => {
+  // The desktop bug this pins: gesture slop was measured from the
+  // numpad button's center, so an off-center click with a few pixels
+  // of mouse wobble misfired a drag/skim instead of tapping — and the
+  // tap itself used to discard a multi-cell selection. Both clicks
+  // here land off-center with wobble; the second landing proves the
+  // selection survived the first.
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Solo" }).click();
+  await page.getByRole("button", { name: "Easy" }).click();
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+  // Two adjacent empty cells in one row, drag-selected with the mouse.
+  const board = await readBoard(page);
+  let start = -1;
+  for (let i = 0; i < 80; i++) {
+    if (board[i] === "." && board[i + 1] === "." && i % 9 < 8) {
+      start = i;
+      break;
+    }
+  }
+  if (start === -1) throw new Error("no adjacent empty pair on easy board");
+  const cellAt = (idx: number) =>
+    page.locator(
+      `button[aria-label^="Cell row ${Math.floor(idx / 9) + 1} column ${(idx % 9) + 1},"]`,
+    );
+  const boxA = await cellAt(start).boundingBox();
+  const boxB = await cellAt(start + 1).boundingBox();
+  if (!boxA || !boxB) throw new Error("cells not visible");
+  await page.mouse.move(boxA.x + boxA.width / 2, boxA.y + boxA.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(boxB.x + boxB.width / 2, boxB.y + boxB.height / 2, {
+    steps: 6,
+  });
+  await page.mouse.up();
+
+  // Click two numpad digits, each off-center with 2px of wobble.
+  const pad = page.locator('[role="group"][aria-label="Number pad"]:visible');
+  const digits: number[] = [];
+  for (const name of [/^1(,|$)/, /^2(,|$)/]) {
+    const btn = pad.getByRole("button", { name });
+    const box = await btn.boundingBox();
+    if (!box) throw new Error("digit not visible");
+    digits.push(Number((await btn.textContent())?.trim()[0]));
+    await page.mouse.move(box.x + box.width - 8, box.y + box.height / 2 + 5);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 6, box.y + box.height / 2 + 6);
+    await page.mouse.up();
+  }
+
+  // Both cells carry both digits as notes — the range got the first
+  // note AND stayed selected for the second.
+  const notes = `notes ${digits.sort((a, b) => a - b).join(" ")}`;
+  for (const idx of [start, start + 1]) {
+    await expect(cellAt(idx)).toHaveAttribute(
+      "aria-label",
+      new RegExp(`${notes}$`),
+    );
+  }
+});
+
 test("holding a numpad digit writes a pencil note", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Start Solo" }).click();
