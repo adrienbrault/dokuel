@@ -441,6 +441,33 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomFull).toBe(false);
   });
 
+  it("re-raises an identical error so the toast can show again", async () => {
+    // "Need 2 players to start" twice in a row: a string state field
+    // is Object.is-equal on the second set, so the consumer's effect
+    // never re-fires and the second tap silently does nothing.
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-error-retoast",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+    await flushSync();
+
+    act(() => {
+      result.current.sendStartGame();
+    });
+    const first = result.current.error;
+    expect(first?.message).toBe("Need 2 players to start");
+
+    act(() => {
+      result.current.sendStartGame();
+    });
+    expect(result.current.error?.message).toBe("Need 2 players to start");
+    expect(result.current.error).not.toBe(first);
+  });
+
   describe("win claims", () => {
     async function setupStartedGame(roomId: string) {
       const { result } = renderHook(() =>
