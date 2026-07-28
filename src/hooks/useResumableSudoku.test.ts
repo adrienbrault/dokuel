@@ -77,6 +77,46 @@ describe("useResumableSudoku", () => {
     expect(result.current.assistLevel).toBe("full");
   });
 
+  it("generates the same board for the same gameKey (shareable solo URLs)", () => {
+    // /solo/<difficulty>/<gameKey> looks like a shareable link, but
+    // generation used to be unseeded — anyone opening it (or the owner
+    // after the save was deleted) got a different random board. The
+    // key seeds the rng, so a solo URL now IS the board.
+    const { result: first, unmount } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "seed-me",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+      }),
+    );
+    const puzzleA = first.current.puzzle;
+    unmount();
+    localStorage.clear();
+
+    const { result: second, unmount: unmount2 } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "seed-me",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+      }),
+    );
+    expect(second.current.puzzle).toBe(puzzleA);
+    unmount2();
+    localStorage.clear();
+
+    const { result: third } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "other-key",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+      }),
+    );
+    expect(third.current.puzzle).not.toBe(puzzleA);
+  });
+
   it("does not rewrite the save when only the timer callback identity changes", () => {
     // SoloGame passes an inline getTimerSeconds closure — new identity
     // per render. With it in the save-effect deps, every render (up to
