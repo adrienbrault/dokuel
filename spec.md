@@ -124,6 +124,9 @@ Setting persists in localStorage across sessions. Position is configurable via a
 
 Gesture model (`tap = enter · hold = note · drag = place`):
 - **Tap** a digit with a cell selected: commit the value
+- **Tap** with a multi-cell selection: pencil the digit as a note into
+  every selected cell, keeping the selection (a range exists for bulk
+  notes — same action as hold)
 - **Tap** with no cell selected: toggle board-wide highlight of that digit
 - **Hold** a digit: pencil it as a note into the selected cell(s)
 - **Drag** a digit onto the board: drop on the top half of a cell to commit
