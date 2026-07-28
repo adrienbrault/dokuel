@@ -1,5 +1,5 @@
-import { LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { SpriteIcon } from "./SpriteIcon.tsx";
 
 export function JoinScreen({
   onJoin,
@@ -24,11 +24,8 @@ export function JoinScreen({
     <div className="screen">
       <form className="screen-content gap-6 py-10" onSubmit={handleSubmit}>
         <header className="flex flex-col items-center gap-3">
-          <span
-            className="icon-chip w-14 h-14 bg-accent-light text-accent"
-            aria-hidden="true"
-          >
-            <LogIn size={26} />
+          <span className="icon-chip w-14 h-14" aria-hidden="true">
+            <SpriteIcon name="joinToken" className="w-14 h-14" />
           </span>
           <h2 className="heading">Join Game</h2>
           <p className="caption text-center">

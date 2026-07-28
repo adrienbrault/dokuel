@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Dokuel mark</title>
+  <desc id="desc">A rounded sudoku tile mark with a teal path through highlighted cells.</desc>
+  <defs>
+    <linearGradient id="tile" x1="28" y1="18" x2="132" y2="146" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f9f7f1"/>
+      <stop offset="1" stop-color="#e8f3ed"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="44" y1="42" x2="118" y2="122" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16b987"/>
+      <stop offset="1" stop-color="#07876d"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="18" width="124" height="124" rx="30" fill="url(#tile)"/>
+  <rect x="18" y="18" width="124" height="124" rx="30" fill="none" stroke="#d8d4c9" stroke-width="3"/>
+  <g stroke="#d6d0c3" stroke-width="2">
+    <path d="M59 32v96M101 32v96M32 59h96M32 101h96"/>
+    <path d="M80 32v96M32 80h96" stroke="#2f2b25" stroke-width="3" opacity=".55"/>
+  </g>
+  <path d="M49 111 78 82l-15-15 20-20 29 29-20 20-14-14-29 29Z" fill="url(#accent)"/>
+  <circle cx="49" cy="111" r="9" fill="#13a37d"/>
+  <circle cx="112" cy="76" r="9" fill="#ffd082"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" role="img" aria-labelledby="title desc">
+  <title id="title">Multiplayer progress ribbon</title>
+  <desc id="desc">Two horizontal progress lanes crossing over subtle sudoku cells.</desc>
+  <rect x="20" y="22" width="200" height="76" rx="24" fill="#fffaf2" stroke="#d7d0c4" stroke-width="3"/>
+  <g stroke="#ebe3d7" stroke-width="2">
+    <path d="M64 28v64M108 28v64M152 28v64M196 28v64M28 60h184"/>
+  </g>
+  <path d="M50 48h94" stroke="#e8e1d6" stroke-linecap="round" stroke-width="12"/>
+  <path d="M50 48h58" stroke="#0a9878" stroke-linecap="round" stroke-width="12"/>
+  <path d="M94 72h96" stroke="#e8e1d6" stroke-linecap="round" stroke-width="12"/>
+  <path d="M94 72h74" stroke="#ff6f91" stroke-linecap="round" stroke-width="12"/>
+  <circle cx="50" cy="48" r="11" fill="#0a9878"/>
+  <circle cx="190" cy="72" r="11" fill="#ff6f91"/>
+</svg>

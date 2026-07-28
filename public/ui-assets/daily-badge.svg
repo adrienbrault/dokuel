@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Daily challenge badge</title>
+  <desc id="desc">A calendar badge with sudoku cells and a sunrise accent.</desc>
+  <rect x="24" y="30" width="112" height="104" rx="26" fill="#fffaf2"/>
+  <path d="M24 58h112v-2c0-14.4-11.6-26-26-26H50c-14.4 0-26 11.6-26 26v2Z" fill="#0a9878"/>
+  <g stroke="#0a9878" stroke-linecap="round" stroke-width="8">
+    <path d="M56 24v20"/>
+    <path d="M104 24v20"/>
+  </g>
+  <g fill="#efe8dc">
+    <rect x="45" y="76" width="18" height="18" rx="5"/>
+    <rect x="71" y="76" width="18" height="18" rx="5"/>
+    <rect x="97" y="76" width="18" height="18" rx="5"/>
+    <rect x="45" y="102" width="18" height="18" rx="5"/>
+    <rect x="71" y="102" width="18" height="18" rx="5"/>
+    <rect x="97" y="102" width="18" height="18" rx="5"/>
+  </g>
+  <circle cx="80" cy="98" r="24" fill="#ffd27f"/>
+  <path d="M54 98h52" stroke="#fffaf2" stroke-linecap="round" stroke-width="7"/>
+  <path d="M63 85a24 24 0 0 1 34 0" fill="none" stroke="#a35f18" stroke-linecap="round" stroke-width="6"/>
+</svg>

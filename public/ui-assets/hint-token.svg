@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Hint token</title>
+  <desc id="desc">A hint light surrounded by small candidate-note dots.</desc>
+  <rect x="30" y="24" width="100" height="112" rx="28" fill="#fffaf2" stroke="#d7d0c4" stroke-width="3"/>
+  <path d="M61 73c0-13 9-23 19-23s19 10 19 23c0 9-4 14-9 20-3 4-5 8-5 14H75c0-6-2-10-5-14-5-6-9-11-9-20Z" fill="#ffd27f"/>
+  <path d="M72 118h16" stroke="#0a9878" stroke-linecap="round" stroke-width="8"/>
+  <g fill="#0a9878">
+    <circle cx="48" cy="46" r="4"/>
+    <circle cx="112" cy="46" r="4"/>
+    <circle cx="48" cy="114" r="4"/>
+    <circle cx="112" cy="114" r="4"/>
+    <circle cx="80" cy="38" r="4"/>
+  </g>
+  <path d="M70 72c2-6 5-9 10-9s8 3 10 9" fill="none" stroke="#9b6217" stroke-linecap="round" stroke-width="5"/>
+</svg>

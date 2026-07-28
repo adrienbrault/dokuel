@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" role="img" aria-labelledby="title desc">
+  <title id="title">Assist level tabs</title>
+  <desc id="desc">A segmented-control asset showing paper, standard, and full assistance states.</desc>
+  <rect x="20" y="35" width="200" height="50" rx="18" fill="#f0ebe3"/>
+  <rect x="87" y="39" width="66" height="42" rx="14" fill="#0a9878"/>
+  <g fill="#c7bfb3">
+    <circle cx="53" cy="60" r="8"/>
+    <circle cx="187" cy="60" r="8"/>
+  </g>
+  <path d="M107 60h26M120 47v26" stroke="#fffaf2" stroke-linecap="round" stroke-width="6"/>
+  <path d="M48 53h10M48 67h10M182 53h10M182 67h10" stroke="#756f66" stroke-linecap="round" stroke-width="4"/>
+</svg>

@@ -5,6 +5,7 @@ import {
 } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { SpriteIcon } from "./SpriteIcon.tsx";
 
 type GameResultProps = {
   isWinner: boolean;
@@ -101,13 +102,10 @@ export function GameResult({
       )}
       <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
         <div className="flex flex-col items-center gap-2.5">
-          <span
-            className={`flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce ${
-              isWinner ? "bg-accent-light" : "bg-bg-inset"
-            }`}
-          >
-            {isWinner ? "🎉" : "👏"}
-          </span>
+          <SpriteIcon
+            name={isWinner ? "victoryMedal" : "dokuelMark"}
+            className="w-20 h-20 animate-emoji-bounce"
+          />
           <h2 className="heading">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
@@ -140,6 +138,7 @@ export function GameResult({
 
         {streakInfo && streakInfo.currentStreak > 0 && (
           <div className="flex items-center justify-center gap-2 text-sm text-accent font-semibold">
+            <SpriteIcon name="streakToken" className="w-7 h-7" />
             <span>{streakInfo.currentStreak}-day streak!</span>
             {streakInfo.currentStreak >= streakInfo.longestStreak &&
               streakInfo.currentStreak > 1 && (

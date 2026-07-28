@@ -1,0 +1,49 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && FILE=$(cat | jq -r '.tool_input.file_path // empty') && case \"$FILE\" in *.env*|*secret*|*.pem|*.key) echo \"Blocked: $FILE is a sensitive file\" >&2; exit 2;; esac; exit 0"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && FILE=$(cat | jq -r '.tool_input.file_path // empty') && if [ -n \"$FILE\" ]; then bunx biome check --write \"$FILE\" 2>/dev/null; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && FILE=$(cat | jq -r '.tool_input.file_path // empty') && if [ -z \"$FILE\" ]; then exit 0; fi && case \"$FILE\" in *.test.ts|*.test.tsx) bunx vitest run --reporter=dot \"$FILE\" 2>&1;; *.tsx) TEST=\"${FILE%.tsx}.test.tsx\"; if [ -f \"$TEST\" ]; then bunx vitest run --reporter=dot \"$TEST\" 2>&1; fi;; *.ts) TEST=\"${FILE%.ts}.test.ts\"; if [ -f \"$TEST\" ]; then bunx vitest run --reporter=dot \"$TEST\" 2>&1; fi;; esac"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && RESULT=$(bun run ci 2>&1) || { echo \"$RESULT\" | tail -30; echo '{\"decision\": \"block\", \"reason\": \"CI checks failed. Fix lint, typecheck, or test errors before stopping.\"}'; }"
+          },
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && bun run diff-coverage 2>&1; true"
+          }
+        ]
+      }
+    ]
+  }
+}

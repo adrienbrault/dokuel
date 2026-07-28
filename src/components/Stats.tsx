@@ -19,6 +19,7 @@ import {
   getStatsByAssistLevel,
 } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { SpriteIcon } from "./SpriteIcon.tsx";
 
 type StatsProps = {
   onBack: () => void;
@@ -85,7 +86,8 @@ export function Stats({ onBack }: StatsProps) {
             Multiplayer
           </h3>
           {mpSummary.played === 0 ? (
-            <div className="card p-4 w-full">
+            <div className="card p-5 w-full flex flex-col items-center gap-3">
+              <SpriteIcon name="emptyBoard" className="w-28 h-24" />
               <p className="text-sm text-text-muted text-center">
                 No multiplayer games yet
               </p>

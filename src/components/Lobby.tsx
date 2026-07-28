@@ -4,6 +4,7 @@ import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
+import { SpriteIcon } from "./SpriteIcon.tsx";
 
 type LobbyProps = {
   roomState: RoomState;
@@ -72,6 +73,7 @@ export function Lobby({
   return (
     <div className="screen-content gap-7 py-10">
       <div className="flex flex-col items-center gap-3">
+        <SpriteIcon name="roomCode" className="w-32 h-16" />
         <h2 className="heading">Game Lobby</h2>
         <button
           type="button"

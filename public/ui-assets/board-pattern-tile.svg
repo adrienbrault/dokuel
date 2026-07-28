@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" role="img" aria-labelledby="title desc">
+  <title id="title">Board pattern tile</title>
+  <desc id="desc">A repeatable subtle sudoku-grid background tile.</desc>
+  <rect width="144" height="144" fill="#fbfaf6"/>
+  <g stroke="#e8e0d5" stroke-width="2">
+    <path d="M16 0v144M48 0v144M80 0v144M112 0v144M0 16h144M0 48h144M0 80h144M0 112h144"/>
+  </g>
+  <g stroke="#ded4c6" stroke-width="3">
+    <path d="M0 48h144M0 96h144M48 0v144M96 0v144"/>
+  </g>
+  <rect x="48" y="48" width="32" height="32" rx="8" fill="#d7f5e7"/>
+  <circle cx="64" cy="64" r="5" fill="#0a9878"/>
+  <circle cx="112" cy="32" r="4" fill="#ffd27f"/>
+  <circle cx="32" cy="112" r="4" fill="#ff7a59"/>
+</svg>
