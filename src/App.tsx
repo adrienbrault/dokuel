@@ -52,6 +52,9 @@ const VALID_DIFFICULTIES = new Set<string>([
 // Invite codes are word-word-xxxx (see room-code.ts); the two-word
 // form covers links minted before the entropy suffix existed.
 const ROOM_CODE_RE = /^[a-z]+-[a-z]+(-[a-z0-9]{4})?$/;
+// Matches the signaling worker's Durable Object key truncation — a
+// longer code would shard inconsistently server-side.
+const MAX_ROOM_CODE_LENGTH = 64;
 
 export function screenToPath(screen: Screen): string {
   switch (screen.name) {
@@ -102,7 +105,10 @@ export function pathToScreen(pathname: string): Screen {
   // joiner into a different, empty room. Anything else is a 404, not
   // an excuse to boot the WebRTC stack.
   const candidate = path.toLowerCase();
-  if (ROOM_CODE_RE.test(candidate)) {
+  if (
+    candidate.length <= MAX_ROOM_CODE_LENGTH &&
+    ROOM_CODE_RE.test(candidate)
+  ) {
     return {
       name: "multiplayer",
       roomId: candidate,
