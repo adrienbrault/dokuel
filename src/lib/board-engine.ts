@@ -9,6 +9,7 @@ import {
 import type {
   ActiveHint,
   Board,
+  Cell,
   ClearedNote,
   GameStatus,
   MoveAction,
@@ -78,17 +79,46 @@ export type SavedBoard = {
   hintsUsed?: number | undefined;
 };
 
-function cloneBoard(board: Board): Board {
-  return board.map((row) =>
-    row.map((cell) => ({
-      ...cell,
-      notes: new Set(cell.notes),
-    })),
-  );
+/**
+ * Copy-on-write view over a board. Rows and cells are cloned only when
+ * `edit` touches them, so every untouched Cell object keeps its
+ * identity across a mutation — that identity is what lets memo(Cell)
+ * actually skip the other ~80 cells on a keystroke (a full clone
+ * defeated the memo entirely).
+ */
+type BoardEditor = {
+  board: Board;
+  /** Read a cell without cloning anything. */
+  peek: (row: number, col: number) => Cell;
+  /** Clone row + cell on first touch, then return the writable cell. */
+  edit: (row: number, col: number) => Cell;
+};
+
+function editBoard(source: Board): BoardEditor {
+  const board: Board = source.map((row) => row);
+  const clonedRows = new Set<number>();
+  const clonedCells = new Set<number>();
+  return {
+    board,
+    peek: (row, col) => board[row]![col]!,
+    edit: (row, col) => {
+      if (!clonedRows.has(row)) {
+        board[row] = [...board[row]!];
+        clonedRows.add(row);
+      }
+      const key = row * 9 + col;
+      if (!clonedCells.has(key)) {
+        const prev = board[row]![col]!;
+        board[row]![col] = { ...prev, notes: new Set(prev.notes) };
+        clonedCells.add(key);
+      }
+      return board[row]![col]!;
+    },
+  };
 }
 
 function clearPeerNotes(
-  board: Board,
+  editor: BoardEditor,
   row: number,
   col: number,
   value: number,
@@ -97,19 +127,19 @@ function clearPeerNotes(
   const boxRow = Math.floor(row / 3) * 3;
   const boxCol = Math.floor(col / 3) * 3;
   for (let i = 0; i < 9; i++) {
-    if (i !== col && board[row]![i]!.notes.has(value)) {
-      board[row]![i]!.notes.delete(value);
+    if (i !== col && editor.peek(row, i).notes.has(value)) {
+      editor.edit(row, i).notes.delete(value);
       cleared.push({ row, col: i, note: value });
     }
-    if (i !== row && board[i]![col]!.notes.has(value)) {
-      board[i]![col]!.notes.delete(value);
+    if (i !== row && editor.peek(i, col).notes.has(value)) {
+      editor.edit(i, col).notes.delete(value);
       cleared.push({ row: i, col, note: value });
     }
   }
   for (let r = boxRow; r < boxRow + 3; r++) {
     for (let c = boxCol; c < boxCol + 3; c++) {
-      if (r !== row && c !== col && board[r]![c]!.notes.has(value)) {
-        board[r]![c]!.notes.delete(value);
+      if (r !== row && c !== col && editor.peek(r, c).notes.has(value)) {
+        editor.edit(r, c).notes.delete(value);
         cleared.push({ row: r, col: c, note: value });
       }
     }
@@ -130,12 +160,12 @@ function handlePlaceNumber(
 
   // Multi-cell batch note toggle
   if (noteMode && state.selectedCells.size > 1) {
-    const board = cloneBoard(state.board);
+    const editor = editBoard(state.board);
     const targets: Position[] = [];
     for (const key of state.selectedCells) {
       const r = Math.floor(key / 9);
       const c = key % 9;
-      const target = board[r]![c]!;
+      const target = editor.peek(r, c);
       if (!target.isGiven && target.value === null) {
         targets.push({ row: r, col: c });
       }
@@ -144,17 +174,16 @@ function handlePlaceNumber(
 
     // If all targets have the note, remove it; otherwise add it
     const allHave = targets.every((p) =>
-      board[p.row]![p.col]!.notes.has(value),
+      editor.peek(p.row, p.col).notes.has(value),
     );
     const added: Position[] = [];
     const removed: Position[] = [];
     for (const pos of targets) {
-      const notes = board[pos.row]![pos.col]!.notes;
       if (allHave) {
-        notes.delete(value);
+        editor.edit(pos.row, pos.col).notes.delete(value);
         removed.push(pos);
-      } else if (!notes.has(value)) {
-        notes.add(value);
+      } else if (!editor.peek(pos.row, pos.col).notes.has(value)) {
+        editor.edit(pos.row, pos.col).notes.add(value);
         added.push(pos);
       }
     }
@@ -167,7 +196,7 @@ function handlePlaceNumber(
     };
     return {
       ...state,
-      board,
+      board: editor.board,
       history: pushHistory(state.history, moveAction),
     };
   }
@@ -175,8 +204,8 @@ function handlePlaceNumber(
   if (cell.isGiven) return state;
 
   if (noteMode) {
-    const board = cloneBoard(state.board);
-    const notes = board[row]![col]!.notes;
+    const editor = editBoard(state.board);
+    const notes = editor.edit(row, col).notes;
     const moveAction: MoveAction = {
       type: "toggleNote",
       position: { row, col },
@@ -189,7 +218,7 @@ function handlePlaceNumber(
     }
     return {
       ...state,
-      board,
+      board: editor.board,
       history: pushHistory(state.history, moveAction),
     };
   }
@@ -199,12 +228,14 @@ function handlePlaceNumber(
   // accidental numpad tap or keyboard press silently clobbering it.
   if (cell.value !== null) return state;
 
-  const board = cloneBoard(state.board);
-  board[row]![col]!.value = value;
-  board[row]![col]!.notes = new Set();
+  const editor = editBoard(state.board);
+  const target = editor.edit(row, col);
+  target.value = value;
+  target.notes = new Set();
   const clearedNotes = autoEliminateNotes
-    ? clearPeerNotes(board, row, col, value)
+    ? clearPeerNotes(editor, row, col, value)
     : [];
+  const board = editor.board;
   const moveAction: MoveAction = {
     type: "place",
     position: { row, col },
@@ -240,8 +271,8 @@ function handlePlaceNoteAt(
   const cell = state.board[row]?.[col];
   if (!cell || cell.isGiven || cell.value !== null) return state;
 
-  const board = cloneBoard(state.board);
-  const notes = board[row]![col]!.notes;
+  const editor = editBoard(state.board);
+  const notes = editor.edit(row, col).notes;
   const moveAction: MoveAction = {
     type: "toggleNote",
     position: { row, col },
@@ -254,7 +285,7 @@ function handlePlaceNoteAt(
   }
   return {
     ...state,
-    board,
+    board: editor.board,
     history: pushHistory(state.history, moveAction),
   };
 }
@@ -264,7 +295,7 @@ function handleErase(state: State): State {
 
   // Multi-cell batch erase
   if (state.selectedCells.size > 1) {
-    const board = cloneBoard(state.board);
+    const editor = editBoard(state.board);
     const erased: {
       position: Position;
       previousValue: import("./types.ts").CellValue;
@@ -273,13 +304,14 @@ function handleErase(state: State): State {
     for (const key of state.selectedCells) {
       const r = Math.floor(key / 9);
       const c = key % 9;
-      const target = board[r]![c]!;
-      if (!target.isGiven && (target.value !== null || target.notes.size > 0)) {
+      const peeked = editor.peek(r, c);
+      if (!peeked.isGiven && (peeked.value !== null || peeked.notes.size > 0)) {
         erased.push({
           position: { row: r, col: c },
-          previousValue: target.value,
-          previousNotes: new Set(target.notes),
+          previousValue: peeked.value,
+          previousNotes: new Set(peeked.notes),
         });
+        const target = editor.edit(r, c);
         target.value = null;
         target.notes = new Set();
       }
@@ -291,7 +323,7 @@ function handleErase(state: State): State {
     };
     return {
       ...state,
-      board,
+      board: editor.board,
       history: pushHistory(state.history, moveAction),
     };
   }
@@ -300,19 +332,20 @@ function handleErase(state: State): State {
   const cell = state.board[row]![col]!;
   if (cell.isGiven) return state;
 
-  const board = cloneBoard(state.board);
+  const editor = editBoard(state.board);
   const moveAction: MoveAction = {
     type: "erase",
     position: { row, col },
     previousValue: cell.value,
     previousNotes: new Set(cell.notes),
   };
-  board[row]![col]!.value = null;
-  board[row]![col]!.notes = new Set();
+  const target = editor.edit(row, col);
+  target.value = null;
+  target.notes = new Set();
 
   return {
     ...state,
-    board,
+    board: editor.board,
     history: pushHistory(state.history, moveAction),
   };
 }
@@ -321,27 +354,29 @@ function handleUndo(state: State): State {
   if (state.history.length === 0 || state.status === "completed") return state;
   const history = state.history.slice(0, -1);
   const lastAction = state.history[state.history.length - 1]!;
-  const board = cloneBoard(state.board);
+  const editor = editBoard(state.board);
 
   switch (lastAction.type) {
     case "place": {
       const { row, col } = lastAction.position;
-      board[row]![col]!.value = lastAction.previousValue;
-      board[row]![col]!.notes = new Set(lastAction.previousNotes);
+      const target = editor.edit(row, col);
+      target.value = lastAction.previousValue;
+      target.notes = new Set(lastAction.previousNotes);
       for (const cleared of lastAction.clearedNotes) {
-        board[cleared.row]![cleared.col]!.notes.add(cleared.note);
+        editor.edit(cleared.row, cleared.col).notes.add(cleared.note);
       }
       break;
     }
     case "erase": {
       const { row, col } = lastAction.position;
-      board[row]![col]!.value = lastAction.previousValue;
-      board[row]![col]!.notes = new Set(lastAction.previousNotes);
+      const target = editor.edit(row, col);
+      target.value = lastAction.previousValue;
+      target.notes = new Set(lastAction.previousNotes);
       break;
     }
     case "toggleNote": {
       const { row, col } = lastAction.position;
-      const notes = board[row]![col]!.notes;
+      const notes = editor.edit(row, col).notes;
       if (notes.has(lastAction.note)) {
         notes.delete(lastAction.note);
       } else {
@@ -351,18 +386,19 @@ function handleUndo(state: State): State {
     }
     case "batchToggleNote": {
       for (const pos of lastAction.added) {
-        board[pos.row]![pos.col]!.notes.delete(lastAction.note);
+        editor.edit(pos.row, pos.col).notes.delete(lastAction.note);
       }
       for (const pos of lastAction.removed) {
-        board[pos.row]![pos.col]!.notes.add(lastAction.note);
+        editor.edit(pos.row, pos.col).notes.add(lastAction.note);
       }
       break;
     }
     case "batchErase": {
       for (const entry of lastAction.cells) {
         const { row, col } = entry.position;
-        board[row]![col]!.value = entry.previousValue;
-        board[row]![col]!.notes = new Set(entry.previousNotes);
+        const target = editor.edit(row, col);
+        target.value = entry.previousValue;
+        target.notes = new Set(entry.previousNotes);
       }
       break;
     }
@@ -370,7 +406,7 @@ function handleUndo(state: State): State {
 
   return {
     ...state,
-    board,
+    board: editor.board,
     history,
   };
 }
