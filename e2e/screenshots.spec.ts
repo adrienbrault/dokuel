@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { type Locator, type Page, test as base } from "@playwright/test";
+import { holdNumpadDigit, test } from "./fixtures.ts";
 
 const SCREENSHOT_DIR = join(import.meta.dirname, "screenshots");
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -8,55 +8,6 @@ mkdirSync(SCREENSHOT_DIR, { recursive: true });
 function screenshotPath(name: string, project: string) {
 	return join(SCREENSHOT_DIR, `${name}--${project.replace(/\s+/g, "-")}.png`);
 }
-
-// Press and hold a numpad digit past the 200ms threshold so it commits a
-// pencil note into the selected cell.
-async function holdNumpadDigit(page: Page, digit: Locator) {
-	const box = await digit.boundingBox();
-	if (!box) throw new Error("numpad digit not visible");
-	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-	await page.mouse.down();
-	await page.waitForTimeout(250);
-	await page.mouse.up();
-}
-
-// Fixture that seeds localStorage and disables CSS animations/transitions
-// before the page loads. Disabling animations lets us screenshot the final
-// state immediately, instead of waiting for staggered cell-reveal animations
-// (~630ms) and entry transitions.
-const test = base.extend<{ storage: Record<string, string> }>({
-	storage: [{}, { option: true }],
-	page: async ({ page, storage }, use) => {
-		// The app is fully self-contained; any external request in a test
-		// is a mistake (and a flake source on CI). Fail it fast instead of
-		// letting the navigation "load" event wait on a third party.
-		await page.route(
-			(url) => !["localhost", "127.0.0.1"].includes(url.hostname),
-			(route) => route.abort(),
-		);
-		const entries = Object.entries(storage);
-		if (entries.length > 0) {
-			await page.addInitScript((items: [string, string][]) => {
-				for (const [k, v] of items) {
-					localStorage.setItem(k, v);
-				}
-			}, entries);
-		}
-		await page.addInitScript(() => {
-			const style = document.createElement("style");
-			style.textContent = `*, *::before, *::after {
-				animation-duration: 0s !important;
-				animation-delay: 0s !important;
-				transition-duration: 0s !important;
-				transition-delay: 0s !important;
-			}`;
-			const inject = () => document.head.appendChild(style);
-			if (document.head) inject();
-			else document.addEventListener("DOMContentLoaded", inject);
-		});
-		await use(page);
-	},
-});
 
 test("landing page", async ({ page }, testInfo) => {
 	await page.goto("/");
