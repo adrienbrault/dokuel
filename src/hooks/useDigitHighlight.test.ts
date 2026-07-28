@@ -194,7 +194,12 @@ describe("useDigitHighlight", () => {
     expect(result.current.highlightedDigit).toBe(4);
   });
 
-  it("tapDigit drops the selection and highlights the digit when multiple cells are selected", () => {
+  it("tapDigit pencils the digit as a note into a multi-cell selection", () => {
+    // A range selection exists for one purpose: bulk notes. Tapping a
+    // digit used to discard the painstaking selection and switch to
+    // highlight mode — the exact opposite of what the player just set
+    // up. The tap now does what hold does (note into every selected
+    // cell) and keeps the selection so more digits can be added.
     const handlers = makeHandlers({ row: 0, col: 0 });
     // Simulate a multi-cell selection: the primary plus another cell.
     handlers.selectedCells = new Set([0, 1]);
@@ -203,9 +208,9 @@ describe("useDigitHighlight", () => {
     act(() => {
       result.current.tapDigit(6);
     });
-    expect(handlers.deselectCell).toHaveBeenCalled();
-    expect(handlers.placeNumber).not.toHaveBeenCalled();
-    expect(result.current.highlightedDigit).toBe(6);
+    expect(handlers.placeNumber).toHaveBeenCalledWith(6, true, true);
+    expect(handlers.deselectCell).not.toHaveBeenCalled();
+    expect(result.current.highlightedDigit).toBeNull();
   });
 
   it("tapDigit forwards the autoEliminateNotes flag to placeNumber", () => {
