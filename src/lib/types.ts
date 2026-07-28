@@ -51,7 +51,11 @@ export type MoveAction =
 
 // --- Hint Explanation ---
 
-export type HintTechnique = "naked-single" | "hidden-single" | "mistake";
+export type HintTechnique =
+  | "naked-single"
+  | "hidden-single"
+  | "mistake"
+  | "reveal";
 
 export type ActiveHint = {
   position: Position;

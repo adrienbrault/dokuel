@@ -4,7 +4,7 @@ import type { Board, Position } from "./types.ts";
 export type HintExplanation = {
   position: Position;
   value: number;
-  technique: "naked-single" | "hidden-single" | "mistake";
+  technique: "naked-single" | "hidden-single" | "mistake" | "reveal";
   explanation: string;
   relatedCells: Position[];
 };
@@ -289,7 +289,7 @@ export function findHint(
   return {
     position: { row: targetRow, col: targetCol },
     value,
-    technique: "naked-single",
+    technique: "reveal",
     explanation:
       candidates.size <= 3
         ? `This cell's candidates are ${[...candidates].sort().join(", ")}. The answer is ${value} — try analyzing which values are possible in neighboring cells to narrow it down.`
