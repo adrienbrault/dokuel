@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -68,6 +68,13 @@ export function GameResult({
   onDismissTip,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+    },
+    [],
+  );
 
   const handleShare = () => {
     const text = buildShareText({
@@ -78,9 +85,21 @@ export function GameResult({
       streakInfo,
       isDaily,
     });
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Only claim "Copied!" once the write actually landed — on iOS the
+    // promise rejects when transient activation is lost.
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(true);
+        if (copiedTimerRef.current !== null) {
+          clearTimeout(copiedTimerRef.current);
+        }
+        copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // Copy failed (permissions, lost activation) — leave the
+        // button label unchanged so the player can try again.
+      });
   };
 
   return (

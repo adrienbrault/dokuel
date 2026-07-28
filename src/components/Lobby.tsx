@@ -67,7 +67,13 @@ export function Lobby({
         // User cancelled or share failed, fall through to clipboard
       }
     }
-    await navigator.clipboard.writeText(gameUrl);
+    try {
+      await navigator.clipboard.writeText(gameUrl);
+    } catch {
+      // Copy failed (permissions, lost activation) — don't claim it
+      // worked, and don't surface an unhandled rejection.
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -80,7 +86,11 @@ export function Lobby({
           type="button"
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-bg-inset border border-border-default cursor-pointer touch-manipulation press-spring-soft"
           onClick={async () => {
-            await navigator.clipboard.writeText(roomState.roomId);
+            try {
+              await navigator.clipboard.writeText(roomState.roomId);
+            } catch {
+              return;
+            }
             setCodeCopied(true);
             setTimeout(() => setCodeCopied(false), 2000);
           }}
