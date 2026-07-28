@@ -25,6 +25,53 @@ function defaultProps() {
   };
 }
 
+describe("Cell accessible state", () => {
+  it("announces a conflict in the label, not just via color", () => {
+    // The red background/text is invisible to screen readers and
+    // ambiguous for colorblind players; the state must be in the name.
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell({ value: 5 })}
+        isConflict={true}
+      />,
+    );
+    expect(
+      screen.getByLabelText("Cell row 1 column 1, value 5, conflict"),
+    ).toBeInTheDocument();
+  });
+
+  it("marks conflicted digits with a wavy underline for colorblind players", () => {
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell({ value: 5 })}
+        isConflict={true}
+      />,
+    );
+    const digit = screen.getByText("5");
+    expect(digit.className).toContain("decoration-wavy");
+  });
+
+  it("announces given digits as given", () => {
+    render(
+      <Cell {...defaultProps()} cell={makeCell({ value: 7, isGiven: true })} />,
+    );
+    expect(
+      screen.getByLabelText("Cell row 1 column 1, value 7, given"),
+    ).toBeInTheDocument();
+  });
+
+  it("announces pencil notes", () => {
+    render(
+      <Cell {...defaultProps()} cell={makeCell({ notes: new Set([4, 1]) })} />,
+    );
+    expect(
+      screen.getByLabelText("Cell row 1 column 1, empty, notes 1 4"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("Cell chargingDigit", () => {
   it("renders the charging glyph as an overlay when chargingDigit is set", () => {
     render(
