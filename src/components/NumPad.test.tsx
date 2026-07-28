@@ -252,6 +252,108 @@ describe("NumPad", () => {
     expect(onSkimDigit).not.toHaveBeenCalled();
   });
 
+  it("keeps an off-center click with slight wobble a tap", () => {
+    // Desktop bug: gesture slop was measured from the BUTTON CENTER,
+    // so on a 64px button any click landing >12px off-center (~87% of
+    // its area) was "past the threshold" before the pointer moved at
+    // all — 3px of natural mouse wobble then misfired a skim or drag
+    // and swallowed the tap.
+    const onTapNumber = vi.fn();
+    const onStartDrag = vi.fn();
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={onTapNumber}
+        onHoldNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const five = screen.getByRole("button", { name: /^5, / });
+    mockRect(five, {
+      left: 0,
+      top: 0,
+      right: 64,
+      bottom: 64,
+      width: 64,
+      height: 64,
+    });
+    // Press near the button's right edge, 24px from its center...
+    fireEvent.pointerDown(five, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 56,
+      clientY: 40,
+    });
+    // ...then wobble 3px — far under the 12px gesture slop.
+    fireEvent.pointerMove(five, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 59,
+      clientY: 41,
+    });
+    fireEvent.pointerUp(five, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 59,
+      clientY: 41,
+    });
+    expect(onStartDrag).not.toHaveBeenCalled();
+    expect(onSkimDigit).not.toHaveBeenCalled();
+    expect(onTapNumber).toHaveBeenCalledWith(5);
+  });
+
+  it("classifies drag direction from the movement, not the press position", () => {
+    // A perpendicular pull toward the board must read as a drag even
+    // when the press landed off-center — with the old center-relative
+    // origin, the click position dominated the angle and an upward
+    // 20px pull from a right-edge press was misread as a skim.
+    const onStartDrag = vi.fn();
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const five = screen.getByRole("button", { name: /^5, / });
+    mockRect(five, {
+      left: 0,
+      top: 0,
+      right: 64,
+      bottom: 64,
+      width: 64,
+      height: 64,
+    });
+    fireEvent.pointerDown(five, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 56,
+      clientY: 40,
+    });
+    // Straight-up 20px pull: perpendicular to a bottom numpad → drag.
+    fireEvent.pointerMove(five, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 56,
+      clientY: 20,
+    });
+    expect(onSkimDigit).not.toHaveBeenCalled();
+    expect(onStartDrag).toHaveBeenCalledWith({
+      digit: 5,
+      x: 56,
+      y: 20,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+  });
+
   it("falls back to drag for any direction when no skim handler is wired", () => {
     const onStartDrag = vi.fn();
     render(
