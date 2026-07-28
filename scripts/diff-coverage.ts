@@ -9,7 +9,8 @@
  *   bun scripts/diff-coverage.ts               # Check all changed files
  *
  * Options:
- *   --base=<ref>   Git ref to diff against (default: HEAD)
+ *   --base=<ref>   Git ref to diff against (default: merge-base with
+ *                  origin/main, falling back to HEAD outside a branch)
  *   --staged       Only check staged changes
  */
 
@@ -67,18 +68,54 @@ function getChangedLines(
   return lines;
 }
 
+function inCoverageScope(f: string): boolean {
+  return (
+    /^src\/(lib|hooks)\/.*\.tsx?$/.test(f) &&
+    !f.endsWith(".test.ts") &&
+    !f.endsWith(".test.tsx")
+  );
+}
+
 function getChangedFiles(base: string, staged: boolean): string[] {
   const diffFlag = staged ? "--cached" : "";
   const cmd = `git diff ${diffFlag} ${base} --name-only --diff-filter=ACMR`;
   try {
     const output = execSync(cmd, { cwd: ROOT, encoding: "utf-8" }).trim();
     if (!output) return [];
-    return output
-      .split("\n")
-      .filter((f) => /^src\/(lib|hooks)\/.*\.tsx?$/.test(f))
-      .filter((f) => !f.endsWith(".test.ts") && !f.endsWith(".test.tsx"));
+    return output.split("\n").filter(inCoverageScope);
   } catch {
     return [];
+  }
+}
+
+/** Brand-new files that are not committed yet — `git diff <ref>` never
+ *  lists them, so without this a freshly written module escaped the
+ *  check entirely. */
+function getUntrackedFiles(): string[] {
+  try {
+    const output = execSync("git ls-files --others --exclude-standard", {
+      cwd: ROOT,
+      encoding: "utf-8",
+    }).trim();
+    if (!output) return [];
+    return output.split("\n").filter(inCoverageScope);
+  } catch {
+    return [];
+  }
+}
+
+/** Default diff base: the branch point against origin/main. Diffing
+ *  against plain HEAD only sees uncommitted edits, which in a
+ *  commit-as-you-go workflow is almost always an empty set — the tool
+ *  then reported "no changes" while the branch carried days of work. */
+function defaultBase(): string {
+  try {
+    return execSync("git merge-base HEAD origin/main", {
+      cwd: ROOT,
+      encoding: "utf-8",
+    }).trim();
+  } catch {
+    return "HEAD";
   }
 }
 
@@ -91,16 +128,21 @@ function findTestFile(file: string): string | null {
   return null;
 }
 
-function runCoverageForFiles(testFiles: string[]): void {
-  if (testFiles.length === 0) return;
+function runCoverageForFiles(testFiles: string[]): string | null {
+  if (testFiles.length === 0) return null;
   const fileArgs = testFiles.map((f) => `"${f}"`).join(" ");
   try {
     execSync(
       `bunx vitest run --coverage --coverage.reporter=json --coverage.reportsDirectory="${COVERAGE_DIR}" ${fileArgs}`,
       { cwd: ROOT, encoding: "utf-8", stdio: "pipe" },
     );
-  } catch {
-    // Tests may fail but coverage is still generated
+    return null;
+  } catch (err) {
+    // vitest exits non-zero for failing tests, which still write
+    // coverage. Keep the output: if coverage turns out to be missing,
+    // a real crash happened and its cause must be shown, not swallowed.
+    const e = err as { stdout?: string; stderr?: string };
+    return `${e.stdout ?? ""}\n${e.stderr ?? ""}`;
   }
 }
 
@@ -162,17 +204,20 @@ function findUncoveredChangedLines(
 // --- Main ---
 
 const args = process.argv.slice(2);
-const base = args.find((a) => a.startsWith("--base="))?.split("=")[1] ?? "HEAD";
+const base =
+  args.find((a) => a.startsWith("--base="))?.split("=")[1] ?? defaultBase();
 const staged = args.includes("--staged");
 const fileArg = args.find((a) => !a.startsWith("--"));
 
-// Determine files to check
+// Determine files to check. Untracked files have no diff against any
+// ref — every line in them counts as changed.
+const untracked = new Set(getUntrackedFiles());
 let filesToCheck: string[];
 if (fileArg) {
   const rel = relative(ROOT, resolve(fileArg));
   filesToCheck = [rel];
 } else {
-  filesToCheck = getChangedFiles(base, staged);
+  filesToCheck = [...new Set([...getChangedFiles(base, staged), ...untracked])];
 }
 
 if (filesToCheck.length === 0) {
@@ -198,12 +243,15 @@ if (testFiles.length === 0) {
 
 // Run coverage
 console.log(`Running coverage for ${testFiles.length} test file(s)...`);
-runCoverageForFiles(testFiles);
+const failureOutput = runCoverageForFiles(testFiles);
 
 // Read coverage data
 const coveragePath = join(COVERAGE_DIR, "coverage-final.json");
 if (!existsSync(coveragePath)) {
-  console.error("Coverage data not generated. Check test output above.");
+  console.error("Coverage data not generated — vitest crashed:");
+  if (failureOutput) {
+    console.error(failureOutput.trim().split("\n").slice(-30).join("\n"));
+  }
   process.exit(1);
 }
 
@@ -217,7 +265,14 @@ let totalChanged = 0;
 
 for (const file of filesWithTests) {
   const absPath = join(ROOT, file);
-  const changedLines = getChangedLines(file, base, staged);
+  const changedLines = untracked.has(file)
+    ? new Set(
+        Array.from(
+          { length: readFileSync(absPath, "utf-8").split("\n").length },
+          (_, i) => i + 1,
+        ),
+      )
+    : getChangedLines(file, base, staged);
   if (changedLines.size === 0) continue;
 
   // Find coverage entry (key might be absolute path)
