@@ -46,6 +46,11 @@ const FORFEIT_TRUST_WINDOW_MS = 120_000;
 // up, short enough that a genuine solo restore feels instant-ish.
 const HYDRATE_GRACE_MS = 3_000;
 
+// Shape checks for peer-written game content. 81 cells, digits with
+// "." holes for a puzzle, digits only for a solution.
+const VALID_PUZZLE_RE = /^[1-9.]{81}$/;
+const VALID_SOLUTION_RE = /^[1-9]{81}$/;
+
 type OpponentProgress = {
   cellsRemaining: number;
   completionPercent: number;
@@ -144,7 +149,12 @@ export function useYjsMultiplayer({
       const state = getRoomState(room);
       setRoomState(state);
       if (!state) return;
-      solutionRef.current = state.solution;
+      // Any peer can write anything into the doc; only mirror a
+      // solution that is actually a full grid so sendComplete's
+      // verification can't be poisoned by garbage.
+      if (state.solution === null || VALID_SOLUTION_RE.test(state.solution)) {
+        solutionRef.current = state.solution;
+      }
 
       // Detect new game (start or rematch). Content is checked as well
       // as the counter: concurrent starts/rematches write the SAME
@@ -152,8 +162,16 @@ export function useYjsMultiplayer({
       // losing writer latched the number from its own local write, so
       // without the puzzle comparison it would keep a board whose
       // completion never validates against the room's solution.
-      const isNewGame = state.gameNumber > lastGameNumberRef.current;
+      // A game is only adopted when its content is shaped like a real
+      // board — a peer writing garbage must not brick the client.
+      const contentValid =
+        state.puzzle !== null &&
+        VALID_PUZZLE_RE.test(state.puzzle) &&
+        (state.solution === null || VALID_SOLUTION_RE.test(state.solution));
+      const isNewGame =
+        contentValid && state.gameNumber > lastGameNumberRef.current;
       const isCollidedGame =
+        contentValid &&
         !isNewGame &&
         state.gameNumber === lastGameNumberRef.current &&
         state.puzzle !== null &&
