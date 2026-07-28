@@ -31,10 +31,20 @@ export function getMultiplayerStats(): MultiplayerGameRecord[] {
 
 export function saveMultiplayerGameResult(record: MultiplayerGameRecord) {
   const all = getMultiplayerStats();
-  const duplicate = all.some(
+  const existingIndex = all.findIndex(
     (r) => r.roomId === record.roomId && r.gameNumber === record.gameNumber,
   );
-  if (duplicate) return;
+  if (existingIndex !== -1) {
+    // Same game reported again. Identical outcome → true duplicate
+    // (remount), keep the original. Different outcome → a photo-finish
+    // whose CRDT merge settled the other way after we recorded
+    // optimistically; the correction wins.
+    if (all[existingIndex]!.won === record.won) return;
+    const corrected = [...all];
+    corrected[existingIndex] = record;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(corrected));
+    return;
+  }
   const next = [...all, record].slice(-MAX_RECORDS);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
