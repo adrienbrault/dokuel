@@ -567,6 +567,32 @@ describe("useYjsMultiplayer", () => {
       expect(doc.getMap("room").get("winnerBoard")).toBeNull();
     });
 
+    it("claimForfeitWin no-ops when the opponent's presence is back", async () => {
+      // The 60s countdown races the opponent's reconnect: if their
+      // awareness reappeared by the time the claim fires, taking the
+      // forfeit would steamroll a player who just came back.
+      const { result, doc } = await setupStartedGame("room-claim-returned");
+      const { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } =
+        await import("y-protocols/awareness");
+      const otherDoc = new Doc();
+      const otherAwareness = new Awareness(otherDoc);
+      otherAwareness.setLocalStateField("user", { id: "p2", name: "Bob" });
+      act(() => {
+        applyAwarenessUpdate(
+          mocks.lastProvider!.awareness,
+          encodeAwarenessUpdate(otherAwareness, [otherDoc.clientID]),
+          "test",
+        );
+      });
+
+      act(() => {
+        result.current.claimForfeitWin();
+      });
+
+      expect(doc.getMap("room").get("winnerId")).toBeNull();
+      otherAwareness.destroy();
+    });
+
     it("does not adopt a malformed remote puzzle", async () => {
       // The CRDT is peer-writable: a malicious or buggy peer can set
       // puzzle/solution to anything. Adopting garbage renders a NaN
