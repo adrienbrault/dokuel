@@ -102,7 +102,7 @@ export const Cell = memo(function Cell({
 					${bgClass}
 					transition-colors duration-100
 					select-none touch-none
-					outline-none focus-visible:ring-2 focus-visible:ring-accent
+					outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent
 					${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
 					${revealDelay !== undefined ? "animate-cell-reveal" : ""}
 				`}
