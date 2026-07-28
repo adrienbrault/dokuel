@@ -25,8 +25,8 @@ import {
 
 const REPO_ROOT = join(import.meta.dirname, "..");
 
-// Public URL the PNGs are served from. The workflow pushes them to the
-// `gh-pages` branch; GitHub Pages serves it at this origin.
+// Public URL the PNGs are served from — the GitHub Pages site the
+// workflow deploys the capture directory to.
 const BASE_URL = (
   process.env.SCREENSHOTS_BASE_URL ?? "https://adrienbrault.github.io/dokuel"
 ).replace(/\/$/, "");
