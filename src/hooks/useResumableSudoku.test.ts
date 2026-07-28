@@ -76,6 +76,37 @@ describe("useResumableSudoku", () => {
     expect(result.current.assistLevel).toBe("full");
   });
 
+  it("persists hintsUsed in the autosave and restores it on resume", () => {
+    // Without this, close-and-reopen laundered a hint-assisted game
+    // into a hint-free one: the PB filter and the in-game PB gate both
+    // read hintsUsed, so a resumed game could set a "clean" record.
+    const puzzle = `..${SOLVED.slice(2)}`;
+    const { result, unmount } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "hint-key",
+        initialPuzzle: puzzle,
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+      }),
+    );
+    act(() => {
+      result.current.game.hint();
+    });
+    expect(loadGame("hint-key")?.hintsUsed).toBe(1);
+    unmount();
+
+    const { result: resumed } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "hint-key",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+      }),
+    );
+    expect(resumed.current.game.hintsUsed).toBe(1);
+  });
+
   it("falls back to initialPuzzle when gameKey has no saved game", () => {
     const puzzle = puzzleMissingOneCell();
     const { result } = renderHook(() =>

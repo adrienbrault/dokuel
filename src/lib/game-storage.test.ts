@@ -36,6 +36,20 @@ describe("game-storage", () => {
     expect(loadGame("k")).toBeNull();
   });
 
+  it("defaults hintsUsed to 0 for saves written before the field existed", () => {
+    const { hintsUsed: _drop, ...legacy } = VALID_GAME;
+    localStorage.setItem("sudoku_save_k", JSON.stringify(legacy));
+    expect(loadGame("k")?.hintsUsed).toBe(0);
+  });
+
+  it("coerces a corrupt hintsUsed to 0 instead of dropping the save", () => {
+    localStorage.setItem(
+      "sudoku_save_k",
+      JSON.stringify({ ...VALID_GAME, hintsUsed: "lol" }),
+    );
+    expect(loadGame("k")?.hintsUsed).toBe(0);
+  });
+
   // A corrupt save is re-read on every app load; anything loadGame lets
   // through flows straight into initState during render, where a bad
   // character or non-array note entry throws and white-screens the app.
