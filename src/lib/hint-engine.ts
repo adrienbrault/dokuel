@@ -1,9 +1,10 @@
+import { getErrors } from "./sudoku.ts";
 import type { Board, Position } from "./types.ts";
 
 export type HintExplanation = {
   position: Position;
   value: number;
-  technique: "naked-single" | "hidden-single";
+  technique: "naked-single" | "hidden-single" | "mistake";
   explanation: string;
   relatedCells: Position[];
 };
@@ -230,6 +231,25 @@ export function findHint(
   solution: string,
   selectedCell?: Position | null,
 ): HintExplanation | null {
+  // A wrong entry poisons every deduction below it: singles derived
+  // from a false premise recommend provably wrong digits with full
+  // confidence. Surface the mistake first — on a mistake-free board,
+  // every single the scans find necessarily matches the solution.
+  const errors = getErrors(board, solution);
+  if (errors.size > 0) {
+    const key = Math.min(...errors);
+    const row = Math.floor(key / 9);
+    const col = key % 9;
+    const wrongValue = board[row]![col]!.value;
+    return {
+      position: { row, col },
+      value: Number(solution[key]),
+      technique: "mistake",
+      explanation: `This cell holds ${wrongValue}, but that can't be right — it makes the rest of the puzzle unsolvable. Clear it, then re-check its row, column, and box.`,
+      relatedCells: [],
+    };
+  }
+
   if (selectedCell) {
     const preferred = nakedSingleAt(board, selectedCell.row, selectedCell.col);
     if (preferred) return preferred;
