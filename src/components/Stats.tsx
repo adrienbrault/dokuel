@@ -41,7 +41,7 @@ export function Stats({ onBack }: StatsProps) {
 
   return (
     <div className="screen">
-      <div className="screen-content gap-8">
+      <div className="screen-content gap-7 py-10">
         <div className="flex flex-col items-center gap-1">
           <h2 className="heading">Stats</h2>
           <p className="text-sm text-text-muted">
@@ -49,27 +49,16 @@ export function Stats({ onBack }: StatsProps) {
           </p>
         </div>
 
-        <div className="card p-4 w-full">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
-                {streak.currentStreak}
-              </div>
-              <div className="text-xs text-text-muted">Current Streak</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-text-primary font-mono tabular-nums">
-                {streak.longestStreak}
-              </div>
-              <div className="text-xs text-text-muted">Longest Streak</div>
-            </div>
-          </div>
+        {/* Headline numbers, one card, equal weight — so the page opens
+            with a summary instead of the first of nine identical cards. */}
+        <div className="card w-full grid grid-cols-3 divide-x divide-border-default">
+          <HeroStat value={totalGames} label="Played" />
+          <HeroStat value={streak.currentStreak} label="Day streak" />
+          <HeroStat value={streak.longestStreak} label="Best streak" />
         </div>
 
         <section aria-label="Solo" className="flex flex-col gap-3 w-full">
-          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-            Solo
-          </h3>
+          <SectionHeading>Solo</SectionHeading>
           <div className="flex flex-col gap-4 w-full">
             {DIFFICULTIES.map((diff) => (
               <DifficultyStats key={diff} difficulty={diff} />
@@ -81,9 +70,7 @@ export function Stats({ onBack }: StatsProps) {
           aria-label="Multiplayer"
           className="flex flex-col gap-3 w-full"
         >
-          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-            Multiplayer
-          </h3>
+          <SectionHeading>Multiplayer</SectionHeading>
           {mpSummary.played === 0 ? (
             <div className="card p-4 w-full">
               <p className="text-sm text-text-muted text-center">
@@ -105,9 +92,7 @@ export function Stats({ onBack }: StatsProps) {
               </div>
               {mpRecent.length > 0 && (
                 <div className="flex flex-col gap-2 w-full mt-2">
-                  <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-                    Recent matches
-                  </h4>
+                  <h4 className="label">Recent matches</h4>
                   <ul className="card divide-y divide-border-default w-full">
                     {mpRecent.map((m) => (
                       <RecentMatchRow
@@ -130,6 +115,28 @@ export function Stats({ onBack }: StatsProps) {
           ← Back
         </button>
       </div>
+    </div>
+  );
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="flex items-center gap-3 label">
+      {children}
+      <span className="flex-1 h-px bg-border-default" aria-hidden="true" />
+    </h3>
+  );
+}
+
+function HeroStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 py-3.5">
+      <span className="text-2xl font-extrabold tabular-nums text-text-primary leading-none">
+        {value}
+      </span>
+      <span className="text-[0.6875rem] font-medium text-text-muted">
+        {label}
+      </span>
     </div>
   );
 }

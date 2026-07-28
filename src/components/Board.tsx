@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import {
+  BOX_GAP_PX,
+  FRAME_PX,
+  THIN_GAP_PX,
+  useBoardGeometry,
+} from "../hooks/useBoardGeometry.ts";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { cellKey } from "../lib/sudoku.ts";
@@ -105,6 +111,16 @@ export function Board({
       : null;
   })();
 
+  // Drives the selection-glow pulse. Scoped to the board so the animation
+  // only runs when a cell is actually selected.
+  const hasSelection = selectedCell !== null || (selectedCells?.size ?? 0) > 0;
+
+  // Roving tab index: the grid is one tab stop, not eighty-one. Without
+  // this, Tab from the header ran through every cell before reaching the
+  // number pad. The stop sits on the selected cell so returning to the
+  // board lands where the player left off.
+  const tabStop = selectedCell ?? { row: 0, col: 0 };
+
   const dragHandlers = useDragSelect({
     board,
     selectedCell,
@@ -114,30 +130,28 @@ export function Board({
     onSelectCell,
   });
 
-  // Snap the board to an integer-pixel size so every cell and every gap
-  // renders at exact device pixels. Sub-pixel cell widths cause adjacent
-  // gaps to anti-alias to different widths (some 1px, some 2px); flooring
-  // to an integer cell size makes that impossible.
-  // Total board = 9 cells + 6 thin gaps (1px) + 2 thick gaps (2px) + 2 outer
-  // pads (2px) = 9 * cellPx + 14.
   const containerRef = useRef<HTMLDivElement>(null);
-  const [cellPx, setCellPx] = useState(32);
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => {
-      const w = el.clientWidth;
-      if (w === 0) return;
-      setCellPx(Math.max(20, Math.floor((w - 14) / 9)));
-    };
-    update();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  const boxPx = cellPx * 3 + 2;
-  const boardPx = cellPx * 9 + 14;
+  const { cellPx, boxPx, boardPx } = useBoardGeometry(containerRef);
+
+  // Arrow keys move the selection through a reducer, so DOM focus has to
+  // be brought along or the focus ring is left behind on the cell the
+  // player started from and assistive tech is told nothing moved. Only
+  // when the board already holds focus — otherwise selecting a cell with
+  // the mouse, or restoring a saved game, would yank focus to the board.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const selectedKey = selectedCell
+    ? cellKey(selectedCell.row, selectedCell.col)
+    : null;
+  useEffect(() => {
+    const root = gridRef.current;
+    if (selectedKey === null || !root) return;
+    if (!root.contains(document.activeElement)) return;
+    root
+      .querySelector<HTMLElement>(
+        `[data-row="${Math.floor(selectedKey / 9)}"][data-col="${selectedKey % 9}"]`,
+      )
+      ?.focus();
+  }, [selectedKey]);
 
   // Block iOS Safari's swipe-from-edge back gesture for drags that
   // originate inside the board. touch-action: none on the cell isn't
@@ -145,7 +159,6 @@ export function Board({
   // system back-swipe. A non-passive touchstart preventDefault is the
   // only block that works across iOS versions. React's onTouchStart is
   // passive (preventDefault is a no-op), so we attach it natively.
-  const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;
@@ -157,17 +170,22 @@ export function Board({
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
+      className="w-full aspect-square flex items-center justify-center"
     >
       <div
         ref={gridRef}
         style={{
           width: boardPx,
           height: boardPx,
+          gap: BOX_GAP_PX,
+          padding: FRAME_PX,
           gridTemplateColumns: `repeat(3, ${boxPx}px)`,
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
+          boxShadow: "var(--elevation-3)",
         }}
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        className={`grid bg-board-border rounded-panel overflow-hidden touch-none ${
+          hasSelection ? "cell-glow-sync" : ""
+        }`}
         role="region"
         aria-label="Sudoku board"
         onPointerDown={
@@ -188,10 +206,11 @@ export function Board({
             <div
               key={boxIdx}
               style={{
+                gap: THIN_GAP_PX,
                 gridTemplateColumns: `repeat(3, ${cellPx}px)`,
                 gridTemplateRows: `repeat(3, ${cellPx}px)`,
               }}
-              className="grid gap-px bg-border-default"
+              className="grid bg-border-default"
             >
               {Array.from({ length: 9 }, (_, cellIdx) => {
                 const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
@@ -275,6 +294,9 @@ export function Board({
                       isSelected && chargingDigit != null
                         ? chargingDigit
                         : undefined
+                    }
+                    tabIndex={
+                      rowIdx === tabStop.row && colIdx === tabStop.col ? 0 : -1
                     }
                     isDragSource={isDragSource}
                     dropTargetState={dropTargetState}

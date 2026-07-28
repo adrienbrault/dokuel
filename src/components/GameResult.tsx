@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -68,6 +68,36 @@ export function GameResult({
   onDismissTip,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const primaryRef = useRef<HTMLButtonElement>(null);
+
+  // The panel renders last in the DOM, after the board and the number pad,
+  // so without moving focus a keyboard user had to tab past ~95 controls
+  // to reach "Play Again". Focusing the primary action on mount also gives
+  // a screen reader the dialog's name and its first control at once.
+  useEffect(() => {
+    primaryRef.current?.focus();
+  }, []);
+
+  // Keep Tab inside the panel while it is up. The board behind it is still
+  // in the accessibility tree, and tabbing into a board you have already
+  // finished — and can no longer change — is a dead end.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab") return;
+    const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+      "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+    );
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const handleShare = () => {
     const text = buildShareText({
@@ -84,7 +114,15 @@ export function GameResult({
   };
 
   return (
-    <div className="modal-overlay p-6">
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the key
+    // handler implements the focus trap the dialog role requires.
+    <div
+      className="modal-overlay p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="game-result-title"
+      onKeyDown={handleKeyDown}
+    >
       {isWinner && (
         <div className="confetti-container">
           <span />
@@ -99,7 +137,10 @@ export function GameResult({
           <span />
         </div>
       )}
-      <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
+      <div
+        ref={panelRef}
+        className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative"
+      >
         <div className="flex flex-col items-center gap-2.5">
           <span
             className={`flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce ${
@@ -108,30 +149,41 @@ export function GameResult({
           >
             {isWinner ? "🎉" : "👏"}
           </span>
-          <h2 className="heading">
+          <h2 className="heading" id="game-result-title">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
           {difficulty && (
-            <span
-              className={`text-xs font-bold px-3 py-1 rounded-full ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}
-            >
+            <span className={`chip ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}>
               {DIFFICULTY_LABELS[difficulty]}
             </span>
           )}
         </div>
-        <div className="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
-          <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
+        {/* The time is the result. Everything else on this panel is
+            context for it, so it gets the panel's largest type and, when
+            it is a record, the accent. */}
+        <div
+          className={`flex flex-col items-center gap-1.5 w-full rounded-panel py-5 ${
+            isNewPB && !isMultiplayer
+              ? "bg-accent-light ring-1 ring-accent/25"
+              : "bg-bg-inset"
+          }`}
+        >
+          <span
+            className={`text-[3.25rem] font-mono font-extrabold tabular-nums leading-none ${
+              isNewPB && !isMultiplayer ? "text-accent" : "text-text-primary"
+            }`}
+          >
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
-            <span className="text-sm font-bold text-accent">
-              New Personal Best!
+            <span className="text-xs font-bold uppercase tracking-wider text-accent">
+              New personal best
             </span>
           )}
         </div>
 
         {stats && !isMultiplayer && (
-          <div className="grid grid-cols-3 gap-2.5 w-full text-center">
+          <div className="grid grid-cols-3 w-full text-center rounded-panel bg-bg-inset divide-x divide-border-default">
             <StatTile label="Played" value={String(stats.gamesPlayed)} />
             <StatTile label="Best" value={formatTime(stats.bestTime)} />
             <StatTile label="Average" value={formatTime(stats.averageTime)} />
@@ -153,29 +205,33 @@ export function GameResult({
         <div className="flex flex-col gap-3 w-full">
           {onRematch && (
             <button
+              ref={primaryRef}
               type="button"
-              className="btn btn-primary w-full py-3 text-lg"
+              className="btn btn-lg btn-primary w-full"
               onClick={onRematch}
             >
               {isMultiplayer ? "Rematch" : "Play Again"}
             </button>
           )}
-          <button
-            type="button"
-            className="btn btn-secondary w-full py-3 text-lg"
-            onClick={onNewGame}
-          >
-            New Game
-          </button>
-          {!isMultiplayer && (
+          <div className="flex gap-3">
             <button
+              ref={onRematch ? undefined : primaryRef}
               type="button"
-              className="btn btn-ghost w-full py-2"
-              onClick={handleShare}
+              className="btn btn-secondary flex-1 py-3"
+              onClick={onNewGame}
             >
-              {copied ? "Copied!" : "Share Result"}
+              New Game
             </button>
-          )}
+            {!isMultiplayer && (
+              <button
+                type="button"
+                className="btn btn-secondary flex-1 py-3"
+                onClick={handleShare}
+              >
+                {copied ? "Copied!" : "Share"}
+              </button>
+            )}
+          </div>
         </div>
         {tip && (
           <button
@@ -193,11 +249,11 @@ export function GameResult({
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-bg-inset py-2.5">
-      <div className="text-lg font-bold text-text-primary font-mono tabular-nums">
+    <div className="py-3">
+      <div className="text-lg font-bold text-text-primary font-mono tabular-nums leading-none">
         {value}
       </div>
-      <div className="text-xs text-text-muted">{label}</div>
+      <div className="text-[0.6875rem] text-text-muted mt-1">{label}</div>
     </div>
   );
 }

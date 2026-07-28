@@ -1,117 +1,227 @@
 @import "tailwindcss";
+/* Self-hosted DM Sans (variable). Bundled rather than fetched from Google
+   Fonts so the first paint never waits on a third-party render-blocking
+   stylesheet — and so the app works offline and in locked-down networks. */
+@import "@fontsource-variable/dm-sans";
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+
+   Two axes, one hue family. The neutral ramp is a cool grey (hue 275 at
+   very low chroma) so it sits under the accent without muddying it, and
+   the accent is an indigo→violet.
+
+   Why indigo and not the old teal: the difficulty scale runs green →
+   amber → orange → red, and the old teal accent (hue 168) was close
+   enough to "Easy" green (hue 155) that the brand colour and a
+   difficulty level read as the same thing. Indigo is outside the
+   difficulty ramp entirely, so accent and difficulty never collide.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  /* Board & cell */
-  --color-board-bg: oklch(0.97 0.005 80);
-  --color-board-border: oklch(0.35 0.01 80);
-  --color-cell-bg: oklch(0.995 0.003 80);
-  --color-cell-selected: oklch(0.92 0.04 168);
-  --color-cell-highlight: oklch(0.95 0.015 168);
-  --color-cell-same-number: oklch(0.9 0.05 168);
-  --color-cell-match-row-col: oklch(0.965 0.012 168);
-  --color-cell-given: oklch(0.25 0.01 80);
-  --color-cell-user: oklch(0.42 0.12 168);
-  --color-cell-conflict: oklch(0.6 0.2 25);
-  --color-cell-conflict-bg: oklch(0.95 0.04 25);
-  --color-success: oklch(0.65 0.18 155);
-  --color-accent: oklch(0.52 0.12 168);
-  --color-accent-bright: oklch(0.61 0.13 168);
-  --color-accent-deep: oklch(0.45 0.12 168);
-  --color-accent-light: oklch(0.92 0.04 168);
+  /* ── Accent ramp ──
+     Two jobs, two tokens. --color-accent is the FOREGROUND ramp: entered
+     digits, icons, links, borders. Dark mode lifts it so it stays legible
+     against a dark page.
 
-  /* Semantic surfaces */
-  --color-bg-primary: oklch(0.99 0.004 80);
-  --color-bg-inset: oklch(0.96 0.006 80);
-  --color-bg-raised: oklch(0.95 0.008 80);
-  --color-bg-overlay: oklch(0.99 0.004 80);
-  --color-border-default: oklch(0.9 0.01 80);
+     --color-accent-surface is the BACKGROUND behind --color-text-on-accent
+     — primary buttons, the selected number-pad key, the active segment. It
+     is deliberately identical in both schemes and fixed at a lightness
+     where white clears WCAG AA (5.55:1), because a token lifted for
+     legibility *on* dark is far too light to sit *under* white text:
+     the previous shared token measured 2.40:1 in dark mode. */
+  --color-accent: oklch(0.55 0.19 278);
+  --color-accent-bright: oklch(0.63 0.19 277);
+  --color-accent-deep: oklch(0.47 0.18 281);
+  --color-accent-surface: oklch(0.53 0.19 278);
+  --color-accent-surface-hover: oklch(0.58 0.19 278);
+  /* Tinted fills — chips, icon backplates, selected cells */
+  --color-accent-light: oklch(0.945 0.032 278);
+  --color-accent-soft: oklch(0.9 0.06 278);
 
-  /* Elevated surface — cards, buttons, popovers, sit above the page */
+  /* ── Board & cell ── */
+  /* The grid gaps are painted by the container behind the cells:
+     board-border is the heavy 3x3 rule, border-default the hairline. */
+  --color-board-bg: oklch(0.97 0.004 275);
+  --color-board-border: oklch(0.42 0.02 275);
+  --color-cell-bg: oklch(1 0 0);
+  --color-cell-selected: oklch(0.895 0.075 278);
+  --color-cell-highlight: oklch(0.965 0.018 278);
+  --color-cell-same-number: oklch(0.865 0.09 278);
+  --color-cell-match-row-col: oklch(0.978 0.011 278);
+  --color-cell-given: oklch(0.24 0.015 275);
+  --color-cell-user: oklch(0.5 0.2 278);
+  --color-cell-conflict: oklch(0.51 0.22 22);
+  --color-cell-conflict-bg: oklch(0.935 0.05 22);
+  --color-cell-note: oklch(0.55 0.02 275);
+
+  /* ── Status ── */
+  --color-success: oklch(0.62 0.17 152);
+  --color-warning: oklch(0.72 0.16 75);
+  --color-danger: oklch(0.58 0.21 22);
+
+  /* ── Semantic surfaces ── */
+  --color-bg-primary: oklch(0.988 0.003 275);
+  --color-bg-inset: oklch(0.962 0.006 275);
+  --color-bg-raised: oklch(0.948 0.007 275);
+  --color-bg-overlay: oklch(1 0 0);
+  --color-border-default: oklch(0.905 0.008 275);
+  --color-border-strong: oklch(0.84 0.012 275);
+
+  /* Elevated surface — cards, buttons, popovers sit above the page */
   --color-surface: oklch(1 0 0);
-  --color-surface-hover: oklch(0.975 0.005 80);
+  --color-surface-hover: oklch(0.975 0.005 275);
 
-  /* Ambient glow washed behind menu screens */
-  --color-screen-glow: oklch(0.88 0.06 168 / 0.5);
+  /* Ambient wash behind menu screens */
+  --color-screen-glow: oklch(0.86 0.075 278 / 0.42);
 
-  /* Semantic text */
-  --color-text-primary: oklch(0.18 0.01 80);
-  --color-text-secondary: oklch(0.45 0.01 80);
-  --color-text-muted: oklch(0.58 0.01 80);
-  --color-text-on-accent: oklch(0.99 0 0);
+  /* ── Semantic text ── */
+  --color-text-primary: oklch(0.22 0.015 275);
+  --color-text-secondary: oklch(0.45 0.013 275);
+  /* AA against the darkest surface it lands on (bg-raised): 4.74:1. It was
+     0.565, which measured 3.92:1 there and 4.09:1 on bg-inset. */
+  --color-text-muted: oklch(0.52 0.013 275);
+  --color-text-on-accent: oklch(0.995 0 0);
+  /* Secondary copy on an accent fill. A solid tint rather than white at
+     70-75% opacity, which never cleared 3.4:1 against the fill. */
+  --color-text-on-accent-muted: oklch(0.93 0.04 278);
 
-  /* Semantic interactive */
-  --color-bg-disabled: oklch(0.88 0.008 80);
-  --color-text-disabled: oklch(0.55 0.01 80);
+  /* ── Semantic interactive ── */
+  --color-bg-disabled: oklch(0.925 0.006 275);
+  --color-text-disabled: oklch(0.66 0.01 275);
 
-  /* Difficulty colors — dot indicators */
-  --color-difficulty-easy: oklch(0.7 0.18 155);
-  --color-difficulty-medium: oklch(0.75 0.17 80);
-  --color-difficulty-hard: oklch(0.7 0.17 50);
-  --color-difficulty-expert: oklch(0.65 0.2 15);
+  /* ── Difficulty: dot / bar indicators ── */
+  --color-difficulty-easy: oklch(0.68 0.17 152);
+  --color-difficulty-medium: oklch(0.75 0.16 78);
+  --color-difficulty-hard: oklch(0.68 0.18 48);
+  --color-difficulty-expert: oklch(0.62 0.21 18);
 
-  /* Difficulty colors — badge backgrounds */
-  --color-difficulty-easy-bg: oklch(0.93 0.06 155);
-  --color-difficulty-medium-bg: oklch(0.93 0.06 80);
-  --color-difficulty-hard-bg: oklch(0.93 0.06 50);
-  --color-difficulty-expert-bg: oklch(0.93 0.06 15);
+  /* ── Difficulty: badge backgrounds ── */
+  --color-difficulty-easy-bg: oklch(0.94 0.055 152);
+  --color-difficulty-medium-bg: oklch(0.945 0.06 78);
+  --color-difficulty-hard-bg: oklch(0.94 0.055 48);
+  --color-difficulty-expert-bg: oklch(0.94 0.045 18);
 
-  /* Difficulty colors — badge text */
-  --color-difficulty-easy-text: oklch(0.4 0.12 155);
-  --color-difficulty-medium-text: oklch(0.4 0.12 80);
-  --color-difficulty-hard-text: oklch(0.4 0.12 50);
-  --color-difficulty-expert-text: oklch(0.4 0.12 15);
+  /* ── Difficulty: badge text ── */
+  --color-difficulty-easy-text: oklch(0.42 0.12 152);
+  --color-difficulty-medium-text: oklch(0.44 0.12 70);
+  --color-difficulty-hard-text: oklch(0.44 0.14 45);
+  --color-difficulty-expert-text: oklch(0.45 0.17 20);
+
+  /* Width of the whole play area: board + rail + the gap between them.
+     The board takes whatever the rail leaves. */
+  --container-game: 54rem;
+
+  /* ── Radius scale ── */
+  --radius-field: 0.875rem;
+  --radius-control: 1rem;
+  --radius-panel: 1.25rem;
+  --radius-sheet: 1.75rem;
+
+  /* ── Motion ── */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 0.12s;
+  --duration-base: 0.2s;
+  --duration-slow: 0.32s;
 }
 
-/* Dark mode overrides */
+/* Elevation. Kept outside @theme because these are composite shadows,
+   not single values Tailwind should generate utilities for — components
+   reference them via var(). Light mode casts a cool, tight shadow;
+   dark mode leans on a top highlight instead, since a black shadow on a
+   near-black page is invisible. */
+:root {
+  --elevation-1: 0 1px 2px oklch(0.22 0.03 275 / 0.06);
+  --elevation-2:
+    0 1px 2px oklch(0.22 0.03 275 / 0.05),
+    0 4px 12px -4px oklch(0.22 0.03 275 / 0.1);
+  --elevation-3:
+    0 1px 2px oklch(0.22 0.03 275 / 0.05),
+    0 12px 28px -12px oklch(0.22 0.03 275 / 0.22);
+  --elevation-4: 0 24px 60px -16px oklch(0.2 0.04 275 / 0.35);
+  --elevation-accent: 0 8px 22px -8px oklch(0.55 0.19 278 / 0.55);
+  --hairline-top: inset 0 1px 0 oklch(1 0 0 / 0.06);
+}
+
+/* ── Dark mode ── */
 .dark {
+  /* Accent — lifted so it stays legible against dark surfaces */
+  --color-accent: oklch(0.68 0.17 278);
+  --color-accent-bright: oklch(0.74 0.16 277);
+  --color-accent-deep: oklch(0.58 0.18 281);
+  --color-accent-light: oklch(0.3 0.07 278);
+  --color-accent-soft: oklch(0.36 0.1 278);
+
   /* Board & cell */
-  --color-board-bg: oklch(0.2 0.008 80);
-  --color-board-border: oklch(0.6 0.01 80);
-  --color-cell-bg: oklch(0.18 0.006 80);
-  --color-cell-selected: oklch(0.42 0.1 168);
-  --color-cell-highlight: oklch(0.27 0.03 168);
-  --color-cell-same-number: oklch(0.4 0.11 168);
-  --color-cell-match-row-col: oklch(0.24 0.025 168);
-  --color-cell-given: oklch(0.78 0.005 80);
-  --color-cell-user: oklch(0.7 0.13 168);
-  --color-cell-conflict: oklch(0.7 0.18 25);
-  --color-cell-conflict-bg: oklch(0.25 0.05 25);
-  --color-accent-light: oklch(0.28 0.05 168);
+  --color-board-bg: oklch(0.22 0.012 275);
+  --color-board-border: oklch(0.56 0.025 275);
+  --color-cell-bg: oklch(0.205 0.012 275);
+  --color-cell-selected: oklch(0.42 0.14 278);
+  --color-cell-highlight: oklch(0.27 0.04 278);
+  --color-cell-same-number: oklch(0.37 0.12 278);
+  --color-cell-match-row-col: oklch(0.245 0.028 278);
+  --color-cell-given: oklch(0.92 0.004 275);
+  --color-cell-user: oklch(0.78 0.15 278);
+  --color-cell-conflict: oklch(0.72 0.19 22);
+  --color-cell-conflict-bg: oklch(0.33 0.09 22);
+  --color-cell-note: oklch(0.7 0.015 275);
+
+  /* Status */
+  --color-success: oklch(0.72 0.16 152);
+  --color-warning: oklch(0.78 0.15 75);
+  --color-danger: oklch(0.68 0.19 22);
 
   /* Semantic surfaces */
-  --color-bg-primary: oklch(0.14 0.008 80);
-  --color-bg-inset: oklch(0.16 0.008 80);
-  --color-bg-raised: oklch(0.21 0.008 80);
-  --color-bg-overlay: oklch(0.16 0.008 80);
-  --color-border-default: oklch(0.32 0.008 80);
+  --color-bg-primary: oklch(0.155 0.012 275);
+  --color-bg-inset: oklch(0.19 0.012 275);
+  --color-bg-raised: oklch(0.235 0.014 275);
+  --color-bg-overlay: oklch(0.22 0.014 275);
+  --color-border-default: oklch(0.325 0.014 275);
+  --color-border-strong: oklch(0.42 0.016 275);
 
   /* Elevated surface — lighter than the page so it reads as raised */
-  --color-surface: oklch(0.2 0.01 80);
-  --color-surface-hover: oklch(0.24 0.012 80);
+  --color-surface: oklch(0.218 0.014 275);
+  --color-surface-hover: oklch(0.262 0.016 275);
 
-  /* Ambient glow washed behind menu screens */
-  --color-screen-glow: oklch(0.55 0.07 168 / 0.14);
+  /* Ambient wash behind menu screens */
+  --color-screen-glow: oklch(0.6 0.14 278 / 0.16);
 
-  /* Semantic text */
-  --color-text-primary: oklch(0.78 0.005 80);
-  --color-text-secondary: oklch(0.7 0.008 80);
-  --color-text-muted: oklch(0.5 0.008 80);
+  /* Semantic text — brighter than the old ramp so body copy clears
+     WCAG AA against the page rather than sitting just under it. */
+  --color-text-primary: oklch(0.94 0.005 275);
+  --color-text-secondary: oklch(0.77 0.008 275);
+  --color-text-muted: oklch(0.63 0.01 275);
 
   /* Semantic interactive */
-  --color-bg-disabled: oklch(0.25 0.008 80);
-  --color-text-disabled: oklch(0.45 0.008 80);
+  --color-bg-disabled: oklch(0.27 0.012 275);
+  --color-text-disabled: oklch(0.5 0.012 275);
 
-  /* Difficulty colors — badge backgrounds */
-  --color-difficulty-easy-bg: oklch(0.25 0.06 155);
-  --color-difficulty-medium-bg: oklch(0.25 0.06 80);
-  --color-difficulty-hard-bg: oklch(0.25 0.06 50);
-  --color-difficulty-expert-bg: oklch(0.25 0.06 15);
+  /* Difficulty: dot / bar indicators */
+  --color-difficulty-easy: oklch(0.75 0.16 152);
+  --color-difficulty-medium: oklch(0.82 0.15 78);
+  --color-difficulty-hard: oklch(0.75 0.16 48);
+  --color-difficulty-expert: oklch(0.7 0.19 18);
 
-  /* Difficulty colors — badge text */
-  --color-difficulty-easy-text: oklch(0.75 0.15 155);
-  --color-difficulty-medium-text: oklch(0.75 0.15 80);
-  --color-difficulty-hard-text: oklch(0.75 0.15 50);
-  --color-difficulty-expert-text: oklch(0.75 0.15 15);
+  /* Difficulty: badge backgrounds */
+  --color-difficulty-easy-bg: oklch(0.29 0.07 152);
+  --color-difficulty-medium-bg: oklch(0.3 0.07 78);
+  --color-difficulty-hard-bg: oklch(0.29 0.08 48);
+  --color-difficulty-expert-bg: oklch(0.29 0.08 18);
+
+  /* Difficulty: badge text */
+  --color-difficulty-easy-text: oklch(0.83 0.14 152);
+  --color-difficulty-medium-text: oklch(0.87 0.14 82);
+  --color-difficulty-hard-text: oklch(0.82 0.14 50);
+  --color-difficulty-expert-text: oklch(0.78 0.15 20);
+
+  --elevation-1: 0 1px 2px oklch(0 0 0 / 0.4);
+  --elevation-2:
+    0 1px 2px oklch(0 0 0 / 0.4), 0 4px 12px -4px oklch(0 0 0 / 0.5);
+  --elevation-3:
+    0 1px 2px oklch(0 0 0 / 0.45), 0 12px 28px -12px oklch(0 0 0 / 0.6);
+  --elevation-4: 0 24px 60px -16px oklch(0 0 0 / 0.7);
+  --elevation-accent: 0 8px 22px -8px oklch(0.5 0.18 278 / 0.6);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -150,7 +260,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  font-family: "DM Sans Variable", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -207,15 +317,26 @@ body {
   }
 }
 
-/* Animate the shared variable once on the root so every selected cell
-   reads from the same source — they pulse in unison regardless of when
-   each one becomes selected. */
-:root {
+/* Animate the shared variable on the board, not the document root.
+   Every selected cell inherits it from the same element, so they still
+   pulse in unison regardless of when each became selected — but the
+   animation only exists while a board is mounted *and* something is
+   selected, rather than running forever on the landing page and the
+   stats screen where nothing reads it.
+
+   With the animation absent the property falls back to its registered
+   initial-value, so an unselected board still renders a static ring. */
+.cell-glow-sync {
   animation: cell-glow-pulse 2s ease-in-out infinite;
 }
 
 .cell-selected-glow {
-  box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / var(--cell-glow-opacity));
+  box-shadow: inset 0 0 0 2px
+    color-mix(
+      in oklch,
+      var(--color-accent) calc(var(--cell-glow-opacity) * 100%),
+      transparent
+    );
 }
 
 .press-spring {
@@ -370,7 +491,7 @@ body {
 }
 .confetti-container span:nth-child(1) {
   left: 10%;
-  background: oklch(0.7 0.15 168);
+  background: oklch(0.68 0.17 278);
   animation-duration: 2.2s;
   animation-delay: 0s;
 }
@@ -400,7 +521,7 @@ body {
 }
 .confetti-container span:nth-child(6) {
   left: 85%;
-  background: oklch(0.6 0.12 168);
+  background: oklch(0.58 0.18 285);
   animation-duration: 2.4s;
   animation-delay: 0.2s;
 }
@@ -460,10 +581,12 @@ body {
    the tinted half clearly reads as the zone the pointer is in;
    washing the whole cell would flatten that contrast. */
 [data-drop-target="valid"] {
-  box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / 0.55);
+  box-shadow: inset 0 0 0 2px
+    color-mix(in oklch, var(--color-accent) 55%, transparent);
 }
 [data-drop-target="invalid"] {
-  box-shadow: inset 0 0 0 3px oklch(0.6 0.2 25 / 0.7);
+  box-shadow: inset 0 0 0 3px
+    color-mix(in oklch, var(--color-cell-conflict) 70%, transparent);
   background-color: var(--color-cell-conflict-bg);
 }
 
@@ -501,12 +624,13 @@ body {
 
 /* Buttons */
 .btn {
-  @apply rounded-2xl font-semibold select-none touch-manipulation;
+  @apply flex items-center justify-center gap-2 font-semibold select-none touch-manipulation;
+  border-radius: var(--radius-control);
   transition:
-    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.2s ease,
-    filter 0.2s ease,
-    background-color 0.2s ease;
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-base) ease,
+    filter var(--duration-base) ease,
+    background-color var(--duration-base) ease;
 }
 .btn:active {
   transform: scale(0.97);
@@ -516,72 +640,90 @@ body {
     transform: translateY(-1px);
   }
 }
+.btn:disabled {
+  @apply bg-bg-disabled text-text-disabled cursor-not-allowed;
+  background-image: none;
+  box-shadow: none;
+  transform: none;
+}
 .btn-lg {
-  @apply py-4 text-lg;
+  @apply py-3.5 text-base;
+  border-radius: var(--radius-panel);
 }
 .btn-md {
   @apply px-4 py-2.5 text-sm font-semibold;
 }
 .btn-primary {
   @apply text-text-on-accent;
-  background-image: linear-gradient(
-    180deg,
-    var(--color-accent-bright),
-    var(--color-accent-deep)
-  );
-  box-shadow:
-    0 1px 2px oklch(0.4 0.1 168 / 0.3),
-    0 10px 24px -10px oklch(0.52 0.12 168 / 0.55);
+  /* Flat, not a gradient. A vertical gradient means the button has a
+     range of contrast ratios rather than one, and its lightest stop
+     decided the worst case — 3.63:1 under white even in light mode. */
+  background-color: var(--color-accent-surface);
+  box-shadow: var(--elevation-accent), var(--hairline-top);
 }
 @media (hover: hover) {
   .btn-primary:hover {
-    filter: brightness(1.05);
+    background-color: var(--color-accent-surface-hover);
   }
 }
 .btn-primary:active {
-  box-shadow: 0 1px 3px oklch(0.4 0.1 168 / 0.35);
+  box-shadow: var(--elevation-1);
 }
 .btn-secondary {
   @apply bg-surface text-text-primary border border-border-default;
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+  box-shadow: var(--elevation-1);
 }
 @media (hover: hover) {
   .btn-secondary:hover {
     background-color: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
   }
 }
 .btn-ghost {
   @apply text-sm font-medium text-text-muted;
 }
+@media (hover: hover) {
+  .btn-ghost:hover {
+    color: var(--color-text-primary);
+  }
+}
 
 /* Surfaces */
 .card {
-  @apply rounded-2xl bg-surface border border-border-default;
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.03),
-    0 8px 24px -14px oklch(0 0 0 / 0.18);
+  @apply bg-surface border border-border-default;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--elevation-2);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
-  animation: modal-backdrop-in 0.2s ease-out;
+  @apply fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md;
+  /* A tall panel on a short phone has to scroll, or its last row is simply
+     cut off by the viewport — on an iPhone SE the result panel's footer
+     was below the fold with no way to reach it. */
+  @apply overflow-y-auto overscroll-contain;
+  background-color: oklch(0.16 0.02 275 / 0.55);
+  animation: modal-backdrop-in var(--duration-base) ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-surface border border-border-default rounded-3xl p-8;
-  box-shadow: 0 24px 60px -16px oklch(0 0 0 / 0.4);
-  animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  @apply flex flex-col items-center gap-6 bg-surface border border-border-default p-7 my-auto;
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--elevation-4);
+  animation: modal-content-in 0.25s var(--ease-spring);
 }
 .screen {
   @apply flex min-h-dvh items-center justify-center;
   background-color: var(--color-bg-primary);
   background-image: radial-gradient(
-    125% 60% at 50% -12%,
+    120% 55% at 50% -10%,
     var(--color-screen-glow),
-    transparent 62%
+    transparent 60%
   );
-  animation: screen-enter 0.2s ease-out;
+  animation: screen-enter var(--duration-base) ease-out;
 }
+/* Menu screens are a single centred column. It widens once past a phone
+   so a tablet is not showing a 24rem strip down the middle of 768px, but
+   stays a readable measure rather than stretching to the viewport. */
 .screen-content {
-  @apply flex flex-col items-center w-full max-w-sm px-6;
+  @apply flex flex-col items-center w-full max-w-sm sm:max-w-md px-6;
 }
 
 /* Icon chip — rounded square that holds an icon inside menu rows */
@@ -592,10 +734,11 @@ body {
 /* Circular icon button — used for header controls (back, settings) */
 .icon-btn {
   @apply flex items-center justify-center rounded-full bg-surface border border-border-default text-text-secondary;
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+  box-shadow: var(--elevation-1);
   transition:
-    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 0.2s ease;
+    transform var(--duration-fast) var(--ease-spring),
+    color var(--duration-base) ease,
+    background-color var(--duration-base) ease;
 }
 .icon-btn:active {
   transform: scale(0.92);
@@ -603,6 +746,117 @@ body {
 @media (hover: hover) {
   .icon-btn:hover {
     background-color: var(--color-surface-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+/* Text field — room codes, player names */
+.field {
+  @apply w-full bg-surface border text-text-primary transition-colors;
+  border-color: var(--color-border-strong);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--elevation-1);
+}
+.field:focus {
+  @apply outline-none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-light);
+}
+.field::placeholder {
+  color: var(--color-text-disabled);
+}
+
+/* Small pill that carries a status or count */
+.chip {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
+}
+
+/* ─── Play-area grid ───
+   Three children — board, number pad, and the control rail — placed by
+   named areas so each one renders exactly once and only its position
+   changes across breakpoints and pad positions.
+
+   Phone: the rail is a horizontal strip pinned between the board and the
+   pad, which puts Undo/Erase/Hint in the same thumb zone as the digits
+   instead of at the top of the screen.
+
+   Desktop (>=1024px): the rail stands up into a column beside the board,
+   which is what fills the horizontal space a 9x9 grid leaves over. */
+.game-grid {
+  --rail-width: 13rem;
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+  align-content: end;
+  justify-items: center;
+  /* Nine stacked 44px keys are taller than the board is wide once a side
+     pad has eaten into the width, so on a phone the pad column always
+     outgrows the board. Centring the board against it beats letting it
+     hang from the top of an over-tall row. */
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "board"
+    "rail"
+    "pad";
+}
+.game-grid[data-pad="left"] {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "pad board"
+    "rail rail";
+}
+.game-grid[data-pad="right"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "board pad"
+    "rail rail";
+}
+.game-area-board {
+  grid-area: board;
+  width: 100%;
+}
+.game-area-pad {
+  grid-area: pad;
+  width: 100%;
+}
+.game-grid[data-pad="left"] .game-area-pad,
+.game-grid[data-pad="right"] .game-area-pad {
+  width: auto;
+}
+.game-rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .game-grid {
+    gap: 1rem 1.5rem;
+    align-content: center;
+    grid-template-columns: minmax(0, 1fr) var(--rail-width);
+    grid-template-areas:
+      "board rail"
+      "pad   rail";
+  }
+  .game-grid[data-pad="left"] {
+    grid-template-columns: auto minmax(0, 1fr) var(--rail-width);
+    grid-template-areas: "pad board rail";
+  }
+  .game-grid[data-pad="right"] {
+    grid-template-columns: var(--rail-width) minmax(0, 1fr) auto;
+    grid-template-areas: "rail board pad";
+  }
+  .game-rail {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: start;
+    align-self: center;
+    gap: 0.5rem;
   }
 }
 
@@ -621,4 +875,47 @@ body {
 }
 .text-mono {
   @apply font-mono text-sm text-text-secondary tabular-nums;
+}
+
+/* Every interactive element gets the same visible keyboard ring.
+   :focus-visible only, so pointer users never see it. */
+:where(
+    button,
+    a,
+    input,
+    [role="radio"],
+    [role="switch"],
+    [tabindex]
+  ):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ─── Reduced motion ───
+   Users who ask for less motion get none of the decorative work: the
+   perpetual selection-glow pulse on :root, confetti, celebration wobble,
+   entrance springs. Functional transitions (colour) are left alone so
+   state changes stay readable. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .confetti-container {
+    display: none;
+  }
+  .btn:active,
+  .btn:hover,
+  .icon-btn:active,
+  .press-spring:active,
+  .press-spring:hover,
+  .press-spring-soft:active,
+  .press-spring-soft:hover {
+    transform: none;
+  }
 }

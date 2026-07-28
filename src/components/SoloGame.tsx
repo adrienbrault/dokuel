@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBoardKeyboard } from "../hooks/useBoardKeyboard.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
-import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
@@ -16,8 +16,10 @@ import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
+import { GameStatus } from "./GameStatus.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad, type NumPadHandle } from "./NumPad.tsx";
+import { PauseOverlay } from "./PauseOverlay.tsx";
 import { Timer } from "./Timer.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
@@ -83,15 +85,13 @@ export function SoloGame({
   );
   const personalBest = priorStats?.bestTime ?? null;
 
-  // Keyboard digit follows the current notesMode flag (N toggles it),
-  // preserving the established "press N then 1" pencil-mark workflow.
-  const handleKeyboardNumber = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      const wasNoteMode = game.notesMode;
-      game.placeNumber(n, assistLevel !== "paper");
-      if (wasNoteMode) game.deselectCell();
-    }
-  };
+  // Re-read once the result panel is due. The win has been written to
+  // storage by then, so the panel reports totals that include this game —
+  // reusing priorStats would tell a first-time winner they have played 0.
+  const resultStats = useMemo(
+    () => (showResult ? getStatsForDifficulty(difficulty, assistLevel) : null),
+    [showResult, difficulty, assistLevel],
+  );
 
   // Touch numpad: a quick tap commits the value into the selected empty
   // cell; on a filled cell it highlights the digit instead, and a hold
@@ -145,14 +145,9 @@ export function SoloGame({
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [game.status]);
 
-  useKeyboard({
-    selectedCell: game.selectedCell,
-    onSelectCell: game.selectCell,
-    onDeselectCell: game.deselectCell,
-    onPlaceNumber: handleKeyboardNumber,
-    onErase: game.erase,
-    onUndo: game.undo,
-    onToggleNotes: game.toggleNotesMode,
+  useBoardKeyboard({
+    game,
+    autoEliminateNotes: assistLevel !== "paper",
     enabled: game.status === "playing" && !paused,
   });
 
@@ -174,37 +169,34 @@ export function SoloGame({
       onDeselectCell={highlight.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
-        <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+        <>
+          <p className="label mb-2">Assistance</p>
+          <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+        </>
       }
       timer={
-        <button
-          type="button"
-          className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm press-spring-soft touch-manipulation"
+        <GameStatus
+          time={
+            <Timer
+              running={game.status === "playing" && !paused && revealed}
+              initialSeconds={initialTimerSeconds}
+              onTick={(s) => {
+                timerSecondsRef.current = s;
+              }}
+              className="font-mono text-xl font-bold tabular-nums text-text-primary leading-none"
+            />
+          }
+          filled={81 - game.cellsRemaining}
           onClick={() => game.status === "playing" && setPaused((p) => !p)}
-          aria-label={paused ? "Resume" : "Pause"}
-        >
-          <Timer
-            running={game.status === "playing" && !paused && revealed}
-            initialSeconds={initialTimerSeconds}
-            onTick={(s) => {
-              timerSecondsRef.current = s;
-            }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
-          />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
-            {paused ? (
-              "Paused"
-            ) : (
-              <>
-                <span className="text-accent font-medium">
-                  {81 - game.cellsRemaining}
-                </span>
-                /81
-                {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
-              </>
-            )}
-          </span>
-        </button>
+          ariaLabel={paused ? "Resume" : "Pause"}
+          note={
+            paused
+              ? "Paused"
+              : personalBest !== null
+                ? `PB ${formatTime(personalBest)}`
+                : undefined
+          }
+        />
       }
       numPad={
         <NumPad
@@ -243,32 +235,21 @@ export function SoloGame({
             onStartCellDrag={paused ? undefined : startCellDrag}
           />
           <DigitDragIndicator state={paused ? null : dragState} />
-          {paused && (
-            <button
-              type="button"
-              className="absolute inset-0 flex items-center justify-center bg-bg-primary/80 backdrop-blur-md rounded-lg"
-              onClick={() => setPaused(false)}
-              aria-label="Resume game"
-            >
-              <span className="text-xl font-semibold text-text-muted">
-                Paused — tap to resume
-              </span>
-            </button>
-          )}
+          {paused && <PauseOverlay onResume={() => setPaused(false)} />}
         </div>
       }
+      headerExtra={
+        game.activeHint ? (
+          <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
+        ) : undefined
+      }
       controls={
-        <>
-          {game.activeHint && (
-            <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
-          )}
-          <GameControls
-            onErase={game.erase}
-            onUndo={game.undo}
-            historyLength={game.historyLength}
-            onHint={game.hint}
-          />
-        </>
+        <GameControls
+          onErase={game.erase}
+          onUndo={game.undo}
+          historyLength={game.historyLength}
+          onHint={game.hint}
+        />
       }
       footer={
         showResult ? (
@@ -280,8 +261,8 @@ export function SoloGame({
             onNewGame={onBack}
             onRematch={onRematch}
             stats={
-              priorStats ?? {
-                gamesPlayed: 0,
+              resultStats ?? {
+                gamesPlayed: 1,
                 bestTime: timerSecondsRef.current,
                 averageTime: timerSecondsRef.current,
               }

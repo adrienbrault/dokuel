@@ -29,7 +29,7 @@ export function SlidingRadioGroup<T extends string>({
       className="relative flex w-full rounded-xl bg-bg-inset p-1"
     >
       <div
-        className="absolute top-1 bottom-1 rounded-lg bg-accent shadow-sm transition-transform duration-200 ease-out"
+        className="absolute top-1 bottom-1 rounded-lg bg-accent-surface shadow-sm transition-transform duration-200 ease-out"
         style={{
           width: `calc((100% - 0.5rem) / ${count})`,
           transform: `translateX(calc(${activeIndex} * 100%))`,
@@ -64,7 +64,7 @@ export function SlidingRadioGroup<T extends string>({
             {option.description && (
               <span
                 className={`text-[0.625rem] leading-none transition-colors duration-200 ${
-                  isActive ? "text-text-on-accent/70" : "text-text-muted"
+                  isActive ? "text-text-on-accent-muted" : "text-text-muted"
                 }`}
               >
                 {option.description}

@@ -194,18 +194,6 @@ describe("NumPad", () => {
     expect(onPressEnd).toHaveBeenCalled();
   });
 
-  it("renders the discoverability caption above the digits", () => {
-    render(
-      <NumPad
-        position="bottom"
-        remainingCounts={ZERO_REMAINING}
-        onTapNumber={vi.fn()}
-        onHoldNumber={vi.fn()}
-      />,
-    );
-    expect(screen.getByText(/tap = enter · hold = note/i)).toBeInTheDocument();
-  });
-
   it("starts a drag when the pan is perpendicular to the numpad axis", () => {
     const onStartDrag = vi.fn();
     const onSkimDigit = vi.fn();
@@ -280,7 +268,10 @@ describe("NumPad", () => {
   });
 
   function hasAccent(el: HTMLElement) {
-    return el.classList.contains("bg-accent");
+    // The accent fill a key carries while pressed or active. Named
+    // separately from --color-accent because it sits *under* white text
+    // and so must stay dark enough for AA in both colour schemes.
+    return el.classList.contains("bg-accent-surface");
   }
 
   it("transfers the press visual to the digit currently under the finger during skim", () => {

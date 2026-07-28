@@ -1,16 +1,13 @@
 import {
-  CalendarDays,
   CalendarHeart,
   ChartColumn,
   Check,
   ChevronRight,
   Flame,
-  Globe,
   LogIn,
   Play,
   Swords,
   Trash2,
-  Zap,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
@@ -23,6 +20,7 @@ import {
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
+import { Logo } from "./Logo.tsx";
 
 type LandingProps = {
   onSolo: () => void;
@@ -45,6 +43,7 @@ export function Landing({
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
   const [savedGames, setSavedGames] = useState(() => listSavedGames());
+  const solved = useMemo(() => getStats().filter((s) => s.won).length, []);
   const dailyProgress = useMemo(() => {
     if (completed) return null;
     const dailyKey = `daily-${today}-medium`;
@@ -62,10 +61,7 @@ export function Landing({
     deleteGame(key);
     setSavedGames((prev) => prev.filter((g) => g.key !== key));
   }, []);
-  const isReturningUser = useMemo(
-    () => savedGames.length > 0 || getStats().length > 0,
-    [savedGames],
-  );
+  const isReturningUser = savedGames.length > 0 || solved > 0;
 
   const dailySub = completed
     ? `${formatShortDate(today)} · completed`
@@ -74,31 +70,33 @@ export function Landing({
       : `${formatShortDate(today)} · same puzzle for everyone`;
 
   return (
-    <div className="screen-content gap-7 py-10 sm:gap-9">
-      <header className="flex flex-col items-center gap-2">
-        <h1 className="text-[3.25rem] leading-none font-extrabold tracking-tight bg-gradient-to-br from-text-primary to-accent bg-clip-text text-transparent">
-          Dokuel
-        </h1>
-        <p className="text-sm text-text-muted">
-          1v1 sudoku duel — no account needed.
-        </p>
+    <div className="screen-content gap-6 py-10 sm:gap-7">
+      <header className="flex flex-col items-center gap-3">
+        <Logo size={52} />
+        <div className="flex flex-col items-center gap-1">
+          <h1 className="text-[2.75rem] leading-none font-extrabold tracking-tight text-text-primary">
+            Dokuel
+          </h1>
+          <p className="text-sm text-text-muted">
+            1v1 sudoku duel — no account needed.
+          </p>
+        </div>
       </header>
 
-      {!isReturningUser && (
-        <div className="flex flex-col gap-2.5 w-full">
-          <FeatureRow
-            icon={<Zap size={16} aria-hidden="true" />}
-            text="Race a friend in real time, peer-to-peer"
-          />
-          <FeatureRow
-            icon={<CalendarDays size={16} aria-hidden="true" />}
-            text="A fresh daily challenge for everyone"
-          />
-          <FeatureRow
-            icon={<Globe size={16} aria-hidden="true" />}
-            text="Mobile & desktop — dark mode, haptics, sounds"
-          />
+      {/* A first-time visitor gets told what the app is; a returning one
+          already knows, and gets their own numbers instead. */}
+      {isReturningUser ? (
+        <div className="card w-full grid grid-cols-3 divide-x divide-border-default">
+          <Metric value={solved} label={solved === 1 ? "Puzzle" : "Puzzles"} />
+          <Metric value={streak.currentStreak} label="Day streak" />
+          <Metric value={streak.longestStreak} label="Best streak" />
         </div>
+      ) : (
+        <ul className="flex flex-col gap-2.5 w-full">
+          <Feature text="Race a friend in real time, peer-to-peer" />
+          <Feature text="A fresh daily challenge for everyone" />
+          <Feature text="Dark mode, haptics and sound — on any device" />
+        </ul>
       )}
 
       <div className="flex flex-col gap-2.5 w-full">
@@ -132,7 +130,7 @@ export function Landing({
                 <Check size={16} strokeWidth={3} />
               </span>
             ) : streak.currentStreak > 0 ? (
-              <span className="flex items-center gap-1 rounded-full bg-accent-light px-2 py-1 text-xs font-bold text-accent">
+              <span className="chip bg-accent-light text-accent">
                 <Flame size={12} aria-hidden="true" />
                 {streak.currentStreak}
               </span>
@@ -156,7 +154,7 @@ export function Landing({
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"
-          className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-accent transition-colors touch-manipulation"
+          className="flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-accent transition-colors touch-manipulation"
           onClick={onStats}
         >
           <ChartColumn size={16} aria-hidden="true" />
@@ -176,17 +174,28 @@ export function Landing({
   );
 }
 
-function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
+function Metric({ value, label }: { value: number; label: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <span
-        className="icon-chip w-8 h-8 bg-accent-light text-accent"
-        aria-hidden="true"
-      >
-        {icon}
+    <div className="flex flex-col items-center gap-0.5 py-3">
+      <span className="text-2xl font-extrabold tabular-nums text-text-primary leading-none">
+        {value}
       </span>
-      <span className="text-sm text-text-secondary">{text}</span>
+      <span className="text-[0.6875rem] font-medium text-text-muted">
+        {label}
+      </span>
     </div>
+  );
+}
+
+function Feature({ text }: { text: string }) {
+  return (
+    <li className="flex items-center gap-2.5">
+      <span
+        className="w-1.5 h-1.5 rounded-full bg-accent shrink-0"
+        aria-hidden="true"
+      />
+      <span className="text-sm text-text-secondary">{text}</span>
+    </li>
   );
 }
 
@@ -209,7 +218,7 @@ function ActionRow({
   return (
     <button
       type="button"
-      className={`btn ${primary ? "btn-primary" : "btn-secondary"} w-full flex items-center gap-3.5 px-3.5 py-3 text-left`}
+      className={`btn ${primary ? "btn-primary" : "btn-secondary"} w-full !justify-start gap-3.5 px-3.5 py-3 text-left`}
       onClick={onClick}
     >
       <span
@@ -222,7 +231,7 @@ function ActionRow({
           {label}
         </span>
         <span
-          className={`block text-xs leading-tight mt-0.5 truncate ${primary ? "text-text-on-accent/75" : "text-text-muted"}`}
+          className={`block text-xs leading-tight mt-0.5 truncate ${primary ? "text-text-on-accent-muted" : "text-text-muted"}`}
         >
           {sublabel}
         </span>
@@ -230,7 +239,7 @@ function ActionRow({
       {accessory}
       <ChevronRight
         size={18}
-        className={primary ? "text-text-on-accent/55" : "text-text-muted"}
+        className={primary ? "text-text-on-accent-muted" : "text-text-muted"}
         aria-hidden="true"
       />
     </button>
@@ -276,7 +285,7 @@ function ContinueRow({
         onClick={onClick}
       >
         <span
-          className="icon-chip w-11 h-11 bg-accent text-text-on-accent"
+          className="icon-chip w-11 h-11 bg-accent-surface text-text-on-accent"
           aria-hidden="true"
         >
           <Play size={20} />
@@ -289,7 +298,7 @@ function ContinueRow({
             {DIFFICULTY_LABELS[game.difficulty]} · {formatTime(game.timer)}
           </span>
         </span>
-        <span className="rounded-full bg-accent-light px-2 py-1 text-xs font-bold text-accent tabular-nums">
+        <span className="chip bg-accent-light text-accent tabular-nums">
           {pct}%
         </span>
       </button>

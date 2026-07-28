@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBoardKeyboard } from "../hooks/useBoardKeyboard.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
 import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
@@ -15,6 +16,7 @@ import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
+import { GameStatus } from "./GameStatus.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
 import { NumPad, type NumPadHandle } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
@@ -183,6 +185,16 @@ export function MultiplayerBoard({
     setChargingDigit(null);
   };
 
+  // The settings popover advertises the keyboard shortcuts on every board;
+  // without this they did nothing in a duel, leaving a desktop player on
+  // the mouse in the one mode where being slower than the opponent is the
+  // entire cost.
+  useBoardKeyboard({
+    game,
+    autoEliminateNotes: assistLevel !== "paper",
+    enabled: game.status === "playing",
+  });
+
   // Digit drag-and-drop: drop commits the value, mirroring solo play.
   // Keyed off local status only — the loser keeps interacting until they
   // finish their own board. A drag brought back over the numpad demotes
@@ -202,24 +214,20 @@ export function MultiplayerBoard({
       position={position}
       onPositionChange={setPosition}
       onDeselectCell={highlight.deselectCell}
-      headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
-        <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm">
-          <Timer
-            running={game.status === "playing"}
-            initialSeconds={initialTimerSeconds}
-            onTick={(s) => {
-              timerSecondsRef.current = s;
-            }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
-          />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
-            <span className="text-accent font-medium">
-              {81 - game.cellsRemaining}
-            </span>
-            /81
-          </span>
-        </div>
+        <GameStatus
+          time={
+            <Timer
+              running={game.status === "playing"}
+              initialSeconds={initialTimerSeconds}
+              onTick={(s) => {
+                timerSecondsRef.current = s;
+              }}
+              className="font-mono text-xl font-bold tabular-nums text-text-primary leading-none"
+            />
+          }
+          filled={81 - game.cellsRemaining}
+        />
       }
       numPad={
         <NumPad

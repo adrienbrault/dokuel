@@ -15,7 +15,7 @@ export function ToggleSwitch({ checked, onChange, label }: ToggleSwitchProps) {
         aria-label={label}
         onClick={onChange}
         className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
-          checked ? "bg-accent" : "bg-bg-disabled"
+          checked ? "bg-accent-surface" : "bg-bg-disabled"
         }`}
       >
         <span

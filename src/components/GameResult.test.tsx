@@ -141,3 +141,37 @@ describe("GameResult", () => {
     expect(onNewGame).toHaveBeenCalledOnce();
   });
 });
+
+describe("GameResult dialog semantics", () => {
+  it("is a labelled modal dialog", () => {
+    render(<GameResult isWinner time="01:23" onNewGame={vi.fn()} />);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    // Named by the heading, so a screen reader announces the outcome as
+    // the dialog's name rather than reading an unnamed container.
+    expect(dialog).toHaveAccessibleName("You Won!");
+  });
+
+  it("focuses the primary action on mount", () => {
+    render(
+      <GameResult
+        isWinner
+        time="01:23"
+        onNewGame={vi.fn()}
+        onRematch={vi.fn()}
+      />,
+    );
+
+    // The panel renders after the board and number pad in the DOM, so
+    // without this a keyboard user tabs through the whole finished board
+    // before reaching anything actionable.
+    expect(screen.getByRole("button", { name: "Play Again" })).toHaveFocus();
+  });
+
+  it("falls back to New Game when there is nothing to replay", () => {
+    render(<GameResult isWinner time="01:23" onNewGame={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "New Game" })).toHaveFocus();
+  });
+});
