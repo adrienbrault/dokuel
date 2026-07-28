@@ -17,7 +17,7 @@ import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
 import { NumPad } from "./NumPad.tsx";
-import { Timer } from "./Timer.tsx";
+import { TimerPill } from "./TimerPill.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
 
@@ -154,22 +154,16 @@ export function SoloGame({
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       }
       timer={
-        <button
-          type="button"
-          className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm press-spring-soft touch-manipulation"
+        <TimerPill
+          running={game.status === "playing" && !paused && revealed}
+          initialSeconds={initialTimerSeconds}
+          onTick={(s) => {
+            timerSecondsRef.current = s;
+          }}
           onClick={() => game.status === "playing" && setPaused((p) => !p)}
-          aria-label={paused ? "Resume" : "Pause"}
-        >
-          <Timer
-            running={game.status === "playing" && !paused && revealed}
-            initialSeconds={initialTimerSeconds}
-            onTick={(s) => {
-              timerSecondsRef.current = s;
-            }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
-          />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
-            {paused ? (
+          ariaLabel={paused ? "Resume" : "Pause"}
+          subline={
+            paused ? (
               "Paused"
             ) : (
               <>
@@ -179,9 +173,9 @@ export function SoloGame({
                 /81
                 {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
               </>
-            )}
-          </span>
-        </button>
+            )
+          }
+        />
       }
       numPad={<NumPad ref={numPadRef} position={position} {...numPadProps} />}
       board={
