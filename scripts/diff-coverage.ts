@@ -21,7 +21,10 @@ const ROOT = resolve(import.meta.dirname, "..");
 const COVERAGE_DIR = join(ROOT, "coverage-diff");
 
 type CoverageEntry = {
-  statementMap: Record<string, { start: { line: number }; end: { line: number } }>;
+  statementMap: Record<
+    string,
+    { start: { line: number }; end: { line: number } }
+  >;
   s: Record<string, number>;
   branchMap: Record<
     string,
@@ -35,7 +38,11 @@ type CoverageEntry = {
   f: Record<string, number>;
 };
 
-function getChangedLines(file: string, base: string, staged: boolean): Set<number> {
+function getChangedLines(
+  file: string,
+  base: string,
+  staged: boolean,
+): Set<number> {
   const diffFlag = staged ? "--cached" : "";
   const cmd = `git diff ${diffFlag} ${base} -U0 -- "${file}"`;
   let output: string;
