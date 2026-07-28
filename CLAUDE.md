@@ -156,6 +156,7 @@ Fixup commits are ONLY for changes that logically belong to a previous commit â€
 - Fixup commits still get a description body explaining *why* the fixup is needed
 - **When in doubt, make it a standalone commit.** A standalone commit with the right type is always better than a wrong fixup.
 - Never amend published commits; always append fixup commits
+- **Squash before merge**: `fixup!` commits are staging markers, not history. Run `git rebase -i --autosquash <base>` on the branch before merging so they fold into their parents â€” `fixup!` subjects must never land on `main`.
 
 ### Commit Hygiene
 
