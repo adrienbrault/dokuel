@@ -65,6 +65,20 @@
   --color-difficulty-medium-text: oklch(0.4 0.12 80);
   --color-difficulty-hard-text: oklch(0.4 0.12 50);
   --color-difficulty-expert-text: oklch(0.4 0.12 15);
+
+  /* Hint surfaces — banner + highlighted cell (warm amber family) */
+  --color-hint-bg: oklch(0.97 0.035 85);
+  --color-hint-border: oklch(0.89 0.08 85);
+  --color-hint-title: oklch(0.55 0.13 70);
+  --color-hint-text: oklch(0.35 0.08 70);
+  --color-hint-muted: oklch(0.75 0.09 85);
+  --color-cell-hint: oklch(0.93 0.07 85);
+
+  /* Outcomes & opponent accent */
+  --color-danger: oklch(0.6 0.21 20);
+  --color-positive-text: oklch(0.5 0.13 155);
+  --color-negative-text: oklch(0.55 0.19 20);
+  --color-opponent: oklch(0.7 0.19 15);
 }
 
 /* Dark mode overrides */
@@ -117,6 +131,20 @@
   --color-difficulty-medium-text: oklch(0.75 0.15 80);
   --color-difficulty-hard-text: oklch(0.75 0.15 50);
   --color-difficulty-expert-text: oklch(0.75 0.15 15);
+
+  /* Hint surfaces */
+  --color-hint-bg: oklch(0.25 0.045 75);
+  --color-hint-border: oklch(0.35 0.07 75);
+  --color-hint-title: oklch(0.78 0.12 85);
+  --color-hint-text: oklch(0.9 0.05 90);
+  --color-hint-muted: oklch(0.55 0.08 75);
+  --color-cell-hint: oklch(0.32 0.07 75);
+
+  /* Outcomes & opponent accent */
+  --color-danger: oklch(0.55 0.19 20);
+  --color-positive-text: oklch(0.75 0.14 155);
+  --color-negative-text: oklch(0.72 0.16 20);
+  --color-opponent: oklch(0.65 0.17 15);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));

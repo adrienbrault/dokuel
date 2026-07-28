@@ -78,7 +78,7 @@ export const Cell = memo(function Cell({
       : isConflict
         ? "bg-cell-conflict-bg"
         : isHintRelated
-          ? "bg-amber-100 dark:bg-amber-900/40"
+          ? "bg-cell-hint"
           : isSameNumber
             ? "bg-cell-same-number"
             : isHighlighted

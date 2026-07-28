@@ -284,8 +284,8 @@ function MultiplayerDifficultyStats({
 
 function RecentMatchRow({ match }: { match: MultiplayerGameRecord }) {
   const outcomeColor = match.won
-    ? "text-emerald-600 dark:text-emerald-400"
-    : "text-rose-600 dark:text-rose-400";
+    ? "text-positive-text"
+    : "text-negative-text";
   return (
     <li className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="flex flex-col min-w-0">
