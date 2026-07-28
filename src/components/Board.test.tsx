@@ -396,6 +396,50 @@ describe("Board iOS back-swipe suppression", () => {
     expect(onSelectCell).toHaveBeenCalledWith(0, 0);
   });
 
+  it("restores tap-to-select for pen input too", () => {
+    // Apple Pencil taps fire touch events (so the Board's touchstart
+    // preventDefault suppresses the synthesized click) but report
+    // pointerType "pen" — a touch-only recovery leaves Pencil users
+    // unable to select cells at all.
+    const board = makeBoard([[0, 0, 5]]);
+    const onSelectCell = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={onSelectCell}
+        onSetSelectedCells={onSetSelectedCells}
+      />,
+    );
+
+    const findCell = (row: number, col: number): HTMLElement =>
+      document.querySelector(
+        `[data-row="${row}"][data-col="${col}"]`,
+      ) as HTMLElement;
+    const original = document.elementFromPoint;
+    document.elementFromPoint = () => findCell(0, 0);
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "pen",
+    });
+    fireEvent.pointerUp(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "pen",
+    });
+
+    document.elementFromPoint = original;
+    expect(onSelectCell).toHaveBeenCalledWith(0, 0);
+  });
+
   it("does not double-fire onSelectCell from pointerup on a mouse click", () => {
     // Desktop mouse already fires Cell.onClick from the synthesized
     // click event — the pointerup path is only for touch where click
