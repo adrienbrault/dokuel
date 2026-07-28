@@ -101,20 +101,20 @@ describe("MultiplayerGame disconnect overlay", () => {
     mockMp = makeMp();
   });
 
-  it("shows the overlay when the opponent's presence drops", () => {
+  it("shows the notice when the opponent's presence drops", () => {
     // opponentDisconnected is the awareness-derived signal — the only
     // one that actually reflects the opponent's connection.
-    mockMp.opponentDisconnected = true;
-    renderGame();
     vi.useFakeTimers();
     try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
       act(() => {
         vi.advanceTimersByTime(2_500);
       });
+      expect(screen.getByText("Opponent disconnected")).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
-    expect(screen.getByText("Opponent disconnected")).toBeInTheDocument();
   });
 
   it("waits a beat before showing, so our own reconnect doesn't flash it", () => {
