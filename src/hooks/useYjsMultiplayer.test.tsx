@@ -567,6 +567,26 @@ describe("useYjsMultiplayer", () => {
       expect(doc.getMap("room").get("winnerBoard")).toBeNull();
     });
 
+    it("does not adopt a malformed remote puzzle", async () => {
+      // The CRDT is peer-writable: a malicious or buggy peer can set
+      // puzzle/solution to anything. Adopting garbage renders a NaN
+      // board and bricks completion — keep the last valid game instead.
+      const { result, doc } = await setupStartedGame("room-bad-puzzle");
+      const goodPuzzle = result.current.puzzle;
+
+      act(() => {
+        doc.transact(() => {
+          const roomMap = doc.getMap("room");
+          roomMap.set("gameNumber", 99);
+          roomMap.set("puzzle", "lol-not-a-board");
+          roomMap.set("solution", "also-not-a-board");
+        });
+      });
+      await flushSync();
+
+      expect(result.current.puzzle).toBe(goodPuzzle);
+    });
+
     it("adopts the merged puzzle after a concurrent start collides on gameNumber", async () => {
       // Both players tapping Start (or Rematch) inside sync latency
       // write the SAME gameNumber with different puzzles; Yjs LWW keeps
