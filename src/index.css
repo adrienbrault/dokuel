@@ -241,10 +241,13 @@ body {
   }
 }
 
-/* Animate the shared variable once on the root so every selected cell
-   reads from the same source — they pulse in unison regardless of when
-   each one becomes selected. */
-:root {
+/* Animate the shared variable once on the board container so every
+   selected cell reads from the same source — they pulse in unison
+   regardless of when each one becomes selected. On the board, NOT
+   :root: an infinite animation on the root keeps the style pipeline
+   awake on every screen of the app (menus included) forever, for a
+   glow only a selected cell can show. */
+[data-board-glow] {
   animation: cell-glow-pulse 2s ease-in-out infinite;
 }
 

@@ -131,6 +131,8 @@ export function useYjsMultiplayer({
   // One-shot: this client removed its own overflow entry after losing
   // a concurrent-join seat race.
   const evictedSelfRef = useRef(false);
+  // Serialized last-published room snapshot for the no-op-fire guard.
+  const lastRoomStateJsonRef = useRef<string | undefined>(undefined);
   // Tracks whether this client actually went away (WebRTC dropped for a
   // hidden tab, or the signaling connection fell over). A remote
   // forfeit claim asserts that we did — it is only honored when this
@@ -180,6 +182,13 @@ export function useYjsMultiplayer({
 
     const updateState = () => {
       const state = getRoomState(room);
+      // The observer fires per transaction — including our own
+      // keystrokes' progress writes — and a fresh object each time
+      // re-renders the whole game tree. Cheap content compare (the
+      // snapshot is ~1KB) keeps identity stable across no-op fires.
+      const stateJson = JSON.stringify(state);
+      if (stateJson === lastRoomStateJsonRef.current) return;
+      lastRoomStateJsonRef.current = stateJson;
       setRoomState(state);
       if (!state) return;
       // Any peer can write anything into the doc; only mirror a
@@ -246,10 +255,17 @@ export function useYjsMultiplayer({
         }
       }
 
-      // Update opponent progress
+      // Update opponent progress (functional set keeps identity when
+      // the numbers didn't move)
       const progress = getOpponentProgress(room, playerId);
       if (progress) {
-        setOpponentProgress(progress);
+        setOpponentProgress((prev) =>
+          prev &&
+          prev.cellsRemaining === progress.cellsRemaining &&
+          prev.completionPercent === progress.completionPercent
+            ? prev
+            : progress,
+        );
       }
 
       // Excess-player detection: not among the first MAX_PLAYERS

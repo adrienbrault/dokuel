@@ -170,6 +170,7 @@ export function Board({
         className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
         role="region"
         aria-label="Sudoku board"
+        data-board-glow
         onPointerDown={
           onSetSelectedCells ? dragHandlers.onPointerDown : undefined
         }
