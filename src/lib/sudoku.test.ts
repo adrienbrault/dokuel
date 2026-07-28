@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { DIFFICULTIES } from "./constants.ts";
 import {
   cellKey,
+  countSolutions,
   generatePuzzle,
   getConflicts,
   getErrors,
@@ -39,6 +41,40 @@ describe("generatePuzzle", () => {
     const a = generatePuzzle("medium");
     const b = generatePuzzle("medium");
     expect(a).not.toBe(b);
+  });
+
+  // The invariant the whole game rests on. A puzzle with two solutions
+  // is not solvable by deduction, and error highlighting compares
+  // against one arbitrarily-chosen solution — so a player's valid digit
+  // turns red. Expert regressed here first; sample every difficulty.
+  it.each(DIFFICULTIES)("generates a unique solution for %s", (difficulty) => {
+    for (let i = 0; i < 3; i++) {
+      expect(countSolutions(generatePuzzle(difficulty))).toBe(1);
+    }
+  });
+});
+
+describe("countSolutions", () => {
+  it("counts one solution for a uniquely-solvable puzzle", () => {
+    expect(countSolutions(KNOWN_PUZZLE)).toBe(1);
+  });
+
+  it("counts more than one when a puzzle is ambiguous", () => {
+    // Erasing every 1 and every 2 leaves those digits fully
+    // interchangeable — swapping them maps one valid completion onto
+    // another. This is the ambiguity a clue-removing generator creates.
+    const ambiguous = KNOWN_SOLUTION.replace(/[12]/g, ".");
+    expect(countSolutions(ambiguous)).toBeGreaterThan(1);
+  });
+
+  it("counts zero for a contradictory puzzle", () => {
+    // Two 5s in the same row — no completion exists.
+    expect(countSolutions(`55${".".repeat(79)}`)).toBe(0);
+  });
+
+  it("stops counting at the cap instead of enumerating every solution", () => {
+    // An empty grid has ~6.7e21 solutions; the cap makes this terminate.
+    expect(countSolutions(".".repeat(81), 2)).toBe(2);
   });
 });
 

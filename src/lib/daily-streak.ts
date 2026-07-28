@@ -21,12 +21,24 @@ export function getDailyStreak(): DailyStreak {
   }
 }
 
-/** Check if the given date string is exactly one day after the other. */
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Days since the epoch for a YYYY-MM-DD string, counted in UTC.
+ *
+ * Anchoring to UTC keeps every calendar day exactly 24 hours long.
+ * Parsing these dates in local time instead makes the spring-forward
+ * day 23 hours and the fall-back day 25, so a day-to-day comparison
+ * would disagree with the calendar twice a year.
+ */
+function toDayNumber(date: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  return Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1) / MS_PER_DAY;
+}
+
+/** Check if the given date string is exactly one calendar day after the other. */
 function isConsecutiveDay(prev: string, next: string): boolean {
-  const prevDate = new Date(prev + "T00:00:00");
-  const nextDate = new Date(next + "T00:00:00");
-  const diffMs = nextDate.getTime() - prevDate.getTime();
-  return diffMs === 24 * 60 * 60 * 1000;
+  return toDayNumber(next) - toDayNumber(prev) === 1;
 }
 
 export function recordDailyCompletion(date: string): DailyStreak {

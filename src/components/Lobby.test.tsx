@@ -37,6 +37,36 @@ describe("Lobby", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
+  // joinRoom caps seats at two, but partitioned joins can still merge
+  // into a third player. Requiring exactly two left the seated pair
+  // staring at a permanently disabled button with no way to recover.
+  it("keeps start enabled when a merge produced a third player", () => {
+    const player = (id: string, name: string) => ({
+      id,
+      name,
+      color: "#3B82F6",
+      cellsRemaining: 81,
+      completionPercent: 0,
+    });
+    render(
+      <Lobby
+        roomState={{
+          ...BASE_STATE,
+          players: [
+            player("p1", "Alice"),
+            player("p2", "Bob"),
+            player("p3", "Carol"),
+          ],
+        }}
+        playerId="p1"
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /start game/i })).toBeEnabled();
+  });
+
   it("shows start button enabled when two players and user is host", () => {
     const state: RoomState = {
       ...BASE_STATE,

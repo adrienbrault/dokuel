@@ -7,6 +7,14 @@ export type SavedGame = {
   timer: number;
   difficulty: Difficulty;
   assistLevel: AssistLevel;
+  /**
+   * The grid this game is being solved against. Persisted rather than
+   * recomputed because a puzzle saved before the generator guaranteed
+   * uniqueness may admit several solutions, and the solver returns an
+   * arbitrary one — so recomputing on resume would flip correctly
+   * entered digits to red. Absent on saves that predate this field.
+   */
+  solution?: string | undefined;
 };
 
 const STORAGE_PREFIX = "sudoku_save_";

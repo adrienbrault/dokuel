@@ -1,6 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate } from "yjs";
+import { DIFFICULTY_CLUES } from "../lib/sudoku.ts";
+
+// Read the band rather than restating it: these tests assert the puzzle
+// came from the room's expert setting instead of the local prop, and
+// should not need editing when the bands are retuned.
+const EXPERT_CLUES = DIFFICULTY_CLUES.expert;
 
 type FakeProvider = {
   connected: boolean;
@@ -169,8 +175,8 @@ describe("useYjsMultiplayer", () => {
 
     const puzzle = doc.getMap("room").get("puzzle") as string;
     expect(puzzle).toBeTruthy();
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(21);
+    expect(countClues(puzzle)).toBeGreaterThanOrEqual(EXPERT_CLUES.min);
+    expect(countClues(puzzle)).toBeLessThanOrEqual(EXPERT_CLUES.max);
   });
 
   it("setDifficulty updates the Yjs room difficulty", async () => {
@@ -296,8 +302,57 @@ describe("useYjsMultiplayer", () => {
     });
 
     const puzzle = doc.getMap("room").get("puzzle") as string;
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(21);
+    expect(countClues(puzzle)).toBeGreaterThanOrEqual(EXPERT_CLUES.min);
+    expect(countClues(puzzle)).toBeLessThanOrEqual(EXPERT_CLUES.max);
+  });
+
+  it("reports the room as full to a third arrival", async () => {
+    // Two players are already seated when this player opens the link —
+    // a shared invite tapped by more people than a duel can hold.
+    const seedDoc = new Doc();
+    const seedRoom = { doc: seedDoc, roomId: "room-full" };
+    initializeRoom(seedRoom, "p1", "medium");
+    joinRoom(seedRoom, "p1", "Alice");
+    joinRoom(seedRoom, "p2", "Bob");
+    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-full",
+        playerId: "p3",
+        playerName: "Carol",
+        difficulty: null,
+      }),
+    );
+
+    await flushSync();
+
+    expect(result.current.roomFull).toBe(true);
+    // The third player must not take a seat, or the two who have one
+    // would be left unable to start.
+    expect(seedDoc.getMap("players").size).toBe(2);
+  });
+
+  it("does not report the room as full to a returning player", async () => {
+    const seedDoc = new Doc();
+    const seedRoom = { doc: seedDoc, roomId: "room-return" };
+    initializeRoom(seedRoom, "p1", "medium");
+    joinRoom(seedRoom, "p1", "Alice");
+    joinRoom(seedRoom, "p2", "Bob");
+    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-return",
+        playerId: "p2",
+        playerName: "Bob",
+        difficulty: null,
+      }),
+    );
+
+    await flushSync();
+
+    expect(result.current.roomFull).toBe(false);
   });
 
   it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {

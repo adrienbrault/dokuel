@@ -15,6 +15,7 @@ import {
   getRoomState,
   hydrateRoomFromSnapshot,
   initializeRoom,
+  isRoomFull,
   joinRoom,
   observeRoomChanges,
   type P2PRoom,
@@ -64,6 +65,9 @@ export function useYjsMultiplayer({
   // flicker (Yjs sync race, transient peer state), instead of bouncing
   // back to the lobby/connecting screen and unmounting local state.
   const [hasStartedGame, setHasStartedGame] = useState(false);
+  // True when this player has no seat: the room was already full on
+  // arrival, or a partitioned join merged into a third player.
+  const [roomFull, setRoomFull] = useState(false);
 
   const roomRef = useRef<P2PRoom | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
@@ -105,6 +109,10 @@ export function useYjsMultiplayer({
     const updateState = () => {
       const state = getRoomState(room);
       setRoomState(state);
+      // Re-evaluated on every room change, not just at join time: the
+      // third player may only become visible once a partitioned peer's
+      // update merges in.
+      setRoomFull((wasFull) => wasFull || isRoomFull(room, playerId));
       if (!state) return;
 
       // Detect new game (start or rematch)
@@ -232,7 +240,10 @@ export function useYjsMultiplayer({
       if (initialDifficulty) {
         initializeRoom(room, playerId, initialDifficulty);
       }
-      joinRoom(room, playerId, playerNameRef.current);
+      if (!joinRoom(room, playerId, playerNameRef.current)) {
+        setRoomFull(true);
+        return;
+      }
 
       announcePresence(awareness, playerId, playerNameRef.current);
       updateState();
@@ -335,6 +346,7 @@ export function useYjsMultiplayer({
     opponentDisconnected,
     gameOver,
     hasStartedGame,
+    roomFull,
     error,
     sendStartGame,
     sendProgress,
