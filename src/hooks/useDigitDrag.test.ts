@@ -84,6 +84,33 @@ describe("useDigitDrag", () => {
     expect(result.current.state).toBeNull();
   });
 
+  it("fires onDrop exactly once per drop under StrictMode", async () => {
+    // onDrop used to be invoked INSIDE the setState updater; StrictMode
+    // double-invokes updaters in dev, and a note drop is a toggle — the
+    // dropped pencil mark toggled twice and silently vanished in every
+    // dev session.
+    const { StrictMode } = await import("react");
+    mockElementFromPoint(() => makeCellElement(3, 4));
+    const onDrop = vi.fn();
+    const { result } = renderHook(
+      () => useDigitDrag({ onDrop, isDroppable: () => true }),
+      { wrapper: StrictMode },
+    );
+    act(() => {
+      result.current.start(startParams({ digit: 5, x: 50, y: 80 }));
+    });
+    act(() => {
+      document.dispatchEvent(
+        pointerEvent("pointermove", { clientX: 50, clientY: 80 }),
+      );
+    });
+    act(() => {
+      document.dispatchEvent(pointerEvent("pointerup"));
+    });
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(result.current.state).toBeNull();
+  });
+
   it("activates a drag when start is called", () => {
     const { result } = renderHook(() =>
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
