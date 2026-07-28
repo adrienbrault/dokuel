@@ -1,3 +1,4 @@
+import { todayLocalISO } from "./date.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type GameStats = {
@@ -39,7 +40,7 @@ export function saveGameResult(
     difficulty,
     assistLevel,
     time,
-    date: new Date().toISOString().slice(0, 10),
+    date: todayLocalISO(),
     won,
     hintsUsed: hintsUsed ?? 0,
   });

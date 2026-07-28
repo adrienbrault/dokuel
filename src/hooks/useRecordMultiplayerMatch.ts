@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { todayLocalISO } from "../lib/date.ts";
 import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 
@@ -43,7 +44,7 @@ export function useRecordMultiplayerMatch({
       difficulty,
       assistLevel,
       time: getTimeSeconds(),
-      date: new Date().toISOString().slice(0, 10),
+      date: todayLocalISO(),
       timestamp: Date.now(),
       won: gameOver.winnerId === playerId,
       opponentName: opponentName || gameOver.winnerName,
