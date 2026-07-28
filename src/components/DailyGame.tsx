@@ -32,6 +32,7 @@ export function DailyGame({ onBack }: { onBack: () => void }) {
       initialPuzzle={puzzle}
       dailyDate={date}
       title={`Daily Challenge — ${formatShortDate(date)}`}
+      isDaily={true}
       onBack={onBack}
       onComplete={handleComplete}
       streakInfo={streakInfo}

@@ -29,6 +29,8 @@ type SoloGameProps = {
   title?: string | undefined;
   /** ISO date for daily challenges; drives streak via completeGame. */
   dailyDate?: string | undefined;
+  /** Marks the daily challenge for share text — not sniffed from the title. */
+  isDaily?: boolean | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
   onComplete?:
@@ -44,6 +46,7 @@ export function SoloGame({
   initialPuzzle,
   title,
   dailyDate,
+  isDaily = false,
   onBack,
   onRematch,
   onComplete,
@@ -245,7 +248,7 @@ export function SoloGame({
             }
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
-            isDaily={!!streakInfo || !!title?.startsWith("Daily")}
+            isDaily={isDaily}
             tip={
               !tipDismissed && position === "bottom"
                 ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."
