@@ -51,6 +51,32 @@ describe("findHint", () => {
     });
   });
 
+  describe("solution fallback", () => {
+    it("labels the solution-lookup fallback as a reveal, not a naked single", () => {
+      // An empty board has no naked or hidden single anywhere, so the
+      // engine falls back to looking the answer up in the solution.
+      // Calling that a "Naked Single" teaches players the wrong thing
+      // about a technique they're trying to learn.
+      const solved =
+        "534678912" +
+        "672195348" +
+        "198342567" +
+        "859761423" +
+        "426853791" +
+        "713924856" +
+        "961537284" +
+        "287419635" +
+        "345286179";
+      const board = parsePuzzle(".".repeat(81));
+
+      const hint = findHint(board, solved);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("reveal");
+      expect(hint!.value).toBe(5);
+    });
+  });
+
   describe("naked single", () => {
     it("detects a cell where only one candidate is possible", () => {
       // Puzzle where R1C1 (index 0) is empty and has 8 of 9 values
