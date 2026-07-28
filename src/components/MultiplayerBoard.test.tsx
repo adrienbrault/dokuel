@@ -73,6 +73,27 @@ describe("MultiplayerBoard local autosave", () => {
     ).not.toBeNull();
   });
 
+  it("swaps to the merged puzzle when a start collision changes it without a gameNumber bump", () => {
+    // Concurrent Start/Rematch: both writers used the same gameNumber,
+    // LWW picked the other player's puzzle. The board must adopt it —
+    // playing on into the divergent board can never complete.
+    const props = baseProps();
+    const { rerender } = render(<MultiplayerBoard {...props} />);
+
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 1, empty/),
+    ).not.toBeNull();
+
+    rerender(<MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={1} />);
+
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+    ).not.toBeNull();
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 5, empty/),
+    ).not.toBeNull();
+  });
+
   it("resets the timer when a rematch starts a new game", () => {
     vi.useFakeTimers();
     try {

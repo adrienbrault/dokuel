@@ -500,6 +500,36 @@ describe("useYjsMultiplayer", () => {
       expect(doc.getMap("room").get("winnerBoard")).toBeNull();
     });
 
+    it("adopts the merged puzzle after a concurrent start collides on gameNumber", async () => {
+      // Both players tapping Start (or Rematch) inside sync latency
+      // write the SAME gameNumber with different puzzles; Yjs LWW keeps
+      // one. The losing writer already latched that number from its own
+      // local write — without a content resync it would keep rendering
+      // its own board while the room holds the other puzzle, and its
+      // completion could never validate: a soft-locked game.
+      const { result, doc } = await setupStartedGame("room-start-collision");
+      const { generatePuzzleWithSolution } = await import("../lib/sudoku.ts");
+      const other = generatePuzzleWithSolution("easy");
+
+      act(() => {
+        doc.transact(() => {
+          const roomMap = doc.getMap("room");
+          roomMap.set("puzzle", other.puzzle);
+          roomMap.set("solution", other.solution);
+        });
+      });
+      await flushSync();
+
+      expect(result.current.puzzle).toBe(other.puzzle);
+      expect(result.current.solution).toBe(other.solution);
+
+      // And the game is actually winnable on the merged board.
+      act(() => {
+        result.current.sendComplete(other.solution);
+      });
+      expect(doc.getMap("room").get("winnerId")).toBe("p1");
+    });
+
     it("ignores a forfeit claim received while we were continuously present", async () => {
       // A forfeit claim asserts that WE left. This client has been
       // connected and visible the whole game, so the claim is
