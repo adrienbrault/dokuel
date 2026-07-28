@@ -90,10 +90,19 @@ export function MultiplayerBoard({
   // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
   // Reset the reducer in-place rather than remount the whole subtree:
   // keeps the timer ref, num-pad position, and any other UI state alive.
+  // The puzzle is tracked too: after a concurrent start/rematch merge
+  // the number can stay put while the puzzle changes under us.
   const prevGameNumberRef = useRef(gameNumber);
+  const prevPuzzleRef = useRef(puzzle);
   useEffect(() => {
-    if (gameNumber === prevGameNumberRef.current) return;
+    if (
+      gameNumber === prevGameNumberRef.current &&
+      puzzle === prevPuzzleRef.current
+    ) {
+      return;
+    }
     prevGameNumberRef.current = gameNumber;
+    prevPuzzleRef.current = puzzle;
     game.reset(puzzle, solution ?? undefined, savedBoard);
     // The new game starts from zero; without this the recorded match
     // time for game 2 includes game 1's clock.

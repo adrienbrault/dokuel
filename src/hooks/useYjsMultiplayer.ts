@@ -79,6 +79,9 @@ export function useYjsMultiplayer({
   const roomRef = useRef<P2PRoom | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
   const lastGameNumberRef = useRef<number>(0);
+  // The puzzle we latched for lastGameNumberRef — lets the observer
+  // spot a same-number/different-puzzle merge after a start collision.
+  const latchedPuzzleRef = useRef<string | null>(null);
   // Tracks whether this client actually went away (WebRTC dropped for a
   // hidden tab, or the signaling connection fell over). A remote
   // forfeit claim asserts that we did — it is only honored when this
@@ -131,9 +134,22 @@ export function useYjsMultiplayer({
       if (!state) return;
       solutionRef.current = state.solution;
 
-      // Detect new game (start or rematch)
-      if (state.gameNumber > lastGameNumberRef.current) {
+      // Detect new game (start or rematch). Content is checked as well
+      // as the counter: concurrent starts/rematches write the SAME
+      // gameNumber with different puzzles and LWW keeps one — the
+      // losing writer latched the number from its own local write, so
+      // without the puzzle comparison it would keep a board whose
+      // completion never validates against the room's solution.
+      const isNewGame = state.gameNumber > lastGameNumberRef.current;
+      const isCollidedGame =
+        !isNewGame &&
+        state.gameNumber === lastGameNumberRef.current &&
+        state.puzzle !== null &&
+        latchedPuzzleRef.current !== null &&
+        state.puzzle !== latchedPuzzleRef.current;
+      if (isNewGame || isCollidedGame) {
         lastGameNumberRef.current = state.gameNumber;
+        latchedPuzzleRef.current = state.puzzle;
         setPuzzle(state.puzzle);
         setSolution(state.solution);
         setGameOver(null);
