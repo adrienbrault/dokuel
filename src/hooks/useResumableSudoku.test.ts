@@ -31,6 +31,7 @@ function savedGame(overrides: Partial<SavedGame> = {}): SavedGame {
     timer: 0,
     difficulty: "easy",
     assistLevel: "standard",
+    hintsUsed: 0,
     ...overrides,
   };
 }

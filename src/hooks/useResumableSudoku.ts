@@ -64,7 +64,14 @@ export function useResumableSudoku({
   const { saved, puzzle, solution } = resolved;
 
   const savedBoard = useMemo(
-    () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
+    () =>
+      saved
+        ? {
+            values: saved.values,
+            notes: saved.notes,
+            hintsUsed: saved.hintsUsed,
+          }
+        : undefined,
     [saved],
   );
 
@@ -74,7 +81,7 @@ export function useResumableSudoku({
     saved?.assistLevel ?? initialAssistLevel,
   );
 
-  // Auto-save on every board / assist-level change while playing
+  // Auto-save on every board / hint / assist-level change while playing
   useEffect(() => {
     if (!gameKey || game.status === "completed") return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
@@ -85,11 +92,13 @@ export function useResumableSudoku({
       timer: getTimerSeconds(),
       difficulty,
       assistLevel,
+      hintsUsed: game.hintsUsed,
     };
     saveGame(gameKey, data);
   }, [
     game.board,
     game.status,
+    game.hintsUsed,
     gameKey,
     puzzle,
     difficulty,

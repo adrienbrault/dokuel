@@ -158,6 +158,7 @@ export function MultiplayerBoard({
       timer: timerSecondsRef.current,
       difficulty,
       assistLevel,
+      hintsUsed: game.hintsUsed,
     });
   }, [game.board, game.status, gameKey, puzzle, difficulty, assistLevel]);
 

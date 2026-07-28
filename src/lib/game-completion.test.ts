@@ -16,6 +16,7 @@ describe("completeGame", () => {
       timer: 0,
       difficulty: "easy",
       assistLevel: "standard",
+      hintsUsed: 0,
     });
 
     completeGame({

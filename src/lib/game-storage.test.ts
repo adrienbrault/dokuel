@@ -14,6 +14,7 @@ const VALID_GAME: SavedGame = {
   timer: 42,
   difficulty: "medium",
   assistLevel: "standard",
+  hintsUsed: 0,
 };
 
 describe("game-storage", () => {

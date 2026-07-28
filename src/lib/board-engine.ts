@@ -75,6 +75,7 @@ export type Action =
 export type SavedBoard = {
   values: string;
   notes: number[][];
+  hintsUsed?: number | undefined;
 };
 
 function cloneBoard(board: Board): Board {
@@ -547,7 +548,7 @@ export function initState(args: {
     selectedCells: new Set(),
     notesMode: false,
     history: [],
-    hintsUsed: 0,
+    hintsUsed: args.savedBoard?.hintsUsed ?? 0,
     activeHint: null,
   };
 }
