@@ -164,7 +164,7 @@ export function Landing({
           View Stats
         </button>
         <a
-          href="https://github.com/adrienbrault/sudoku"
+          href="https://github.com/adrienbrault/dokuel"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors"
