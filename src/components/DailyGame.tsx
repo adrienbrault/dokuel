@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { getDailyPuzzle } from "../lib/daily.ts";
+import { todayLocalISO } from "../lib/date.ts";
 import { formatShortDate } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
 export function DailyGame({ onBack }: { onBack: () => void }) {
-  const date = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const date = useMemo(() => todayLocalISO(), []);
   const { puzzle } = useMemo(() => getDailyPuzzle(date, "medium"), [date]);
   const [streakInfo, setStreakInfo] = useState<{
     currentStreak: number;

@@ -38,7 +38,7 @@ export function JoinScreen({
         <input
           ref={inputRef}
           type="text"
-          placeholder="e.g. loud-duck-38"
+          placeholder="e.g. loud-duck-7kmq"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           className="w-full px-4 py-3.5 rounded-2xl bg-surface border-2 border-border-default text-text-primary text-center text-lg font-mono shadow-sm transition-colors focus:border-accent focus:outline-none"

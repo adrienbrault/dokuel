@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
+import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -66,9 +66,13 @@ export function initializeRoom(
     roomMap.set("solution", null);
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
+    roomMap.set("winnerBoard", null);
     roomMap.set("gameNumber", 0);
   });
 }
+
+/** 1v1: a room holds exactly two players. */
+export const MAX_PLAYERS = 2;
 
 export function joinRoom(
   room: P2PRoom,
@@ -77,6 +81,11 @@ export function joinRoom(
 ): void {
   const players = room.doc.getMap("players");
   if (players.has(playerId)) return;
+  // Best-effort cap: catches the common sequential case where the
+  // room synced before this join. Two truly concurrent joins can
+  // still overflow via CRDT merge — the hook detects that post-merge
+  // and flags the excess player (roomFull).
+  if (players.size >= MAX_PLAYERS) return;
 
   const joinOrder = players.size;
 
@@ -107,8 +116,7 @@ export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
   const roomMap = room.doc.getMap("room");
   const actualDifficulty =
     difficulty ?? ((roomMap.get("difficulty") as Difficulty) || "medium");
-  const puzzle = generatePuzzle(actualDifficulty);
-  const solution = solvePuzzle(puzzle);
+  const { puzzle, solution } = generatePuzzleWithSolution(actualDifficulty);
   const clueCount = puzzle.split("").filter((c) => c !== ".").length;
 
   room.doc.transact(() => {
@@ -118,6 +126,7 @@ export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
     roomMap.set("status", "playing");
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
+    roomMap.set("winnerBoard", null);
     roomMap.set("gameNumber", ((roomMap.get("gameNumber") as number) || 0) + 1);
 
     const players = room.doc.getMap("players");
@@ -176,17 +185,36 @@ export function getOpponentProgress(
   return null;
 }
 
+/**
+ * Write a win claim into the room. `board` is the claimant's completed
+ * board for a solved win, or null for a forfeit (opponent gone —
+ * nothing to verify). The first claim normally wins, with one
+ * exception: an existing solved-claim whose board does NOT match the
+ * room's solution is forged, and a later claim may overwrite it so a
+ * cheater cannot lock the real winner out.
+ */
 export function claimWinner(
   room: P2PRoom,
   playerId: string,
   playerName: string,
+  board: string | null,
 ): boolean {
   const roomMap = room.doc.getMap("room");
-  if (roomMap.get("winnerId") !== null) return false;
+  const existingWinner = roomMap.get("winnerId");
+  if (existingWinner !== null && existingWinner !== undefined) {
+    const existingBoard = roomMap.get("winnerBoard");
+    const solution = roomMap.get("solution");
+    const existingIsForged =
+      typeof existingBoard === "string" &&
+      typeof solution === "string" &&
+      existingBoard !== solution;
+    if (!existingIsForged) return false;
+  }
 
   room.doc.transact(() => {
     roomMap.set("winnerId", playerId);
     roomMap.set("winnerName", playerName);
+    roomMap.set("winnerBoard", board);
     roomMap.set("status", "finished");
   });
   return true;
@@ -228,6 +256,12 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     solution: (roomMap.get("solution") as string) || null,
     winnerId: (roomMap.get("winnerId") as string) || null,
     winnerName: (roomMap.get("winnerName") as string) || null,
+    // No || coercion here: "" must stay a string (a forged solved-claim
+    // the receiver rejects), while null/undefined mean forfeit/legacy.
+    winnerBoard:
+      typeof roomMap.get("winnerBoard") === "string"
+        ? (roomMap.get("winnerBoard") as string)
+        : null,
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
     events: [],
   };
@@ -266,11 +300,18 @@ export function getPlayers(room: P2PRoom): Player[] {
     });
   }
 
-  result.sort(
-    (a, b) =>
-      ((players.get(a.id) as Y.Map<unknown>).get("joinOrder") as number) -
-      ((players.get(b.id) as Y.Map<unknown>).get("joinOrder") as number),
-  );
+  // joinOrder first, playerId as tiebreak: concurrent joiners can both
+  // read size 0 and claim the same joinOrder, and every peer must agree
+  // on seat order (it decides who the excess player is in an overflow).
+  result.sort((a, b) => {
+    const orderA = (players.get(a.id) as Y.Map<unknown>).get(
+      "joinOrder",
+    ) as number;
+    const orderB = (players.get(b.id) as Y.Map<unknown>).get(
+      "joinOrder",
+    ) as number;
+    return orderA - orderB || a.id.localeCompare(b.id);
+  });
 
   return result;
 }

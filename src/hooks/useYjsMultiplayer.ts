@@ -16,6 +16,7 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  MAX_PLAYERS,
   observeRoomChanges,
   type P2PRoom,
   presenceHasOpponent,
@@ -59,6 +60,11 @@ export function useYjsMultiplayer({
   const [gameOver, setGameOver] = useState<GameOverInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  // True when this client is the odd one out of a full 1v1 room —
+  // either it arrived after two players had joined (its joinRoom
+  // no-oped), or a concurrent-join merge left three entries and this
+  // player sorts into the overflow.
+  const [roomFull, setRoomFull] = useState(false);
   // Latched true on first gameNumber > 0 and never cleared. Lets the UI
   // keep rendering the board even if roomState or puzzle momentarily
   // flicker (Yjs sync race, transient peer state), instead of bouncing
@@ -68,6 +74,10 @@ export function useYjsMultiplayer({
   const roomRef = useRef<P2PRoom | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
   const lastGameNumberRef = useRef<number>(0);
+  // Mirrors the room's current solution so the sendComplete callback
+  // (stable identity, created once) can validate claims without a
+  // stale closure over the `solution` state.
+  const solutionRef = useRef<string | null>(null);
   const playerNameRef = useRef(playerName);
   playerNameRef.current = playerName;
   // Captured at mount so the joiner does not stomp on the host's
@@ -106,6 +116,7 @@ export function useYjsMultiplayer({
       const state = getRoomState(room);
       setRoomState(state);
       if (!state) return;
+      solutionRef.current = state.solution;
 
       // Detect new game (start or rematch)
       if (state.gameNumber > lastGameNumberRef.current) {
@@ -117,13 +128,23 @@ export function useYjsMultiplayer({
         setHasStartedGame(true);
       }
 
-      // Detect winner
+      // Detect winner. A remote solved-claim only counts when the
+      // board it ships actually equals the solution — a peer can write
+      // anything into the CRDT. Forfeit claims (null board) have
+      // nothing to verify; our own claims were validated before
+      // writing.
       if (state.winnerId && state.winnerName) {
-        setGameOver({
-          winnerId: state.winnerId,
-          winnerName: state.winnerName,
-        });
-        clearSnapshot(roomId);
+        const claimValid =
+          state.winnerId === playerId ||
+          state.winnerBoard === null ||
+          state.winnerBoard === state.solution;
+        if (claimValid) {
+          setGameOver({
+            winnerId: state.winnerId,
+            winnerName: state.winnerName,
+          });
+          clearSnapshot(roomId);
+        }
       }
 
       // Update opponent progress
@@ -131,6 +152,15 @@ export function useYjsMultiplayer({
       if (progress) {
         setOpponentProgress(progress);
       }
+
+      // Excess-player detection: not among the first MAX_PLAYERS
+      // (joinRoom no-oped), or sorted into the overflow after a
+      // concurrent-join merge.
+      const seat = state.players.findIndex((p) => p.id === playerId);
+      setRoomFull(
+        state.players.length >= MAX_PLAYERS &&
+          (seat === -1 || seat >= MAX_PLAYERS),
+      );
     };
 
     const unobserveRoom = observeRoomChanges(room, updateState);
@@ -285,13 +315,26 @@ export function useYjsMultiplayer({
   );
 
   const sendComplete = useCallback(
-    (_board: string) => {
+    (board: string) => {
       const room = roomRef.current;
       if (!room) return;
-      claimWinner(room, playerId, playerNameRef.current);
+      // Only a board that actually solves the puzzle may claim. This
+      // is client-side honesty, not server enforcement — but it kills
+      // the accidental and one-liner cheat paths.
+      if (!solutionRef.current || board !== solutionRef.current) return;
+      claimWinner(room, playerId, playerNameRef.current, board);
     },
     [playerId],
   );
+
+  // Forfeit path: the opponent's presence dropped and the grace period
+  // ran out. Distinct from sendComplete so an unfinished board is never
+  // disguised as a solve.
+  const claimForfeitWin = useCallback(() => {
+    const room = roomRef.current;
+    if (!room) return;
+    claimWinner(room, playerId, playerNameRef.current, null);
+  }, [playerId]);
 
   const sendRematch = useCallback(() => {
     const room = roomRef.current;
@@ -335,10 +378,12 @@ export function useYjsMultiplayer({
     opponentDisconnected,
     gameOver,
     hasStartedGame,
+    roomFull,
     error,
     sendStartGame,
     sendProgress,
     sendComplete,
+    claimForfeitWin,
     sendRematch,
     updateName,
     setAssistLevel,

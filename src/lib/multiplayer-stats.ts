@@ -19,7 +19,11 @@ const MAX_RECORDS = 100;
 export function getMultiplayerStats(): MultiplayerGameRecord[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    // Callers iterate immediately; a parseable non-array ("{}", "null")
+    // must not escape this reader.
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }

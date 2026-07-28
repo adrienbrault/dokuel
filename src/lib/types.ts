@@ -106,6 +106,12 @@ export type RoomState = {
   solution: string | null; // 81-char string, null in lobby
   winnerId: string | null;
   winnerName: string | null;
+  /**
+   * The winner's completed board for solved claims, null for forfeit
+   * claims (opponent gone — nothing to verify). Receivers only accept
+   * a solved claim when this equals the room's solution.
+   */
+  winnerBoard: string | null;
   gameNumber: number;
   events: GameEvent[];
 };

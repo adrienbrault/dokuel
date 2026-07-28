@@ -15,18 +15,43 @@ const DEFAULT_STREAK: DailyStreak = {
 export function getDailyStreak(): DailyStreak {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { ...DEFAULT_STREAK };
+    if (!raw) return { ...DEFAULT_STREAK };
+    const parsed: unknown = JSON.parse(raw);
+    // JSON.parse happily returns null/numbers/objects of the wrong
+    // shape; recordDailyCompletion does arithmetic on these fields.
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as DailyStreak).currentStreak !== "number" ||
+      typeof (parsed as DailyStreak).longestStreak !== "number" ||
+      typeof (parsed as DailyStreak).lastCompletedDate !== "string"
+    ) {
+      return { ...DEFAULT_STREAK };
+    }
+    return parsed as DailyStreak;
   } catch {
     return { ...DEFAULT_STREAK };
   }
 }
 
-/** Check if the given date string is exactly one day after the other. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Check if the given date string is exactly one calendar day after the
+ * other. Compares in UTC so local DST transitions (23h/25h days) can't
+ * break the comparison.
+ */
 function isConsecutiveDay(prev: string, next: string): boolean {
-  const prevDate = new Date(prev + "T00:00:00");
-  const nextDate = new Date(next + "T00:00:00");
-  const diffMs = nextDate.getTime() - prevDate.getTime();
-  return diffMs === 24 * 60 * 60 * 1000;
+  const prevUtc = parseDateUTC(prev);
+  const nextUtc = parseDateUTC(next);
+  if (prevUtc === null || nextUtc === null) return false;
+  return nextUtc - prevUtc === DAY_MS;
+}
+
+function parseDateUTC(date: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return null;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
 export function recordDailyCompletion(date: string): DailyStreak {

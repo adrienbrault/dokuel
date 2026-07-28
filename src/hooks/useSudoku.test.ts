@@ -33,7 +33,7 @@ describe("useSudoku reset", () => {
     expect(result.current.historyLength).toBe(1);
 
     const nextPuzzle = `${SOLVED.slice(0, 9)}.${SOLVED.slice(10)}`;
-    act(() => result.current.reset(nextPuzzle, solvePuzzle(nextPuzzle)));
+    act(() => result.current.reset(nextPuzzle, solvePuzzle(nextPuzzle)!));
 
     expect(result.current.historyLength).toBe(0);
     expect(result.current.selectedCell).toBeNull();
@@ -214,7 +214,7 @@ describe("useSudoku", () => {
 
   it("detects completion when board is fully and correctly solved", () => {
     const puzzle = generatePuzzle("easy");
-    const solution = solvePuzzle(puzzle);
+    const solution = solvePuzzle(puzzle)!;
     const { result } = renderHook(() => useSudoku(puzzle));
 
     // Fill all empty cells with correct values from solution

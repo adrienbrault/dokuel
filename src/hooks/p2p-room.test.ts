@@ -73,6 +73,30 @@ describe("p2p-room", () => {
       expect(p1.get("color")).not.toBe(p2.get("color"));
     });
 
+    it("does not add a third player to a full room", () => {
+      // Spec: 1v1 rooms hold two players; a third joiner gets the
+      // "Game is full" screen. Without the cap the Start button's
+      // players.length === 2 check could never pass again.
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      joinRoom(room, "player3", "Carol");
+
+      expect(getPlayers(room)).toHaveLength(2);
+      expect(room.doc.getMap("players").has("player3")).toBe(false);
+    });
+
+    it("still recognizes an already-joined player when the room is full", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      // Re-join (e.g. reconnect) must stay a no-op, not be treated as
+      // a third player.
+      joinRoom(room, "player1", "Alice");
+
+      expect(getPlayers(room)).toHaveLength(2);
+    });
+
     it("does not claim host on join", () => {
       // Host is claimed only by initializeRoom (creator-only). joinRoom
       // never writes hostId — see the deterministic race test below
@@ -267,7 +291,8 @@ describe("p2p-room", () => {
       joinRoom(room, "player2", "Bob");
       startGame(room, "medium");
 
-      const claimed = claimWinner(room, "player1", "Alice");
+      const solution = room.doc.getMap("room").get("solution") as string;
+      const claimed = claimWinner(room, "player1", "Alice", solution);
 
       expect(claimed).toBe(true);
       const roomMap = room.doc.getMap("room");
@@ -282,8 +307,9 @@ describe("p2p-room", () => {
       joinRoom(room, "player2", "Bob");
       startGame(room, "medium");
 
-      claimWinner(room, "player1", "Alice");
-      const claimed = claimWinner(room, "player2", "Bob");
+      const solution = room.doc.getMap("room").get("solution") as string;
+      claimWinner(room, "player1", "Alice", solution);
+      const claimed = claimWinner(room, "player2", "Bob", solution);
 
       expect(claimed).toBe(false);
       expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
@@ -389,7 +415,8 @@ describe("p2p-room", () => {
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
       startGame(room, "medium");
-      claimWinner(room, "player1", "Alice");
+      const solution = room.doc.getMap("room").get("solution") as string;
+      claimWinner(room, "player1", "Alice", solution);
 
       const state = getRoomState(room)!;
       expect(state.winnerId).toBe("player1");

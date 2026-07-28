@@ -73,6 +73,29 @@ describe("MultiplayerBoard local autosave", () => {
     ).not.toBeNull();
   });
 
+  it("resets the timer when a rematch starts a new game", () => {
+    vi.useFakeTimers();
+    try {
+      const props = baseProps();
+      const { rerender } = render(<MultiplayerBoard {...props} />);
+
+      act(() => {
+        vi.advanceTimersByTime(65_000);
+      });
+      expect(screen.getByText("01:05")).toBeTruthy();
+
+      // Rematch: gameNumber bumps and a new puzzle arrives. The board
+      // resets in place — the clock must not carry game 1's time into
+      // game 2 (it is also what gets recorded as the match time).
+      rerender(
+        <MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={2} />,
+      );
+      expect(screen.getByText("00:00")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores the elapsed timer on remount", () => {
     vi.useFakeTimers();
     try {

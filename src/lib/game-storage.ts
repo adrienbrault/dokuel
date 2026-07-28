@@ -19,19 +19,39 @@ export function saveGame(key: string, data: SavedGame): void {
   }
 }
 
+const BOARD_STRING = /^[1-9.]{81}$/;
+
+function isValidNotes(notes: unknown): notes is number[][] {
+  return (
+    Array.isArray(notes) &&
+    notes.length === 81 &&
+    notes.every(
+      (entry) =>
+        Array.isArray(entry) &&
+        entry.every(
+          (n) =>
+            typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 9,
+        ),
+    )
+  );
+}
+
 export function loadGame(key: string): SavedGame | null {
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + key);
     if (!raw) return null;
     const data = JSON.parse(raw);
+    // Content-level validation, not just shape: anything let through
+    // here is fed to initState during render on every app load, where
+    // a stray character or non-array note entry throws.
     if (
       typeof data.puzzle !== "string" ||
-      data.puzzle.length !== 81 ||
+      !BOARD_STRING.test(data.puzzle) ||
       typeof data.values !== "string" ||
-      data.values.length !== 81 ||
-      !Array.isArray(data.notes) ||
-      data.notes.length !== 81 ||
-      typeof data.timer !== "number"
+      !BOARD_STRING.test(data.values) ||
+      !isValidNotes(data.notes) ||
+      typeof data.timer !== "number" ||
+      !Number.isFinite(data.timer)
     ) {
       return null;
     }
@@ -88,5 +108,25 @@ export function deleteGame(key: string): void {
     localStorage.removeItem(STORAGE_PREFIX + key);
   } catch {
     // silently ignore
+  }
+}
+
+/**
+ * Remove every saved game (including dailies) but nothing else — the
+ * error boundary's recovery action for corrupted saves. Stats and
+ * streak keys live outside the prefix and are untouched.
+ */
+export function clearAllSavedGames(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) keys.push(key);
+    }
+    for (const key of keys) {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // localStorage unavailable
   }
 }

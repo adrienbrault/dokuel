@@ -95,6 +95,9 @@ export function MultiplayerBoard({
     if (gameNumber === prevGameNumberRef.current) return;
     prevGameNumberRef.current = gameNumber;
     game.reset(puzzle, solution ?? undefined, savedBoard);
+    // The new game starts from zero; without this the recorded match
+    // time for game 2 includes game 1's clock.
+    timerSecondsRef.current = 0;
   }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
@@ -126,11 +129,12 @@ export function MultiplayerBoard({
     }
   }, [game.cellsRemaining, onProgress, puzzle]);
 
-  // Check completion
+  // Check completion — the claim ships the actual filled board so the
+  // opponent's client can verify it against the room's solution.
   useEffect(() => {
     if (game.status !== "completed") return;
-    onComplete(puzzle);
-  }, [game.status, onComplete, puzzle]);
+    onComplete(serializeBoard(game.board as Cell[][]).values);
+  }, [game.status, game.board, onComplete]);
 
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
@@ -206,6 +210,7 @@ export function MultiplayerBoard({
       timer={
         <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm">
           <Timer
+            key={gameNumber}
             running={game.status === "playing"}
             initialSeconds={initialTimerSeconds}
             onTick={(s) => {

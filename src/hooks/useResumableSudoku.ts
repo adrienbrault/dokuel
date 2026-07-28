@@ -5,7 +5,7 @@ import {
   type GameCompletionResult,
 } from "../lib/game-completion.ts";
 import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
-import { generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
+import { generatePuzzleWithSolution, solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell, Difficulty } from "../lib/types.ts";
 import { useSudoku } from "./useSudoku.ts";
 
@@ -46,15 +46,22 @@ export function useResumableSudoku({
   dailyDate,
   onComplete,
 }: UseResumableSudokuOptions) {
-  const saved = useMemo(() => (gameKey ? loadGame(gameKey) : null), [gameKey]);
-
-  const puzzle = useMemo(() => {
-    if (saved?.puzzle) return saved.puzzle;
-    if (initialPuzzle) return initialPuzzle;
-    return generatePuzzle(difficulty);
-  }, [difficulty, initialPuzzle, saved]);
-
-  const solution = useMemo(() => solvePuzzle(puzzle), [puzzle]);
+  // Resolve puzzle + solution + save together: a saved or provided
+  // puzzle that fails to solve is treated as corrupt and discarded
+  // rather than crashing the render, falling back to a fresh puzzle.
+  const resolved = useMemo(() => {
+    const saved = gameKey ? loadGame(gameKey) : null;
+    if (saved) {
+      const solution = solvePuzzle(saved.puzzle);
+      if (solution) return { saved, puzzle: saved.puzzle, solution };
+    }
+    if (initialPuzzle) {
+      const solution = solvePuzzle(initialPuzzle);
+      if (solution) return { saved: null, puzzle: initialPuzzle, solution };
+    }
+    return { saved: null, ...generatePuzzleWithSolution(difficulty) };
+  }, [gameKey, initialPuzzle, difficulty]);
+  const { saved, puzzle, solution } = resolved;
 
   const savedBoard = useMemo(
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
