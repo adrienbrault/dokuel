@@ -228,9 +228,10 @@ export function useDragSelect({
         ) {
           onSetSelectedCells(drag.cells, drag.primaryPos);
         }
-      } else if (e.pointerType === "touch" && onSelectCell) {
-        // iOS only: the Board's touchstart preventDefault eats the
-        // synthesized click that normally fires Cell.onClick. Restore
+      } else if (e.pointerType !== "mouse" && onSelectCell) {
+        // Touch and pen (Apple Pencil taps report "pen" but still ride the
+        // suppressed-touch path): the Board.s touchstart preventDefault eats
+        // the synthesized click that normally fires Cell.onClick — restore
         // tap-to-select here. Desktop mouse still goes through click.
         const pos = getCellFromPoint(e.clientX, e.clientY);
         if (pos) onSelectCell(pos.row, pos.col);
