@@ -1,10 +1,16 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { hashCode, seededRandom } from "../lib/daily.ts";
 import { cellKey, generatePuzzle, solvePuzzle } from "../lib/sudoku.ts";
 import { useSudoku } from "./useSudoku.ts";
 
+// Seeded generation: a fresh random board per run turned board-shape
+// assumptions (like "the first empty cell's row has a second empty
+// cell") into intermittent CI failures. Same seed → same board → a
+// failure here reproduces on the next run.
 function setupHook(difficulty: "easy" | "medium" = "easy") {
-  const puzzle = generatePuzzle(difficulty);
+  const rng = seededRandom(hashCode(`useSudoku-test-${difficulty}`));
+  const puzzle = generatePuzzle(difficulty, rng);
   return renderHook(() => useSudoku(puzzle));
 }
 
