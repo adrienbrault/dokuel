@@ -1,9 +1,13 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
+	fillCells,
 	holdNumpadDigit,
 	nearlyWonSave,
+	preparePage,
 	priorEasyStats,
+	readBoard,
 	test,
 } from "./fixtures.ts";
 
@@ -126,49 +130,8 @@ test.describe("dark mode", () => {
 		});
 	});
 
-	test("multiplayer - dual progress bars (dark mode)", async ({
-		page,
-	}, testInfo) => {
-		await page.goto("/");
-		await page.getByRole("button", { name: "Start Solo" }).click();
-		await page.getByRole("button", { name: "Easy" }).click();
-		await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
-
-		await page.evaluate(() => {
-			const header = document.querySelector(
-				".flex.items-center.justify-between.w-full",
-			);
-			if (!header) return;
-
-			const bars = document.createElement("div");
-			bars.className =
-				"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
-			bars.innerHTML = `
-				<div class="flex items-center gap-2">
-					<span class="text-xs text-text-secondary w-24 truncate">You</span>
-					<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-						<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
-					</div>
-					<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
-				</div>
-				<div class="flex items-center gap-2">
-					<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
-					<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-						<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
-					</div>
-					<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
-				</div>
-			`;
-			header.after(bars);
-		});
-
-		await page.screenshot({
-			path: screenshotPath(
-				"multiplayer-progress-bars-dark",
-				testInfo.project.name,
-			),
-		});
-	});
+	// multiplayer-progress-bars-dark is captured from the guest tab of
+	// the real two-tab session below — see "multiplayer session".
 });
 
 // --- Missing screens ---
@@ -435,87 +398,122 @@ test.describe("solo win modal", () => {
 	});
 });
 
-// --- Multiplayer progress bar mockups ---
+// --- Multiplayer: real two-tab session ---
+//
+// y-webrtc syncs same-origin tabs over a BroadcastChannel, so two pages
+// in one browser context form a real room with no signaling server —
+// the offline route guard stays intact. localStorage is shared between
+// the tabs, so each tab asserts its own player identity via init
+// script before it loads (the host reads its identity at mount, before
+// the guest overwrites the shared keys). The guest renders in dark
+// mode via emulated prefers-color-scheme — NOT via the sudoku_theme
+// storage key, which the host would pick up too when GameLayout's
+// useDarkMode instance mounts — so one session yields both light and
+// dark captures.
 
-test("multiplayer - dual progress bars", async ({ page }, testInfo) => {
-	await page.goto("/");
-	await page.getByRole("button", { name: "Start Solo" }).click();
-	await page.getByRole("button", { name: "Easy" }).click();
-	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+const HOST_IDENTITY = {
+	sudoku_player_id: "e2e-host-0001",
+	sudoku_player_name: "Clever Fox",
+};
 
-	await page.evaluate(() => {
-		const header = document.querySelector(
-			".flex.items-center.justify-between.w-full",
+const GUEST_IDENTITY = {
+	sudoku_player_id: "e2e-guest-0002",
+	sudoku_player_name: "Brave Otter",
+};
+
+test.describe("multiplayer session", () => {
+	test.use({ storage: HOST_IDENTITY });
+
+	test("multiplayer - two-tab game: progress, settings, finish", async ({
+		page,
+		context,
+	}, testInfo) => {
+		// Drives ~50 real moves across two tabs — well beyond the default
+		// per-test budget, especially on CI runners.
+		test.setTimeout(120_000);
+		const project = testInfo.project.name;
+
+		// Host creates a room and lands in the lobby.
+		await page.goto("/");
+		await page.getByRole("button", { name: "Create Game" }).click();
+		await page.getByRole("button", { name: "Easy" }).click();
+		await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
+		const roomId = new URL(page.url()).pathname.slice(1);
+
+		// Guest joins from a second tab in the same context.
+		const guest = await context.newPage();
+		await preparePage(guest, GUEST_IDENTITY);
+		await guest.emulateMedia({ colorScheme: "dark" });
+		await guest.goto(`/${roomId}`);
+		await guest.getByRole("heading", { name: "Game Lobby" }).waitFor();
+
+		// Both lobbies must see both players before the host can start.
+		await page.getByText("Brave Otter").waitFor();
+		await guest.getByText("Clever Fox").waitFor();
+
+		await page.getByRole("button", { name: "Start Game" }).click();
+		await page.waitForSelector(
+			'[role="group"][aria-label="Number pad"]:visible',
 		);
-		if (!header) return;
-
-		const bars = document.createElement("div");
-		bars.className =
-			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5 mx-auto";
-		bars.innerHTML = `
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">You</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-					<div class="h-full rounded-full bg-accent transition-all duration-300" style="width: 42%"></div>
-				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">42%</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-text-secondary w-24 truncate">Opponent</span>
-				<div class="flex-1 h-2 rounded-full bg-bg-raised overflow-hidden">
-					<div class="h-full rounded-full bg-rose-400 transition-all duration-300" style="width: 67%"></div>
-				</div>
-				<span class="text-xs text-text-secondary font-mono tabular-nums w-8 text-right">67%</span>
-			</div>
-		`;
-		header.after(bars);
-	});
-
-	await page.screenshot({
-		path: screenshotPath("multiplayer-progress-bars", testInfo.project.name),
-	});
-});
-
-test("multiplayer - opponent finished banner", async ({ page }, testInfo) => {
-	await page.goto("/");
-	await page.getByRole("button", { name: "Start Solo" }).click();
-	await page.getByRole("button", { name: "Easy" }).click();
-	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
-
-	await page.evaluate(() => {
-		const header = document.querySelector(
-			".flex.items-center.justify-between.w-full",
+		await guest.waitForSelector(
+			'[role="group"][aria-label="Number pad"]:visible',
 		);
-		if (!header) return;
 
-		const banner = document.createElement("div");
-		banner.className =
-			"w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2 mx-auto";
-		banner.innerHTML = `
-			<div class="px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary text-center">
-				<span class="font-semibold text-text-primary">Alice</span>
-				finished first — keep going to complete your puzzle.
-			</div>
-		`;
-		header.after(banner);
-	});
+		// Read the shared puzzle off the board and solve it so both tabs
+		// can make real, correct moves.
+		const puzzle = await readBoard(page);
+		const solution = solvePuzzle(puzzle);
+		if (!solution) throw new Error("started multiplayer puzzle is unsolvable");
+		const empties = [...puzzle].flatMap((ch, i) => (ch === "." ? [i] : []));
 
-	await page.screenshot({
-		path: screenshotPath(
-			"multiplayer-opponent-finished-banner",
-			testInfo.project.name,
-		),
-	});
-});
+		// Each tab plays its own copy of the board. Host fills a few
+		// cells, guest a few more, so the two progress bars land at
+		// distinct non-zero percentages.
+		await fillCells(page, solution, empties.slice(0, 5));
+		await fillCells(guest, solution, empties.slice(0, 12));
 
-test("multiplayer - progress bars hidden", async ({ page }, testInfo) => {
-	await page.goto("/");
-	await page.getByRole("button", { name: "Start Solo" }).click();
-	await page.getByRole("button", { name: "Easy" }).click();
-	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+		await page.getByText("Opponent", { exact: true }).waitFor();
+		await guest.getByText("Opponent", { exact: true }).waitFor();
+		await page.screenshot({
+			path: screenshotPath("multiplayer-progress-bars", project),
+		});
+		await guest.screenshot({
+			path: screenshotPath("multiplayer-progress-bars-dark", project),
+		});
 
-	await page.screenshot({
-		path: screenshotPath("multiplayer-progress-hidden", testInfo.project.name),
+		// The settings popover carries the real opponent-bar toggle.
+		await page.getByLabel("Settings").click();
+		await page.getByRole("switch", { name: "Opponent bar" }).waitFor();
+		await page.screenshot({
+			path: screenshotPath("multiplayer-settings-toggle", project),
+		});
+
+		// Turn it off — the bars disappear for real.
+		await page.getByRole("switch", { name: "Opponent bar" }).click();
+		await page.keyboard.press("Escape");
+		await page
+			.getByText("Opponent", { exact: true })
+			.waitFor({ state: "hidden" });
+		await page.screenshot({
+			path: screenshotPath("multiplayer-progress-hidden", project),
+		});
+
+		// Back on for the finish scene.
+		await page.getByLabel("Settings").click();
+		await page.getByRole("switch", { name: "Opponent bar" }).click();
+		await page.keyboard.press("Escape");
+
+		// Guest completes their board: the guest gets the real result
+		// dialog, and the host sees the real finished-first banner while
+		// their own board stays playable.
+		await fillCells(guest, solution, empties.slice(12));
+		await guest.getByRole("dialog").getByText("You Won!").waitFor();
+		await page.getByText(/finished first/).waitFor();
+		await page.screenshot({
+			path: screenshotPath("multiplayer-opponent-finished-banner", project),
+		});
+
+		await guest.close();
 	});
 });
 
@@ -530,48 +528,6 @@ test("solo game - settings popover open", async ({ page }, testInfo) => {
 
 	await page.screenshot({
 		path: screenshotPath("solo-settings-popover", testInfo.project.name),
-	});
-});
-
-test("multiplayer - settings with opponent bar toggle", async ({
-	page,
-}, testInfo) => {
-	await page.goto("/");
-	await page.getByRole("button", { name: "Start Solo" }).click();
-	await page.getByRole("button", { name: "Easy" }).click();
-	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
-
-	await page.getByLabel("Settings").click();
-	await page.locator(".absolute.right-0.top-full").waitFor();
-
-	await page.evaluate(() => {
-		const popover = document.querySelector(".absolute.right-0.top-full");
-		if (!popover) return;
-
-		const section = document.createElement("div");
-		section.className = "mt-3 pt-3 border-t border-border-default";
-		section.innerHTML = `
-			<label class="flex items-center gap-3 cursor-pointer select-none touch-manipulation">
-				<span class="text-sm text-text-secondary">Opponent bar</span>
-				<button type="button" role="switch" aria-checked="true" aria-label="Opponent bar"
-					class="relative w-11 h-6 rounded-full transition-colors duration-200 bg-accent">
-					<span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 translate-x-5"></span>
-				</button>
-			</label>
-		`;
-		const numpadSection = popover.querySelector("p + div");
-		if (numpadSection) {
-			numpadSection.after(section);
-		} else {
-			popover.appendChild(section);
-		}
-	});
-
-	await page.screenshot({
-		path: screenshotPath(
-			"multiplayer-settings-toggle",
-			testInfo.project.name,
-		),
 	});
 });
 
