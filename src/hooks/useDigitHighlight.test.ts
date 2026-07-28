@@ -194,12 +194,13 @@ describe("useDigitHighlight", () => {
     expect(result.current.highlightedDigit).toBe(4);
   });
 
-  it("tapDigit pencils the digit as a note into a multi-cell selection", () => {
-    // A range selection exists for one purpose: bulk notes. Tapping a
-    // digit used to discard the painstaking selection and switch to
-    // highlight mode — the exact opposite of what the player just set
-    // up. The tap now does what hold does (note into every selected
-    // cell) and keeps the selection so more digits can be added.
+  it("tapDigit notes a multi-cell selection, releases it, and highlights the digit", () => {
+    // Mirrors the numpad note-DROP semantics (useGameDigitDrag): a
+    // numpad-sourced note releases the selection and leaves the board
+    // highlighting that digit. So: tap 4 → notes land AND all 4s light
+    // up (placement confirmed); tap 7 next → selection is gone, so the
+    // tap toggles the 7 highlight — the scan-the-grid rhythm. Stacking
+    // pairs stays on hold, the one gesture that keeps the selection.
     const handlers = makeHandlers({ row: 0, col: 0 });
     // Simulate a multi-cell selection: the primary plus another cell.
     handlers.selectedCells = new Set([0, 1]);
@@ -209,8 +210,8 @@ describe("useDigitHighlight", () => {
       result.current.tapDigit(6);
     });
     expect(handlers.placeNumber).toHaveBeenCalledWith(6, true, true);
-    expect(handlers.deselectCell).not.toHaveBeenCalled();
-    expect(result.current.highlightedDigit).toBeNull();
+    expect(handlers.deselectCell).toHaveBeenCalled();
+    expect(result.current.highlightedDigit).toBe(6);
   });
 
   it("tapDigit forwards the autoEliminateNotes flag to placeNumber", () => {
