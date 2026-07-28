@@ -6,7 +6,17 @@
  * - { type: "unsubscribe", topics: string[] }
  * - { type: "publish", topic: string, ... }
  * - { type: "ping" } → { type: "pong" }
+ *
+ * Rooms are sharded: the client appends its room id to the URL path
+ * (wss://signal.dokuel.com/<roomId>) and each path maps to its own
+ * Durable Object, so one room's fanout never scans another room's
+ * sockets. A bare path keeps the legacy shared "global" object so
+ * clients built before the sharding still connect.
  */
+
+import { DurableObject } from "cloudflare:workers";
+
+const MAX_ROOM_KEY_LENGTH = 64;
 
 type Env = {
   SIGNALING_ROOM: DurableObjectNamespace;
@@ -23,7 +33,10 @@ export default {
 
     // WebSocket upgrade
     if (request.headers.get("Upgrade") === "websocket") {
-      const id = env.SIGNALING_ROOM.idFromName("global");
+      const url = new URL(request.url);
+      const roomKey =
+        url.pathname.slice(1).slice(0, MAX_ROOM_KEY_LENGTH) || "global";
+      const id = env.SIGNALING_ROOM.idFromName(roomKey);
       const stub = env.SIGNALING_ROOM.get(id);
       return stub.fetch(request);
     }
@@ -45,8 +58,6 @@ function corsHeaders(): Record<string, string> {
     "Access-Control-Allow-Headers": "*",
   };
 }
-
-import { DurableObject } from "cloudflare:workers";
 
 // Attachment stored on each WebSocket, survives DO hibernation
 type WsAttachment = { topics: string[] };
