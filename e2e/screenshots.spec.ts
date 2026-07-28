@@ -258,6 +258,10 @@ test("drag from numpad commits the digit on drop", async ({ page }) => {
 	await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
 	const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+	const cellPrefix = (await emptyCell.getAttribute("aria-label"))?.split(
+		",",
+	)[0];
+	if (!cellPrefix) throw new Error("empty cell has no accessible name");
 	const cellBox = await emptyCell.boundingBox();
 	if (!cellBox) throw new Error("empty cell not visible");
 
@@ -277,17 +281,29 @@ test("drag from numpad commits the digit on drop", async ({ page }) => {
 		digitBox.y + digitBox.height / 2 - 22,
 		{ steps: 3 },
 	);
+	// Aim at the top quarter of the cell: the drop zone is split at the
+	// midline (top = value, bottom = note), so the exact center is a
+	// boundary coin-flip.
 	await page.mouse.move(
 		cellBox.x + cellBox.width / 2,
-		cellBox.y + cellBox.height / 2,
+		cellBox.y + cellBox.height * 0.25,
 		{ steps: 8 },
 	);
 	await page.mouse.up();
 
-	// After dropping the 5 on the empty cell, it should now be a value-5 cell.
-	const droppedCell = page.locator('button[aria-label$="value 5"]');
-	const count = await droppedCell.count();
-	if (count === 0) throw new Error("drop did not commit a value");
+	// The dropped 5 must land in the target cell as a value. Match the
+	// specific cell and allow state suffixes (e.g. ", conflict") — the
+	// board is random, so the dropped digit may legitimately conflict.
+	const dropped = page.locator(
+		`button[aria-label^="${cellPrefix}, value 5"]`,
+	);
+	if ((await dropped.count()) === 0) {
+		const after = await page
+			.locator(`button[aria-label^="${cellPrefix},"]`)
+			.first()
+			.getAttribute("aria-label");
+		throw new Error(`drop did not commit a value; cell is now: ${after}`);
+	}
 });
 
 test("solo game - drag from a filled cell", async ({ page }, testInfo) => {
