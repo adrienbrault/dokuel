@@ -283,6 +283,35 @@ describe("NumPad", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders digits as pencil-note previews while a tap will note", () => {
+    // Pre-press affordance: with a range selected, each key shows its
+    // digit as a small pencil mark in its 3×3 note-grid slot — the
+    // numpad previews the exact artifact a press will create, instead
+    // of a caption describing it. The accessible name says so too.
+    const { rerender } = render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        tapAction="note"
+      />,
+    );
+    const noteKey = screen.getByRole("button", { name: "5, pencil note" });
+    expect(noteKey.querySelector("[data-note-preview]")).not.toBeNull();
+
+    // Back to enter-mode: full-size digit, remaining count, no preview.
+    rerender(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        tapAction="enter"
+      />,
+    );
+    const valueKey = screen.getByRole("button", { name: "5, 9 remaining" });
+    expect(valueKey.querySelector("[data-note-preview]")).toBeNull();
+  });
+
   it("keeps an off-center click with slight wobble a tap", () => {
     // Desktop bug: gesture slop was measured from the BUTTON CENTER,
     // so on a 64px button any click landing >12px off-center (~87% of
