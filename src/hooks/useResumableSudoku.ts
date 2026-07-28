@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { serializeBoard } from "../lib/board-engine.ts";
+import { hashCode, seededRandom } from "../lib/daily.ts";
 import {
   completeGame,
   type GameCompletionResult,
@@ -59,7 +60,14 @@ export function useResumableSudoku({
       const solution = solvePuzzle(initialPuzzle);
       if (solution) return { saved: null, puzzle: initialPuzzle, solution };
     }
-    return { saved: null, ...generatePuzzleWithSolution(difficulty) };
+    // Seed generation from the gameKey: /solo/<difficulty>/<key> then
+    // identifies its board, so a shared or bookmarked solo URL
+    // reproduces the same puzzle on any device (same mechanism as the
+    // daily challenge).
+    const rng = gameKey
+      ? seededRandom(hashCode(`sudoku-solo-${gameKey}`))
+      : undefined;
+    return { saved: null, ...generatePuzzleWithSolution(difficulty, rng) };
   }, [gameKey, initialPuzzle, difficulty]);
   const { saved, puzzle, solution } = resolved;
 

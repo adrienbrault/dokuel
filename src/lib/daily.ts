@@ -2,7 +2,8 @@ import { todayLocalISO } from "./date.ts";
 import { generatePuzzleWithSolution } from "./sudoku.ts";
 import type { Difficulty } from "./types.ts";
 
-function hashCode(str: string): number {
+/** Deterministic 32-bit string hash — the seed source for seededRandom. */
+export function hashCode(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0;
