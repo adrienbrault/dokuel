@@ -282,7 +282,6 @@ export function getRoomState(room: P2PRoom): RoomState | null {
         ? (roomMap.get("winnerBoard") as string)
         : null,
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
-    events: [],
   };
 }
 

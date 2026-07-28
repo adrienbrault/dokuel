@@ -26,7 +26,6 @@ const BASE_STATE: RoomState = {
   winnerName: null,
   winnerBoard: null,
   gameNumber: 0,
-  events: [],
 };
 
 describe("Lobby", () => {
