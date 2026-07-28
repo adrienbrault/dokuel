@@ -94,6 +94,40 @@ describe("MultiplayerBoard local autosave", () => {
     ).not.toBeNull();
   });
 
+  it("never writes the previous game's board under the new game's key", () => {
+    // On rematch the reset dispatch and the autosave effect share one
+    // commit: the save ran with the OLD board serialized under the NEW
+    // gameKey. It self-corrects a render later, but a tab killed in
+    // that window resumes game 2 with game 1's cells.
+    const props = baseProps();
+    const { rerender } = render(<MultiplayerBoard {...props} />);
+
+    const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+    fireEvent.click(cell);
+    const five = screen.getAllByLabelText("5")[0]!;
+    fireEvent.pointerDown(five, { pointerType: "touch" });
+    fireEvent.pointerUp(five, { pointerType: "touch" });
+
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    try {
+      rerender(
+        <MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={2} />,
+      );
+      const newKey = `sudoku_save_mp_${props.roomId}_${PUZZLE_B.slice(0, 12)}`;
+      const writesForNewGame = setItem.mock.calls.filter(
+        ([key]) => key === newKey,
+      );
+      for (const [, raw] of writesForNewGame) {
+        const saved = JSON.parse(raw as string);
+        // Index 4 is PUZZLE_B's only hole; the old board holds a given
+        // digit there, a fresh game-2 board holds ".".
+        expect(saved.values[4]).toBe(".");
+      }
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
   it("resets the timer when a rematch starts a new game", () => {
     vi.useFakeTimers();
     try {
