@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seededRandom } from "./daily.ts";
 import { countSolutions } from "./solver.ts";
 import {
   cellKey,
@@ -11,14 +12,6 @@ import {
   solvePuzzle,
 } from "./sudoku.ts";
 import type { Board } from "./types.ts";
-
-function seededRng(seed: number): () => number {
-  let state = seed;
-  return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) | 0;
-    return (state >>> 0) / 0x100000000;
-  };
-}
 
 // A known valid puzzle and its solution — avoids calling generatePuzzle in every test
 const KNOWN_PUZZLE =
@@ -79,8 +72,8 @@ describe("generatePuzzle", () => {
   });
 
   it("is deterministic when given a seeded rng", () => {
-    expect(generatePuzzle("hard", seededRng(5))).toBe(
-      generatePuzzle("hard", seededRng(5)),
+    expect(generatePuzzle("hard", seededRandom(5))).toBe(
+      generatePuzzle("hard", seededRandom(5)),
     );
   });
 });

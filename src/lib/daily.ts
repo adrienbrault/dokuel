@@ -10,7 +10,12 @@ function hashCode(str: string): number {
   return hash >>> 0;
 }
 
-function seededRandom(seed: number): () => number {
+/**
+ * Deterministic integer LCG → [0,1) float. Exported as the app's one
+ * seeded Rng so tests exercise the exact generator the daily golden
+ * vectors pin — a copied implementation could drift silently.
+ */
+export function seededRandom(seed: number): () => number {
   let state = seed;
   return () => {
     state = (Math.imul(state, 1664525) + 1013904223) | 0;
