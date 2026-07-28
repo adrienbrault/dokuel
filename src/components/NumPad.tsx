@@ -12,12 +12,10 @@ import { haptics } from "../lib/haptics.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 
 const LONG_PRESS_MS = 200;
-// Pointer must travel this far from where the press landed before we
-// classify the gesture (skim vs. drag). Measured from the pointerdown
-// point — NOT the button center: center-relative slop meant an
-// off-center click was "past the threshold" before it ever moved, and
-// a few pixels of mouse wobble misfired a drag/skim. Tuned to
-// fingertip-sized slop.
+// Pointer must travel this far FROM THE POINTERDOWN POINT before we
+// classify the gesture (skim vs. drag). Never measure from the button
+// center: an off-center click would start "past the threshold", and a
+// few pixels of mouse wobble then misfired a drag/skim.
 const GESTURE_THRESHOLD_PX = 12;
 // Half-angle of the drag cone — the wedge pointing perpendicular to the
 // numpad, toward the board. A pan within this many degrees of that axis
