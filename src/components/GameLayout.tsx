@@ -95,13 +95,13 @@ export function GameLayout({
           flex gap-3 w-full justify-center flex-1
           ${position === "left" ? "flex-row items-end lg:items-center" : ""}
           ${position === "right" ? "flex-row-reverse items-end lg:items-center" : ""}
-          ${position === "bottom" ? "flex-col items-center" : ""}
+          ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-center lg:justify-center lg:gap-10" : ""}
         `}
       >
         {/* Side numpad (left / right positions) */}
         {position !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full lg:w-[32rem] flex-1 lg:flex-none justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
         >
           <div className="flex flex-col items-center gap-3 w-full">
             {controls}
@@ -123,15 +123,17 @@ export function GameLayout({
           >
             {board}
           </div>
-          {/* Bottom numpad — widened to span the board on mobile, where the
-              board itself runs edge-to-edge; reset to the board width on
-              desktop where the board is capped. */}
-          {position === "bottom" && (
-            <div className="flex justify-center -mx-2 w-[calc(100%+1rem)] lg:mx-0 lg:w-full">
-              {numPad}
-            </div>
-          )}
         </div>
+        {/* Bottom numpad — one instance, repositioned by the row's flex
+            direction: under the board on mobile (full-width digit row,
+            widened to span the edge-to-edge board), beside it at lg+
+            where the row turns horizontal and the spec's side-by-side
+            desktop layout applies (NumPad renders 3-wide there). */}
+        {position === "bottom" && (
+          <div className="flex justify-center items-center -mx-2 w-[calc(100%+1rem)] lg:mx-0 lg:w-auto">
+            {numPad}
+          </div>
+        )}
       </div>
 
       {footer}
