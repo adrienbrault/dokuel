@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
@@ -106,7 +106,87 @@ describe("MultiplayerGame disconnect overlay", () => {
     // one that actually reflects the opponent's connection.
     mockMp.opponentDisconnected = true;
     renderGame();
+    vi.useFakeTimers();
+    try {
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
     expect(screen.getByText("Opponent disconnected")).toBeInTheDocument();
+  });
+
+  it("waits a beat before showing, so our own reconnect doesn't flash it", () => {
+    // Right after we return from a background tab the opponent's
+    // awareness hasn't re-synced yet — a blocking "opponent
+    // disconnected" flash on every longer app switch reads as a bug.
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      expect(
+        screen.queryByText("Opponent disconnected"),
+      ).not.toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(screen.getByText("Opponent disconnected")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the loser's board playable while the opponent is away", () => {
+    // The grace period is exactly when the still-connected player wants
+    // to race ahead — a full-screen blocking modal costs them 60s.
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      // A status banner, not a modal: jsdom has no hit-testing, so the
+      // structural assertion is what actually pins "non-blocking".
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Opponent disconnected",
+      );
+
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+      expect(
+        screen.getByLabelText(/Cell row 1 column 1, value 5/),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("offers the claim button after the 60s countdown", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(screen.queryByRole("button", { name: /claim win/i })).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(61_000);
+      });
+      const claim = screen.getByRole("button", { name: /claim win/i });
+      fireEvent.click(claim);
+      expect(mockMp.claimForfeitWin).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not show the overlay when only our own provider disconnected", () => {
