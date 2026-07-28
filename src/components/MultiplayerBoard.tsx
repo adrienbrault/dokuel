@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
-import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
+import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
@@ -16,7 +15,7 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
-import { NumPad, type NumPadHandle } from "./NumPad.tsx";
+import { NumPad } from "./NumPad.tsx";
 import { Timer } from "./Timer.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
@@ -192,36 +191,14 @@ export function MultiplayerBoard({
     getTimeSeconds: () => timerSecondsRef.current,
   });
 
-  // Touch numpad: a quick tap commits the value into the selected empty
-  // cell; on a filled cell it highlights the digit instead, and a hold
-  // adds a pencil note (see useDigitHighlight). With no cell selected, a
-  // tap toggles the digit's board-wide highlight.
-  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  const highlight = useDigitHighlight(game, assistLevel !== "paper");
-
-  const handleHoldNote = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
-    }
-  };
-
-  const handlePressEnd = () => {
-    setChargingDigit(null);
-  };
-
-  // Digit drag-and-drop: drop commits the value, mirroring solo play.
   // Keyed off local status only — the loser keeps interacting until they
-  // finish their own board. A drag brought back over the numpad demotes
-  // to a skim (see NumPad).
-  const numPadRef = useRef<NumPadHandle>(null);
-  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
-    game,
-    disabled: game.status !== "playing",
-    autoEliminateNotes: assistLevel !== "paper",
-    onHighlightDigit: highlight.setDigit,
-    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
-  });
+  // finish their own board.
+  const { highlight, chargingDigit, numPadRef, numPadProps, dragState, startCellDrag } =
+    useNumpadInteractions({
+      game,
+      disabled: game.status !== "playing",
+      assistLevel,
+    });
 
   return (
     <GameLayout
@@ -249,25 +226,7 @@ export function MultiplayerBoard({
           </span>
         </div>
       }
-      numPad={
-        <NumPad
-          ref={numPadRef}
-          position={position}
-          remainingCounts={game.remainingCounts}
-          selectedValue={
-            game.selectedCell
-              ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
-              : highlight.highlightedDigit
-          }
-          showRemainingCounts={assistLevel === "full"}
-          disableCompleted={assistLevel !== "paper"}
-          onTapNumber={highlight.tapDigit}
-          onHoldNumber={handleHoldNote}
-          onPressEnd={handlePressEnd}
-          onStartDrag={startNumpadDrag}
-          onSkimDigit={highlight.skimToDigit}
-        />
-      }
+      numPad={<NumPad ref={numPadRef} position={position} {...numPadProps} />}
       board={
         <>
           <Board
