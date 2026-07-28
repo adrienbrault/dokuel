@@ -41,6 +41,11 @@ type UseYjsMultiplayerOptions = {
 // the case where we return just as their claim lands.
 const FORFEIT_TRUST_WINDOW_MS = 120_000;
 
+// Grace window before applying the localStorage snapshot to an empty
+// doc: long enough for WebRTC to deliver the live room when a peer is
+// up, short enough that a genuine solo restore feels instant-ish.
+const HYDRATE_GRACE_MS = 3_000;
+
 type OpponentProgress = {
   cellsRemaining: number;
   completionPercent: number;
@@ -309,30 +314,65 @@ export function useYjsMultiplayer({
     // idempotent so post-sync invocation either seeds an empty room or
     // no-ops one already populated.
     let cancelled = false;
+    let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
+    let stopHydrateWatch: (() => void) | null = null;
     void persistence.whenSynced.then(() => {
       if (cancelled) return;
-
-      // If IDB came back without a started game but localStorage has
-      // a recent snapshot, hydrate from it. CRDT merge will reconcile
-      // with whatever the peer eventually sends.
-      const yjs = getRoomState(room);
-      if (!yjs || yjs.gameNumber === 0) {
-        const snap = loadSnapshot(roomId);
-        if (snap) hydrateRoomFromSnapshot(room, snap);
-      }
 
       // The creator (came in from the create flow with a chosen
       // difficulty) initializes the room and claims host. Joiners
       // (difficulty=null, came via shared link) skip this and learn
       // host + difficulty from Yjs sync.
-      const initialDifficulty = initialDifficultyRef.current;
-      if (initialDifficulty) {
-        initializeRoom(room, playerId, initialDifficulty);
-      }
-      joinRoom(room, playerId, playerNameRef.current);
+      const completeSetup = () => {
+        if (cancelled) return;
+        const initialDifficulty = initialDifficultyRef.current;
+        if (initialDifficulty) {
+          initializeRoom(room, playerId, initialDifficulty);
+        }
+        joinRoom(room, playerId, playerNameRef.current);
+        updateState();
+      };
 
       announcePresence(awareness, playerId, playerNameRef.current);
-      updateState();
+
+      // If IDB came back without a started game but localStorage has a
+      // recent snapshot, restore from it — but not immediately. The
+      // snapshot would land in a fresh doc with a new clientID, making
+      // every key causally concurrent with the live peer's state, and
+      // per-key LWW could roll a finished game back for both players.
+      // Give WebRTC a grace window to deliver the real room first; the
+      // snapshot only applies when nothing shows up.
+      const yjs = getRoomState(room);
+      const snap = !yjs || yjs.gameNumber === 0 ? loadSnapshot(roomId) : null;
+      if (!snap) {
+        completeSetup();
+        return;
+      }
+
+      const finish = (applySnapshot: boolean) => {
+        if (hydrateTimer !== null) {
+          clearTimeout(hydrateTimer);
+          hydrateTimer = null;
+        }
+        stopHydrateWatch?.();
+        stopHydrateWatch = null;
+        if (cancelled) return;
+        if (applySnapshot) {
+          const current = getRoomState(room);
+          if (!current || current.gameNumber === 0) {
+            hydrateRoomFromSnapshot(room, snap);
+          }
+        }
+        completeSetup();
+      };
+      stopHydrateWatch = observeRoomChanges(room, () => {
+        const current = getRoomState(room);
+        if (current && current.gameNumber > 0) finish(false);
+      });
+      hydrateTimer = setTimeout(() => {
+        hydrateTimer = null;
+        finish(true);
+      }, HYDRATE_GRACE_MS);
     });
 
     return () => {
@@ -343,6 +383,12 @@ export function useYjsMultiplayer({
         clearTimeout(hideTimer);
         hideTimer = null;
       }
+      if (hydrateTimer !== null) {
+        clearTimeout(hydrateTimer);
+        hydrateTimer = null;
+      }
+      stopHydrateWatch?.();
+      stopHydrateWatch = null;
       unobserveRoom();
       awareness.off("change", updatePresence);
       provider.off("status", onStatus);
