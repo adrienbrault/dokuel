@@ -14,6 +14,7 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  leaveRoom,
   observeRoomChanges,
   type P2PRoom,
   requestRematch,
@@ -617,6 +618,57 @@ describe("p2p-room", () => {
       const players = getPlayers(room);
       expect(players).toHaveLength(2);
       expect(players.find((p) => p.id === "p2")?.cellsRemaining).toBe(30);
+    });
+  });
+
+  describe("leaveRoom", () => {
+    it("removes the player's entry from the room", () => {
+      const room = createTestRoom();
+      joinRoom(room, "p1", "Alice");
+      joinRoom(room, "p2", "Bob");
+
+      leaveRoom(room, "p2");
+
+      expect(getPlayers(room)).toHaveLength(1);
+      expect(getPlayers(room)[0]!.id).toBe("p1");
+    });
+
+    it("is a no-op for a player not in the room", () => {
+      const room = createTestRoom();
+      joinRoom(room, "p1", "Alice");
+
+      leaveRoom(room, "ghost");
+
+      expect(getPlayers(room)).toHaveLength(1);
+    });
+
+    it("resolves a concurrent-join overflow back to a startable room", () => {
+      // Two joiners race the host's 2-player cap before syncing: the
+      // merge leaves 3 entries. The deterministic overflow player must
+      // be able to remove itself, otherwise the remaining two are stuck
+      // in a lobby whose Start never enables.
+      const docA = new Y.Doc();
+      const docB = new Y.Doc();
+      const roomA = createRoomFromDoc(docA, "race");
+      const roomB = createRoomFromDoc(docB, "race");
+      joinRoom(roomA, "host", "Host");
+      Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+
+      joinRoom(roomA, "j1", "One");
+      joinRoom(roomB, "j2", "Two");
+      const updateA = Y.encodeStateAsUpdate(docA);
+      const updateB = Y.encodeStateAsUpdate(docB);
+      Y.applyUpdate(docB, updateA);
+      Y.applyUpdate(docA, updateB);
+      expect(getPlayers(roomA)).toHaveLength(3);
+
+      const overflowId = getPlayers(roomA)[2]!.id;
+      leaveRoom(roomA, overflowId);
+      Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+
+      expect(getPlayers(roomA)).toHaveLength(2);
+      expect(getPlayers(roomB)).toHaveLength(2);
+      expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
     });
   });
 

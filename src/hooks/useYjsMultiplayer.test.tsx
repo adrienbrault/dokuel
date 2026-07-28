@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Awareness } from "y-protocols/awareness";
-import { applyUpdate, Doc, encodeStateAsUpdate } from "yjs";
+import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
 
 type FakeProvider = {
   awareness: Awareness;
@@ -378,6 +378,46 @@ describe("useYjsMultiplayer", () => {
     await flushSync();
     expect(result.current.roomFull).toBe(true);
     expect(result.current.roomState?.players).toHaveLength(2);
+  });
+
+  it("evicts itself from the players map after a concurrent-join overflow", async () => {
+    // A concurrent-join merge can leave 3 entries even though joinRoom
+    // capped locally. The overflow player (us, by deterministic seat
+    // sort) must delete its own entry — otherwise the two seated
+    // players stare at a lobby whose Start never enables.
+    const { result } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-overflow-evict",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: null,
+      }),
+    );
+    await flushSync();
+    const doc = mocks.lastDoc!;
+    // Simulate the merged remote state: the host's room map plus two
+    // players whose joinOrder/id sort ahead of ours ("a1"/"a2" < "p1"
+    // at joinOrder 0).
+    act(() => {
+      initializeRoom({ doc, roomId: "room-overflow-evict" }, "a1", "medium");
+      doc.transact(() => {
+        const players = doc.getMap("players");
+        for (const id of ["a1", "a2"]) {
+          const pm = new YMap<unknown>();
+          pm.set("name", id);
+          pm.set("color", "blue");
+          pm.set("cellsRemaining", 81);
+          pm.set("completionPercent", 0);
+          pm.set("joinOrder", 0);
+          players.set(id, pm);
+        }
+      });
+    });
+    await flushSync();
+
+    expect(result.current.roomFull).toBe(true);
+    expect(doc.getMap("players").has("p1")).toBe(false);
+    expect(doc.getMap("players").size).toBe(2);
   });
 
   it("does not flag roomFull for a player already in the room", async () => {
