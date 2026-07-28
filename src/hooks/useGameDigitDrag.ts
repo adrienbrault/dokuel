@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { gameFeedback } from "../lib/game-feedback.ts";
 import type { Board, Position } from "../lib/types.ts";
 import {
   type DigitDragSource,
@@ -79,7 +78,6 @@ export function useGameDigitDrag({
       mode: DigitDropMode,
     ) => {
       if (disabled) return;
-      gameFeedback.onPlace();
       if (mode === "note") {
         // A note drop must not pull the selection onto the drop target
         // — that would yank the board highlight to wherever the note
