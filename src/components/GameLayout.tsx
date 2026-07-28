@@ -8,9 +8,11 @@ import {
 } from "react";
 import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
+import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
+import { SoundToggle } from "./SoundToggle.tsx";
 
 type GameLayoutProps = {
   onBack: () => void;
@@ -149,6 +151,9 @@ function SettingsButton({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const darkMode = useDarkMode();
+  // Sound was only reachable from the landing screen; mid-game is
+  // where players actually decide they want silence.
+  const [soundOn, setSoundOn] = useState(getSoundEnabled);
 
   useEffect(() => {
     if (!open) return;
@@ -196,6 +201,17 @@ function SettingsButton({
             <DarkModeToggle
               isDark={darkMode.isDark}
               onToggle={darkMode.toggle}
+            />
+          </div>
+          <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
+            <p className="text-xs text-text-muted font-medium">Sound</p>
+            <SoundToggle
+              enabled={soundOn}
+              onToggle={() => {
+                const next = !soundOn;
+                setSoundOn(next);
+                setSoundEnabled(next);
+              }}
             />
           </div>
           {extra && (
