@@ -40,17 +40,21 @@ describe("daily-streak", () => {
         currentStreak: 0,
         lastCompletedDate: "",
         longestStreak: 0,
+        completedDates: [],
       });
     });
 
-    it("returns stored streak data", () => {
+    it("returns stored streak data, migrating pre-completedDates records", () => {
       const data = {
         currentStreak: 3,
         lastCompletedDate: "2026-03-07",
         longestStreak: 5,
       };
       localStorage.setItem("sudoku_daily_streak", JSON.stringify(data));
-      expect(getDailyStreak()).toEqual(data);
+      expect(getDailyStreak()).toEqual({
+        ...data,
+        completedDates: ["2026-03-07"],
+      });
     });
 
     it("returns default on invalid JSON", () => {
@@ -59,6 +63,7 @@ describe("daily-streak", () => {
         currentStreak: 0,
         lastCompletedDate: "",
         longestStreak: 0,
+        completedDates: [],
       });
     });
 
@@ -71,6 +76,7 @@ describe("daily-streak", () => {
           currentStreak: 0,
           lastCompletedDate: "",
           longestStreak: 0,
+          completedDates: [],
         });
       }
     });

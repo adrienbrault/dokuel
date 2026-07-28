@@ -4,31 +4,52 @@ export type DailyStreak = {
   currentStreak: number;
   lastCompletedDate: string;
   longestStreak: number;
+  // Recent completion days (bounded). The source of truth for streak
+  // math: a set of days is order-insensitive, so completing yesterday's
+  // daily after today's (timezone travel, corrected clocks) neither
+  // resets nor double-counts.
+  completedDates: string[];
 };
 
 const STORAGE_KEY = "sudoku_daily_streak";
+
+// Enough to cover any currentStreak we can display plus slack; the
+// longest-ever streak is kept as a scalar so trimming can't lose it.
+const MAX_COMPLETED_DATES = 60;
 
 const DEFAULT_STREAK: DailyStreak = {
   currentStreak: 0,
   lastCompletedDate: "",
   longestStreak: 0,
+  completedDates: [],
 };
 
 export function getDailyStreak(): DailyStreak {
-  return readJson<DailyStreak>(STORAGE_KEY, { ...DEFAULT_STREAK }, (parsed) => {
-    // JSON.parse happily returns null/numbers/objects of the wrong
-    // shape; recordDailyCompletion does arithmetic on these fields.
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      typeof (parsed as DailyStreak).currentStreak !== "number" ||
-      typeof (parsed as DailyStreak).longestStreak !== "number" ||
-      typeof (parsed as DailyStreak).lastCompletedDate !== "string"
-    ) {
-      return null;
-    }
-    return parsed as DailyStreak;
-  });
+  return readJson<DailyStreak>(
+    STORAGE_KEY,
+    { ...DEFAULT_STREAK, completedDates: [] },
+    (parsed) => {
+      // JSON.parse happily returns null/numbers/objects of the wrong
+      // shape; recordDailyCompletion does arithmetic on these fields.
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        typeof (parsed as DailyStreak).currentStreak !== "number" ||
+        typeof (parsed as DailyStreak).longestStreak !== "number" ||
+        typeof (parsed as DailyStreak).lastCompletedDate !== "string"
+      ) {
+        return null;
+      }
+      const streak = parsed as DailyStreak;
+      // Migrate records written before completedDates existed.
+      const dates = Array.isArray(streak.completedDates)
+        ? streak.completedDates.filter((d) => typeof d === "string")
+        : streak.lastCompletedDate
+          ? [streak.lastCompletedDate]
+          : [];
+      return { ...streak, completedDates: dates };
+    },
+  );
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -54,25 +75,30 @@ function parseDateUTC(date: string): number | null {
 export function recordDailyCompletion(date: string): DailyStreak {
   const streak = getDailyStreak();
 
-  // No-op if already completed today
-  if (streak.lastCompletedDate === date) return streak;
+  if (streak.completedDates.includes(date)) return streak;
+  if (parseDateUTC(date) === null) return streak;
 
-  if (
-    streak.lastCompletedDate &&
-    isConsecutiveDay(streak.lastCompletedDate, date)
-  ) {
-    streak.currentStreak++;
-  } else {
-    streak.currentStreak = 1;
+  // Newest-first, deduped, bounded — then derive the streak by walking
+  // the consecutive run from the most recent completed day.
+  const dates = [...streak.completedDates, date]
+    .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
+    .slice(0, MAX_COMPLETED_DATES);
+
+  let run = 1;
+  while (run < dates.length && isConsecutiveDay(dates[run]!, dates[run - 1]!)) {
+    run++;
   }
 
-  streak.lastCompletedDate = date;
-  streak.longestStreak = Math.max(streak.longestStreak, streak.currentStreak);
-
-  writeJson(STORAGE_KEY, streak);
-  return streak;
+  const next: DailyStreak = {
+    currentStreak: run,
+    lastCompletedDate: dates[0]!,
+    longestStreak: Math.max(streak.longestStreak, run),
+    completedDates: dates,
+  };
+  writeJson(STORAGE_KEY, next);
+  return next;
 }
 
 export function isDailyCompleted(date: string): boolean {
-  return getDailyStreak().lastCompletedDate === date;
+  return getDailyStreak().completedDates.includes(date);
 }
