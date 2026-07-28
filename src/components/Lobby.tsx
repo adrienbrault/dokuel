@@ -79,7 +79,7 @@ export function Lobby({
   }
 
   return (
-    <div className="screen-content gap-7 py-10">
+    <div className="screen-content gap-7 py-10 short:gap-4 short:py-5">
       <div className="flex flex-col items-center gap-3">
         <h2 className="heading">Game Lobby</h2>
         <button

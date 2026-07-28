@@ -26,7 +26,7 @@ export function JoinScreen({
 
   return (
     <div className="screen">
-      <form className="screen-content gap-6 py-10" onSubmit={handleSubmit}>
+      <form className="screen-content gap-6 py-10 short:gap-4 short:py-5" onSubmit={handleSubmit}>
         <header className="flex flex-col items-center gap-3">
           <span
             className="icon-chip w-14 h-14 bg-accent-light text-accent"

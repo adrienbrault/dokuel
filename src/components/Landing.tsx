@@ -75,9 +75,9 @@ export function Landing({
       : `${formatShortDate(today)} · same puzzle for everyone`;
 
   return (
-    <div className="screen-content gap-7 py-10 sm:gap-9">
+    <div className="screen-content gap-7 py-10 sm:gap-9 short:gap-4 short:py-5">
       <header className="flex flex-col items-center gap-2">
-        <h1 className="text-[3.25rem] leading-none font-extrabold tracking-tight bg-gradient-to-br from-text-primary to-accent bg-clip-text text-transparent">
+        <h1 className="text-[3.25rem] short:text-4xl leading-none font-extrabold tracking-tight bg-gradient-to-br from-text-primary to-accent bg-clip-text text-transparent">
           Dokuel
         </h1>
         <p className="text-sm text-text-muted">

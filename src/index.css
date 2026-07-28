@@ -5,6 +5,10 @@
 @import "@fontsource-variable/dm-sans/opsz.css";
 @import "@fontsource-variable/dm-sans/opsz-italic.css";
 
+/* Short viewports: iPhone SE class and landscape phones. Used to
+   tighten vertical rhythm so primary actions stay above the fold. */
+@custom-variant short (@media (max-height: 700px));
+
 @theme {
   /* Board & cell */
   --color-board-bg: oklch(0.97 0.005 80);

@@ -76,7 +76,7 @@ export function DifficultyPicker({ onSelect, onBack }: DifficultyPickerProps) {
   const { level: assistLevel, setLevel: setAssistLevel } = useAssistLevel();
 
   return (
-    <div className="screen-content gap-6 py-10">
+    <div className="screen-content gap-6 py-10 short:gap-3.5 short:py-5">
       <header className="flex flex-col items-center gap-1">
         <h2 className="heading">Choose Difficulty</h2>
         <p className="caption">Pick how hard the puzzle should be.</p>
