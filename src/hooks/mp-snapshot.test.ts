@@ -111,7 +111,10 @@ describe("mp-snapshot", () => {
 
     const swept = sweepStaleSnapshots();
 
-    expect(swept.sort()).toEqual(["room-junk", "room-old"]);
+    expect([...swept].sort((a, b) => a.localeCompare(b))).toEqual([
+      "room-junk",
+      "room-old",
+    ]);
     expect(localStorage.getItem("dokuel_mp_snap_room-old")).toBeNull();
     expect(localStorage.getItem("dokuel_mp_snap_room-junk")).toBeNull();
     expect(loadSnapshot("room-fresh")).not.toBeNull();
