@@ -89,6 +89,25 @@ describe("multiplayer-stats", () => {
       expect(all).toHaveLength(100);
       expect(all[0]!.gameNumber).toBe(5);
     });
+
+    it("keeps a difficulty's best win when another difficulty floods the history", () => {
+      saveMultiplayerGameResult({
+        ...BASE_RECORD,
+        difficulty: "easy",
+        time: 90,
+        roomId: "room-pb",
+      });
+      for (let i = 0; i < 120; i++) {
+        saveMultiplayerGameResult({
+          ...BASE_RECORD,
+          difficulty: "medium",
+          time: 500 + i,
+          roomId: `flood-${i}`,
+        });
+      }
+
+      expect(getMultiplayerStatsForDifficulty("easy")?.bestWinTime).toBe(90);
+    });
   });
 
   describe("getMultiplayerSummary", () => {

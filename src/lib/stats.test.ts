@@ -12,6 +12,27 @@ describe("stats", () => {
     localStorage.clear();
   });
 
+  it("keeps a difficulty's personal best when another difficulty floods the history", () => {
+    // The 100-game cap was global: 100 medium games pushed an old easy
+    // PB out of the ring and the displayed best silently regressed (or
+    // the whole easy row vanished). Eviction must be per bucket.
+    saveGameResult("easy", "standard", 100, true);
+    for (let i = 0; i < 120; i++) {
+      saveGameResult("medium", "standard", 500 + i, true);
+    }
+
+    const easy = getStatsForDifficulty("easy", "standard");
+    expect(easy).not.toBeNull();
+    expect(easy!.bestTime).toBe(100);
+  });
+
+  it("still caps each bucket's history", () => {
+    for (let i = 0; i < 120; i++) {
+      saveGameResult("easy", "standard", 200 + i, true);
+    }
+    expect(getStats().length).toBeLessThanOrEqual(100);
+  });
+
   it("stamps records with the app's local calendar date", () => {
     // date.ts is the single source of "today": toISOString() reports
     // the UTC date, which is tomorrow for an evening game in any
