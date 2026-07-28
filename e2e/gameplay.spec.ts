@@ -135,6 +135,12 @@ test("clicking digits notes a drag-selected range and keeps the selection", asyn
   });
   await page.mouse.up();
 
+  // The legend tracks the tap action: with a range selected, tap
+  // pencils notes and the cheat-sheet must say so.
+  await expect(
+    page.getByText("tap = note · hold = note · drag = place"),
+  ).toBeVisible();
+
   // Click two numpad digits, each off-center with 2px of wobble.
   const pad = page.locator('[role="group"][aria-label="Number pad"]:visible');
   const digits: number[] = [];
