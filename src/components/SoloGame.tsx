@@ -165,6 +165,17 @@ export function SoloGame({
     return set;
   }, [game.activeHint]);
 
+  // Masthead ink line tracks the player's own solve progress — givens
+  // don't count, matching multiplayer's synced completion percent, so the
+  // rule starts blank and inks in as *you* fill the page.
+  const nonGivenTotal = 81 - game.board.flat().filter((c) => c.isGiven).length;
+  const solvePercent =
+    nonGivenTotal > 0
+      ? Math.round(
+          ((nonGivenTotal - game.cellsRemaining) / nonGivenTotal) * 100,
+        )
+      : 100;
+
   return (
     <GameLayout
       onBack={handleBack}
@@ -176,7 +187,7 @@ export function SoloGame({
       settingsExtra={
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       }
-      progressPercent={Math.round(((81 - game.cellsRemaining) / 81) * 100)}
+      progressPercent={solvePercent}
       timer={
         <button
           type="button"

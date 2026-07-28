@@ -203,7 +203,7 @@ export function MultiplayerBoard({
       onPositionChange={setPosition}
       onDeselectCell={highlight.deselectCell}
       headerClassName="max-w-[min(100vw-2rem,28rem)] lg:max-w-[35rem]"
-      progressPercent={Math.round(((81 - game.cellsRemaining) / 81) * 100)}
+      progressPercent={myPercent}
       timer={
         <div className="flex flex-col items-center px-4 py-1">
           <Timer

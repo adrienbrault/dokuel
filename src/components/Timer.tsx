@@ -32,13 +32,16 @@ export function Timer({
 
   // The colon breathes (see .timer-colon) — the digits themselves stay
   // still, so the running state shows without the numbers jittering.
+  // Gated on `running`: a paused or finished clock must not signal life.
   const parts = formatTime(seconds).split(":");
   return (
     <span className={className ?? "text-mono text-base"}>
       {parts.map((part, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: positional segments
         <Fragment key={i}>
-          {i > 0 && <span className="timer-colon">:</span>}
+          {i > 0 && (
+            <span className={running ? "timer-colon" : undefined}>:</span>
+          )}
           {part}
         </Fragment>
       ))}
