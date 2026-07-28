@@ -63,6 +63,17 @@ function corsHeaders(): Record<string, string> {
 type WsAttachment = { topics: string[] };
 
 export class SignalingRoom extends DurableObject {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    // y-webrtc keepalive pings answered by the runtime itself, without
+    // waking a hibernated object — the previous in-handler pong meant
+    // every idle client resurrected the DO every ~30s, defeating
+    // hibernation entirely.
+    this.ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair('{"type":"ping"}', '{"type":"pong"}'),
+    );
+  }
+
   async fetch(request: Request): Promise<Response> {
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
@@ -119,6 +130,8 @@ export class SignalingRoom extends DurableObject {
         break;
       }
       case "ping": {
+        // Fallback for ping payloads that don't byte-match the
+        // auto-response pair (e.g. different whitespace).
         try {
           ws.send(JSON.stringify({ type: "pong" }));
         } catch {
