@@ -12,6 +12,10 @@ function stackUnderPointer(stack: Element[]) {
     stack) as typeof document.elementsFromPoint;
 }
 
+function nextFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+}
+
 function movePointer(pointerType = "mouse") {
   window.dispatchEvent(
     new PointerEvent("pointermove", { clientX: 10, clientY: 10, pointerType }),
@@ -26,7 +30,7 @@ afterEach(() => {
 });
 
 describe("useHoverCursor", () => {
-  it("names the affordance on the body so a stacked overlay inherits it", () => {
+  it("names the affordance on the body so a stacked overlay inherits it", async () => {
     // The cursor is resolved from the topmost hit-testable element under
     // the pointer. A browser extension's overlay sits above the board, so
     // a rule scoped to cells never reaches it and the arrow stays. Naming
@@ -39,6 +43,9 @@ describe("useHoverCursor", () => {
 
     renderHook(() => useHoverCursor());
     movePointer();
+    // The hook hit-tests once per frame — the cursor can only change as
+    // often as the screen does.
+    await nextFrame();
 
     expect(document.body.dataset.hoverCursor).toBe("grab");
   });

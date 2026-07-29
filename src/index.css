@@ -573,6 +573,23 @@ body {
   cursor: grab;
 }
 
+/* The same affordances again, page-wide, driven by useHoverCursor.
+   The rules above only reach the board's own elements, and the cursor
+   is resolved from the topmost hit-testable element under the pointer
+   — which on a real machine is often not ours. Browser extensions,
+   password managers and accessibility tools inject full-viewport
+   layers that sit above the board and answer the hit test instead of
+   it, leaving the arrow in place. The drag cursor never had this
+   problem because its rule was always page-wide; this gives the
+   resting cursor the same reach. Declared before the drag rules so a
+   drag wins the tie on source order. */
+body[data-hover-cursor="cell"] * {
+  cursor: cell;
+}
+body[data-hover-cursor="grab"] * {
+  cursor: grab;
+}
+
 /* Cursor during a drag. The pointer holds a digit no matter which
    surface it is over, so the closed hand is applied page-wide and
    only the cell under the pointer overrides it — copy where the

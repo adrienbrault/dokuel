@@ -8,6 +8,7 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
+import { useHoverCursor } from "./hooks/useHoverCursor.ts";
 import { generateId } from "./lib/id.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
@@ -155,6 +156,11 @@ function App() {
       window.history.replaceState(null, "", canonical);
     }
   }, []);
+
+  // Mounted once for the whole app: it reads the affordance straight
+  // off the DOM, so it covers every screen that renders a board or a
+  // numpad without being threaded through them.
+  useHoverCursor();
 
   const darkMode = useDarkMode();
   const [soundOn, setSoundOn] = useState(getSoundEnabled);
