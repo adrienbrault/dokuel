@@ -137,7 +137,8 @@ describe("useHoverCursor", () => {
     cell.dataset.cellFilled = "true";
     document.body.append(cell);
     const hits = vi.fn(() => [cell]);
-    document.elementsFromPoint = hits as unknown as typeof document.elementsFromPoint;
+    document.elementsFromPoint =
+      hits as unknown as typeof document.elementsFromPoint;
 
     renderHook(() => useHoverCursor());
     movePointer();
