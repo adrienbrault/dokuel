@@ -87,13 +87,6 @@ export const Cell = memo(function Cell({
                 ? "bg-cell-match-row-col"
                 : "bg-cell-bg";
 
-  // Desktop-only affordance: the cursor is the one channel that can
-  // advertise a gesture before it is attempted. A filled cell holds a
-  // digit that can be picked up and dropped elsewhere, so it reads as
-  // grabbable; an empty one can be swept into a multi-cell selection,
-  // which is the spreadsheet gesture `cursor: cell` already names.
-  const cursorClass = cell.value !== null ? "cursor-grab" : "cursor-cell";
-
   const textClass = cell.isGiven
     ? "text-cell-given font-bold"
     : isConflict
@@ -123,7 +116,7 @@ export const Cell = memo(function Cell({
 					aspect-square w-full
 					${bgClass}
 					transition-colors duration-100
-					select-none touch-none ${cursorClass}
+					select-none touch-none
 					outline-none focus-visible:ring-2 focus-visible:ring-accent
 					${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
 					${revealDelay !== undefined ? "animate-cell-reveal" : ""}
@@ -135,6 +128,11 @@ export const Cell = memo(function Cell({
       }
       data-row={row}
       data-col={col}
+      // Cursor hook, not styling: a filled cell holds a digit that can
+      // be picked up, so the unlayered resting-cursor rules give it the
+      // open hand. See "Cursor affordances" in index.css for why this
+      // isn't a cursor-grab utility class.
+      data-cell-filled={cell.value !== null ? "true" : undefined}
       data-drag-source={isDragSource ? "true" : undefined}
       data-drop-target={dropTargetState ?? undefined}
       data-drop-mode={
