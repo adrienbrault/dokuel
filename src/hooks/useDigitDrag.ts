@@ -178,6 +178,20 @@ export function useDigitDrag({
     [applyState],
   );
 
+  // A drag's cursor belongs to the page, not to one element: the
+  // pointer travels over the board, the numpad and the margins between
+  // them while carrying a digit. Flagging the document lets one CSS
+  // rule keep the closed hand everywhere, and lets the cell under the
+  // pointer override it with the drop verb.
+  const isDragging = state !== null;
+  useEffect(() => {
+    if (!isDragging) return;
+    document.body.dataset.digitDrag = "true";
+    return () => {
+      delete document.body.dataset.digitDrag;
+    };
+  }, [isDragging]);
+
   useEffect(() => {
     if (activePointerId === null) return;
     const ownPointerId = activePointerId;
