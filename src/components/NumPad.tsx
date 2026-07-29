@@ -120,11 +120,11 @@ export function NumPad({
       <NumPadLegend isVertical={isVertical} tapAction={tapAction} />
       <div
         ref={groupRef}
-        // The cursor lives on the group as well as the keys: the gaps
-        // between keys belong to this element, and without it the
-        // pointer falls back to the default arrow between every key it
-        // crosses.
-        className={`flex gap-1 lg:gap-1.5 ${onStartDrag ? "cursor-grab" : ""} ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full lg:grid lg:grid-cols-3 lg:w-auto lg:gap-2"}`}
+        // Cursor hook: the gutters between keys belong to this element,
+        // so the grab cursor is declared here and inherited by every
+        // key. Only set when the keys can actually be dragged.
+        data-numpad-keys={onStartDrag ? "true" : undefined}
+        className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full lg:grid lg:grid-cols-3 lg:w-auto lg:gap-2"}`}
         role="group"
         aria-label="Number pad"
       >
@@ -143,7 +143,7 @@ export function NumPad({
               type="button"
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${onStartDrag ? "cursor-grab" : "cursor-pointer"} ${isVertical ? "h-11 short:h-10 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16 lg:w-16 lg:flex-none"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
+              className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 short:h-10 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16 lg:w-16 lg:flex-none"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
               onPointerDown={handlePointerDown(n)}
               onPointerMove={handlePointerMove}
               onPointerUp={() => endPress(true)}

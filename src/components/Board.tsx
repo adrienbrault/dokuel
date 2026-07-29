@@ -167,15 +167,15 @@ export function Board({
           gridTemplateColumns: `repeat(3, ${boxPx}px)`,
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
         }}
-        // cursor-cell on the grid, not just on the cells: the gaps
-        // between cells and the board's own padding are part of this
-        // element, and a bare grid would drop the pointer back to the
-        // default arrow at every seam it crosses. Cells inherit this
-        // and filled ones override it with cursor-grab.
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none cursor-cell"
+        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
         role="region"
         aria-label="Sudoku board"
         data-board-glow
+        // Cursor hook: the seams between cells and the board's own
+        // padding belong to this element, so the resting cursor is
+        // declared here and inherited by every cell. Filled cells
+        // override it with the grab cursor.
+        data-board-grid
         onPointerDown={
           onSetSelectedCells ? dragHandlers.onPointerDown : undefined
         }
