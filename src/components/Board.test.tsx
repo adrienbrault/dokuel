@@ -700,3 +700,22 @@ describe("Board filled-cell drag gating", () => {
     expect(onSelectCell).toHaveBeenCalledWith(3, 3);
   });
 });
+
+describe("Board cursor affordance", () => {
+  it("carries the cell cursor on the grid itself, not only on the cells", () => {
+    // The 1–2px seams between cells belong to the grid element. Without
+    // a cursor of its own the grid falls back to the default arrow, so
+    // sweeping the pointer across the board makes the cursor blink
+    // between the affordance and the arrow at every seam.
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    expect(region.className).toContain("cursor-cell");
+  });
+});
