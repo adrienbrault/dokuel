@@ -90,8 +90,9 @@ export const Cell = memo(function Cell({
   // Desktop-only affordance: the cursor is the one channel that can
   // advertise a gesture before it is attempted. A filled cell holds a
   // digit that can be picked up and dropped elsewhere, so it reads as
-  // grabbable.
-  const cursorClass = cell.value !== null ? "cursor-grab" : "";
+  // grabbable; an empty one can be swept into a multi-cell selection,
+  // which is the spreadsheet gesture `cursor: cell` already names.
+  const cursorClass = cell.value !== null ? "cursor-grab" : "cursor-cell";
 
   const textClass = cell.isGiven
     ? "text-cell-given font-bold"
