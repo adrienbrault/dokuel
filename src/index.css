@@ -538,6 +538,28 @@ body {
 /* Drop landing: the receiving cell's digit gets the existing
    .animate-pop-in via the Cell render path; nothing extra needed. */
 
+/* Cursor during a drag. The pointer holds a digit no matter which
+   surface it is over, so the closed hand is applied page-wide and
+   only the cell under the pointer overrides it — copy where the
+   digit would land, not-allowed where it can't. Descendants are
+   matched explicitly: the cursor is resolved from the deepest
+   element under the pointer, which inside a cell is the notes grid
+   or the drop preview, not the cell button itself. These rules sit
+   outside Tailwind's layers, so they win over the cursor-grab /
+   cursor-cell utilities the board and numpad carry at rest. */
+body[data-digit-drag],
+body[data-digit-drag] * {
+  cursor: grabbing;
+}
+body[data-digit-drag] [data-drop-target="valid"],
+body[data-digit-drag] [data-drop-target="valid"] * {
+  cursor: copy;
+}
+body[data-digit-drag] [data-drop-target="invalid"],
+body[data-digit-drag] [data-drop-target="invalid"] * {
+  cursor: not-allowed;
+}
+
 /* ─── Design System: Component Classes ─── */
 
 /* Buttons */
