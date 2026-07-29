@@ -268,6 +268,16 @@ describe("Cell chargingDigit", () => {
     expect(screen.getByRole("button").className).toContain("cursor-grab");
   });
 
+  it("offers the range-select cursor over an empty cell", () => {
+    // Empty cells can be swept to build a multi-cell selection —
+    // the same gesture a spreadsheet uses, so it borrows the same
+    // cursor rather than the generic pointer.
+    render(<Cell {...defaultProps()} cell={makeCell()} />);
+    const className = screen.getByRole("button").className;
+    expect(className).toContain("cursor-cell");
+    expect(className).not.toContain("cursor-grab");
+  });
+
   it("hides the static note glyph for the digit being charged", () => {
     // Notes 1, 3, 5 in the cell; charging digit 3 — only 1 and 5
     // should remain visible in the notes grid (the 3 is being shown
