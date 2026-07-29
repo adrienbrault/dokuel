@@ -120,7 +120,11 @@ export function NumPad({
       <NumPadLegend isVertical={isVertical} tapAction={tapAction} />
       <div
         ref={groupRef}
-        className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full lg:grid lg:grid-cols-3 lg:w-auto lg:gap-2"}`}
+        // The cursor lives on the group as well as the keys: the gaps
+        // between keys belong to this element, and without it the
+        // pointer falls back to the default arrow between every key it
+        // crosses.
+        className={`flex gap-1 lg:gap-1.5 ${onStartDrag ? "cursor-grab" : ""} ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full lg:grid lg:grid-cols-3 lg:w-auto lg:gap-2"}`}
         role="group"
         aria-label="Number pad"
       >
