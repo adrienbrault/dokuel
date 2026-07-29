@@ -702,7 +702,7 @@ describe("Board filled-cell drag gating", () => {
 });
 
 describe("Board cursor affordance", () => {
-  it("carries the cell cursor on the grid itself, not only on the cells", () => {
+  it("marks the grid so the cursor covers the seams, not only the cells", () => {
     // The 1–2px seams between cells belong to the grid element. Without
     // a cursor of its own the grid falls back to the default arrow, so
     // sweeping the pointer across the board makes the cursor blink
@@ -716,6 +716,6 @@ describe("Board cursor affordance", () => {
       />,
     );
     const region = screen.getByRole("region", { name: /sudoku board/i });
-    expect(region.className).toContain("cursor-cell");
+    expect(region).toHaveAttribute("data-board-grid");
   });
 });

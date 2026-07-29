@@ -63,21 +63,19 @@ describe("NumPad", () => {
     expect(onTapNumber).toHaveBeenCalledWith(7);
   });
 
-  it("offers a grab cursor on the digit keys when they can be dragged", () => {
-    // A key is not just a button: it can be picked up and dropped onto
-    // a cell. Desktop players only find that out by accident unless the
-    // cursor says so.
+  it("leaves the keys unmarked when they cannot be dragged", () => {
+    // No drag handler means no drag gesture to advertise: the pad falls
+    // back to the plain button cursor instead of the open hand.
     render(
       <NumPad
         position="bottom"
         remainingCounts={ZERO_REMAINING}
         onTapNumber={vi.fn()}
-        onStartDrag={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: /^7, / }).className).toContain(
-      "cursor-grab",
-    );
+    expect(
+      screen.getByRole("group", { name: "Number pad" }),
+    ).not.toHaveAttribute("data-numpad-keys");
   });
 
   it("does not double-fire onTapNumber when click follows a pointer tap", () => {
@@ -972,7 +970,7 @@ describe("NumPad", () => {
 });
 
 describe("NumPad cursor affordance", () => {
-  it("carries the grab cursor on the key group, not only on the keys", () => {
+  it("marks the key group so the cursor covers the gaps between keys", () => {
     // The gaps between keys belong to the group element, so a bare
     // group drops the pointer back to the default arrow between every
     // key the pointer crosses.
@@ -984,8 +982,8 @@ describe("NumPad cursor affordance", () => {
         onStartDrag={vi.fn()}
       />,
     );
-    expect(
-      screen.getByRole("group", { name: "Number pad" }).className,
-    ).toContain("cursor-grab");
+    expect(screen.getByRole("group", { name: "Number pad" })).toHaveAttribute(
+      "data-numpad-keys",
+    );
   });
 });
