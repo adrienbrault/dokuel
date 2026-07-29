@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Locator } from "@playwright/test";
 import {
   holdNumpadDigit,
   nearlyWonSave,
@@ -207,4 +207,69 @@ test("holding a numpad digit writes a pencil note", async ({ page }) => {
   await expect(
     page.locator(`button[aria-label^="${prefix},"][aria-label*="notes"]`),
   ).toBeVisible();
+});
+
+/**
+ * Cursor affordances. The board and numpad advertise their gestures to
+ * desktop players through `cursor:` alone, and the drag-time cursors
+ * come from unlayered CSS that has to outrank Tailwind's utilities —
+ * a resolution only a real browser can answer, so it is asserted here
+ * rather than in a unit test.
+ */
+test("the cursor names the gesture available under the pointer", async ({
+  page,
+}) => {
+  // What the browser resolves at a point, which is what the user sees:
+  // the cursor comes from the deepest element under the pointer, not
+  // from the cell button that carries the utility class.
+  const cursorAt = (x: number, y: number) =>
+    page.evaluate(
+      ([px, py]: number[]) => {
+        const el = document.elementFromPoint(px as number, py as number);
+        return el ? getComputedStyle(el).cursor : null;
+      },
+      [x, y],
+    );
+  const centerOf = async (locator: Locator) => {
+    const box = await locator.boundingBox();
+    if (!box) throw new Error("element has no box");
+    return [box.x + box.width / 2, box.y + box.height / 2] as const;
+  };
+
+  await page.goto("/solo/easy/e2e-cursors");
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+  const given = page.locator('button[aria-label*="given"]').first();
+  const empty = page.locator('button[aria-label*=", empty"]').first();
+  const key = page
+    .locator(
+      '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+    )
+    .first();
+
+  const [givenX, givenY] = await centerOf(given);
+  const [emptyX, emptyY] = await centerOf(empty);
+  const [keyX, keyY] = await centerOf(key);
+
+  // At rest: pick up a digit, sweep a range of blanks, pick up a key.
+  expect(await cursorAt(givenX, givenY)).toBe("grab");
+  expect(await cursorAt(emptyX, emptyY)).toBe("cell");
+  expect(await cursorAt(keyX, keyY)).toBe("grab");
+
+  // Mid-drag, the resting cursors give way to the drop verb.
+  await page.mouse.move(givenX, givenY);
+  await page.mouse.down();
+  await page.mouse.move(emptyX, emptyY, { steps: 8 });
+  expect(await cursorAt(emptyX, emptyY)).toBe("copy");
+  expect(await cursorAt(keyX, keyY)).toBe("grabbing");
+
+  // A given can't receive the digit, and says so before the release.
+  const secondGiven = page.locator('button[aria-label*="given"]').nth(1);
+  const [otherX, otherY] = await centerOf(secondGiven);
+  await page.mouse.move(otherX, otherY, { steps: 8 });
+  expect(await cursorAt(otherX, otherY)).toBe("not-allowed");
+
+  // Released, the page goes back to its resting affordances.
+  await page.mouse.up();
+  expect(await cursorAt(keyX, keyY)).toBe("grab");
 });
