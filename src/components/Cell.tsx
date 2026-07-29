@@ -87,6 +87,12 @@ export const Cell = memo(function Cell({
                 ? "bg-cell-match-row-col"
                 : "bg-cell-bg";
 
+  // Desktop-only affordance: the cursor is the one channel that can
+  // advertise a gesture before it is attempted. A filled cell holds a
+  // digit that can be picked up and dropped elsewhere, so it reads as
+  // grabbable.
+  const cursorClass = cell.value !== null ? "cursor-grab" : "";
+
   const textClass = cell.isGiven
     ? "text-cell-given font-bold"
     : isConflict
@@ -116,7 +122,7 @@ export const Cell = memo(function Cell({
 					aspect-square w-full
 					${bgClass}
 					transition-colors duration-100
-					select-none touch-none
+					select-none touch-none ${cursorClass}
 					outline-none focus-visible:ring-2 focus-visible:ring-accent
 					${isSelected || isMultiSelected ? (isPaper ? "ring-2 ring-accent ring-inset" : "cell-selected-glow") : ""}
 					${revealDelay !== undefined ? "animate-cell-reveal" : ""}
