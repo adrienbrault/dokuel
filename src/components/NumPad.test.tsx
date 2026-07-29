@@ -63,6 +63,23 @@ describe("NumPad", () => {
     expect(onTapNumber).toHaveBeenCalledWith(7);
   });
 
+  it("offers a grab cursor on the digit keys when they can be dragged", () => {
+    // A key is not just a button: it can be picked up and dropped onto
+    // a cell. Desktop players only find that out by accident unless the
+    // cursor says so.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        onStartDrag={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^7, / }).className).toContain(
+      "cursor-grab",
+    );
+  });
+
   it("does not double-fire onTapNumber when click follows a pointer tap", () => {
     const onTapNumber = vi.fn();
     render(
