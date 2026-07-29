@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
@@ -23,11 +24,26 @@ export function MultiplayerGame({
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const [toast, setToast] = useState<string | null>(null);
+  // Arms after the disconnect has persisted for a beat; combined with
+  // the live value below so the banner hides instantly on return.
+  const disconnectSettled = useDelayedFlag(
+    mp.opponentDisconnected && !mp.gameOver,
+    2_000,
+  );
+  // "Connecting..." with no room state after this long means the room
+  // ended, the code is wrong, or ICE can't get through — surface an
+  // explanation and a way out instead of an infinite spinner.
+  const connectionStalled = useDelayedFlag(
+    !mp.roomState && !mp.hasStartedGame,
+    12_000,
+  );
 
-  // Show errors as transient toasts instead of replacing the UI
+  // Show errors as transient toasts instead of replacing the UI. The
+  // hook raises a fresh object per error, so a repeat of the same
+  // message re-fires this effect and the toast shows again.
   useEffect(() => {
     if (!mp.error) return;
-    setToast(mp.error);
+    setToast(mp.error.message);
     const id = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(id);
   }, [mp.error]);
@@ -80,9 +96,12 @@ export function MultiplayerGame({
         />
         {/* opponentDisconnected is awareness-based — the only signal
             that reflects the opponent. provider.connected is local
-            intent and goes false on our own tab-hide teardown. */}
-        {mp.opponentDisconnected && !mp.gameOver && (
-          <DisconnectOverlay onClaimWin={mp.claimForfeitWin} />
+            intent and goes false on our own tab-hide teardown. The
+            delay swallows the re-sync moment right after OUR return
+            from a backgrounded tab, and the live && hides the banner
+            the instant the opponent is back. */}
+        {disconnectSettled && mp.opponentDisconnected && !mp.gameOver && (
+          <DisconnectBanner onClaimWin={mp.claimForfeitWin} />
         )}
         {toast && <Toast message={toast} />}
       </>
@@ -90,6 +109,32 @@ export function MultiplayerGame({
   }
 
   if (!mp.roomState) {
+    if (connectionStalled) {
+      return (
+        <div className="screen">
+          <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
+            <h1 className="heading">Still trying to connect…</h1>
+            <p className="caption max-w-sm">
+              The room may have ended, or the connection can't get through.
+              Double-check the code with the host, make sure both of you are
+              online, or try joining from the same Wi-Fi network.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                className="btn btn-lg btn-primary"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+              <button type="button" className="btn-ghost" onClick={onBack}>
+                ← Back
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="screen">
         <p className="caption">Connecting...</p>
@@ -122,7 +167,13 @@ export function MultiplayerGame({
 
 const DISCONNECT_TIMEOUT = 60;
 
-function DisconnectOverlay({ onClaimWin }: { onClaimWin: () => void }) {
+/**
+ * Non-blocking notice while the opponent's presence is gone. The spec's
+ * grace period is exactly when the still-connected player wants to race
+ * ahead, so the board must stay fully playable underneath — this is a
+ * status banner pinned to the top, never a modal.
+ */
+function DisconnectBanner({ onClaimWin }: { onClaimWin: () => void }) {
   const [seconds, setSeconds] = useState(DISCONNECT_TIMEOUT);
 
   useEffect(() => {
@@ -139,26 +190,27 @@ function DisconnectOverlay({ onClaimWin }: { onClaimWin: () => void }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-modal-backdrop">
-      <div className="bg-bg-overlay rounded-2xl px-8 py-6 shadow-2xl text-center animate-modal-content">
-        <p className="text-lg font-semibold text-text-primary">
-          Opponent disconnected
+    <div
+      role="status"
+      className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-full bg-bg-overlay px-5 py-2.5 shadow-lg border border-border-default animate-modal-content"
+      style={{ top: "calc(env(safe-area-inset-top) + 0.75rem)" }}
+    >
+      <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
+        Opponent disconnected
+      </p>
+      {seconds > 0 ? (
+        <p className="caption whitespace-nowrap">
+          <span className="font-mono tabular-nums">{seconds}s</span>
         </p>
-        {seconds > 0 ? (
-          <p className="caption mt-1">
-            Reconnecting...{" "}
-            <span className="font-mono tabular-nums">{seconds}s</span>
-          </p>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-md btn-primary mt-3"
-            onClick={onClaimWin}
-          >
-            Claim Win
-          </button>
-        )}
-      </div>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-md btn-primary"
+          onClick={onClaimWin}
+        >
+          Claim Win
+        </button>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { serializeBoard } from "../lib/board-engine.ts";
+import { hashCode, seededRandom } from "../lib/daily.ts";
 import {
   completeGame,
   type GameCompletionResult,
@@ -59,12 +60,26 @@ export function useResumableSudoku({
       const solution = solvePuzzle(initialPuzzle);
       if (solution) return { saved: null, puzzle: initialPuzzle, solution };
     }
-    return { saved: null, ...generatePuzzleWithSolution(difficulty) };
+    // Seed generation from the gameKey: /solo/<difficulty>/<key> then
+    // identifies its board, so a shared or bookmarked solo URL
+    // reproduces the same puzzle on any device (same mechanism as the
+    // daily challenge).
+    const rng = gameKey
+      ? seededRandom(hashCode(`sudoku-solo-${gameKey}`))
+      : undefined;
+    return { saved: null, ...generatePuzzleWithSolution(difficulty, rng) };
   }, [gameKey, initialPuzzle, difficulty]);
   const { saved, puzzle, solution } = resolved;
 
   const savedBoard = useMemo(
-    () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
+    () =>
+      saved
+        ? {
+            values: saved.values,
+            notes: saved.notes,
+            hintsUsed: saved.hintsUsed,
+          }
+        : undefined,
     [saved],
   );
 
@@ -74,7 +89,14 @@ export function useResumableSudoku({
     saved?.assistLevel ?? initialAssistLevel,
   );
 
-  // Auto-save on every board / assist-level change while playing
+  // Callers pass inline closures (new identity per render); read via a
+  // ref so the save effect keys on game state, not render churn — with
+  // the callback in the deps, a digit drag re-rendered SoloGame per
+  // pointermove and wrote localStorage up to ~60 times a second.
+  const getTimerSecondsRef = useRef(getTimerSeconds);
+  getTimerSecondsRef.current = getTimerSeconds;
+
+  // Auto-save on every board / hint / assist-level change while playing
   useEffect(() => {
     if (!gameKey || game.status === "completed") return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
@@ -82,19 +104,57 @@ export function useResumableSudoku({
       puzzle,
       values,
       notes,
-      timer: getTimerSeconds(),
+      timer: getTimerSecondsRef.current(),
       difficulty,
       assistLevel,
+      hintsUsed: game.hintsUsed,
     };
     saveGame(gameKey, data);
   }, [
     game.board,
     game.status,
+    game.hintsUsed,
     gameKey,
     puzzle,
     difficulty,
     assistLevel,
-    getTimerSeconds,
+  ]);
+
+  // Flush on pagehide/tab-hide: the effect above only fires on state
+  // changes, so idle thinking time between moves would otherwise be
+  // lost on refresh and the resumed timer would rewind.
+  useEffect(() => {
+    if (!gameKey) return;
+    const flush = () => {
+      if (game.status === "completed") return;
+      const { values, notes } = serializeBoard(game.board as Cell[][]);
+      saveGame(gameKey, {
+        puzzle,
+        values,
+        notes,
+        timer: getTimerSecondsRef.current(),
+        difficulty,
+        assistLevel,
+        hintsUsed: game.hintsUsed,
+      });
+    };
+    const onVisibility = () => {
+      if (document.hidden) flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [
+    game.board,
+    game.status,
+    game.hintsUsed,
+    gameKey,
+    puzzle,
+    difficulty,
+    assistLevel,
   ]);
 
   // On completion: orchestrate side effects via completeGame, notify caller.

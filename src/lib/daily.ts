@@ -2,7 +2,8 @@ import { todayLocalISO } from "./date.ts";
 import { generatePuzzleWithSolution } from "./sudoku.ts";
 import type { Difficulty } from "./types.ts";
 
-function hashCode(str: string): number {
+/** Deterministic 32-bit string hash — the seed source for seededRandom. */
+export function hashCode(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0;
@@ -10,7 +11,12 @@ function hashCode(str: string): number {
   return hash >>> 0;
 }
 
-function seededRandom(seed: number): () => number {
+/**
+ * Deterministic integer LCG → [0,1) float. Exported as the app's one
+ * seeded Rng so tests exercise the exact generator the daily golden
+ * vectors pin — a copied implementation could drift silently.
+ */
+export function seededRandom(seed: number): () => number {
   let state = seed;
   return () => {
     state = (Math.imul(state, 1664525) + 1013904223) | 0;

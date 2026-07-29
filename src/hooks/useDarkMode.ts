@@ -35,46 +35,48 @@ function syncThemeColorMeta(theme: Theme, isDark: boolean) {
   document.head.appendChild(meta);
 }
 
-function applyTheme(theme: Theme) {
-  const isDark =
-    theme === "dark" || (theme === "system" && getSystemPreference());
-  document.documentElement.classList.toggle("dark", isDark);
-  syncThemeColorMeta(theme, isDark);
-}
-
 export function useDarkMode() {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem("sudoku_theme") as Theme | null;
-    return stored || "system";
+    try {
+      const stored = localStorage.getItem("sudoku_theme") as Theme | null;
+      return stored || "system";
+    } catch {
+      // Storage access blocked — fall back to following the OS.
+      return "system";
+    }
   });
+  // The system preference is React state, not a render-time DOM read:
+  // isDark must be correct in the SAME render as a toggle (the effect
+  // that applies the class runs after), and a mounted toggle must
+  // re-render when the OS theme flips.
+  const [systemDark, setSystemDark] = useState(getSystemPreference);
+
+  const isDark = theme === "dark" || (theme === "system" && systemDark);
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    document.documentElement.classList.toggle("dark", isDark);
+    syncThemeColorMeta(theme, isDark);
+  }, [theme, isDark]);
 
-  // Listen for system preference changes when in system mode
   useEffect(() => {
-    if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => applyTheme("system");
+    const handler = () => setSystemDark(mq.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, []);
 
   const setTheme = useCallback((t: Theme) => {
-    localStorage.setItem("sudoku_theme", t);
+    try {
+      localStorage.setItem("sudoku_theme", t);
+    } catch {
+      // Storage unavailable — the in-session choice still applies.
+    }
     setThemeState(t);
   }, []);
 
   const toggle = useCallback(() => {
-    const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "light" : "dark");
-  }, [setTheme]);
+  }, [setTheme, isDark]);
 
-  return {
-    theme,
-    setTheme,
-    toggle,
-    isDark: document.documentElement.classList.contains("dark"),
-  };
+  return { theme, setTheme, toggle, isDark };
 }

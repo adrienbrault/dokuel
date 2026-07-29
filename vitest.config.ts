@@ -6,6 +6,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // A spy left installed by a failing test must not cascade into the
+    // next test's failure — restore all mocks between tests.
+    restoreMocks: true,
     coverage: {
       provider: "v8",
       include: ["src/lib/**", "src/hooks/**"],
@@ -14,11 +17,14 @@ export default defineConfig({
         "src/test-setup.ts",
         "src/lib/types.ts",
         "src/lib/constants.ts",
-        "src/hooks/useYjsMultiplayer.ts",
       ],
+      // Branch threshold reflects useYjsMultiplayer being measured: the
+      // suite genuinely covers ~85% of branches with it included, which
+      // is more honest than the previous 88% computed while excluding
+      // the hardest file. Ratchet upward as its coverage grows.
       thresholds: {
         statements: 90,
-        branches: 88,
+        branches: 85,
         functions: 90,
         lines: 90,
       },

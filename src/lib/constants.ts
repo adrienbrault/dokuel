@@ -24,10 +24,10 @@ export const DIFFICULTY_BADGE_CLASSES: Record<Difficulty, string> = {
 };
 
 export const DIFFICULTY_TEXT_COLORS: Record<Difficulty, string> = {
-  easy: "text-emerald-600 dark:text-emerald-400",
-  medium: "text-amber-600 dark:text-amber-400",
-  hard: "text-orange-600 dark:text-orange-400",
-  expert: "text-rose-600 dark:text-rose-400",
+  easy: "text-difficulty-easy-text",
+  medium: "text-difficulty-medium-text",
+  hard: "text-difficulty-hard-text",
+  expert: "text-difficulty-expert-text",
 };
 
 export const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] =

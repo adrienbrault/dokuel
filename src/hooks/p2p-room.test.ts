@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { Awareness, removeAwarenessStates } from "y-protocols/awareness";
 import * as Y from "yjs";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
+  announcePresence,
   claimWinner,
   createRoomFromDoc,
   getHostId,
@@ -12,6 +14,7 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  leaveRoom,
   observeRoomChanges,
   type P2PRoom,
   requestRematch,
@@ -314,6 +317,36 @@ describe("p2p-room", () => {
       expect(claimed).toBe(false);
       expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
     });
+
+    it("lets a verified solved claim displace a forfeit claim", () => {
+      // A forfeit only means anything while the "absent" player never
+      // finishes. If they complete the real board, the forfeit was
+      // premature or fabricated — the solve wins.
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "medium");
+
+      const solution = room.doc.getMap("room").get("solution") as string;
+      claimWinner(room, "player2", "Bob", null);
+      const claimed = claimWinner(room, "player1", "Alice", solution);
+
+      expect(claimed).toBe(true);
+      expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
+    });
+
+    it("does not let a wrong board displace a forfeit claim", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "medium");
+
+      claimWinner(room, "player2", "Bob", null);
+      const claimed = claimWinner(room, "player1", "Alice", "1".repeat(81));
+
+      expect(claimed).toBe(false);
+      expect(room.doc.getMap("room").get("winnerId")).toBe("player2");
+    });
   });
 
   describe("requestRematch", () => {
@@ -585,6 +618,112 @@ describe("p2p-room", () => {
       const players = getPlayers(room);
       expect(players).toHaveLength(2);
       expect(players.find((p) => p.id === "p2")?.cellsRemaining).toBe(30);
+    });
+  });
+
+  describe("seat ordering", () => {
+    it("breaks joinOrder ties by codepoint, not locale collation", () => {
+      // Every peer must sort players identically to agree on who holds
+      // a seat. localeCompare("a", "B") is locale-dependent (-1 in en,
+      // codepoint order says "B" < "a") — a mismatch would make two
+      // clients evict different overflow players.
+      const room = createTestRoom();
+      const players = room.doc.getMap("players");
+      for (const id of ["a", "B"]) {
+        const pm = new Y.Map<unknown>();
+        pm.set("name", id);
+        pm.set("color", "blue");
+        pm.set("cellsRemaining", 81);
+        pm.set("completionPercent", 0);
+        pm.set("joinOrder", 0);
+        players.set(id, pm);
+      }
+
+      const ordered = getPlayers(room).map((p) => p.id);
+
+      expect(ordered).toEqual(["B", "a"]);
+    });
+  });
+
+  describe("leaveRoom", () => {
+    it("removes the player's entry from the room", () => {
+      const room = createTestRoom();
+      joinRoom(room, "p1", "Alice");
+      joinRoom(room, "p2", "Bob");
+
+      leaveRoom(room, "p2");
+
+      expect(getPlayers(room)).toHaveLength(1);
+      expect(getPlayers(room)[0]!.id).toBe("p1");
+    });
+
+    it("is a no-op for a player not in the room", () => {
+      const room = createTestRoom();
+      joinRoom(room, "p1", "Alice");
+
+      leaveRoom(room, "ghost");
+
+      expect(getPlayers(room)).toHaveLength(1);
+    });
+
+    it("resolves a concurrent-join overflow back to a startable room", () => {
+      // Two joiners race the host's 2-player cap before syncing: the
+      // merge leaves 3 entries. The deterministic overflow player must
+      // be able to remove itself, otherwise the remaining two are stuck
+      // in a lobby whose Start never enables.
+      const docA = new Y.Doc();
+      const docB = new Y.Doc();
+      const roomA = createRoomFromDoc(docA, "race");
+      const roomB = createRoomFromDoc(docB, "race");
+      joinRoom(roomA, "host", "Host");
+      Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+
+      joinRoom(roomA, "j1", "One");
+      joinRoom(roomB, "j2", "Two");
+      const updateA = Y.encodeStateAsUpdate(docA);
+      const updateB = Y.encodeStateAsUpdate(docB);
+      Y.applyUpdate(docB, updateA);
+      Y.applyUpdate(docA, updateB);
+      expect(getPlayers(roomA)).toHaveLength(3);
+
+      const overflowId = getPlayers(roomA)[2]!.id;
+      leaveRoom(roomA, overflowId);
+      Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+
+      expect(getPlayers(roomA)).toHaveLength(2);
+      expect(getPlayers(roomB)).toHaveLength(2);
+      expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
+    });
+  });
+
+  describe("announcePresence", () => {
+    it("publishes the player identity into awareness", () => {
+      const doc = new Y.Doc();
+      const awareness = new Awareness(doc);
+
+      announcePresence(awareness, "player1", "Alice");
+
+      expect(awareness.getLocalState()).toEqual({
+        user: { id: "player1", name: "Alice" },
+      });
+      awareness.destroy();
+    });
+
+    it("restores presence after a disconnect cleared the local state", () => {
+      const doc = new Y.Doc();
+      const awareness = new Awareness(doc);
+      // y-webrtc's Room.disconnect() removes the local client's
+      // awareness entry, leaving local state null — the situation
+      // after the tab was backgrounded long enough to drop WebRTC.
+      removeAwarenessStates(awareness, [doc.clientID], "disconnect");
+      expect(awareness.getLocalState()).toBeNull();
+
+      announcePresence(awareness, "player1", "Alice");
+
+      expect(awareness.getLocalState()).toEqual({
+        user: { id: "player1", name: "Alice" },
+      });
+      awareness.destroy();
     });
   });
 });

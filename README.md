@@ -53,13 +53,14 @@
 ### Mobile-First UX
 
 - Touch-optimized with 44px+ tap targets
-- Numpad gestures — tap to pencil a note, press-and-hold to commit a value, or drag a digit onto the board (drop high for a value, low for a note)
+- Numpad gestures — tap to enter a value, press-and-hold to pencil a note, or drag a digit onto the board (drop high for a value, low for a note)
 - Tap a numpad digit with no cell selected to highlight every matching digit on the board
 - Haptic feedback (vibration patterns for place, erase, conflict, completion)
 - Synthesized sound effects via Web Audio API (toggleable)
 - Movable numpad — Bottom (default), Left, or Right — configurable via settings popover
 - Safe area support for notched devices
 - Dark mode with system preference detection + manual toggle
+- Installable — web app manifest with home-screen icons; invite links unfurl with a rich preview card
 
 ### Desktop Support
 

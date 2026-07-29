@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
@@ -36,15 +36,14 @@ const roomState: RoomState = {
   winnerName: null,
   winnerBoard: null,
   gameNumber: 1,
-  events: [],
 };
 
 function makeMp() {
   return {
     connected: true,
-    roomState,
-    puzzle: PUZZLE,
-    solution: SOLUTION,
+    roomState: roomState as RoomState | null,
+    puzzle: PUZZLE as string | null,
+    solution: SOLUTION as string | null,
     opponentProgress: null,
     opponentDisconnected: false,
     gameOver: null as { winnerId: string; winnerName: string } | null,
@@ -95,18 +94,135 @@ describe("MultiplayerGame full room", () => {
   });
 });
 
+describe("MultiplayerGame connecting state", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = null;
+    mockMp.puzzle = null;
+    mockMp.solution = null;
+    mockMp.hasStartedGame = false;
+  });
+
+  it("shows a plain connecting note at first", () => {
+    renderGame();
+    expect(screen.getByText(/connecting/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+  });
+
+  it("offers troubleshooting after the connection stalls", () => {
+    // Symmetric-NAT pairs (mobile carriers), a typo'd code, or an
+    // expired room all used to present the same infinite spinner with
+    // zero feedback and no way out.
+    vi.useFakeTimers();
+    try {
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(12_500);
+      });
+      expect(screen.getByText(/still trying to connect/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /retry/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("MultiplayerGame disconnect overlay", () => {
   beforeEach(() => {
     localStorage.clear();
     mockMp = makeMp();
   });
 
-  it("shows the overlay when the opponent's presence drops", () => {
+  it("shows the notice when the opponent's presence drops", () => {
     // opponentDisconnected is the awareness-derived signal — the only
     // one that actually reflects the opponent's connection.
-    mockMp.opponentDisconnected = true;
-    renderGame();
-    expect(screen.getByText("Opponent disconnected")).toBeInTheDocument();
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(screen.getByText("Opponent disconnected")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("waits a beat before showing, so our own reconnect doesn't flash it", () => {
+    // Right after we return from a background tab the opponent's
+    // awareness hasn't re-synced yet — a blocking "opponent
+    // disconnected" flash on every longer app switch reads as a bug.
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      expect(
+        screen.queryByText("Opponent disconnected"),
+      ).not.toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(screen.getByText("Opponent disconnected")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the loser's board playable while the opponent is away", () => {
+    // The grace period is exactly when the still-connected player wants
+    // to race ahead — a full-screen blocking modal costs them 60s.
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      // A status banner, not a modal: jsdom has no hit-testing, so the
+      // structural assertion is what actually pins "non-blocking".
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Opponent disconnected",
+      );
+
+      const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+      fireEvent.click(cell);
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+      expect(
+        screen.getByLabelText(/Cell row 1 column 1, value 5/),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("offers the claim button after the 60s countdown", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(screen.queryByRole("button", { name: /claim win/i })).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(61_000);
+      });
+      const claim = screen.getByRole("button", { name: /claim win/i });
+      fireEvent.click(claim);
+      expect(mockMp.claimForfeitWin).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not show the overlay when only our own provider disconnected", () => {

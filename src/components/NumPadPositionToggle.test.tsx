@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
@@ -52,6 +52,28 @@ describe("NumPadPositionToggle", () => {
     expect(
       screen.getByRole("radiogroup", { name: "Number pad position" }),
     ).toBeInTheDocument();
+  });
+
+  it("implements the radio keyboard pattern: roving tabindex + arrows", async () => {
+    // role="radio" without arrow-key movement is worse than plain
+    // buttons: keyboard users expect one Tab stop and arrows to move
+    // the selection within the group.
+    const onChange = vi.fn();
+    render(<NumPadPositionToggle position="bottom" onChange={onChange} />);
+
+    const bottom = screen.getByRole("radio", { name: "Pad bottom" });
+    const left = screen.getByRole("radio", { name: "Pad left" });
+    const right = screen.getByRole("radio", { name: "Pad right" });
+    expect(bottom).toHaveAttribute("tabindex", "0");
+    expect(left).toHaveAttribute("tabindex", "-1");
+    expect(right).toHaveAttribute("tabindex", "-1");
+
+    bottom.focus();
+    fireEvent.keyDown(bottom, { key: "ArrowRight" });
+    expect(onChange).toHaveBeenCalledWith("right");
+
+    fireEvent.keyDown(bottom, { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenCalledWith("left");
   });
 
   it("updates checked state when position prop changes", () => {

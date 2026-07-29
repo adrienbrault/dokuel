@@ -1,8 +1,83 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
 import { parsePuzzle } from "./sudoku.ts";
 
 describe("findHint", () => {
+  describe("mistake redirection", () => {
+    const solved =
+      "534678912" +
+      "672195348" +
+      "198342567" +
+      "859761423" +
+      "426853791" +
+      "713924856" +
+      "961537284" +
+      "287419635" +
+      "345286179";
+
+    it("points at the player's wrong entry instead of deducing from it", () => {
+      // Two empty cells; the player filled (0,0) with 9 — locally
+      // consistent, but wrong (solution says 5). Deducing singles from
+      // that premise recommends provably wrong digits with full
+      // confidence; the hint must surface the mistake instead.
+      const puzzle = "..".concat(solved.slice(2));
+      const board = parsePuzzle(puzzle);
+      board[0]![0]!.value = 9;
+
+      const hint = findHint(board, solved);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("mistake");
+      expect(hint!.position).toEqual({ row: 0, col: 0 });
+      expect(hint!.explanation).toContain("9");
+    });
+
+    it("never recommends a digit that contradicts the solution", () => {
+      // The executed failure from the review: with a wrong entry on the
+      // board, the naked-single scan returned a wrong digit for another
+      // cell. Whatever the hint is, a value it asks the player to place
+      // must match the solution.
+      const puzzle = "..".concat(solved.slice(2));
+      const board = parsePuzzle(puzzle);
+      board[0]![0]!.value = 9;
+
+      const hint = findHint(board, solved);
+
+      expect(hint).not.toBeNull();
+      if (hint!.technique !== "mistake") {
+        const { row, col } = hint!.position;
+        expect(hint!.value).toBe(Number(solved[row * 9 + col]));
+      }
+    });
+  });
+
+  describe("solution fallback", () => {
+    it("labels the solution-lookup fallback as a reveal, not a naked single", () => {
+      // An empty board has no naked or hidden single anywhere, so the
+      // engine falls back to looking the answer up in the solution.
+      // Calling that a "Naked Single" teaches players the wrong thing
+      // about a technique they're trying to learn.
+      const solved =
+        "534678912" +
+        "672195348" +
+        "198342567" +
+        "859761423" +
+        "426853791" +
+        "713924856" +
+        "961537284" +
+        "287419635" +
+        "345286179";
+      const board = parsePuzzle(".".repeat(81));
+
+      const hint = findHint(board, solved);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("reveal");
+      expect(hint!.value).toBe(5);
+    });
+  });
+
   describe("naked single", () => {
     it("detects a cell where only one candidate is possible", () => {
       // Puzzle where R1C1 (index 0) is empty and has 8 of 9 values

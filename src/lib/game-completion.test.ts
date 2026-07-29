@@ -8,6 +8,32 @@ describe("completeGame", () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
+  it("survives a throwing localStorage at the moment of winning", async () => {
+    // Quota exhaustion / blocked storage throws on setItem. This runs
+    // inside the completion effect — an unhandled throw here crashes
+    // the app exactly at the win, and loses the streak increment that
+    // would have followed the stats write.
+    const { vi } = await import("vitest");
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      expect(() =>
+        completeGame({
+          difficulty: "easy",
+          assistLevel: "standard",
+          timeSeconds: 60,
+          hintsUsed: 0,
+          dailyDate: "2026-07-28",
+        }),
+      ).not.toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("deletes the autosave when a gameKey is given", () => {
     saveGame("active-easy", {
       puzzle: ".".repeat(81),
@@ -16,6 +42,7 @@ describe("completeGame", () => {
       timer: 0,
       difficulty: "easy",
       assistLevel: "standard",
+      hintsUsed: 0,
     });
 
     completeGame({

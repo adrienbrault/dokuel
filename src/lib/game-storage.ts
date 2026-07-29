@@ -7,6 +7,9 @@ export type SavedGame = {
   timer: number;
   difficulty: Difficulty;
   assistLevel: AssistLevel;
+  // Hints taken so far. Persisted so a save/resume cycle can't launder
+  // a hint-assisted game into PB eligibility.
+  hintsUsed: number;
 };
 
 const STORAGE_PREFIX = "sudoku_save_";
@@ -61,6 +64,16 @@ export function loadGame(key: string): SavedGame | null {
     }
     if (!data.assistLevel) {
       data.assistLevel = "standard";
+    }
+    // Backward compat: saves predate the field, and a corrupt value
+    // shouldn't cost the whole game — worst case the player gets PB
+    // eligibility they shouldn't have, same as the pre-field behavior.
+    if (
+      typeof data.hintsUsed !== "number" ||
+      !Number.isInteger(data.hintsUsed) ||
+      data.hintsUsed < 0
+    ) {
+      data.hintsUsed = 0;
     }
     return data as SavedGame;
   } catch {

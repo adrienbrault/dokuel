@@ -17,12 +17,19 @@ export function JoinScreen({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.trim()) onJoin(code.trim());
+    // Yjs room names are case-sensitive and codes are minted lowercase;
+    // anything a keyboard capitalized would join a different, empty
+    // room with no error.
+    const normalized = code.trim().toLowerCase();
+    if (normalized) onJoin(normalized);
   };
 
   return (
     <div className="screen">
-      <form className="screen-content gap-6 py-10" onSubmit={handleSubmit}>
+      <form
+        className="screen-content gap-6 py-10 short:gap-4 short:py-5"
+        onSubmit={handleSubmit}
+      >
         <header className="flex flex-col items-center gap-3">
           <span
             className="icon-chip w-14 h-14 bg-accent-light text-accent"
@@ -38,9 +45,13 @@ export function JoinScreen({
         <input
           ref={inputRef}
           type="text"
+          aria-label="Room code"
           placeholder="e.g. loud-duck-7kmq"
           value={code}
           onChange={(e) => setCode(e.target.value)}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full px-4 py-3.5 rounded-2xl bg-surface border-2 border-border-default text-text-primary text-center text-lg font-mono shadow-sm transition-colors focus:border-accent focus:outline-none"
         />
         <button

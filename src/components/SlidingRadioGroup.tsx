@@ -44,7 +44,7 @@ export function SlidingRadioGroup<T extends string>({
             key={option.value}
             className={`relative z-10 flex flex-1 ${
               option.description ? "flex-col" : "items-center justify-center"
-            } items-center gap-0.5 rounded-lg py-2 cursor-pointer select-none touch-manipulation transition-colors duration-200 ${
+            } items-center gap-0.5 rounded-lg py-2 cursor-pointer select-none touch-manipulation transition-colors duration-200 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent ${
               isActive ? "text-text-on-accent" : "text-text-secondary"
             }`}
           >

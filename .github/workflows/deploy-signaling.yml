@@ -8,6 +8,17 @@ on:
 
   workflow_dispatch:
 
+# The deploy talks to Cloudflare with its own API token; the GitHub
+# token only needs to read the repo.
+permissions:
+  contents: read
+
+# One deploy at a time, newest wins — a stale worker build should not
+# land after a newer one.
+concurrency:
+  group: deploy-signaling
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

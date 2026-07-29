@@ -32,7 +32,7 @@ export function MultiplayerHeaderExtra({
             <ProgressBar
               label="Opponent"
               percent={opponentProgress.completionPercent}
-              color="bg-rose-400"
+              color="bg-opponent"
             />
           </div>
         )}
@@ -49,7 +49,7 @@ export function MultiplayerHeaderExtra({
             opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
           }
           percent={opponentProgress.completionPercent}
-          color="bg-rose-400"
+          color="bg-opponent"
         />
       </div>
     );

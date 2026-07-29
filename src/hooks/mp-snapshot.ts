@@ -86,3 +86,49 @@ export function clearSnapshot(roomId: string): void {
     // Ignore.
   }
 }
+
+/**
+ * Removes every snapshot key loadSnapshot would refuse (over-age or
+ * malformed) and returns the room ids that were dropped. Without this,
+ * each room ever visited parked a dead ~2KB entry in localStorage for
+ * good — loadSnapshot ages entries out logically but never physically.
+ */
+export function sweepStaleSnapshots(): string[] {
+  const swept: string[] = [];
+  try {
+    const staleKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      if (!storageKey?.startsWith(KEY_PREFIX)) continue;
+      const roomId = storageKey.slice(KEY_PREFIX.length);
+      if (loadSnapshot(roomId) === null) {
+        staleKeys.push(storageKey);
+        swept.push(roomId);
+      }
+    }
+    for (const storageKey of staleKeys) {
+      localStorage.removeItem(storageKey);
+    }
+  } catch {
+    // Storage unavailable — nothing to sweep.
+  }
+  return swept;
+}
+
+/**
+ * Best-effort deletion of the y-indexeddb databases behind rooms whose
+ * snapshot just aged out — each holds the room's full Yjs update log
+ * and otherwise accumulates per room forever. indexedDB.databases() is
+ * not universal (and a DB open in another tab blocks deletion); both
+ * cases fail silently and the next sweep retries.
+ */
+export function sweepStaleRoomDatabases(roomIds: string[]): void {
+  if (roomIds.length === 0) return;
+  try {
+    for (const roomId of roomIds) {
+      indexedDB.deleteDatabase(`dokuel_${roomId}`);
+    }
+  } catch {
+    // IndexedDB unavailable — ignore.
+  }
+}

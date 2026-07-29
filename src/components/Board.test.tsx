@@ -38,11 +38,11 @@ describe("Board same-number row/col highlighting (full assist)", () => {
 
     // Cell (4,0) is in row 4 (same row as matching 5 at (4,6)), not in selected row/col/box
     // It should get the match-row-col highlight
-    const cell40 = screen.getByLabelText("Cell row 5 column 1, empty");
+    const cell40 = screen.getByLabelText(/^Cell row 5 column 1, empty/);
     expect(cell40.className).toContain("bg-cell-match-row-col");
 
     // Cell (0,6) is in col 6 (same col as matching 5 at (4,6)), not in selected row/col/box
-    const cell06 = screen.getByLabelText("Cell row 1 column 7, empty");
+    const cell06 = screen.getByLabelText(/^Cell row 1 column 7, empty/);
     expect(cell06.className).toContain("bg-cell-match-row-col");
   });
 
@@ -63,7 +63,7 @@ describe("Board same-number row/col highlighting (full assist)", () => {
     );
 
     // Cell (4,0) should NOT have match-row-col in standard mode
-    const cell40 = screen.getByLabelText("Cell row 5 column 1, empty");
+    const cell40 = screen.getByLabelText(/^Cell row 5 column 1, empty/);
     expect(cell40.className).not.toContain("bg-cell-match-row-col");
   });
 
@@ -83,7 +83,7 @@ describe("Board same-number row/col highlighting (full assist)", () => {
       />,
     );
 
-    const cell40 = screen.getByLabelText("Cell row 5 column 1, empty");
+    const cell40 = screen.getByLabelText(/^Cell row 5 column 1, empty/);
     expect(cell40.className).not.toContain("bg-cell-match-row-col");
   });
 
@@ -104,7 +104,7 @@ describe("Board same-number row/col highlighting (full assist)", () => {
     );
 
     // (3,7) shares box (1,2) with matching 5 at (4,6); not in row 4 or col 6
-    const cell37 = screen.getByLabelText("Cell row 4 column 8, empty");
+    const cell37 = screen.getByLabelText(/^Cell row 4 column 8, empty/);
     expect(cell37.className).toContain("bg-cell-match-row-col");
   });
 });
@@ -130,17 +130,17 @@ describe("Board highlightedDigit", () => {
     );
 
     expect(
-      screen.getByLabelText("Cell row 1 column 1, value 7").className,
+      screen.getByLabelText(/^Cell row 1 column 1, value 7/).className,
     ).toContain("bg-cell-same-number");
     expect(
-      screen.getByLabelText("Cell row 4 column 4, value 7").className,
+      screen.getByLabelText(/^Cell row 4 column 4, value 7/).className,
     ).toContain("bg-cell-same-number");
     expect(
-      screen.getByLabelText("Cell row 6 column 9, value 7").className,
+      screen.getByLabelText(/^Cell row 6 column 9, value 7/).className,
     ).toContain("bg-cell-same-number");
     // Non-matching value cell does not get same-number bg
     expect(
-      screen.getByLabelText("Cell row 5 column 5, value 2").className,
+      screen.getByLabelText(/^Cell row 5 column 5, value 2/).className,
     ).not.toContain("bg-cell-same-number");
   });
 
@@ -164,7 +164,7 @@ describe("Board highlightedDigit", () => {
     // The 7 at (3,3) should NOT highlight as same-number because the
     // selected cell's value (5) takes precedence
     expect(
-      screen.getByLabelText("Cell row 4 column 4, value 7").className,
+      screen.getByLabelText(/^Cell row 4 column 4, value 7/).className,
     ).not.toContain("bg-cell-same-number");
   });
 
@@ -189,15 +189,15 @@ describe("Board highlightedDigit", () => {
     );
 
     // Cell (1,0) shares row 1 with the 5 at (1,2)
-    const cell10 = screen.getByLabelText("Cell row 2 column 1, empty");
+    const cell10 = screen.getByLabelText(/^Cell row 2 column 1, empty/);
     expect(cell10.className).toContain("bg-cell-match-row-col");
 
     // Cell (0,6) shares col 6 with the 5 at (4,6)
-    const cell06 = screen.getByLabelText("Cell row 1 column 7, empty");
+    const cell06 = screen.getByLabelText(/^Cell row 1 column 7, empty/);
     expect(cell06.className).toContain("bg-cell-match-row-col");
 
     // Cell (3,7) shares box (1,2) with the 5 at (4,6)
-    const cell37 = screen.getByLabelText("Cell row 4 column 8, empty");
+    const cell37 = screen.getByLabelText(/^Cell row 4 column 8, empty/);
     expect(cell37.className).toContain("bg-cell-match-row-col");
   });
 
@@ -218,7 +218,7 @@ describe("Board highlightedDigit", () => {
       />,
     );
 
-    const cell10 = screen.getByLabelText("Cell row 2 column 1, empty");
+    const cell10 = screen.getByLabelText(/^Cell row 2 column 1, empty/);
     expect(cell10.className).not.toContain("bg-cell-match-row-col");
   });
 });
@@ -235,16 +235,19 @@ describe("Board drag-select filters non-empty cells", () => {
   }
 
   function mockElementFromPoint(cells: Array<{ row: number; col: number }>) {
-    // Map each successive (x, y) coordinate to the next cell in the list
+    // Map each successive (x, y) coordinate to the next cell in the list.
+    // A spy (not a raw assignment) so restoreMocks cleans up even when
+    // an assertion fails before the test's own restore call.
     let idx = 0;
-    const original = document.elementFromPoint;
-    document.elementFromPoint = () => {
-      const next = cells[Math.min(idx, cells.length - 1)]!;
-      idx += 1;
-      return findCell(next.row, next.col);
-    };
+    const spy = vi
+      .spyOn(document, "elementFromPoint")
+      .mockImplementation(() => {
+        const next = cells[Math.min(idx, cells.length - 1)]!;
+        idx += 1;
+        return findCell(next.row, next.col);
+      });
     return () => {
-      document.elementFromPoint = original;
+      spy.mockRestore();
     };
   }
 
@@ -375,8 +378,9 @@ describe("Board iOS back-swipe suppression", () => {
       document.querySelector(
         `[data-row="${row}"][data-col="${col}"]`,
       ) as HTMLElement;
-    const original = document.elementFromPoint;
-    document.elementFromPoint = () => findCell(0, 0);
+    vi.spyOn(document, "elementFromPoint").mockImplementation(() =>
+      findCell(0, 0),
+    );
 
     const region = screen.getByRole("region", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
@@ -392,7 +396,50 @@ describe("Board iOS back-swipe suppression", () => {
       pointerType: "touch",
     });
 
-    document.elementFromPoint = original;
+    expect(onSelectCell).toHaveBeenCalledWith(0, 0);
+  });
+
+  it("restores tap-to-select for pen input too", () => {
+    // Apple Pencil taps fire touch events (so the Board's touchstart
+    // preventDefault suppresses the synthesized click) but report
+    // pointerType "pen" — a touch-only recovery leaves Pencil users
+    // unable to select cells at all.
+    const board = makeBoard([[0, 0, 5]]);
+    const onSelectCell = vi.fn();
+    const onSetSelectedCells = vi.fn();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={onSelectCell}
+        onSetSelectedCells={onSetSelectedCells}
+      />,
+    );
+
+    const findCell = (row: number, col: number): HTMLElement =>
+      document.querySelector(
+        `[data-row="${row}"][data-col="${col}"]`,
+      ) as HTMLElement;
+    vi.spyOn(document, "elementFromPoint").mockImplementation(() =>
+      findCell(0, 0),
+    );
+
+    const region = screen.getByRole("region", { name: /sudoku board/i });
+    fireEvent.pointerDown(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "pen",
+    });
+    fireEvent.pointerUp(region, {
+      clientX: 5,
+      clientY: 100,
+      pointerId: 1,
+      pointerType: "pen",
+    });
+
     expect(onSelectCell).toHaveBeenCalledWith(0, 0);
   });
 
@@ -418,8 +465,9 @@ describe("Board iOS back-swipe suppression", () => {
       document.querySelector(
         `[data-row="${row}"][data-col="${col}"]`,
       ) as HTMLElement;
-    const original = document.elementFromPoint;
-    document.elementFromPoint = () => findCell(0, 0);
+    vi.spyOn(document, "elementFromPoint").mockImplementation(() =>
+      findCell(0, 0),
+    );
 
     const region = screen.getByRole("region", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
@@ -435,7 +483,6 @@ describe("Board iOS back-swipe suppression", () => {
       pointerType: "mouse",
     });
 
-    document.elementFromPoint = original;
     expect(onSelectCell).not.toHaveBeenCalled();
   });
 });
@@ -454,14 +501,15 @@ describe("Board filled-cell drag gating", () => {
 
   function mockElementFromPoint(cells: Array<{ row: number; col: number }>) {
     let idx = 0;
-    const original = document.elementFromPoint;
-    document.elementFromPoint = () => {
-      const next = cells[Math.min(idx, cells.length - 1)]!;
-      idx += 1;
-      return findCell(next.row, next.col);
-    };
+    const spy = vi
+      .spyOn(document, "elementFromPoint")
+      .mockImplementation(() => {
+        const next = cells[Math.min(idx, cells.length - 1)]!;
+        idx += 1;
+        return findCell(next.row, next.col);
+      });
     return () => {
-      document.elementFromPoint = original;
+      spy.mockRestore();
     };
   }
 

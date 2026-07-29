@@ -8,9 +8,11 @@ import {
 } from "react";
 import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
+import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
+import { SoundToggle } from "./SoundToggle.tsx";
 
 type GameLayoutProps = {
   onBack: () => void;
@@ -93,13 +95,13 @@ export function GameLayout({
           flex gap-3 w-full justify-center flex-1
           ${position === "left" ? "flex-row items-end lg:items-center" : ""}
           ${position === "right" ? "flex-row-reverse items-end lg:items-center" : ""}
-          ${position === "bottom" ? "flex-col items-center" : ""}
+          ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-center lg:justify-center lg:gap-10" : ""}
         `}
       >
         {/* Side numpad (left / right positions) */}
         {position !== "bottom" && numPad}
         <div
-          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full flex-1 justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
+          className={`flex flex-col items-center gap-3 lg:max-w-lg ${position === "bottom" ? "w-full lg:w-[32rem] flex-1 lg:flex-none justify-end lg:justify-center" : "flex-1 min-w-0 lg:flex-none lg:w-[32rem]"} ${boardClassName}`}
         >
           <div className="flex flex-col items-center gap-3 w-full">
             {controls}
@@ -121,15 +123,17 @@ export function GameLayout({
           >
             {board}
           </div>
-          {/* Bottom numpad — widened to span the board on mobile, where the
-              board itself runs edge-to-edge; reset to the board width on
-              desktop where the board is capped. */}
-          {position === "bottom" && (
-            <div className="flex justify-center -mx-2 w-[calc(100%+1rem)] lg:mx-0 lg:w-full">
-              {numPad}
-            </div>
-          )}
         </div>
+        {/* Bottom numpad — one instance, repositioned by the row's flex
+            direction: under the board on mobile (full-width digit row,
+            widened to span the edge-to-edge board), beside it at lg+
+            where the row turns horizontal and the spec's side-by-side
+            desktop layout applies (NumPad renders 3-wide there). */}
+        {position === "bottom" && (
+          <div className="flex justify-center items-center -mx-2 w-[calc(100%+1rem)] lg:mx-0 lg:w-auto">
+            {numPad}
+          </div>
+        )}
       </div>
 
       {footer}
@@ -148,7 +152,11 @@ function SettingsButton({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const darkMode = useDarkMode();
+  // Sound was only reachable from the landing screen; mid-game is
+  // where players actually decide they want silence.
+  const [soundOn, setSoundOn] = useState(getSoundEnabled);
 
   useEffect(() => {
     if (!open) return;
@@ -157,18 +165,31 @@ function SettingsButton({
         setOpen(false);
       }
     }
+    // Keyboard users need a way out too; hand focus back to the
+    // trigger so it doesn't fall to <body>.
+    function handleKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
     document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("pointerdown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [open]);
 
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         className="icon-btn w-10 h-10 touch-manipulation"
         onClick={() => setOpen((v) => !v)}
         aria-label="Settings"
         aria-expanded={open}
+        aria-haspopup="dialog"
       >
         <Settings size={18} aria-hidden="true" />
       </button>
@@ -196,6 +217,17 @@ function SettingsButton({
             <DarkModeToggle
               isDark={darkMode.isDark}
               onToggle={darkMode.toggle}
+            />
+          </div>
+          <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
+            <p className="text-xs text-text-muted font-medium">Sound</p>
+            <SoundToggle
+              enabled={soundOn}
+              onToggle={() => {
+                const next = !soundOn;
+                setSoundOn(next);
+                setSoundEnabled(next);
+              }}
             />
           </div>
           {extra && (

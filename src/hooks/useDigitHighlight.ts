@@ -21,11 +21,12 @@ type Handlers = {
  *
  * `tapDigit` is the quick-tap handler. With nothing selected it toggles
  * the digit's highlight. With a single empty cell selected it places the
- * value, as before. But when the selected cell already holds a value —
- * where a tap could not place anything anyway — or when multiple cells
- * are selected — where a tap can't meaningfully fill a range — it is
- * repurposed: the selection is dropped and that digit becomes the
- * active highlight.
+ * value. With a multi-cell selection it pencils the digit as a note
+ * into every selected cell, then releases the selection and highlights
+ * the noted digit — the same semantics as dropping a note from a
+ * numpad drag. Only when the selected cell already holds a value —
+ * where a tap could not place anything anyway — is it repurposed: the
+ * selection is dropped and that digit becomes the active highlight.
  *
  * Returns wrapped versions of the game's select handlers so callers
  * don't have to remember to clear the active digit at every selection
@@ -83,10 +84,15 @@ export function useDigitHighlight(
         toggle(n);
         return;
       }
-      // Multiple cells selected: a single tap can't meaningfully fill a
-      // range, so drop the selection and make the tapped digit the
-      // active highlight instead of silently committing one cell.
+      // Multiple cells selected: the only meaningful bulk action is a
+      // pencil note. Same semantics as dropping a note from a numpad
+      // drag: the note lands, the selection is released, and the board
+      // highlights the noted digit — placement is confirmed visually,
+      // and the NEXT tap toggles another digit's highlight (the
+      // scan-the-grid rhythm). Hold is the gesture that keeps the
+      // selection, for stacking pairs/triples into the same range.
       if (selectedCells.size > 1) {
+        placeNumber(n, autoEliminateNotes, true);
         deselectCell();
         setHighlightedDigit(n);
         return;

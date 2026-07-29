@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -68,6 +68,45 @@ export function GameResult({
   onDismissTip,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+    },
+    [],
+  );
+
+  // Modal focus management: move focus onto the primary action when the
+  // result opens (this is also what makes screen readers announce the
+  // outcome), restore it when the dialog goes away, and keep Tab
+  // cycling inside — without this, Tab walked the covered board.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    const primary = panelRef.current?.querySelector<HTMLElement>("button");
+    primary?.focus();
+    return () => {
+      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+    };
+  }, []);
+  const trapTab = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab") return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusable = Array.from(
+      panel.querySelectorAll<HTMLElement>("button, [href], [tabindex]"),
+    ).filter((el) => !el.hasAttribute("disabled"));
+    if (focusable.length === 0) return;
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const handleShare = () => {
     const text = buildShareText({
@@ -78,9 +117,21 @@ export function GameResult({
       streakInfo,
       isDaily,
     });
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Only claim "Copied!" once the write actually landed — on iOS the
+    // promise rejects when transient activation is lost.
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(true);
+        if (copiedTimerRef.current !== null) {
+          clearTimeout(copiedTimerRef.current);
+        }
+        copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // Copy failed (permissions, lost activation) — leave the
+        // button label unchanged so the player can try again.
+      });
   };
 
   return (
@@ -99,7 +150,14 @@ export function GameResult({
           <span />
         </div>
       )}
-      <div className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="game-result-title"
+        onKeyDown={trapTab}
+        ref={panelRef}
+        className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative"
+      >
         <div className="flex flex-col items-center gap-2.5">
           <span
             className={`flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce ${
@@ -108,7 +166,7 @@ export function GameResult({
           >
             {isWinner ? "🎉" : "👏"}
           </span>
-          <h2 className="heading">
+          <h2 id="game-result-title" className="heading">
             {isWinner ? "You Won!" : "Puzzle Complete!"}
           </h2>
           {difficulty && (

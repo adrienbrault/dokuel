@@ -25,7 +25,10 @@ export function Lobby({
   onBack,
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
-  const canStart = roomState.players.length === 2;
+  // >= not ===: a concurrent-join merge can briefly hold a third entry
+  // until the overflow client evicts itself — the seated pair must
+  // still be able to start.
+  const canStart = roomState.players.length >= 2;
   const waiting = roomState.players.length < 2;
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -64,20 +67,30 @@ export function Lobby({
         // User cancelled or share failed, fall through to clipboard
       }
     }
-    await navigator.clipboard.writeText(gameUrl);
+    try {
+      await navigator.clipboard.writeText(gameUrl);
+    } catch {
+      // Copy failed (permissions, lost activation) — don't claim it
+      // worked, and don't surface an unhandled rejection.
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   return (
-    <div className="screen-content gap-7 py-10">
+    <div className="screen-content gap-7 py-10 short:gap-4 short:py-5">
       <div className="flex flex-col items-center gap-3">
         <h2 className="heading">Game Lobby</h2>
         <button
           type="button"
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-bg-inset border border-border-default cursor-pointer touch-manipulation press-spring-soft"
           onClick={async () => {
-            await navigator.clipboard.writeText(roomState.roomId);
+            try {
+              await navigator.clipboard.writeText(roomState.roomId);
+            } catch {
+              return;
+            }
             setCodeCopied(true);
             setTimeout(() => setCodeCopied(false), 2000);
           }}

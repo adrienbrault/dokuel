@@ -1,6 +1,21 @@
 name: CI
 
-on: [push, pull_request]
+# push+pull_request unfiltered ran every PR commit twice (once per
+# event). Scoping push to main keeps exactly one run per PR commit and
+# still gates direct pushes to main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Supersede in-flight runs when a PR gets a new push; never cancel a
+# main run, so every landed commit keeps a complete CI record.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   check:
@@ -11,5 +26,23 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
-      - run: bun run test
+      - run: bun run typecheck:signaling
+      # Coverage, not plain test: the thresholds in vitest.config.ts
+      # are the enforced floor, so a PR that erodes them fails here.
+      - run: bun run test:coverage
       - run: bun run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: e2e/results
+          retention-days: 7

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
   initState,
@@ -31,6 +32,56 @@ describe("serializeBoard", () => {
     const board = initState({ puzzle }).board;
     const { values } = serializeBoard(board);
     expect(values).toBe(puzzle);
+  });
+});
+
+describe("structural sharing", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("preserves untouched row and cell identities across a placement", () => {
+    // Cell is memoized, but a full-board clone gave all 81 cells fresh
+    // identities on every keystroke — the memo never skipped anything.
+    // Only the mutated cell (and its row array) may change identity.
+    let state = initState({ puzzle });
+    const before = state.board;
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+
+    expect(state.board).not.toBe(before);
+    expect(state.board[0]).not.toBe(before[0]);
+    expect(state.board[0]![2]).not.toBe(before[0]![2]);
+    // Untouched neighbours keep their identity.
+    expect(state.board[0]![3]).toBe(before[0]![3]);
+    expect(state.board[1]).toBe(before[1]);
+    expect(state.board[8]).toBe(before[8]);
+  });
+
+  it("only touches the peer cells whose notes were auto-cleared", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 3 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: true,
+      asNote: true,
+    });
+    const before = state.board;
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: true,
+    });
+
+    // (0,3) lost its pencil 4 → fresh identity; an unrelated far row
+    // stays shared.
+    expect(state.board[0]![3]).not.toBe(before[0]![3]);
+    expect(state.board[5]).toBe(before[5]);
   });
 });
 

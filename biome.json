@@ -87,9 +87,50 @@
     }
   },
   "files": {
-    "includes": ["src/**", "signaling/src/**", "*.ts", "*.json"]
+    "includes": [
+      "src/**",
+      "signaling/src/**",
+      "scripts/**",
+      "e2e/**",
+      "!e2e/results",
+      "!e2e/screenshots",
+      "*.ts",
+      "*.json"
+    ]
   },
   "overrides": [
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": {
+              "level": "error",
+              "options": { "allow": ["log", "error", "warn", "info"] }
+            }
+          },
+          "security": {
+            "noSecrets": "off"
+          },
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["e2e/**"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noSecrets": "off"
+          },
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["src/**/*.css"],
       "linter": {

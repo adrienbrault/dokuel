@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { getDailyPuzzle } from "./daily.ts";
 import { todayLocalISO } from "./date.ts";

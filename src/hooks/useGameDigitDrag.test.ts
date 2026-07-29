@@ -102,6 +102,31 @@ describe("useGameDigitDrag", () => {
       null) as typeof document.elementFromPoint;
   });
 
+  it("leaves placement feedback to the game actions (no double buzz)", async () => {
+    // game.placeNumber / placeNoteAt already play the placement
+    // haptic+tone inside useSudoku. A second call at the drag layer
+    // meant every drop double-buzzed and double-beeped.
+    const { gameFeedback } = await import("../lib/game-feedback.ts");
+    const onPlace = vi.spyOn(gameFeedback, "onPlace");
+    try {
+      const game = makeGame();
+      const { result } = renderHook(() =>
+        useGameDigitDrag({
+          game,
+          autoEliminateNotes: true,
+          onHighlightDigit: vi.fn(),
+        }),
+      );
+
+      drop(result, "numpad", 5, VALUE_Y);
+
+      expect(game.placeNumber).toHaveBeenCalled();
+      expect(onPlace).not.toHaveBeenCalled();
+    } finally {
+      onPlace.mockRestore();
+    }
+  });
+
   it("a note dropped from the numpad lands at the target without selecting it", () => {
     const game = makeGame();
     const onHighlightDigit = vi.fn();

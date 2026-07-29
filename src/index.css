@@ -1,4 +1,13 @@
 @import "tailwindcss";
+/* Self-hosted DM Sans (variable, opsz+wght axes) — no request to Google
+   Fonts, so first paint never blocks on a third party and the app works
+   offline. The "Variable" family name comes from @fontsource. */
+@import "@fontsource-variable/dm-sans/opsz.css";
+@import "@fontsource-variable/dm-sans/opsz-italic.css";
+
+/* Short viewports: iPhone SE class and landscape phones. Used to
+   tighten vertical rhythm so primary actions stay above the fold. */
+@custom-variant short (@media (max-height: 700px));
 
 @theme {
   /* Board & cell */
@@ -60,6 +69,20 @@
   --color-difficulty-medium-text: oklch(0.4 0.12 80);
   --color-difficulty-hard-text: oklch(0.4 0.12 50);
   --color-difficulty-expert-text: oklch(0.4 0.12 15);
+
+  /* Hint surfaces — banner + highlighted cell (warm amber family) */
+  --color-hint-bg: oklch(0.97 0.035 85);
+  --color-hint-border: oklch(0.89 0.08 85);
+  --color-hint-title: oklch(0.55 0.13 70);
+  --color-hint-text: oklch(0.35 0.08 70);
+  --color-hint-muted: oklch(0.75 0.09 85);
+  --color-cell-hint: oklch(0.93 0.07 85);
+
+  /* Outcomes & opponent accent */
+  --color-danger: oklch(0.6 0.21 20);
+  --color-positive-text: oklch(0.5 0.13 155);
+  --color-negative-text: oklch(0.55 0.19 20);
+  --color-opponent: oklch(0.7 0.19 15);
 }
 
 /* Dark mode overrides */
@@ -112,6 +135,20 @@
   --color-difficulty-medium-text: oklch(0.75 0.15 80);
   --color-difficulty-hard-text: oklch(0.75 0.15 50);
   --color-difficulty-expert-text: oklch(0.75 0.15 15);
+
+  /* Hint surfaces */
+  --color-hint-bg: oklch(0.25 0.045 75);
+  --color-hint-border: oklch(0.35 0.07 75);
+  --color-hint-title: oklch(0.78 0.12 85);
+  --color-hint-text: oklch(0.9 0.05 90);
+  --color-hint-muted: oklch(0.55 0.08 75);
+  --color-cell-hint: oklch(0.32 0.07 75);
+
+  /* Outcomes & opponent accent */
+  --color-danger: oklch(0.55 0.19 20);
+  --color-positive-text: oklch(0.75 0.14 155);
+  --color-negative-text: oklch(0.72 0.16 20);
+  --color-opponent: oklch(0.65 0.17 15);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -150,7 +187,8 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  font-family:
+    "DM Sans Variable", "DM Sans", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -207,10 +245,13 @@ body {
   }
 }
 
-/* Animate the shared variable once on the root so every selected cell
-   reads from the same source — they pulse in unison regardless of when
-   each one becomes selected. */
-:root {
+/* Animate the shared variable once on the board container so every
+   selected cell reads from the same source — they pulse in unison
+   regardless of when each one becomes selected. On the board, NOT
+   :root: an infinite animation on the root keeps the style pipeline
+   awake on every screen of the app (menus included) forever, for a
+   glow only a selected cell can show. */
+[data-board-glow] {
   animation: cell-glow-pulse 2s ease-in-out infinite;
 }
 
@@ -621,4 +662,23 @@ body {
 }
 .text-mono {
   @apply font-mono text-sm text-text-secondary tabular-nums;
+}
+
+/* Respect prefers-reduced-motion: the app leans on confetti, board
+   shakes, staggered cell reveals, spring presses, and screen
+   transitions — all decorative. Vestibular-disorder users get the
+   same UI with instant state changes instead. The glow pulse and
+   loading pulses are covered by the wildcard. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .confetti-container {
+    display: none;
+  }
 }

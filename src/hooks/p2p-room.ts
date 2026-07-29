@@ -100,6 +100,19 @@ export function joinRoom(
   });
 }
 
+/**
+ * Remove a player's entry. Used by the overflow client after a
+ * concurrent-join merge left more than MAX_PLAYERS entries: deleting
+ * itself returns the room to a startable two-player lobby.
+ */
+export function leaveRoom(room: P2PRoom, playerId: string): void {
+  const players = room.doc.getMap("players");
+  if (!players.has(playerId)) return;
+  room.doc.transact(() => {
+    players.delete(playerId);
+  });
+}
+
 export function setAssistLevel(room: P2PRoom, level: AssistLevel): void {
   room.doc.transact(() => {
     room.doc.getMap("room").set("assistLevel", level);
@@ -188,10 +201,12 @@ export function getOpponentProgress(
 /**
  * Write a win claim into the room. `board` is the claimant's completed
  * board for a solved win, or null for a forfeit (opponent gone —
- * nothing to verify). The first claim normally wins, with one
- * exception: an existing solved-claim whose board does NOT match the
- * room's solution is forged, and a later claim may overwrite it so a
- * cheater cannot lock the real winner out.
+ * nothing to verify). The first claim normally wins, with two
+ * exceptions that keep a cheater from locking the real winner out:
+ * an existing solved-claim whose board does NOT match the room's
+ * solution is forged and may be overwritten, and an existing forfeit
+ * claim yields to a verified solved board — a forfeit only means
+ * anything while the supposedly absent player never finishes.
  */
 export function claimWinner(
   room: P2PRoom,
@@ -208,7 +223,11 @@ export function claimWinner(
       typeof existingBoard === "string" &&
       typeof solution === "string" &&
       existingBoard !== solution;
-    if (!existingIsForged) return false;
+    const solvedBeatsForfeit =
+      (existingBoard === null || existingBoard === undefined) &&
+      typeof solution === "string" &&
+      board === solution;
+    if (!existingIsForged && !solvedBeatsForfeit) return false;
   }
 
   room.doc.transact(() => {
@@ -263,7 +282,6 @@ export function getRoomState(room: P2PRoom): RoomState | null {
         ? (roomMap.get("winnerBoard") as string)
         : null,
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
-    events: [],
   };
 }
 
@@ -303,6 +321,8 @@ export function getPlayers(room: P2PRoom): Player[] {
   // joinOrder first, playerId as tiebreak: concurrent joiners can both
   // read size 0 and claim the same joinOrder, and every peer must agree
   // on seat order (it decides who the excess player is in an overflow).
+  // Codepoint comparison, NOT localeCompare — collation varies by
+  // locale and this order has to be identical on every client.
   result.sort((a, b) => {
     const orderA = (players.get(a.id) as Y.Map<unknown>).get(
       "joinOrder",
@@ -310,7 +330,10 @@ export function getPlayers(room: P2PRoom): Player[] {
     const orderB = (players.get(b.id) as Y.Map<unknown>).get(
       "joinOrder",
     ) as number;
-    return orderA - orderB || a.id.localeCompare(b.id);
+    if (orderA !== orderB) return orderA - orderB;
+    if (a.id < b.id) return -1;
+    if (a.id > b.id) return 1;
+    return 0;
   });
 
   return result;
@@ -361,7 +384,8 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
  * one place. The hook just hands the awareness object in.
  */
 type Awareness = {
-  setLocalStateField: (field: string, value: unknown) => void;
+  getLocalState: () => Record<string, unknown> | null;
+  setLocalState: (state: Record<string, unknown>) => void;
   getStates: () => Map<number, { user?: { id: string; name: string } }>;
 };
 
@@ -370,7 +394,14 @@ export function announcePresence(
   playerId: string,
   playerName: string,
 ): void {
-  awareness.setLocalStateField("user", { id: playerId, name: playerName });
+  // Not setLocalStateField: that helper silently no-ops while the local
+  // state is null — which is what y-webrtc's disconnect() leaves behind
+  // after we drop WebRTC for a backgrounded tab. Rebuilding the state
+  // object makes re-announcing work from any starting point.
+  awareness.setLocalState({
+    ...(awareness.getLocalState() ?? {}),
+    user: { id: playerId, name: playerName },
+  });
 }
 
 /**

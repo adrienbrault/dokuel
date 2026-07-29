@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { todayLocalISO } from "../lib/date.ts";
 import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 
@@ -33,14 +34,17 @@ export function useRecordMultiplayerMatch({
   const savedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!gameOver) return;
-    const key = `${roomId}:${gameNumber}`;
+    // Winner is part of the key: a photo-finish can flip gameOver after
+    // the optimistic record, and the corrected outcome must re-save
+    // (the store upserts on the same roomId+gameNumber).
+    const key = `${roomId}:${gameNumber}:${gameOver.winnerId}`;
     if (savedRef.current === key) return;
     savedRef.current = key;
     saveMultiplayerGameResult({
       difficulty,
       assistLevel,
       time: getTimeSeconds(),
-      date: new Date().toISOString().slice(0, 10),
+      date: todayLocalISO(),
       timestamp: Date.now(),
       won: gameOver.winnerId === playerId,
       opponentName: opponentName || gameOver.winnerName,

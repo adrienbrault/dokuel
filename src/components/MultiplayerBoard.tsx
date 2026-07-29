@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
-import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
+import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
@@ -16,8 +15,8 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
-import { NumPad, type NumPadHandle } from "./NumPad.tsx";
-import { Timer } from "./Timer.tsx";
+import { NumPad } from "./NumPad.tsx";
+import { TimerPill } from "./TimerPill.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
@@ -90,10 +89,19 @@ export function MultiplayerBoard({
   // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
   // Reset the reducer in-place rather than remount the whole subtree:
   // keeps the timer ref, num-pad position, and any other UI state alive.
+  // The puzzle is tracked too: after a concurrent start/rematch merge
+  // the number can stay put while the puzzle changes under us.
   const prevGameNumberRef = useRef(gameNumber);
+  const prevPuzzleRef = useRef(puzzle);
   useEffect(() => {
-    if (gameNumber === prevGameNumberRef.current) return;
+    if (
+      gameNumber === prevGameNumberRef.current &&
+      puzzle === prevPuzzleRef.current
+    ) {
+      return;
+    }
     prevGameNumberRef.current = gameNumber;
+    prevPuzzleRef.current = puzzle;
     game.reset(puzzle, solution ?? undefined, savedBoard);
     // The new game starts from zero; without this the recorded match
     // time for game 2 includes game 1's clock.
@@ -141,6 +149,19 @@ export function MultiplayerBoard({
   // the puzzle + opponent progress; the filled cells live here.
   useEffect(() => {
     if (game.status === "completed") return;
+    // On rematch this effect and the RESET dispatch share a commit: the
+    // reducer still holds the OLD game's board while gameKey already
+    // points at the new one. Writing that mix would resume game 2
+    // wearing game 1's cells if the tab dies before the next render.
+    const boardMatchesPuzzle = game.board.every((boardRow, r) =>
+      boardRow.every((boardCell, c) => {
+        const ch = puzzle[r * 9 + c];
+        return ch === "."
+          ? !boardCell.isGiven
+          : boardCell.isGiven && boardCell.value === Number(ch);
+      }),
+    );
+    if (!boardMatchesPuzzle) return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
     saveGame(gameKey, {
       puzzle,
@@ -149,8 +170,17 @@ export function MultiplayerBoard({
       timer: timerSecondsRef.current,
       difficulty,
       assistLevel,
+      hintsUsed: game.hintsUsed,
     });
-  }, [game.board, game.status, gameKey, puzzle, difficulty, assistLevel]);
+  }, [
+    game.board,
+    game.status,
+    game.hintsUsed,
+    gameKey,
+    puzzle,
+    difficulty,
+    assistLevel,
+  ]);
 
   // Clear the save once this player finishes — keyed off local status so
   // the loser's in-progress save survives the opponent's win.
@@ -169,35 +199,19 @@ export function MultiplayerBoard({
     getTimeSeconds: () => timerSecondsRef.current,
   });
 
-  // Touch numpad: a quick tap commits the value into the selected empty
-  // cell; on a filled cell it highlights the digit instead, and a hold
-  // adds a pencil note (see useDigitHighlight). With no cell selected, a
-  // tap toggles the digit's board-wide highlight.
-  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  const highlight = useDigitHighlight(game, assistLevel !== "paper");
-
-  const handleHoldNote = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
-    }
-  };
-
-  const handlePressEnd = () => {
-    setChargingDigit(null);
-  };
-
-  // Digit drag-and-drop: drop commits the value, mirroring solo play.
   // Keyed off local status only — the loser keeps interacting until they
-  // finish their own board. A drag brought back over the numpad demotes
-  // to a skim (see NumPad).
-  const numPadRef = useRef<NumPadHandle>(null);
-  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
+  // finish their own board.
+  const {
+    highlight,
+    chargingDigit,
+    numPadRef,
+    numPadProps,
+    dragState,
+    startCellDrag,
+  } = useNumpadInteractions({
     game,
     disabled: game.status !== "playing",
-    autoEliminateNotes: assistLevel !== "paper",
-    onHighlightDigit: highlight.setDigit,
-    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
+    assistLevel,
   });
 
   return (
@@ -208,43 +222,24 @@ export function MultiplayerBoard({
       onDeselectCell={highlight.deselectCell}
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
-        <div className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm">
-          <Timer
-            key={gameNumber}
-            running={game.status === "playing"}
-            initialSeconds={initialTimerSeconds}
-            onTick={(s) => {
-              timerSecondsRef.current = s;
-            }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
-          />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
-            <span className="text-accent font-medium">
-              {81 - game.cellsRemaining}
-            </span>
-            /81
-          </span>
-        </div>
-      }
-      numPad={
-        <NumPad
-          ref={numPadRef}
-          position={position}
-          remainingCounts={game.remainingCounts}
-          selectedValue={
-            game.selectedCell
-              ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
-              : highlight.highlightedDigit
+        <TimerPill
+          timerKey={gameNumber}
+          running={game.status === "playing"}
+          initialSeconds={initialTimerSeconds}
+          onTick={(s) => {
+            timerSecondsRef.current = s;
+          }}
+          subline={
+            <>
+              <span className="text-accent font-medium">
+                {81 - game.cellsRemaining}
+              </span>
+              /81
+            </>
           }
-          showRemainingCounts={assistLevel === "full"}
-          disableCompleted={assistLevel !== "paper"}
-          onTapNumber={highlight.tapDigit}
-          onHoldNumber={handleHoldNote}
-          onPressEnd={handlePressEnd}
-          onStartDrag={startNumpadDrag}
-          onSkimDigit={highlight.skimToDigit}
         />
       }
+      numPad={<NumPad ref={numPadRef} position={position} {...numPadProps} />}
       board={
         <>
           <Board

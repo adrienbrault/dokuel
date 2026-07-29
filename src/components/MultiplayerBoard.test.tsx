@@ -73,6 +73,61 @@ describe("MultiplayerBoard local autosave", () => {
     ).not.toBeNull();
   });
 
+  it("swaps to the merged puzzle when a start collision changes it without a gameNumber bump", () => {
+    // Concurrent Start/Rematch: both writers used the same gameNumber,
+    // LWW picked the other player's puzzle. The board must adopt it —
+    // playing on into the divergent board can never complete.
+    const props = baseProps();
+    const { rerender } = render(<MultiplayerBoard {...props} />);
+
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 1, empty/),
+    ).not.toBeNull();
+
+    rerender(<MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={1} />);
+
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 1, value 5/),
+    ).not.toBeNull();
+    expect(
+      screen.queryByLabelText(/Cell row 1 column 5, empty/),
+    ).not.toBeNull();
+  });
+
+  it("never writes the previous game's board under the new game's key", () => {
+    // On rematch the reset dispatch and the autosave effect share one
+    // commit: the save ran with the OLD board serialized under the NEW
+    // gameKey. It self-corrects a render later, but a tab killed in
+    // that window resumes game 2 with game 1's cells.
+    const props = baseProps();
+    const { rerender } = render(<MultiplayerBoard {...props} />);
+
+    const cell = screen.getByLabelText(/Cell row 1 column 1, empty/);
+    fireEvent.click(cell);
+    const five = screen.getAllByLabelText("5")[0]!;
+    fireEvent.pointerDown(five, { pointerType: "touch" });
+    fireEvent.pointerUp(five, { pointerType: "touch" });
+
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    try {
+      rerender(
+        <MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={2} />,
+      );
+      const newKey = `sudoku_save_mp_${props.roomId}_${PUZZLE_B.slice(0, 12)}`;
+      const writesForNewGame = setItem.mock.calls.filter(
+        ([key]) => key === newKey,
+      );
+      for (const [, raw] of writesForNewGame) {
+        const saved = JSON.parse(raw as string);
+        // Index 4 is PUZZLE_B's only hole; the old board holds a given
+        // digit there, a fresh game-2 board holds ".".
+        expect(saved.values[4]).toBe(".");
+      }
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
   it("resets the timer when a rematch starts a new game", () => {
     vi.useFakeTimers();
     try {
@@ -158,7 +213,7 @@ describe("MultiplayerBoard local autosave", () => {
 
       // Select a filled cell, then tap a numpad digit — a tap can't
       // overwrite it, so it highlights the digit instead.
-      const filled = screen.getByLabelText("Cell row 1 column 5, value 7");
+      const filled = screen.getByLabelText(/^Cell row 1 column 5, value 7/);
       fireEvent.click(filled);
       expect(filled.className).toContain("cell-selected-glow");
 
@@ -169,10 +224,10 @@ describe("MultiplayerBoard local autosave", () => {
       // The cell is no longer selected, and the digit drives the board's
       // same-number highlight.
       expect(
-        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).not.toContain("cell-selected-glow");
       expect(
-        screen.getByLabelText("Cell row 2 column 7, value 3").className,
+        screen.getByLabelText(/^Cell row 2 column 7, value 3/).className,
       ).toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -217,13 +272,15 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.pointerUp(seven, { pointerType: "touch" });
 
       // (0,4) holds 7 in PUZZLE.
-      const cell04 = screen.getByLabelText("Cell row 1 column 5, value 7");
+      const cell04 = screen.getByLabelText(/^Cell row 1 column 5, value 7/);
       expect(cell04.className).toContain("bg-cell-same-number");
 
       // Tap "7" again → toggles the highlight off.
       fireEvent.pointerDown(seven, { pointerType: "touch" });
       fireEvent.pointerUp(seven, { pointerType: "touch" });
-      const cell04After = screen.getByLabelText("Cell row 1 column 5, value 7");
+      const cell04After = screen.getByLabelText(
+        /^Cell row 1 column 5, value 7/,
+      );
       expect(cell04After.className).not.toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -245,11 +302,11 @@ describe("MultiplayerBoard local autosave", () => {
 
       // 7 should no longer highlight; 8 should.
       expect(
-        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).not.toContain("bg-cell-same-number");
       // (0,5)=8 in PUZZLE
       expect(
-        screen.getByLabelText("Cell row 1 column 6, value 8").className,
+        screen.getByLabelText(/^Cell row 1 column 6, value 8/).className,
       ).toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -265,7 +322,7 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.pointerDown(seven, { pointerType: "touch" });
       fireEvent.pointerUp(seven, { pointerType: "touch" });
       expect(
-        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).toContain("bg-cell-same-number");
 
       // Click an empty cell — selection clears the digit highlight so the
@@ -274,7 +331,7 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.click(empty);
 
       expect(
-        screen.getByLabelText("Cell row 1 column 5, value 7").className,
+        screen.getByLabelText(/^Cell row 1 column 5, value 7/).className,
       ).not.toContain("bg-cell-same-number");
     } finally {
       vi.useRealTimers();
@@ -516,6 +573,31 @@ describe("MultiplayerBoard after opponent wins", () => {
     expect(all[0]?.won).toBe(true);
   });
 
+  it("corrects the recorded outcome when the winner flips after a CRDT merge", () => {
+    // Photo finish: both clients momentarily see themselves as winner,
+    // then the merged doc settles on one. The optimistic record must be
+    // corrected — otherwise both players' stores keep won:true forever.
+    const props = baseProps();
+    const { rerender } = render(
+      <MultiplayerBoard
+        {...props}
+        gameOver={{ winnerId: "p1", winnerName: "Me" }}
+      />,
+    );
+    expect(getMultiplayerStats()[0]?.won).toBe(true);
+
+    rerender(
+      <MultiplayerBoard
+        {...props}
+        gameOver={{ winnerId: "p2", winnerName: "Brave Otter" }}
+      />,
+    );
+
+    const all = getMultiplayerStats();
+    expect(all).toHaveLength(1);
+    expect(all[0]?.won).toBe(false);
+  });
+
   it("does not record a duplicate record on remount for the same gameNumber", () => {
     const props = {
       ...baseProps(),
@@ -578,7 +660,7 @@ describe("MultiplayerBoard digit drag", () => {
 
     const three = screen.getByRole("button", { name: "3" });
     const five = screen.getByRole("button", { name: "5" });
-    const boardCell = screen.getByLabelText("Cell row 1 column 1, empty");
+    const boardCell = screen.getByLabelText(/^Cell row 1 column 1, empty/);
 
     // Press digit 3 and pan straight off the numpad → drag-to-place.
     fireEvent.pointerDown(three, {

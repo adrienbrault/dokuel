@@ -1,3 +1,4 @@
+import { readJson, writeJson } from "./storage.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type MultiplayerGameRecord = {
@@ -14,29 +15,56 @@ export type MultiplayerGameRecord = {
 
 const STORAGE_KEY = "sudoku_multiplayer_stats";
 
-const MAX_RECORDS = 100;
+// Per-difficulty cap: a global ring let a run of medium matches evict
+// an easy best-win record (getMultiplayerStatsForDifficulty derives
+// bestWinTime from stored records).
+const MAX_RECORDS_PER_DIFFICULTY = 100;
 
 export function getMultiplayerStats(): MultiplayerGameRecord[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    // Callers iterate immediately; a parseable non-array ("{}", "null")
-    // must not escape this reader.
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  // Callers iterate immediately; a parseable non-array ("{}", "null")
+  // must not escape this reader.
+  return readJson<MultiplayerGameRecord[]>(STORAGE_KEY, [], (parsed) =>
+    Array.isArray(parsed) ? (parsed as MultiplayerGameRecord[]) : null,
+  );
 }
 
 export function saveMultiplayerGameResult(record: MultiplayerGameRecord) {
   const all = getMultiplayerStats();
-  const duplicate = all.some(
+  const existingIndex = all.findIndex(
     (r) => r.roomId === record.roomId && r.gameNumber === record.gameNumber,
   );
-  if (duplicate) return;
-  const next = [...all, record].slice(-MAX_RECORDS);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  if (existingIndex !== -1) {
+    // Same game reported again. Identical outcome → true duplicate
+    // (remount), keep the original. Different outcome → a photo-finish
+    // whose CRDT merge settled the other way after we recorded
+    // optimistically; the correction wins.
+    if (all[existingIndex]!.won === record.won) return;
+    const corrected = [...all];
+    corrected[existingIndex] = record;
+    writeJson(STORAGE_KEY, corrected);
+    return;
+  }
+  const next = [...all, record];
+  const counts = new Map<string, number>();
+  for (const r of next) {
+    counts.set(r.difficulty, (counts.get(r.difficulty) ?? 0) + 1);
+  }
+  const excess = new Map<string, number>();
+  for (const [difficulty, count] of counts) {
+    if (count > MAX_RECORDS_PER_DIFFICULTY) {
+      excess.set(difficulty, count - MAX_RECORDS_PER_DIFFICULTY);
+    }
+  }
+  const trimmed =
+    excess.size === 0
+      ? next
+      : next.filter((r) => {
+          const over = excess.get(r.difficulty) ?? 0;
+          if (over === 0) return true;
+          excess.set(r.difficulty, over - 1);
+          return false;
+        });
+  writeJson(STORAGE_KEY, trimmed);
 }
 
 export type MultiplayerSummary = {

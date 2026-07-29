@@ -9,10 +9,9 @@ on:
       - ".github/workflows/screenshots.yml"
   workflow_dispatch:
 
-permissions:
-  contents: write # push the README commit back to main
-  pages: write # deploy to GitHub Pages
-  id-token: write # OIDC token for actions/deploy-pages
+# Each job declares only what it needs; the capture job that runs the
+# browser and arbitrary build scripts holds a read-only token.
+permissions: {}
 
 # Serialize Pages deploys; never cancel a deploy in flight or Pages can end
 # up in an inconsistent state.
@@ -21,15 +20,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  screenshots:
+  capture:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run screenshots
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./e2e/screenshots
+      # Raw PNGs again as a plain artifact: the README job needs to
+      # list them, and the Pages artifact is not download-friendly.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: e2e/screenshots
+          retention-days: 1
+
+  deploy:
+    needs: capture
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write # OIDC token for actions/deploy-pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # Bot identity used by the README commit at the end. Git reads these
-    # env vars natively, so no `git config` calls are needed. The 41898282
-    # prefix is the github-actions[bot] numeric user-id; using it makes
-    # the commit render with the bot's avatar.
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  update-readme:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the README commit back to main
+    # Bot identity used by the README commit. Git reads these env vars
+    # natively, so no `git config` calls are needed. The 41898282 prefix
+    # is the github-actions[bot] numeric user-id; using it makes the
+    # commit render with the bot's avatar.
     env:
       GIT_AUTHOR_NAME: github-actions[bot]
       GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
@@ -38,17 +72,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-
       - run: bun install --frozen-lockfile
-      - run: bunx playwright install --with-deps chromium
-      - run: bun run screenshots
-
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          path: ./e2e/screenshots
-      - id: deployment
-        uses: actions/deploy-pages@v5
+          name: screenshots
+          path: e2e/screenshots
 
       - name: Update README
         run: bun run scripts/update-readme-screenshots.ts
@@ -61,4 +89,10 @@ jobs:
             exit 0
           fi
           git commit -q -m "chore(docs): refresh README screenshots from $GITHUB_SHA"
+          # main may have moved during capture+deploy (~minutes): rebase
+          # our one README commit onto the new tip and retry the push.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            git pull --rebase origin main
+          done
           git push

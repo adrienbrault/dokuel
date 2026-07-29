@@ -51,7 +51,11 @@ export type MoveAction =
 
 // --- Hint Explanation ---
 
-export type HintTechnique = "naked-single" | "hidden-single";
+export type HintTechnique =
+  | "naked-single"
+  | "hidden-single"
+  | "mistake"
+  | "reveal";
 
 export type ActiveHint = {
   position: Position;
@@ -62,18 +66,6 @@ export type ActiveHint = {
 };
 
 export type GameStatus = "idle" | "playing" | "completed";
-
-export type GameState = {
-  board: Board;
-  solution: string;
-  difficulty: Difficulty;
-  status: GameStatus;
-  selectedCell: Position | null;
-  notesMode: boolean;
-  timer: number; // seconds elapsed
-  history: MoveAction[];
-  conflicts: Set<number>; // row*9+col keys
-};
 
 // --- Assistance ---
 
@@ -113,17 +105,4 @@ export type RoomState = {
    */
   winnerBoard: string | null;
   gameNumber: number;
-  events: GameEvent[];
-};
-
-export type GameEvent = {
-  type:
-    | "share_progress"
-    | "player_joined"
-    | "player_left"
-    | "game_started"
-    | "game_won";
-  playerId: string;
-  timestamp: number;
-  message: string;
 };

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useDigitHighlight } from "../hooks/useDigitHighlight.ts";
-import { useGameDigitDrag } from "../hooks/useGameDigitDrag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
+import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
@@ -17,8 +16,8 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
-import { NumPad, type NumPadHandle } from "./NumPad.tsx";
-import { Timer } from "./Timer.tsx";
+import { NumPad } from "./NumPad.tsx";
+import { TimerPill } from "./TimerPill.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
 
@@ -30,6 +29,8 @@ type SoloGameProps = {
   title?: string | undefined;
   /** ISO date for daily challenges; drives streak via completeGame. */
   dailyDate?: string | undefined;
+  /** Marks the daily challenge for share text — not sniffed from the title. */
+  isDaily?: boolean | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
   onComplete?:
@@ -45,6 +46,7 @@ export function SoloGame({
   initialPuzzle,
   title,
   dailyDate,
+  isDaily = false,
   onBack,
   onRematch,
   onComplete,
@@ -93,33 +95,17 @@ export function SoloGame({
     }
   };
 
-  // Touch numpad: a quick tap commits the value into the selected empty
-  // cell; on a filled cell it highlights the digit instead, and a hold
-  // adds a pencil note (see useDigitHighlight). With no cell selected, a
-  // tap toggles the digit's board-wide highlight.
-  const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  const highlight = useDigitHighlight(game, assistLevel !== "paper");
-
-  const handleHoldNote = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
-    }
-  };
-
-  const handlePressEnd = () => {
-    setChargingDigit(null);
-  };
-
-  // Digit drag: top-half drop commits a value, bottom-half adds a note.
-  // A drag brought back over the numpad demotes to a skim (see NumPad).
-  const numPadRef = useRef<NumPadHandle>(null);
-  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
+  const {
+    highlight,
+    chargingDigit,
+    numPadRef,
+    numPadProps,
+    dragState,
+    startCellDrag,
+  } = useNumpadInteractions({
     game,
     disabled: paused || game.status !== "playing",
-    autoEliminateNotes: assistLevel !== "paper",
-    onHighlightDigit: highlight.setDigit,
-    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
+    assistLevel,
   });
 
   const handleBack = () => {
@@ -177,22 +163,16 @@ export function SoloGame({
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       }
       timer={
-        <button
-          type="button"
-          className="flex flex-col items-center px-4 py-1.5 rounded-2xl bg-surface border border-border-default shadow-sm press-spring-soft touch-manipulation"
+        <TimerPill
+          running={game.status === "playing" && !paused && revealed}
+          initialSeconds={initialTimerSeconds}
+          onTick={(s) => {
+            timerSecondsRef.current = s;
+          }}
           onClick={() => game.status === "playing" && setPaused((p) => !p)}
-          aria-label={paused ? "Resume" : "Pause"}
-        >
-          <Timer
-            running={game.status === "playing" && !paused && revealed}
-            initialSeconds={initialTimerSeconds}
-            onTick={(s) => {
-              timerSecondsRef.current = s;
-            }}
-            className="font-mono text-lg font-bold tabular-nums text-text-primary leading-none"
-          />
-          <span className="text-[0.6875rem] text-text-muted font-mono tabular-nums mt-0.5">
-            {paused ? (
+          ariaLabel={paused ? "Resume" : "Pause"}
+          subline={
+            paused ? (
               "Paused"
             ) : (
               <>
@@ -202,29 +182,11 @@ export function SoloGame({
                 /81
                 {personalBest !== null && ` · PB ${formatTime(personalBest)}`}
               </>
-            )}
-          </span>
-        </button>
-      }
-      numPad={
-        <NumPad
-          ref={numPadRef}
-          position={position}
-          remainingCounts={game.remainingCounts}
-          selectedValue={
-            game.selectedCell
-              ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
-              : highlight.highlightedDigit
+            )
           }
-          showRemainingCounts={assistLevel === "full"}
-          disableCompleted={assistLevel !== "paper"}
-          onTapNumber={highlight.tapDigit}
-          onHoldNumber={handleHoldNote}
-          onPressEnd={handlePressEnd}
-          onStartDrag={startNumpadDrag}
-          onSkimDigit={highlight.skimToDigit}
         />
       }
+      numPad={<NumPad ref={numPadRef} position={position} {...numPadProps} />}
       board={
         <div className="relative w-full">
           <Board
@@ -292,7 +254,7 @@ export function SoloGame({
             }
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
-            isDaily={!!streakInfo || !!title?.startsWith("Daily")}
+            isDaily={isDaily}
             tip={
               !tipDismissed && position === "bottom"
                 ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."
