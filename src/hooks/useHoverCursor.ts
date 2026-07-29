@@ -38,15 +38,14 @@ function affordanceAt(x: number, y: number): string | null {
 export function useHoverCursor() {
   useEffect(() => {
     let frame = 0;
-    let pending: { x: number; y: number } | null = null;
+    let pendingX = 0;
+    let pendingY = 0;
 
     const apply = () => {
       frame = 0;
-      if (!pending) return;
-      const { x, y } = pending;
       // A drag owns the cursor page-wide while it lasts.
       if (document.body.dataset.digitDrag !== undefined) return;
-      const cursor = affordanceAt(x, y);
+      const cursor = affordanceAt(pendingX, pendingY);
       if (cursor === null) delete document.body.dataset.hoverCursor;
       else if (document.body.dataset.hoverCursor !== cursor)
         document.body.dataset.hoverCursor = cursor;
@@ -55,7 +54,8 @@ export function useHoverCursor() {
     const onMove = (e: PointerEvent) => {
       // Touch has no resting pointer to advertise anything to.
       if (e.pointerType === "touch") return;
-      pending = { x: e.clientX, y: e.clientY };
+      pendingX = e.clientX;
+      pendingY = e.clientY;
       // Hit testing once per frame: pointermove can outpace paint, and
       // the cursor only changes as often as the screen does.
       if (!frame) frame = requestAnimationFrame(apply);
