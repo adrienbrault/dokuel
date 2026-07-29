@@ -319,3 +319,46 @@ test("the cursor never drops to the arrow inside the board or the numpad", async
   expect((await sweep(board)).sort()).toEqual(["cell", "grab"]);
   expect(await sweep(pad)).toEqual(["grab"]);
 });
+
+test("the cursor survives an unlayered cursor rule on the page", async ({
+  page,
+}) => {
+  // Browser extensions, user stylesheets and userscripts all inject
+  // unlayered CSS, which outranks anything in a Tailwind layer however
+  // specific it is. A cursor built from cursor-* utilities loses to a
+  // single `* { cursor: default }` from any of them — while the
+  // drag-time rules, being unlayered, keep working. That asymmetry is
+  // what a stuck arrow at rest next to a working drag cursor looks
+  // like, so the resting cursors have to hold up under it too.
+  await page.goto("/solo/easy/e2e-cursor-cascade");
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+  await page.addStyleTag({ content: "* { cursor: default }" });
+
+  const cursorAt = async (locator: Locator) => {
+    const box = await locator.boundingBox();
+    if (!box) throw new Error("element has no box");
+    return page.evaluate(
+      ([px, py]: number[]) => {
+        const el = document.elementFromPoint(px as number, py as number);
+        return el ? getComputedStyle(el).cursor : null;
+      },
+      [box.x + box.width / 2, box.y + box.height / 2],
+    );
+  };
+
+  expect(
+    await cursorAt(page.locator('button[aria-label*="given"]').first()),
+  ).toBe("grab");
+  expect(
+    await cursorAt(page.locator('button[aria-label*=", empty"]').first()),
+  ).toBe("cell");
+  expect(
+    await cursorAt(
+      page
+        .locator(
+          '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+        )
+        .first(),
+    ),
+  ).toBe("grab");
+});
