@@ -260,6 +260,14 @@ describe("Cell chargingDigit", () => {
     expect(screen.queryByTestId("drop-preview")).toBeNull();
   });
 
+  it("offers a grab cursor over a filled cell so the digit reads as draggable", () => {
+    // Dragging a digit out of a filled cell is invisible on desktop —
+    // nothing in the pixels says the digit can be picked up. The open
+    // hand is the web's standard "this moves" affordance.
+    render(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
+    expect(screen.getByRole("button").className).toContain("cursor-grab");
+  });
+
   it("hides the static note glyph for the digit being charged", () => {
     // Notes 1, 3, 5 in the cell; charging digit 3 — only 1 and 5
     // should remain visible in the notes grid (the 3 is being shown
