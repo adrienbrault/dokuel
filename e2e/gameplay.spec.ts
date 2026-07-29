@@ -273,3 +273,49 @@ test("the cursor names the gesture available under the pointer", async ({
   await page.mouse.up();
   expect(await cursorAt(keyX, keyY)).toBe("grab");
 });
+
+test("the cursor never drops to the arrow inside the board or the numpad", async ({
+  page,
+}) => {
+  // Sweeping the pointer across the board and the pad used to blink:
+  // the seams between cells and the 8px gutters between keys belong to
+  // their containers, which had no cursor of their own and handed the
+  // pointer back to the default arrow mid-crossing.
+  await page.goto("/solo/easy/e2e-cursor-gaps");
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+  const sweep = async (box: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => {
+    const y = box.y + box.height / 2;
+    const seen = new Set<string>();
+    for (let x = Math.ceil(box.x); x < box.x + box.width; x += 1) {
+      seen.add(
+        await page.evaluate(
+          ([px, py]: number[]) => {
+            const el = document.elementFromPoint(px as number, py as number);
+            return el ? getComputedStyle(el).cursor : "none";
+          },
+          [x, y],
+        ),
+      );
+    }
+    return [...seen];
+  };
+
+  const board = await page
+    .getByRole("region", { name: /sudoku board/i })
+    .boundingBox();
+  const pad = await page
+    .locator('[role="group"][aria-label="Number pad"]:visible')
+    .boundingBox();
+  if (!board || !pad) throw new Error("board or numpad has no box");
+
+  // Every pixel across the board is either a digit to pick up or a
+  // blank to sweep — never the inert arrow.
+  expect((await sweep(board)).sort()).toEqual(["cell", "grab"]);
+  expect(await sweep(pad)).toEqual(["grab"]);
+});
