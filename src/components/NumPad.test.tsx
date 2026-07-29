@@ -970,3 +970,22 @@ describe("NumPad", () => {
     });
   });
 });
+
+describe("NumPad cursor affordance", () => {
+  it("carries the grab cursor on the key group, not only on the keys", () => {
+    // The gaps between keys belong to the group element, so a bare
+    // group drops the pointer back to the default arrow between every
+    // key the pointer crosses.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        onStartDrag={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("group", { name: "Number pad" }).className,
+    ).toContain("cursor-grab");
+  });
+});
