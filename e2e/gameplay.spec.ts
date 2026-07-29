@@ -362,3 +362,58 @@ test("the cursor survives an unlayered cursor rule on the page", async ({
     ),
   ).toBe("grab");
 });
+
+test("the cursor survives a layer stacked above the board", async ({
+  page,
+}) => {
+  // The cursor is resolved from the topmost hit-testable element under
+  // the pointer, and on a real machine that is often not ours: browser
+  // extensions, password managers and accessibility tools all inject
+  // full-viewport layers. A rule scoped to the board never reaches
+  // them, so the pointer keeps the arrow — while the drag cursor, whose
+  // rule is page-wide, keeps working. That split is exactly what a
+  // player sees as "the hover cursor is dead but dragging works".
+  await page.goto("/solo/easy/e2e-cursor-overlay");
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+  await page.evaluate(() => {
+    const overlay = document.createElement("div");
+    overlay.id = "stacked-layer";
+    overlay.style.cssText =
+      "position:fixed;inset:0;z-index:2147483647;background:transparent";
+    document.body.append(overlay);
+  });
+
+  const cursorAtPointerOver = async (locator: Locator) => {
+    const box = await locator.boundingBox();
+    if (!box) throw new Error("element has no box");
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    await page.mouse.move(x, y);
+    return page.evaluate(
+      ([px, py]: number[]) => {
+        const el = document.elementFromPoint(px as number, py as number);
+        return el ? getComputedStyle(el).cursor : null;
+      },
+      [x, y],
+    );
+  };
+
+  // The overlay is what the browser resolves the cursor from, so these
+  // assertions only pass if the affordance reaches it.
+  expect(
+    await cursorAtPointerOver(page.locator("[data-cell-filled]").first()),
+  ).toBe("grab");
+  expect(
+    await cursorAtPointerOver(
+      page
+        .locator(
+          '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+        )
+        .first(),
+    ),
+  ).toBe("grab");
+  expect(
+    await cursorAtPointerOver(
+      page.locator('button[aria-label*=", empty"]').first(),
+    ),
+  ).toBe("cell");
+});
