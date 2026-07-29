@@ -260,22 +260,22 @@ describe("Cell chargingDigit", () => {
     expect(screen.queryByTestId("drop-preview")).toBeNull();
   });
 
-  it("offers a grab cursor over a filled cell so the digit reads as draggable", () => {
-    // Dragging a digit out of a filled cell is invisible on desktop —
-    // nothing in the pixels says the digit can be picked up. The open
-    // hand is the web's standard "this moves" affordance.
+  it("marks a filled cell as holding a draggable digit", () => {
+    // The grab cursor keys off this attribute rather than a utility
+    // class: Tailwind's utilities live in a cascade layer, and ANY
+    // unlayered rule on the page — an extension, a user stylesheet —
+    // beats a layered one whatever its specificity. The drag-time
+    // cursors are unlayered and survive that; the resting ones have to
+    // be too, which means an attribute the unlayered CSS can select.
     render(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
-    expect(screen.getByRole("button").className).toContain("cursor-grab");
+    expect(screen.getByRole("button")).toHaveAttribute("data-cell-filled");
   });
 
-  it("offers the range-select cursor over an empty cell", () => {
-    // Empty cells can be swept to build a multi-cell selection —
-    // the same gesture a spreadsheet uses, so it borrows the same
-    // cursor rather than the generic pointer.
+  it("leaves an empty cell unmarked so it keeps the range-select cursor", () => {
+    // Empty cells can be swept to build a multi-cell selection — they
+    // inherit the grid's cell cursor instead of the grab one.
     render(<Cell {...defaultProps()} cell={makeCell()} />);
-    const className = screen.getByRole("button").className;
-    expect(className).toContain("cursor-cell");
-    expect(className).not.toContain("cursor-grab");
+    expect(screen.getByRole("button")).not.toHaveAttribute("data-cell-filled");
   });
 
   it("hides the static note glyph for the digit being charged", () => {
