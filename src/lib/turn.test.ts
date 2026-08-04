@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchTurnIceServers, TURN_CREDENTIALS_URL } from "./turn.ts";
+import {
+  fetchTurnIceServers,
+  resetTurnCredentialsCache,
+  TURN_CREDENTIALS_URL,
+} from "./turn.ts";
 
 const CF_ICE_SERVERS = [
   { urls: ["stun:stun.cloudflare.com:3478"] },
@@ -23,6 +27,7 @@ function stubFetchOk(body: unknown) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetTurnCredentialsCache();
 });
 
 describe("fetchTurnIceServers", () => {
@@ -64,5 +69,15 @@ describe("fetchTurnIceServers", () => {
     stubFetchOk({ error: "unexpected shape" });
 
     expect(await fetchTurnIceServers()).toBeNull();
+  });
+
+  it("reuses minted credentials across calls instead of refetching", async () => {
+    const fetchMock = stubFetchOk({ iceServers: CF_ICE_SERVERS });
+
+    await fetchTurnIceServers();
+    const second = await fetchTurnIceServers();
+
+    expect(second).toEqual(CF_ICE_SERVERS);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

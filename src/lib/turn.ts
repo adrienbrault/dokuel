@@ -15,6 +15,9 @@ export const TURN_CREDENTIALS_URL =
 // slow/broken endpoint must degrade to STUN-only, not a hung lobby.
 const FETCH_TIMEOUT_MS = 3_000;
 
+/** Test-only: drop the cached credentials between test cases. */
+export function resetTurnCredentialsCache(): void {}
+
 export async function fetchTurnIceServers(): Promise<RTCIceServer[] | null> {
   try {
     const response = await fetch(TURN_CREDENTIALS_URL, {
