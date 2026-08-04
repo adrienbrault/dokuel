@@ -228,10 +228,12 @@ describe("useYjsMultiplayer", () => {
         difficulty: "easy",
       }),
     );
+    // Setup is async (ICE resolution precedes doc creation) — flush
+    // before asserting.
+    await flushSync();
 
     expect(mocks.lastIdbName).toBe("dokuel_room-idb");
     expect(mocks.lastIdbDoc).toBe(mocks.lastDoc);
-    await flushSync();
   });
 
   it("destroys the IndexedDB persistence on unmount", async () => {
@@ -244,8 +246,8 @@ describe("useYjsMultiplayer", () => {
       }),
     );
 
-    expect(mocks.idbDestroyed).toBe(false);
     await flushSync();
+    expect(mocks.idbDestroyed).toBe(false);
     unmount();
     expect(mocks.idbDestroyed).toBe(true);
   });
@@ -262,10 +264,10 @@ describe("useYjsMultiplayer", () => {
       { initialProps: { playerName: "Alice" } },
     );
 
+    await flushSync();
     const docBefore = mocks.lastDoc;
     expect(docBefore).not.toBeNull();
 
-    await flushSync();
     rerender({ playerName: "Alice Renamed" });
     await flushSync();
 

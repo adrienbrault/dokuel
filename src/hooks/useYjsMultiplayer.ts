@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { WebrtcProvider } from "y-webrtc";
 import * as Y from "yjs";
+import { fetchTurnIceServers } from "../lib/turn.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { clearSnapshot, loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
@@ -59,9 +60,11 @@ const VALID_SOLUTION_RE = /^[1-9]{81}$/;
  * VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL at build time; without
  * them the provider keeps its defaults.
  */
-function webrtcPeerOptions():
+type WebrtcPeerOptions =
   | { peerOpts: { config: { iceServers: RTCIceServer[] } } }
-  | Record<string, never> {
+  | Record<string, never>;
+
+function webrtcPeerOptions(): WebrtcPeerOptions {
   const url = import.meta.env.VITE_TURN_URL;
   if (!url) return {};
   const turn: RTCIceServer = {
@@ -81,6 +84,21 @@ function webrtcPeerOptions():
       },
     },
   };
+}
+
+/**
+ * Static build-time TURN env wins; otherwise ask the signaling worker
+ * to mint ephemeral Cloudflare TURN credentials (cached per page
+ * session, 3s timeout); otherwise keep the provider's STUN-only
+ * defaults. The resolved iceServers must exist before the provider is
+ * constructed — they cannot be added to live peer connections.
+ */
+async function resolveWebrtcOptions(): Promise<WebrtcPeerOptions> {
+  const staticOptions = webrtcPeerOptions();
+  if ("peerOpts" in staticOptions) return staticOptions;
+  const iceServers = await fetchTurnIceServers();
+  if (!iceServers) return {};
+  return { peerOpts: { config: { iceServers } } };
 }
 
 type OpponentProgress = {
@@ -162,316 +180,335 @@ export function useYjsMultiplayer({
       );
     }
 
-    const doc = new Y.Doc();
-    // Persist the doc locally so a tab refresh, brief disconnect, or
-    // background tab eviction doesn't lose progress. The `dokuel_`
-    // prefix scopes our DBs apart from anything else on the origin.
-    const persistence = new IndexeddbPersistence(`dokuel_${roomId}`, doc);
-    // Room in the signaling URL path: the worker shards rooms into
-    // separate Durable Objects keyed by it, so peers only ever share a
-    // socket fanout with their own room.
-    const provider = new WebrtcProvider(roomId, doc, {
-      signaling: [`wss://signal.dokuel.com/${roomId}`],
-      maxConns: 4,
-      filterBcConns: true,
-      ...webrtcPeerOptions(),
-    });
+    let cancelled = false;
+    let teardown: (() => void) | null = null;
 
-    const room = createRoomFromDoc(doc, roomId);
-    roomRef.current = room;
-    providerRef.current = provider;
+    // Everything from doc creation onward lives behind the async ICE
+    // resolution: the provider needs its iceServers at construction,
+    // and the worker round-trip (cached after the first mount) is
+    // bounded by the fetcher's 3s timeout so a broken endpoint only
+    // delays — never blocks — the room.
+    const start = (webrtcOptions: WebrtcPeerOptions): (() => void) => {
+      const doc = new Y.Doc();
+      // Persist the doc locally so a tab refresh, brief disconnect, or
+      // background tab eviction doesn't lose progress. The `dokuel_`
+      // prefix scopes our DBs apart from anything else on the origin.
+      const persistence = new IndexeddbPersistence(`dokuel_${roomId}`, doc);
+      // Room in the signaling URL path: the worker shards rooms into
+      // separate Durable Objects keyed by it, so peers only ever share a
+      // socket fanout with their own room.
+      const provider = new WebrtcProvider(roomId, doc, {
+        signaling: [`wss://signal.dokuel.com/${roomId}`],
+        maxConns: 4,
+        filterBcConns: true,
+        ...webrtcOptions,
+      });
 
-    const awareness = provider.awareness;
+      const room = createRoomFromDoc(doc, roomId);
+      roomRef.current = room;
+      providerRef.current = provider;
 
-    const updateState = () => {
-      const state = getRoomState(room);
-      // The observer fires per transaction — including our own
-      // keystrokes' progress writes — and a fresh object each time
-      // re-renders the whole game tree. Cheap content compare (the
-      // snapshot is ~1KB) keeps identity stable across no-op fires.
-      const stateJson = JSON.stringify(state);
-      if (stateJson === lastRoomStateJsonRef.current) return;
-      lastRoomStateJsonRef.current = stateJson;
-      setRoomState(state);
-      if (!state) return;
-      // Any peer can write anything into the doc; only mirror a
-      // solution that is actually a full grid so sendComplete's
-      // verification can't be poisoned by garbage.
-      if (state.solution === null || VALID_SOLUTION_RE.test(state.solution)) {
-        solutionRef.current = state.solution;
-      }
+      const awareness = provider.awareness;
 
-      // Detect new game (start or rematch). Content is checked as well
-      // as the counter: concurrent starts/rematches write the SAME
-      // gameNumber with different puzzles and LWW keeps one — the
-      // losing writer latched the number from its own local write, so
-      // without the puzzle comparison it would keep a board whose
-      // completion never validates against the room's solution.
-      // A game is only adopted when its content is shaped like a real
-      // board — a peer writing garbage must not brick the client.
-      const contentValid =
-        state.puzzle !== null &&
-        VALID_PUZZLE_RE.test(state.puzzle) &&
-        (state.solution === null || VALID_SOLUTION_RE.test(state.solution));
-      const isNewGame =
-        contentValid && state.gameNumber > lastGameNumberRef.current;
-      const isCollidedGame =
-        contentValid &&
-        !isNewGame &&
-        state.gameNumber === lastGameNumberRef.current &&
-        state.puzzle !== null &&
-        latchedPuzzleRef.current !== null &&
-        state.puzzle !== latchedPuzzleRef.current;
-      if (isNewGame || isCollidedGame) {
-        lastGameNumberRef.current = state.gameNumber;
-        latchedPuzzleRef.current = state.puzzle;
-        setPuzzle(state.puzzle);
-        setSolution(state.solution);
-        setGameOver(null);
-        setOpponentProgress(null);
-        setHasStartedGame(true);
-      }
-
-      // Detect winner. A remote solved-claim only counts when the
-      // board it ships actually equals the solution — a peer can write
-      // anything into the CRDT. A forfeit claim (null board) asserts
-      // that WE went away, so it only counts when our own absence
-      // record agrees; a fabricated forfeit is ignored and later
-      // displaced by our verified solve. Our own claims were validated
-      // before writing.
-      if (state.winnerId && state.winnerName) {
-        const absence = absenceRef.current;
-        const forfeitBackedByAbsence =
-          absence.ongoing ||
-          Date.now() - absence.endedAt < FORFEIT_TRUST_WINDOW_MS;
-        const claimValid =
-          state.winnerId === playerId ||
-          (state.winnerBoard === null
-            ? forfeitBackedByAbsence
-            : state.winnerBoard === state.solution);
-        if (claimValid) {
-          setGameOver({
-            winnerId: state.winnerId,
-            winnerName: state.winnerName,
-          });
-          clearSnapshot(roomId);
+      const updateState = () => {
+        const state = getRoomState(room);
+        // The observer fires per transaction — including our own
+        // keystrokes' progress writes — and a fresh object each time
+        // re-renders the whole game tree. Cheap content compare (the
+        // snapshot is ~1KB) keeps identity stable across no-op fires.
+        const stateJson = JSON.stringify(state);
+        if (stateJson === lastRoomStateJsonRef.current) return;
+        lastRoomStateJsonRef.current = stateJson;
+        setRoomState(state);
+        if (!state) return;
+        // Any peer can write anything into the doc; only mirror a
+        // solution that is actually a full grid so sendComplete's
+        // verification can't be poisoned by garbage.
+        if (state.solution === null || VALID_SOLUTION_RE.test(state.solution)) {
+          solutionRef.current = state.solution;
         }
-      }
 
-      // Update opponent progress (functional set keeps identity when
-      // the numbers didn't move)
-      const progress = getOpponentProgress(room, playerId);
-      if (progress) {
-        setOpponentProgress((prev) =>
-          prev &&
-          prev.cellsRemaining === progress.cellsRemaining &&
-          prev.completionPercent === progress.completionPercent
-            ? prev
-            : progress,
+        // Detect new game (start or rematch). Content is checked as well
+        // as the counter: concurrent starts/rematches write the SAME
+        // gameNumber with different puzzles and LWW keeps one — the
+        // losing writer latched the number from its own local write, so
+        // without the puzzle comparison it would keep a board whose
+        // completion never validates against the room's solution.
+        // A game is only adopted when its content is shaped like a real
+        // board — a peer writing garbage must not brick the client.
+        const contentValid =
+          state.puzzle !== null &&
+          VALID_PUZZLE_RE.test(state.puzzle) &&
+          (state.solution === null || VALID_SOLUTION_RE.test(state.solution));
+        const isNewGame =
+          contentValid && state.gameNumber > lastGameNumberRef.current;
+        const isCollidedGame =
+          contentValid &&
+          !isNewGame &&
+          state.gameNumber === lastGameNumberRef.current &&
+          state.puzzle !== null &&
+          latchedPuzzleRef.current !== null &&
+          state.puzzle !== latchedPuzzleRef.current;
+        if (isNewGame || isCollidedGame) {
+          lastGameNumberRef.current = state.gameNumber;
+          latchedPuzzleRef.current = state.puzzle;
+          setPuzzle(state.puzzle);
+          setSolution(state.solution);
+          setGameOver(null);
+          setOpponentProgress(null);
+          setHasStartedGame(true);
+        }
+
+        // Detect winner. A remote solved-claim only counts when the
+        // board it ships actually equals the solution — a peer can write
+        // anything into the CRDT. A forfeit claim (null board) asserts
+        // that WE went away, so it only counts when our own absence
+        // record agrees; a fabricated forfeit is ignored and later
+        // displaced by our verified solve. Our own claims were validated
+        // before writing.
+        if (state.winnerId && state.winnerName) {
+          const absence = absenceRef.current;
+          const forfeitBackedByAbsence =
+            absence.ongoing ||
+            Date.now() - absence.endedAt < FORFEIT_TRUST_WINDOW_MS;
+          const claimValid =
+            state.winnerId === playerId ||
+            (state.winnerBoard === null
+              ? forfeitBackedByAbsence
+              : state.winnerBoard === state.solution);
+          if (claimValid) {
+            setGameOver({
+              winnerId: state.winnerId,
+              winnerName: state.winnerName,
+            });
+            clearSnapshot(roomId);
+          }
+        }
+
+        // Update opponent progress (functional set keeps identity when
+        // the numbers didn't move)
+        const progress = getOpponentProgress(room, playerId);
+        if (progress) {
+          setOpponentProgress((prev) =>
+            prev &&
+            prev.cellsRemaining === progress.cellsRemaining &&
+            prev.completionPercent === progress.completionPercent
+              ? prev
+              : progress,
+          );
+        }
+
+        // Excess-player detection: not among the first MAX_PLAYERS
+        // (joinRoom no-oped), or sorted into the overflow after a
+        // concurrent-join merge.
+        const seat = state.players.findIndex((p) => p.id === playerId);
+        if (
+          state.players.length > MAX_PLAYERS &&
+          seat >= MAX_PLAYERS &&
+          !evictedSelfRef.current
+        ) {
+          // We hold an entry but lost the seat race — delete it so the
+          // two seated players get their startable lobby back instead of
+          // a ghost row and a disabled Start button.
+          evictedSelfRef.current = true;
+          leaveRoom(room, playerId);
+        }
+        setRoomFull(
+          state.players.length >= MAX_PLAYERS &&
+            (seat === -1 || seat >= MAX_PLAYERS),
         );
-      }
+      };
 
-      // Excess-player detection: not among the first MAX_PLAYERS
-      // (joinRoom no-oped), or sorted into the overflow after a
-      // concurrent-join merge.
-      const seat = state.players.findIndex((p) => p.id === playerId);
-      if (
-        state.players.length > MAX_PLAYERS &&
-        seat >= MAX_PLAYERS &&
-        !evictedSelfRef.current
-      ) {
-        // We hold an entry but lost the seat race — delete it so the
-        // two seated players get their startable lobby back instead of
-        // a ghost row and a disabled Start button.
-        evictedSelfRef.current = true;
-        leaveRoom(room, playerId);
-      }
-      setRoomFull(
-        state.players.length >= MAX_PLAYERS &&
-          (seat === -1 || seat >= MAX_PLAYERS),
-      );
-    };
+      const unobserveRoom = observeRoomChanges(room, updateState);
 
-    const unobserveRoom = observeRoomChanges(room, updateState);
+      const updatePresence = () => {
+        const hasOpponent = presenceHasOpponent(
+          awareness,
+          doc.clientID,
+          playerId,
+          getPlayers(room).length,
+        );
+        // We drop our own WebRTC on hide (see visibility handler), which
+        // clears our awareness — don't blame the opponent for that.
+        setOpponentDisconnected(
+          !document.hidden && !hasOpponent && getPlayers(room).length > 1,
+        );
+      };
 
-    const updatePresence = () => {
-      const hasOpponent = presenceHasOpponent(
-        awareness,
-        doc.clientID,
-        playerId,
-        getPlayers(room).length,
-      );
-      // We drop our own WebRTC on hide (see visibility handler), which
-      // clears our awareness — don't blame the opponent for that.
-      setOpponentDisconnected(
-        !document.hidden && !hasOpponent && getPlayers(room).length > 1,
-      );
-    };
+      awareness.on("change", updatePresence);
 
-    awareness.on("change", updatePresence);
-
-    const markAbsent = () => {
-      absenceRef.current = { ongoing: true, endedAt: 0 };
-    };
-    const markPresentAgain = () => {
-      if (absenceRef.current.ongoing) {
-        absenceRef.current = { ongoing: false, endedAt: Date.now() };
-      }
-    };
-
-    // Track connection status via provider
-    const onStatus = ({ connected: isConnected }: { connected: boolean }) => {
-      setConnected(isConnected);
-      if (isConnected) {
-        markPresentAgain();
-      } else {
-        markAbsent();
-      }
-    };
-    provider.on("status", onStatus);
-
-    // Also listen for peers to detect when WebRTC connects
-    const onPeers = () => {
-      updatePresence();
-    };
-    provider.on("peers", onPeers);
-
-    setConnected(provider.connected);
-
-    // Synchronous localStorage mirror. y-indexeddb writes are async
-    // and iOS Safari doesn't always flush them before killing a
-    // backgrounded tab — saveSnapshot survives that.
-    const persistSnapshot = () => {
-      const state = getRoomState(room);
-      if (state) saveSnapshot(roomId, state);
-    };
-
-    // Release WebRTC peer connections + signaling sockets while the
-    // tab is backgrounded: iOS Safari kills tabs under memory pressure
-    // and RTCPeerConnections are the dominant cost here. Y.Doc and
-    // persistence stay alive across the cycle.
-    const HIDE_DEBOUNCE_MS = 15_000;
-    let hideTimer: ReturnType<typeof setTimeout> | null = null;
-    const handleVisibility = () => {
-      if (document.hidden) {
-        persistSnapshot();
-        if (hideTimer === null) {
-          hideTimer = setTimeout(() => {
-            provider.disconnect();
-            markAbsent();
-            hideTimer = null;
-          }, HIDE_DEBOUNCE_MS);
+      const markAbsent = () => {
+        absenceRef.current = { ongoing: true, endedAt: 0 };
+      };
+      const markPresentAgain = () => {
+        if (absenceRef.current.ongoing) {
+          absenceRef.current = { ongoing: false, endedAt: Date.now() };
         }
-      } else {
+      };
+
+      // Track connection status via provider
+      const onStatus = ({ connected: isConnected }: { connected: boolean }) => {
+        setConnected(isConnected);
+        if (isConnected) {
+          markPresentAgain();
+        } else {
+          markAbsent();
+        }
+      };
+      provider.on("status", onStatus);
+
+      // Also listen for peers to detect when WebRTC connects
+      const onPeers = () => {
+        updatePresence();
+      };
+      provider.on("peers", onPeers);
+
+      setConnected(provider.connected);
+
+      // Synchronous localStorage mirror. y-indexeddb writes are async
+      // and iOS Safari doesn't always flush them before killing a
+      // backgrounded tab — saveSnapshot survives that.
+      const persistSnapshot = () => {
+        const state = getRoomState(room);
+        if (state) saveSnapshot(roomId, state);
+      };
+
+      // Release WebRTC peer connections + signaling sockets while the
+      // tab is backgrounded: iOS Safari kills tabs under memory pressure
+      // and RTCPeerConnections are the dominant cost here. Y.Doc and
+      // persistence stay alive across the cycle.
+      const HIDE_DEBOUNCE_MS = 15_000;
+      let hideTimer: ReturnType<typeof setTimeout> | null = null;
+      const handleVisibility = () => {
+        if (document.hidden) {
+          persistSnapshot();
+          if (hideTimer === null) {
+            hideTimer = setTimeout(() => {
+              provider.disconnect();
+              markAbsent();
+              hideTimer = null;
+            }, HIDE_DEBOUNCE_MS);
+          }
+        } else {
+          if (hideTimer !== null) {
+            clearTimeout(hideTimer);
+            hideTimer = null;
+          }
+          if (!provider.connected) {
+            provider.connect();
+            announcePresence(awareness, playerId, playerNameRef.current);
+          }
+          markPresentAgain();
+        }
+        updatePresence();
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
+      window.addEventListener("pagehide", persistSnapshot);
+
+      // Defer the writes until y-indexeddb has loaded any persisted
+      // state. Writing before sync would seed clock-0 ops (initializeRoom
+      // defaults, a fresh player Y.Map from joinRoom) that race the
+      // restored state — under iOS Safari's flaky IDB flushes on memory
+      // pressure, the doc can resolve back to lobby/gameNumber=0 over
+      // several reloads, wiping the in-progress game. Helpers are
+      // idempotent so post-sync invocation either seeds an empty room or
+      // no-ops one already populated.
+      let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
+      let stopHydrateWatch: (() => void) | null = null;
+      void persistence.whenSynced.then(() => {
+        if (cancelled) return;
+
+        // The creator (came in from the create flow with a chosen
+        // difficulty) initializes the room and claims host. Joiners
+        // (difficulty=null, came via shared link) skip this and learn
+        // host + difficulty from Yjs sync.
+        const completeSetup = () => {
+          if (cancelled) return;
+          const initialDifficulty = initialDifficultyRef.current;
+          if (initialDifficulty) {
+            initializeRoom(room, playerId, initialDifficulty);
+          }
+          joinRoom(room, playerId, playerNameRef.current);
+          updateState();
+        };
+
+        announcePresence(awareness, playerId, playerNameRef.current);
+
+        // If IDB came back without a started game but localStorage has a
+        // recent snapshot, restore from it — but not immediately. The
+        // snapshot would land in a fresh doc with a new clientID, making
+        // every key causally concurrent with the live peer's state, and
+        // per-key LWW could roll a finished game back for both players.
+        // Give WebRTC a grace window to deliver the real room first; the
+        // snapshot only applies when nothing shows up.
+        const yjs = getRoomState(room);
+        const snap = !yjs || yjs.gameNumber === 0 ? loadSnapshot(roomId) : null;
+        if (!snap) {
+          completeSetup();
+          return;
+        }
+
+        const finish = (applySnapshot: boolean) => {
+          if (hydrateTimer !== null) {
+            clearTimeout(hydrateTimer);
+            hydrateTimer = null;
+          }
+          stopHydrateWatch?.();
+          stopHydrateWatch = null;
+          if (cancelled) return;
+          if (applySnapshot) {
+            const current = getRoomState(room);
+            if (!current || current.gameNumber === 0) {
+              hydrateRoomFromSnapshot(room, snap);
+            }
+          }
+          completeSetup();
+        };
+        stopHydrateWatch = observeRoomChanges(room, () => {
+          const current = getRoomState(room);
+          if (current && current.gameNumber > 0) finish(false);
+        });
+        hydrateTimer = setTimeout(() => {
+          hydrateTimer = null;
+          finish(true);
+        }, HYDRATE_GRACE_MS);
+      });
+
+      return () => {
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("pagehide", persistSnapshot);
         if (hideTimer !== null) {
           clearTimeout(hideTimer);
           hideTimer = null;
         }
-        if (!provider.connected) {
-          provider.connect();
-          announcePresence(awareness, playerId, playerNameRef.current);
-        }
-        markPresentAgain();
-      }
-      updatePresence();
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("pagehide", persistSnapshot);
-
-    // Defer the writes until y-indexeddb has loaded any persisted
-    // state. Writing before sync would seed clock-0 ops (initializeRoom
-    // defaults, a fresh player Y.Map from joinRoom) that race the
-    // restored state — under iOS Safari's flaky IDB flushes on memory
-    // pressure, the doc can resolve back to lobby/gameNumber=0 over
-    // several reloads, wiping the in-progress game. Helpers are
-    // idempotent so post-sync invocation either seeds an empty room or
-    // no-ops one already populated.
-    let cancelled = false;
-    let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
-    let stopHydrateWatch: (() => void) | null = null;
-    void persistence.whenSynced.then(() => {
-      if (cancelled) return;
-
-      // The creator (came in from the create flow with a chosen
-      // difficulty) initializes the room and claims host. Joiners
-      // (difficulty=null, came via shared link) skip this and learn
-      // host + difficulty from Yjs sync.
-      const completeSetup = () => {
-        if (cancelled) return;
-        const initialDifficulty = initialDifficultyRef.current;
-        if (initialDifficulty) {
-          initializeRoom(room, playerId, initialDifficulty);
-        }
-        joinRoom(room, playerId, playerNameRef.current);
-        updateState();
-      };
-
-      announcePresence(awareness, playerId, playerNameRef.current);
-
-      // If IDB came back without a started game but localStorage has a
-      // recent snapshot, restore from it — but not immediately. The
-      // snapshot would land in a fresh doc with a new clientID, making
-      // every key causally concurrent with the live peer's state, and
-      // per-key LWW could roll a finished game back for both players.
-      // Give WebRTC a grace window to deliver the real room first; the
-      // snapshot only applies when nothing shows up.
-      const yjs = getRoomState(room);
-      const snap = !yjs || yjs.gameNumber === 0 ? loadSnapshot(roomId) : null;
-      if (!snap) {
-        completeSetup();
-        return;
-      }
-
-      const finish = (applySnapshot: boolean) => {
         if (hydrateTimer !== null) {
           clearTimeout(hydrateTimer);
           hydrateTimer = null;
         }
         stopHydrateWatch?.();
         stopHydrateWatch = null;
-        if (cancelled) return;
-        if (applySnapshot) {
-          const current = getRoomState(room);
-          if (!current || current.gameNumber === 0) {
-            hydrateRoomFromSnapshot(room, snap);
-          }
-        }
-        completeSetup();
+        unobserveRoom();
+        awareness.off("change", updatePresence);
+        provider.off("status", onStatus);
+        provider.off("peers", onPeers);
+        provider.disconnect();
+        provider.destroy();
+        persistence.destroy();
+        destroyRoom(room);
+        roomRef.current = null;
+        providerRef.current = null;
       };
-      stopHydrateWatch = observeRoomChanges(room, () => {
-        const current = getRoomState(room);
-        if (current && current.gameNumber > 0) finish(false);
-      });
-      hydrateTimer = setTimeout(() => {
-        hydrateTimer = null;
-        finish(true);
-      }, HYDRATE_GRACE_MS);
+    };
+
+    void resolveWebrtcOptions().then((webrtcOptions) => {
+      if (cancelled) return;
+      teardown = start(webrtcOptions);
     });
 
     return () => {
       cancelled = true;
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("pagehide", persistSnapshot);
-      if (hideTimer !== null) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-      if (hydrateTimer !== null) {
-        clearTimeout(hydrateTimer);
-        hydrateTimer = null;
-      }
-      stopHydrateWatch?.();
-      stopHydrateWatch = null;
-      unobserveRoom();
-      awareness.off("change", updatePresence);
-      provider.off("status", onStatus);
-      provider.off("peers", onPeers);
-      provider.disconnect();
-      provider.destroy();
-      persistence.destroy();
-      destroyRoom(room);
-      roomRef.current = null;
-      providerRef.current = null;
+      teardown?.();
+      teardown = null;
     };
     // playerName is intentionally excluded: it's read via playerNameRef
     // inside the effect, and a rename should not tear down the Y.Doc and
