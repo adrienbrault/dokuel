@@ -1,6 +1,6 @@
 # Dokuel Signaling Server
 
-Lightweight Cloudflare Worker that implements the [y-webrtc](https://github.com/yjs/y-webrtc) signaling protocol using Durable Objects. Used only for WebRTC peer discovery — all game data flows peer-to-peer after connection.
+Lightweight Cloudflare Worker that implements the [y-webrtc](https://github.com/yjs/y-webrtc) signaling protocol using Durable Objects. Used only for WebRTC peer discovery — all game data flows peer-to-peer after connection. Also mints ephemeral TURN credentials (`GET /turn-credentials`) so peers behind carrier NAT can fall back to a relay.
 
 ## Setup
 
@@ -39,6 +39,36 @@ bun install
 bunx wrangler login
 bunx wrangler deploy
 ```
+
+### 4. TURN relay (Cloudflare Realtime)
+
+STUN-only WebRTC cannot traverse the symmetric NAT / CGNAT used by mobile
+carriers — a phone on cellular and a phone on wifi never connect directly.
+The worker's `GET /turn-credentials` route fixes this by minting short-lived
+(24h) [Cloudflare Realtime TURN](https://developers.cloudflare.com/realtime/turn/)
+credentials, so the account API token never ships to browsers.
+
+One-time setup:
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com), go to
+   **Realtime → TURN Server** and create a TURN key. Note the **Key ID** and
+   the **API token** shown at creation.
+2. Store both as Worker secrets:
+
+   ```bash
+   cd signaling
+   bunx wrangler secret put TURN_KEY_ID        # paste the key id
+   bunx wrangler secret put TURN_KEY_API_TOKEN # paste the key's api token
+   ```
+
+Without these secrets the route returns 404 and clients silently fall back
+to STUN-only (same-network play still works). Cloudflare Realtime includes
+1,000 GB/month of free TURN egress — the relay only carries traffic when a
+direct connection is impossible, and sudoku sync is a few KB per game.
+
+The frontend can still override everything at build time with
+`VITE_TURN_URL` / `VITE_TURN_USERNAME` / `VITE_TURN_CREDENTIAL` (static
+credentials, e.g. for local testing against coturn).
 
 ## Architecture
 

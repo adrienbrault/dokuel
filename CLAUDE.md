@@ -47,6 +47,7 @@ The frontend deploys automatically on push to `main`. Multiplayer uses WebRTC pe
 - **URL**: https://signal.dokuel.com (custom domain)
 - **Deploy**: Auto-deploys via GitHub Actions on push to `main` when `signaling/` changes
 - **Secrets**: `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in GitHub repo secrets
+- **TURN relay**: `GET /turn-credentials` mints ephemeral Cloudflare Realtime TURN credentials; requires `TURN_KEY_ID` + `TURN_KEY_API_TOKEN` Worker secrets (`wrangler secret put`), 404s into a STUN-only client fallback without them
 - See `signaling/README.md` for full setup instructions
 
 ### DNS (Cloudflare)
