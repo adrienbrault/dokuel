@@ -50,4 +50,13 @@ describe("fetchTurnIceServers", () => {
 
     expect(await fetchTurnIceServers()).toBeNull();
   });
+
+  it("returns null when the request fails or times out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
+
+    expect(await fetchTurnIceServers()).toBeNull();
+  });
 });
