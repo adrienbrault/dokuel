@@ -80,4 +80,17 @@ describe("fetchTurnIceServers", () => {
     expect(second).toEqual(CF_ICE_SERVERS);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("retries after a failure instead of caching the null", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
+    expect(await fetchTurnIceServers()).toBeNull();
+
+    const fetchMock = stubFetchOk({ iceServers: CF_ICE_SERVERS });
+
+    expect(await fetchTurnIceServers()).toEqual(CF_ICE_SERVERS);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
