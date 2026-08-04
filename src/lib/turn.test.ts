@@ -59,4 +59,10 @@ describe("fetchTurnIceServers", () => {
 
     expect(await fetchTurnIceServers()).toBeNull();
   });
+
+  it("returns null when the body is not an iceServers array", async () => {
+    stubFetchOk({ error: "unexpected shape" });
+
+    expect(await fetchTurnIceServers()).toBeNull();
+  });
 });
