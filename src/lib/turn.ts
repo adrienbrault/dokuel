@@ -21,8 +21,9 @@ export async function fetchTurnIceServers(): Promise<RTCIceServer[] | null> {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return null;
-    const body = (await response.json()) as { iceServers: RTCIceServer[] };
-    return body.iceServers;
+    const body = (await response.json()) as { iceServers?: unknown };
+    if (!Array.isArray(body.iceServers)) return null;
+    return body.iceServers as RTCIceServer[];
   } catch {
     return null;
   }
