@@ -16,10 +16,14 @@ export const TURN_CREDENTIALS_URL =
 const FETCH_TIMEOUT_MS = 3_000;
 
 export async function fetchTurnIceServers(): Promise<RTCIceServer[] | null> {
-  const response = await fetch(TURN_CREDENTIALS_URL, {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
-  if (!response.ok) return null;
-  const body = (await response.json()) as { iceServers: RTCIceServer[] };
-  return body.iceServers;
+  try {
+    const response = await fetch(TURN_CREDENTIALS_URL, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { iceServers: RTCIceServer[] };
+    return body.iceServers;
+  } catch {
+    return null;
+  }
 }
