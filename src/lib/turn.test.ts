@@ -37,4 +37,17 @@ describe("fetchTurnIceServers", () => {
       expect.anything(),
     );
   });
+
+  it("returns null when the worker has no TURN key configured (404)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("TURN not configured", {
+          status: 404,
+        }),
+      ),
+    );
+
+    expect(await fetchTurnIceServers()).toBeNull();
+  });
 });
