@@ -15,10 +15,19 @@ export const TURN_CREDENTIALS_URL =
 // slow/broken endpoint must degrade to STUN-only, not a hung lobby.
 const FETCH_TIMEOUT_MS = 3_000;
 
+// Successful mints are cached for the page session: credentials live
+// 24h, far beyond any session, and the hook re-mounts on every room
+// navigation. Failures are NOT cached — a transient outage at first
+// join shouldn't doom every later join to STUN-only.
+let cachedIceServers: RTCIceServer[] | null = null;
+
 /** Test-only: drop the cached credentials between test cases. */
-export function resetTurnCredentialsCache(): void {}
+export function resetTurnCredentialsCache(): void {
+  cachedIceServers = null;
+}
 
 export async function fetchTurnIceServers(): Promise<RTCIceServer[] | null> {
+  if (cachedIceServers) return cachedIceServers;
   try {
     const response = await fetch(TURN_CREDENTIALS_URL, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -26,7 +35,8 @@ export async function fetchTurnIceServers(): Promise<RTCIceServer[] | null> {
     if (!response.ok) return null;
     const body = (await response.json()) as { iceServers?: unknown };
     if (!Array.isArray(body.iceServers)) return null;
-    return body.iceServers as RTCIceServer[];
+    cachedIceServers = body.iceServers as RTCIceServer[];
+    return cachedIceServers;
   } catch {
     return null;
   }
