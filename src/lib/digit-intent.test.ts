@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   applyDigitIntent,
+  type DigitGesture,
   type DigitIntentContext,
   digitIntent,
 } from "./digit-intent.ts";
@@ -260,4 +261,45 @@ describe("applyDigitIntent", () => {
 
     for (const op of Object.values(ops)) expect(op).not.toHaveBeenCalled();
   });
+});
+
+describe("digitIntent — label", () => {
+  const gestures: DigitGesture[] = [
+    { kind: "tap" },
+    { kind: "hold" },
+    { kind: "key", notesMode: false },
+    { kind: "key", notesMode: true },
+    { kind: "drop", mode: "value", target: { row: 4, col: 5 }, from: null },
+    { kind: "drop", mode: "note", target: { row: 4, col: 5 }, from: null },
+    {
+      kind: "drop",
+      mode: "note",
+      target: { row: 4, col: 5 },
+      from: { row: 3, col: 4 },
+    },
+  ];
+  const selections: [string, DigitIntentContext][] = [
+    ["nothing selected", ctx()],
+    ["an empty cell selected", cellSelected(0, 0)],
+    ["a filled cell selected", cellSelected(0, 0, 7)],
+    [
+      "a range armed",
+      ctx({
+        selectedCell: { row: 0, col: 0 },
+        selectedCells: new Set([0, 1]),
+      }),
+    ],
+  ];
+
+  // The numpad legend used to be a hand-rolled mirror of the tap rules,
+  // and drifted from them. Deriving it from the effect makes the two
+  // impossible to disagree — this pins that for the whole table.
+  for (const gesture of gestures) {
+    for (const [what, selection] of selections) {
+      it(`says "note" exactly when ${JSON.stringify(gesture)} pencils one, with ${what}`, () => {
+        const { effect, label } = digitIntent(gesture, selection);
+        expect(label).toBe(effect.kind === "note" ? "note" : "enter");
+      });
+    }
+  }
 });
