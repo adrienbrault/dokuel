@@ -199,71 +199,73 @@ export function hiddenSet(s: CandidateState, size: number): Elimination | null {
 }
 
 /**
- * X-wing: a digit held to the same two lines in two crossing lines
- * forms a rectangle; the digit leaves the rest of the crossing lines.
- * `cellAt` maps (line, cross) to a cell so one scan covers both the
- * row-based and the column-based orientation.
+ * Fish of `size` lines: a digit held to the same `size` crossing lines
+ * across `size` lines (size 2 = X-wing rectangle, 3 = swordfish); the
+ * digit leaves the rest of those crossing lines. `cellAt` maps (line,
+ * cross) to a cell so one scan covers both orientations.
  */
-function xWingOriented(
+function fishOriented(
   s: CandidateState,
   v: number,
+  size: number,
   cellAt: (line: number, cross: number) => number,
 ): Elimination | null {
   const bit = 1 << v;
-  const crosses: number[][] = [];
+  const crossesOf: number[][] = [];
+  const lines: number[] = [];
   for (let line = 0; line < 9; line++) {
     const held: number[] = [];
     for (let cross = 0; cross < 9; cross++) {
       if (s.cand[cellAt(line, cross)]! & bit) held.push(cross);
     }
-    crosses.push(held);
+    crossesOf.push(held);
+    if (held.length >= 2 && held.length <= size) lines.push(line);
   }
-  for (let a = 0; a < 9; a++) {
-    if (crosses[a]!.length !== 2) continue;
-    for (let b = a + 1; b < 9; b++) {
-      if (crosses[b]!.length !== 2) continue;
-      if (
-        crosses[a]![0] !== crosses[b]![0] ||
-        crosses[a]![1] !== crosses[b]![1]
-      ) {
-        continue;
+  for (const combo of kCombinations(lines, size)) {
+    const union = new Set<number>();
+    for (const line of combo) {
+      for (const cross of crossesOf[line]!) union.add(cross);
+    }
+    if (union.size !== size) continue;
+    const removed: { cell: number; digit: number }[] = [];
+    let changed = false;
+    for (let line = 0; line < 9; line++) {
+      if (combo.includes(line)) continue;
+      for (const cross of union) {
+        changed =
+          eliminate(s, cellAt(line, cross), bit, [v], removed) || changed;
       }
-      const removed: { cell: number; digit: number }[] = [];
-      let changed = false;
-      for (let line = 0; line < 9; line++) {
-        if (line === a || line === b) continue;
-        for (const cross of crosses[a]!) {
-          changed =
-            eliminate(s, cellAt(line, cross), bit, [v], removed) || changed;
-        }
-      }
-      if (changed) {
-        return {
-          kind: "x-wing",
-          digits: [v],
-          patternCells: [a, b].flatMap((line) =>
-            crosses[a]!.map((cross) => cellAt(line, cross)),
-          ),
-          removed,
-        };
-      }
+    }
+    if (changed) {
+      return {
+        kind: size === 2 ? "x-wing" : "swordfish",
+        digits: [v],
+        patternCells: combo.flatMap((line) =>
+          crossesOf[line]!.map((cross) => cellAt(line, cross)),
+        ),
+        removed,
+      };
     }
   }
   return null;
 }
 
-export function xWing(s: CandidateState): Elimination | null {
+function fish(s: CandidateState, size: number): Elimination | null {
   for (let v = 1; v <= 9; v++) {
-    const rows = xWingOriented(s, v, (row, col) => row * 9 + col);
+    const rows = fishOriented(s, v, size, (line, cross) => line * 9 + cross);
     if (rows) return rows;
-    const cols = xWingOriented(s, v, (col, row) => row * 9 + col);
+    const cols = fishOriented(s, v, size, (line, cross) => cross * 9 + line);
     if (cols) return cols;
   }
   return null;
 }
 
-export function swordfish(_s: CandidateState): Elimination | null {
-  return null;
+export function xWing(s: CandidateState): Elimination | null {
+  return fish(s, 2);
+}
+
+export function swordfish(s: CandidateState): Elimination | null {
+  return fish(s, 3);
 }
 
 /**
