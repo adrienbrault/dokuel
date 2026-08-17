@@ -198,15 +198,43 @@ export function getOpponentProgress(
   return null;
 }
 
+export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
+
+/**
+ * The one guard over win claims. Every peer can write any winnerId it
+ * likes into the CRDT, so a claim is worth only what its board proves:
+ *
+ * - `solved` — the board equals the room's solution. Always credible.
+ * - `forfeit` — no board at all, asserting the opponent vanished.
+ *   Nothing here can verify that; only the receiver's own absence
+ *   record can back it.
+ * - `forged` — a board that does not solve the puzzle. `""` lands here
+ *   (the original one-liner cheat), which is why getRoomState must not
+ *   coerce it to null.
+ * - `unverifiable` — a board arrived but the room has no solution to
+ *   check it against. Not provably forged, so callers that punish
+ *   forgery must leave it alone.
+ *
+ * Deliberately typed on `unknown`: the write path reads raw Yjs values
+ * while the read path holds a projected RoomState, and both must reach
+ * the same verdict.
+ */
+export function judgeClaim(board: unknown, solution: unknown): ClaimVerdict {
+  if (board === null || board === undefined) return "forfeit";
+  if (typeof board !== "string" || typeof solution !== "string") {
+    return "unverifiable";
+  }
+  return board === solution ? "solved" : "forged";
+}
+
 /**
  * Write a win claim into the room. `board` is the claimant's completed
  * board for a solved win, or null for a forfeit (opponent gone —
  * nothing to verify). The first claim normally wins, with two
- * exceptions that keep a cheater from locking the real winner out:
- * an existing solved-claim whose board does NOT match the room's
- * solution is forged and may be overwritten, and an existing forfeit
- * claim yields to a verified solved board — a forfeit only means
- * anything while the supposedly absent player never finishes.
+ * exceptions that keep a cheater from locking the real winner out: a
+ * forged claim may be overwritten by anyone, and a forfeit claim yields
+ * to a verified solved board — a forfeit only means anything while the
+ * supposedly absent player never finishes.
  */
 export function claimWinner(
   room: P2PRoom,
@@ -217,17 +245,12 @@ export function claimWinner(
   const roomMap = room.doc.getMap("room");
   const existingWinner = roomMap.get("winnerId");
   if (existingWinner !== null && existingWinner !== undefined) {
-    const existingBoard = roomMap.get("winnerBoard");
     const solution = roomMap.get("solution");
-    const existingIsForged =
-      typeof existingBoard === "string" &&
-      typeof solution === "string" &&
-      existingBoard !== solution;
-    const solvedBeatsForfeit =
-      (existingBoard === null || existingBoard === undefined) &&
-      typeof solution === "string" &&
-      board === solution;
-    if (!existingIsForged && !solvedBeatsForfeit) return false;
+    const existing = judgeClaim(roomMap.get("winnerBoard"), solution);
+    const mayOverwrite =
+      existing === "forged" ||
+      (existing === "forfeit" && judgeClaim(board, solution) === "solved");
+    if (!mayOverwrite) return false;
   }
 
   room.doc.transact(() => {

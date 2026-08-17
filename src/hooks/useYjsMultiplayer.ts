@@ -14,6 +14,7 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  judgeClaim,
   leaveRoom,
   MAX_PLAYERS,
   observeRoomChanges,
@@ -214,11 +215,12 @@ export function useYjsMultiplayer({
           const forfeitBackedByAbsence =
             absence.ongoing ||
             Date.now() - absence.endedAt < FORFEIT_TRUST_WINDOW_MS;
+          const verdict = judgeClaim(state.winnerBoard, state.solution);
           const claimValid =
             state.winnerId === playerId ||
-            (state.winnerBoard === null
+            (verdict === "forfeit"
               ? forfeitBackedByAbsence
-              : state.winnerBoard === state.solution);
+              : verdict === "solved");
           if (claimValid) {
             setGameOver({
               winnerId: state.winnerId,
@@ -482,10 +484,11 @@ export function useYjsMultiplayer({
     (board: string) => {
       const room = roomRef.current;
       if (!room) return;
-      // Only a board that actually solves the puzzle may claim. This
-      // is client-side honesty, not server enforcement — but it kills
-      // the accidental and one-liner cheat paths.
-      if (!solutionRef.current || board !== solutionRef.current) return;
+      // Only a board that actually solves the puzzle may claim — the
+      // same guard the receiver applies to a remote claim. This is
+      // client-side honesty, not server enforcement, but it kills the
+      // accidental and one-liner cheat paths.
+      if (judgeClaim(board, solutionRef.current) !== "solved") return;
       claimWinner(room, playerId, playerNameRef.current, board);
     },
     [playerId],

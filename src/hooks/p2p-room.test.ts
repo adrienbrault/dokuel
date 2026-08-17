@@ -14,6 +14,7 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  judgeClaim,
   leaveRoom,
   observeRoomChanges,
   type P2PRoom,
@@ -284,6 +285,38 @@ describe("p2p-room", () => {
       joinRoom(room, "player1", "Alice");
 
       expect(getOpponentProgress(room, "player1")).toBeNull();
+    });
+  });
+
+  describe("judgeClaim", () => {
+    const SOLUTION = "1".repeat(81);
+
+    it("credits a board that equals the room's solution", () => {
+      expect(judgeClaim(SOLUTION, SOLUTION)).toBe("solved");
+    });
+
+    it("reads a missing board as a forfeit claim", () => {
+      // Nothing in the doc can verify "the opponent vanished" — only
+      // the receiver's own absence record can back it.
+      expect(judgeClaim(null, SOLUTION)).toBe("forfeit");
+      expect(judgeClaim(undefined, SOLUTION)).toBe("forfeit");
+    });
+
+    it("treats an empty-string board as forged, not forfeit", () => {
+      // The original one-liner cheat: a solved-claim with no board. If
+      // "" collapsed to a forfeit it would be judged by absence instead
+      // of by the solution.
+      expect(judgeClaim("", SOLUTION)).toBe("forged");
+    });
+
+    it("rejects a board that does not solve the puzzle", () => {
+      expect(judgeClaim("2".repeat(81), SOLUTION)).toBe("forged");
+    });
+
+    it("cannot prove anything without a solution in the room", () => {
+      // Not provably forged — callers that punish forgery must leave a
+      // claim in this state alone rather than assume the worst.
+      expect(judgeClaim(SOLUTION, null)).toBe("unverifiable");
     });
   });
 
