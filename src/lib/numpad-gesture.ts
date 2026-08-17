@@ -64,9 +64,7 @@ export function classifyPan({
 export function digitButtonAt(x: number, y: number): HTMLButtonElement | null {
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
-  return (el as HTMLElement).closest?.(
-    "[data-numpad-digit]",
-  ) as HTMLButtonElement | null;
+  return el.closest("[data-numpad-digit]") as HTMLButtonElement | null;
 }
 
 /**
