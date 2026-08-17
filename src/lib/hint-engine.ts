@@ -1,22 +1,11 @@
 import { getErrors } from "./sudoku.ts";
-import { buildTechniqueHint } from "./technique-hint.ts";
-import { findUnlockingPlacement } from "./techniques.ts";
+import { findTechniqueHint } from "./technique-hint.ts";
 import type { ActiveHint, Board, Position } from "./types.ts";
 
 // Alias, not a parallel definition: board-engine stores findHint's
 // result in an ActiveHint field, and two structurally-identical types
 // only stay identical by luck.
 export type HintExplanation = ActiveHint;
-
-function boardValues(board: Board): string {
-  let out = "";
-  for (const row of board) {
-    for (const cell of row) {
-      out += cell.value === null ? "." : String(cell.value);
-    }
-  }
-  return out;
-}
 
 function peersOf(row: number, col: number): Position[] {
   const peers: Position[] = [];
@@ -273,8 +262,8 @@ export function findHint(
   // No single anywhere — the state graded boards put players in. Look
   // for the elimination (locked candidates, pairs, triples, X-wing)
   // whose removals make the next placement visible, and teach that.
-  const unlock = findUnlockingPlacement(boardValues(board));
-  if (unlock) return buildTechniqueHint(unlock);
+  const techniqueHint = findTechniqueHint(board);
+  if (techniqueHint) return techniqueHint;
 
   // Fallback: use solution to find the target cell and explain what's possible
   let targetRow = -1;

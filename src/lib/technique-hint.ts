@@ -6,11 +6,25 @@
 
 import { boxIndex } from "./board-geometry.ts";
 import type { HintExplanation } from "./hint-engine.ts";
-import type { Elimination, UnlockingPlacement } from "./techniques.ts";
-import type { HintTechnique, Position } from "./types.ts";
+import {
+  type Elimination,
+  findUnlockingPlacement,
+  type UnlockingPlacement,
+} from "./techniques.ts";
+import type { Board, HintTechnique, Position } from "./types.ts";
 
 function toPosition(cell: number): Position {
   return { row: Math.floor(cell / 9), col: cell % 9 };
+}
+
+function boardValues(board: Board): string {
+  let out = "";
+  for (const row of board) {
+    for (const cell of row) {
+      out += cell.value === null ? "." : String(cell.value);
+    }
+  }
+  return out;
 }
 
 /** Name the row, column, or box that contains every given cell. */
@@ -104,9 +118,14 @@ const TECHNIQUE_OF_KIND: Record<Elimination["kind"], HintTechnique> = {
   "x-wing": "x-wing",
 };
 
-export function buildTechniqueHint(
-  unlock: UnlockingPlacement,
-): HintExplanation {
+/** The technique hint for a board whose singles have run dry — null
+ * when only chains or guessing can progress. */
+export function findTechniqueHint(board: Board): HintExplanation | null {
+  const unlock = findUnlockingPlacement(boardValues(board));
+  return unlock ? buildTechniqueHint(unlock) : null;
+}
+
+function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
   const { elimination, single, priorSteps } = unlock;
   const preamble =
     priorSteps > 0
