@@ -286,6 +286,26 @@ describe("findHint", () => {
       expect(hint!.explanation).toContain("eliminations deep");
     });
 
+    it("walks the XY-wing through both pivot cases with real digits", () => {
+      // The live board behind the "I don't understand" report: the
+      // pivot holds 4/5 and never the eliminated 2, so a hint naming
+      // only "an XY-wing on 2" reads as nonsense. The fix: name the
+      // pivot's digits and walk what each choice forces.
+      const USER_BOARD =
+        ".738.1.69.61..9.8.8946...1.42756839115.3..87.38..17.4.745126938912783654638...127";
+      const board = parsePuzzle(USER_BOARD);
+      const hint = findHint(board, solvePuzzle(USER_BOARD)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("xy-wing");
+      expect(hint!.position).toEqual({ row: 1, col: 0 });
+      expect(hint!.value).toBe(5);
+      expect(hint!.explanation).toContain("pivot cell can only be 4 or 5");
+      expect(hint!.explanation).toContain("If it's 4");
+      expect(hint!.explanation).toContain("If it's 5");
+      expect(hint!.explanation).toContain("must be 2");
+    });
+
     it("labels a naked-quad unlock", () => {
       const QUAD_STUCK =
         "6.4..8..72..59184689...63.....8.267...8.57..972.9..518.82..5...5........1....97.5";
