@@ -1,5 +1,4 @@
 import type { Doc } from "yjs";
-import type { Presence } from "./mp-connection.presence.ts";
 
 /**
  * The Connection: how a room's state reaches its peers and survives
@@ -117,6 +116,9 @@ export function createIceServerResolver(
   };
 }
 
+/** The presence payload one client publishes about itself. */
+export type PresenceUser = { id: string; name: string };
+
 /**
  * A synced, locally-persisted doc plus presence for one room, on the
  * best transport available.
@@ -144,11 +146,17 @@ export function createIceServerResolver(
  * joining or leaving the mesh and a peer publishing or clearing its own
  * entry — because no caller has ever wanted to tell them apart.
  */
-export type Connection = Omit<Presence, "removeAllListeners"> & {
+export type Connection = {
   doc: Doc;
   whenSynced: Promise<void>;
   readonly connected: boolean;
   onStatus(listener: (connected: boolean) => void): () => void;
+  /** Fires whenever the reachable set may have changed. */
+  onPresenceChange(listener: () => void): () => void;
+  /** Publish who we are so peers can tell us apart from a stale entry. */
+  announce(user: PresenceUser): void;
+  /** True when some other client has announced a different player. */
+  hasOtherPeer(ownPlayerId: string): boolean;
   connect(): void;
   disconnect(): void;
   close(): void;

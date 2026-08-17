@@ -1,4 +1,5 @@
 import type { Awareness } from "y-protocols/awareness";
+import type { Connection, PresenceUser } from "./mp-connection.ts";
 
 /**
  * Presence over a y-protocols Awareness: whether the opponent is
@@ -12,20 +13,15 @@ import type { Awareness } from "y-protocols/awareness";
  * through `y-webrtc`, so nothing here may pull it in itself.
  */
 
-/** The awareness payload's schema, defined once. */
-export type PresenceUser = { id: string; name: string };
-
 /**
- * The presence half of the {@link ./mp-connection.ts Connection}
- * interface, plus the teardown hook an adapter's own `close()` calls.
+ * The presence half of the {@link Connection} interface — derived from
+ * it rather than restated, so the two cannot drift — plus the teardown
+ * hook an adapter's own `close()` calls.
  */
-export type Presence = {
-  /** Publish who we are so peers can tell us apart from a stale entry. */
-  announce(user: PresenceUser): void;
-  /** True when some other client has announced a different player. */
-  hasOtherPeer(ownPlayerId: string): boolean;
-  /** Fires whenever the reachable set may have changed. */
-  onPresenceChange(listener: () => void): () => void;
+export type Presence = Pick<
+  Connection,
+  "announce" | "hasOtherPeer" | "onPresenceChange"
+> & {
   /** Drop every listener this helper installed. */
   removeAllListeners(): void;
 };
