@@ -86,6 +86,8 @@ export function useNumPadGesture({
     button: HTMLButtonElement;
     gestureMode: "none" | "drag" | "skim";
     holdFired: boolean;
+    /** Whether the press owns the pointer — see beginPress. */
+    captured: boolean;
   } | null>(null);
   // Suppresses the synthetic click after pointerup, so onTap fires once.
   const pointerFiredRef = useRef(false);
@@ -126,6 +128,21 @@ export function useNumPadGesture({
       pointerFiredRef.current = true;
       setPressedDigit(n);
       const btn = e.currentTarget;
+      // Claim the pointer for the whole unclassified phase. A mouse gets
+      // no implicit capture, so a press landing near a key's edge would
+      // otherwise cross the boundary within the slop, and the button's
+      // pointerleave would cancel a gesture that had not been read yet.
+      // Classification hands the pointer back so document-level tracking
+      // can follow the gesture across the pad.
+      let captured = false;
+      if (typeof btn.setPointerCapture === "function") {
+        try {
+          btn.setPointerCapture(e.pointerId);
+          captured = true;
+        } catch {
+          // ignore — the pointer may already be gone
+        }
+      }
       const originX = e.clientX;
       const originY = e.clientY;
       const timer = cbRef.current.onHold
@@ -148,6 +165,7 @@ export function useNumPadGesture({
         button: btn,
         gestureMode: "none",
         holdFired: false,
+        captured,
       };
     },
     [cancelTimer],
@@ -223,6 +241,16 @@ export function useNumPadGesture({
     [cancelTimer],
   );
 
+  // A capturing browser cannot send this while the press is still
+  // unclassified — every move keeps targeting the pressed button until
+  // classification releases the pointer. Ignoring it states that
+  // invariant; where capture is unavailable the leave still cancels.
+  const handlePointerLeave = useCallback(() => {
+    const press = pressRef.current;
+    if (press?.captured && press.gestureMode === "none") return;
+    endPress(false);
+  }, [endPress]);
+
   const handleClick = useCallback((n: number) => {
     if (pointerFiredRef.current) {
       pointerFiredRef.current = false;
@@ -237,11 +265,11 @@ export function useNumPadGesture({
       onPointerDown: (e) => beginPress(n, e),
       onPointerMove: handlePointerMove,
       onPointerUp: () => endPress(true),
-      onPointerLeave: () => endPress(false),
+      onPointerLeave: handlePointerLeave,
       onPointerCancel: () => endPress(false),
       onClick: () => handleClick(n),
     }),
-    [beginPress, handlePointerMove, endPress, handleClick],
+    [beginPress, handlePointerMove, endPress, handlePointerLeave, handleClick],
   );
 
   /**
