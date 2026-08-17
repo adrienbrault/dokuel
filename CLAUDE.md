@@ -282,7 +282,7 @@ You cannot judge visual quality from code alone. **Always screenshot, always rev
 - **Peer-to-peer**: No server needed. Game state syncs via Yjs CRDTs over WebRTC. Public signaling servers used only for peer discovery.
 - **Board sharing**: Sharer's cells become locked/given on both boards. Notes not shared.
 - **Numpad positions**: Bottom (default), Left, Right. Persisted in localStorage. Configured via settings popover.
-- **No accounts**: Auto-generated fun names (adjective + animal). Name persisted in localStorage, editable in lobby. sessionStorage for reconnect identity.
+- **No accounts**: Auto-generated fun names (adjective + animal). Player id and name persisted in localStorage; name editable in lobby.
 - **Daily challenge**: Deterministic puzzle via seeded RNG — same date, same board, any device. Streak tracking (current + longest).
 - **Stats tracking**: Per-difficulty game history (best time, average, games played) in localStorage. Personal best shown during gameplay.
 - **Game persistence**: Auto-save in-progress games to localStorage. Resume on return.

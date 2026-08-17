@@ -155,7 +155,7 @@ src/
 - **Peer-to-peer multiplayer** — game state syncs via Yjs CRDTs over WebRTC. A self-hosted Cloudflare Worker at `signal.dokuel.com` handles peer discovery; all game data flows directly between players
 - **React hooks only** — `useReducer` for game state, no external state library
 - **Soft validation** — conflicts are visual feedback, not hard constraints. The board is complete only when fully filled with no violations
-- **No accounts** — auto-generated fun names (adjective + animal), persisted in localStorage; session identity in sessionStorage for reconnect
+- **No accounts** — auto-generated fun names (adjective + animal), persisted in localStorage so the same identity survives reloads and reconnects
 - **Colocated tests** — `*.test.ts` / `*.test.tsx` files sit next to the code they test
 
 ## Deployment
