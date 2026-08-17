@@ -98,6 +98,15 @@ describe("generatePuzzle", () => {
       expect(grade.stuckCells).toBeGreaterThanOrEqual(40);
     }
   });
+
+  it("still ships a valid board when the grade bar is unreachable", () => {
+    // A constant rng makes every dig identical, so the graded loop can
+    // never meet its bar — generation must fall back to the best board
+    // seen instead of blocking the UI.
+    const puzzle = generatePuzzle("expert", () => 0);
+    expect(puzzle).toMatch(/^[1-9.]{81}$/);
+    expect(countSolutions(puzzle)).toBe(1);
+  });
 });
 
 describe("generatePuzzleWithSolution", () => {
