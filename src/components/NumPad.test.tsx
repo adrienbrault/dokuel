@@ -229,6 +229,95 @@ describe("NumPad", () => {
     expect(onTapNumber).not.toHaveBeenCalled();
   });
 
+  // jsdom implements no pointer capture at all, so a captured press is
+  // staged by hand: the stubs stand in for the browser's, and moves are
+  // fired at the origin button the way a capturing browser retargets
+  // them there even once the cursor has left it.
+  function stubPointerCapture(el: HTMLElement) {
+    el.setPointerCapture = vi.fn();
+    el.releasePointerCapture = vi.fn();
+  }
+
+  it("keeps a captured mouse press alive when the cursor leaves the key", () => {
+    // Mice get no implicit capture: a press landing within the slop of a
+    // key's edge crosses the boundary before the pan classifies, and the
+    // button-scoped pointerleave then killed the whole gesture — no
+    // drag, no skim, no tap. A captured press owns the pointer until it
+    // classifies, so the leave is not the end of anything.
+    const onStartDrag = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        onHoldNumber={vi.fn()}
+        onStartDrag={onStartDrag}
+        onSkimDigit={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    stubPointerCapture(three);
+    fireEvent.pointerDown(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    expect(three.setPointerCapture).toHaveBeenCalledWith(1);
+    // 5px toward the board — under the slop, already off the key.
+    fireEvent.pointerLeave(three, { pointerType: "mouse", pointerId: 1 });
+    fireEvent.pointerMove(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: -40,
+    });
+    expect(onStartDrag).toHaveBeenCalledWith({
+      digit: 3,
+      x: 0,
+      y: -40,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+  });
+
+  it("still skims after a captured mouse press leaves the key", () => {
+    const onSkimDigit = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        onStartDrag={vi.fn()}
+        onSkimDigit={onSkimDigit}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    const five = screen.getByRole("button", { name: /^5, / });
+    stubPointerCapture(three);
+    fireEvent.pointerDown(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerLeave(three, { pointerType: "mouse", pointerId: 1 });
+    // Along-axis pan past the slop → skim, tracked at the document level.
+    fireEvent.pointerMove(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 50,
+      clientY: 0,
+    });
+    mockElementFromPoint(five);
+    act(() => {
+      document.dispatchEvent(
+        docPointer("pointermove", { pointerId: 1, clientX: 100, clientY: 0 }),
+      );
+    });
+    expect(onSkimDigit).toHaveBeenCalledWith(5);
+  });
+
   it("calls onPressEnd on pointer release (after a quick tap)", () => {
     const onPressEnd = vi.fn();
     render(
