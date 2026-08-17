@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { type DigitIntentContext, digitIntent } from "./digit-intent.ts";
+import { describe, expect, it, vi } from "vitest";
+import {
+  applyDigitIntent,
+  type DigitIntentContext,
+  digitIntent,
+} from "./digit-intent.ts";
 import type { Board } from "./types.ts";
 
 function emptyBoard(): Board {
@@ -170,5 +174,90 @@ describe("digitIntent — keyboard", () => {
       after: { selection: "keep", highlight: false },
       label: "enter",
     });
+  });
+});
+
+describe("applyDigitIntent", () => {
+  function makeOps() {
+    return {
+      placeNumber: vi.fn(),
+      placeNoteAt: vi.fn(),
+      selectCell: vi.fn(),
+      deselectCell: vi.fn(),
+      toggleHighlight: vi.fn(),
+      setHighlight: vi.fn(),
+    };
+  }
+
+  /** Asserts `first` was called before `second`, both having been called. */
+  function expectCalledBefore(
+    first: { mock: { invocationCallOrder: number[] } },
+    second: { mock: { invocationCallOrder: number[] } },
+  ) {
+    const [a, b] = [first, second].map(
+      (m) => m.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    ) as [number, number];
+    expect(a).toBeLessThan(b);
+  }
+
+  it("notes into an armed range BEFORE releasing it", () => {
+    // The engine's batch-note branch reads selectedCells, so deselecting
+    // first would silently turn the whole gesture into a no-op.
+    const ops = makeOps();
+    const armed = ctx({
+      selectedCell: { row: 0, col: 0 },
+      selectedCells: new Set([0, 1]),
+    });
+    applyDigitIntent(digitIntent({ kind: "tap" }, armed), 6, ops);
+
+    expect(ops.placeNumber).toHaveBeenCalledWith(6, true);
+    expectCalledBefore(ops.placeNumber, ops.deselectCell);
+    expect(ops.setHighlight).toHaveBeenCalledWith(6);
+  });
+
+  it("selects a value drop's target BEFORE placing the value", () => {
+    const ops = makeOps();
+    const target = { row: 4, col: 5 };
+    applyDigitIntent(
+      digitIntent({ kind: "drop", mode: "value", target, from: null }, ctx()),
+      9,
+      ops,
+    );
+
+    expect(ops.selectCell).toHaveBeenCalledWith(4, 5);
+    expect(ops.placeNumber).toHaveBeenCalledWith(9, false);
+    expectCalledBefore(ops.selectCell, ops.placeNumber);
+  });
+
+  it("lands a note drop at its target BEFORE selecting the source cell", () => {
+    const ops = makeOps();
+    const target = { row: 4, col: 5 };
+    const from = { row: 3, col: 4 };
+    applyDigitIntent(
+      digitIntent({ kind: "drop", mode: "note", target, from }, ctx()),
+      7,
+      ops,
+    );
+
+    expect(ops.placeNoteAt).toHaveBeenCalledWith(4, 5, 7);
+    expect(ops.selectCell).toHaveBeenCalledWith(3, 4);
+    expectCalledBefore(ops.placeNoteAt, ops.selectCell);
+    expect(ops.setHighlight).not.toHaveBeenCalled();
+  });
+
+  it("toggles the highlight and touches nothing else", () => {
+    const ops = makeOps();
+    applyDigitIntent(digitIntent({ kind: "tap" }, ctx()), 3, ops);
+
+    expect(ops.toggleHighlight).toHaveBeenCalledWith(3);
+    expect(ops.placeNumber).not.toHaveBeenCalled();
+    expect(ops.deselectCell).not.toHaveBeenCalled();
+  });
+
+  it("runs nothing for a hold with no selection", () => {
+    const ops = makeOps();
+    applyDigitIntent(digitIntent({ kind: "hold" }, ctx()), 3, ops);
+
+    for (const op of Object.values(ops)) expect(op).not.toHaveBeenCalled();
   });
 });

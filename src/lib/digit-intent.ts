@@ -132,3 +132,36 @@ function dropIntent(
     ? intent({ kind: "note", at: gesture.target }, gesture.from)
     : intent({ kind: "note", at: gesture.target }, "release", true);
 }
+
+/**
+ * The board and selection commands an intent is run against. Split out
+ * so the executor can be exercised without a game.
+ */
+export type DigitIntentOps = {
+  /** Place into the CURRENT selection — the engine reads it itself. */
+  placeNumber: (value: number, asNote: boolean) => void;
+  /** Toggle a note at an explicit cell, whatever is selected. */
+  placeNoteAt: (row: number, col: number, value: number) => void;
+  selectCell: (row: number, col: number) => void;
+  deselectCell: () => void;
+  /** Spotlight `digit`, or clear the spotlight if it is already on it. */
+  toggleHighlight: (digit: number) => void;
+  /** Spotlight `digit` unconditionally. */
+  setHighlight: (digit: number) => void;
+};
+
+/**
+ * Runs an intent for `digit`. The order is the contract: the effect
+ * lands first, because placing into "the current selection" means the
+ * engine reads the selection — releasing or moving it first would turn
+ * the placement into a no-op. A value drop is the mirror case: its
+ * target must be selected BEFORE the value is placed, which is why that
+ * select lives inside the effect and not in `after`.
+ */
+export function applyDigitIntent(
+  _intent: DigitIntent,
+  _digit: number,
+  _ops: DigitIntentOps,
+): void {
+  // Stub so the commit typechecks; the ordering lands next.
+}
