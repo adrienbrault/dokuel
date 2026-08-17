@@ -530,6 +530,37 @@ describe("useYjsMultiplayer", () => {
       }
     });
 
+    it("hydrates even if the wall clock steps back mid-window", async () => {
+      // NTP corrections and VM restores move the wall clock backwards.
+      // A tick timed against a clock that went back reads as early, and
+      // an early tick the binding never re-armed used to strand the
+      // pending snapshot for good: setup never ran, so the player never
+      // took a seat in their own room.
+      vi.useFakeTimers();
+      try {
+        seedSnapshot("room-clock-step");
+
+        const { result } = renderRoom({
+          roomId: "room-clock-step",
+          difficulty: null,
+        });
+        // Let local sync land so the grace window is armed.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1_000);
+        });
+
+        vi.setSystemTime(Date.now() - 5_000);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2_000);
+        });
+
+        expect(result.current.hasStartedGame).toBe(true);
+        expect(result.current.roomState?.gameNumber).toBe(4);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("writes a snapshot to localStorage on pagehide", async () => {
       const { result } = renderRoom({
         roomId: "room-pagehide",

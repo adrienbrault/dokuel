@@ -292,6 +292,20 @@ describe("win claims", () => {
     expect(room.snapshot().gameOver).toBeNull();
   });
 
+  it("ignores a forfeit claim on a clock that only just started", () => {
+    // "Never been away" is not "was away at instant zero". The binding
+    // feeds the Room a monotonic clock that starts near zero at page
+    // load, so an absence record initialised to 0 would read as an
+    // absence that just ended and honour a fabricated forfeit for the
+    // first two minutes of every session.
+    const { p2p, room, tickTo } = setupStartedGame();
+    tickTo(1_000);
+
+    claimWinner(p2p, "p2", "Bob", null);
+
+    expect(room.snapshot().gameOver).toBeNull();
+  });
+
   it("accepts a forfeit claim that our own absence record backs", () => {
     const { p2p, room, tickTo } = setupStartedGame();
     room.apply({ type: "connectivity-changed", connected: false, now: T0 });
@@ -496,6 +510,21 @@ describe("hydration", () => {
     expect(room.snapshot().puzzle).toBe(".".repeat(81));
     expect(room.snapshot().roomState?.gameNumber).toBe(4);
     expect(room.snapshot().roomState?.difficulty).toBe("hard");
+  });
+
+  it("keeps asking for a wake-up after a tick that came too early", () => {
+    // The Room drops an early tick, so it must still be naming an
+    // instant afterwards — the binding re-arms from nextWakeAt() and a
+    // Room that went quiet here would strand the snapshot forever,
+    // leaving the player without a seat.
+    seedSnapshot();
+    const { room } = setup(null);
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    room.apply({ type: "tick", now: T0 + 1_000 });
+
+    expect(room.snapshot().hasStartedGame).toBe(false);
+    expect(room.nextWakeAt()).toBe(T0 + 3_000);
   });
 
   it("prefers live peer state that arrives during the grace window", () => {
