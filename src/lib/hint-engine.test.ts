@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
-import { parsePuzzle } from "./sudoku.ts";
+import { parsePuzzle, solvePuzzle } from "./sudoku.ts";
 
 describe("findHint", () => {
   describe("mistake redirection", () => {
@@ -220,6 +220,40 @@ describe("findHint", () => {
       const hint = findHint(board, solved, { row: 8, col: 8 });
       expect(hint).not.toBeNull();
       expect(hint!.position).toEqual({ row: 8, col: 8 });
+    });
+  });
+
+  describe("technique unlock", () => {
+    // Boards captured by playing singles to exhaustion on graded
+    // puzzles — the state where the old engine gave up and revealed.
+    const PAIRS_STUCK =
+      "5.....3277.982.4656..57.891.7....1.49.31.5.78..1..7..9497.1.5823..4927161..758943";
+    const TRIPLES_STUCK =
+      "57....8....87..9.....5.873468..59..7..567..98.9728....8....647.7413256899.6847..1";
+
+    it("explains the unlocking elimination instead of revealing", () => {
+      // Box 2 confines 3 to column 6, which strips r7c6 down to a
+      // lone 6 — a real deduction with proving cells, not a reveal.
+      const board = parsePuzzle(PAIRS_STUCK);
+      const hint = findHint(board, solvePuzzle(PAIRS_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("locked-candidates");
+      expect(hint!.position).toEqual({ row: 6, col: 5 });
+      expect(hint!.value).toBe(6);
+      expect(hint!.explanation).toContain("3");
+      expect(hint!.explanation).toContain("6");
+      expect(hint!.relatedCells.length).toBeGreaterThan(0);
+    });
+
+    it("labels an X-wing unlock as an X-wing", () => {
+      const board = parsePuzzle(TRIPLES_STUCK);
+      const hint = findHint(board, solvePuzzle(TRIPLES_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("x-wing");
+      expect(hint!.position).toEqual({ row: 5, col: 7 });
+      expect(hint!.value).toBe(4);
     });
   });
 
