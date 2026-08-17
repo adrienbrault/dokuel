@@ -9,6 +9,9 @@ const NEEDS_PAIRS =
   "5.....3.....8..46.6..57..9..7.........31.5..8..1.....9.97.1.58....4.2.......5..4.";
 const NEEDS_TRIPLES =
   "57....8....87..........8.346...59.....5....9...72..........6.7...1....899.684...1";
+// AI Escargot — famously requires forcing chains far beyond tier 3.
+const NEEDS_CHAINS =
+  "1....7.9..3..2...8..96..5....53..9...1..8...26....4...3......1..4......7..7...3..";
 
 describe("gradePuzzle", () => {
   it("grades a puzzle that falls to singles alone as tier 1", () => {
@@ -21,5 +24,17 @@ describe("gradePuzzle", () => {
 
   it("grades a puzzle needing triples or an X-wing as tier 3", () => {
     expect(gradePuzzle(NEEDS_TRIPLES)).toEqual({ tier: 3, stuckCells: 0 });
+  });
+
+  it("grades a chains-only puzzle tier 4 with a deep stuck count", () => {
+    const grade = gradePuzzle(NEEDS_CHAINS);
+    expect(grade.tier).toBe(4);
+    // Most of the board must still be open when the techniques run
+    // dry — the severity signal expert generation selects on.
+    expect(grade.stuckCells).toBeGreaterThanOrEqual(40);
+  });
+
+  it("treats a malformed puzzle as maximally stuck", () => {
+    expect(gradePuzzle("123")).toEqual({ tier: 4, stuckCells: 81 });
   });
 });
