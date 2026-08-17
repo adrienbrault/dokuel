@@ -65,6 +65,11 @@ export function useNumpadInteractions({
     if (intent.effect.kind !== "none") setChargingDigit(n);
   };
 
+  // The keyboard's digit keys, which follow the N-toggled notes flag
+  // rather than the selection shape. Multiplayer has no keyboard path.
+  const keyDigit = (n: number) =>
+    runIntent({ kind: "key", notesMode: game.notesMode }, n);
+
   const handlePressEnd = () => {
     setChargingDigit(null);
   };
@@ -100,6 +105,7 @@ export function useNumpadInteractions({
   return {
     highlight,
     chargingDigit,
+    keyDigit,
     numPadRef,
     numPadProps,
     dragState,

@@ -85,19 +85,10 @@ export function SoloGame({
   );
   const personalBest = priorStats?.bestTime ?? null;
 
-  // Keyboard digit follows the current notesMode flag (N toggles it),
-  // preserving the established "press N then 1" pencil-mark workflow.
-  const handleKeyboardNumber = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      const wasNoteMode = game.notesMode;
-      game.placeNumber(n, assistLevel !== "paper");
-      if (wasNoteMode) game.deselectCell();
-    }
-  };
-
   const {
     highlight,
     chargingDigit,
+    keyDigit,
     numPadRef,
     numPadProps,
     dragState,
@@ -135,7 +126,7 @@ export function SoloGame({
     selectedCell: game.selectedCell,
     onSelectCell: game.selectCell,
     onDeselectCell: game.deselectCell,
-    onPlaceNumber: handleKeyboardNumber,
+    onPlaceNumber: keyDigit,
     onErase: game.erase,
     onUndo: game.undo,
     onToggleNotes: game.toggleNotesMode,
