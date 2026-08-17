@@ -1,7 +1,7 @@
 import type { Board, Position } from "./types.ts";
 
 /** What the player did to a digit. Widened as gestures are routed. */
-export type DigitGesture = { kind: "tap" };
+export type DigitGesture = { kind: "tap" } | { kind: "hold" };
 
 /** The selection state the answer depends on. Nothing more is read. */
 export type DigitIntentContext = {
@@ -62,6 +62,9 @@ export function digitIntent(
   switch (gesture.kind) {
     case "tap":
       return tapIntent(ctx);
+    case "hold":
+      // Stub so the commit typechecks; the hold rules land next.
+      return intent({ kind: "none" });
   }
 }
 

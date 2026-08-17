@@ -71,3 +71,35 @@ describe("digitIntent — tap", () => {
     });
   });
 });
+
+describe("digitIntent — hold", () => {
+  it("pencils a note into the selected cell and keeps the selection", () => {
+    expect(digitIntent({ kind: "hold" }, cellSelected(0, 0))).toEqual({
+      effect: { kind: "note", at: null },
+      after: { selection: "keep", highlight: false },
+      label: "note",
+    });
+  });
+
+  it("pencils a note into an armed range and keeps it armed", () => {
+    // Hold is the one gesture that survives a range, so pairs and
+    // triples can be stacked into the same cells without re-dragging.
+    const armed = ctx({
+      selectedCell: { row: 0, col: 0 },
+      selectedCells: new Set([0, 1]),
+    });
+    expect(digitIntent({ kind: "hold" }, armed)).toEqual({
+      effect: { kind: "note", at: null },
+      after: { selection: "keep", highlight: false },
+      label: "note",
+    });
+  });
+
+  it("does nothing when nothing is selected", () => {
+    expect(digitIntent({ kind: "hold" }, ctx())).toEqual({
+      effect: { kind: "none" },
+      after: { selection: "keep", highlight: false },
+      label: "enter",
+    });
+  });
+});
