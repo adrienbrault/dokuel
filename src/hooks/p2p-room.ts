@@ -207,9 +207,10 @@ export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
  * - `forfeit` — no board at all, asserting the opponent vanished.
  *   Nothing here can verify that; only the receiver's own absence
  *   record can back it.
- * - `forged` — a board that does not solve the puzzle. `""` lands here
- *   (the original one-liner cheat), which is why getRoomState must not
- *   coerce it to null.
+ * - `forged` — a board that does not solve the puzzle. `""` and values
+ *   that are not boards at all (a peer can write anything into the
+ *   CRDT) land here, which is why getRoomState must not coerce them to
+ *   null.
  * - `unverifiable` — a board arrived but the room has no solution to
  *   check it against. Not provably forged, so callers that punish
  *   forgery must leave it alone.
@@ -220,9 +221,11 @@ export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
  */
 export function judgeClaim(board: unknown, solution: unknown): ClaimVerdict {
   if (board === null || board === undefined) return "forfeit";
-  if (typeof board !== "string" || typeof solution !== "string") {
-    return "unverifiable";
-  }
+  // Only a missing SOLUTION leaves a claim unjudgeable. A board that
+  // is not a string is judgeable and false — the room knows what a
+  // solved board looks like and this is not one.
+  if (typeof solution !== "string") return "unverifiable";
+  if (typeof board !== "string") return "forged";
   return board === solution ? "solved" : "forged";
 }
 
@@ -273,6 +276,11 @@ export function getHostId(room: P2PRoom): string {
   return (room.doc.getMap("room").get("hostId") as string) || "";
 }
 
+function projectWinnerBoard(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null;
+  return typeof raw === "string" ? raw : "";
+}
+
 /**
  * Snapshot the room into a plain RoomState the React tree can render.
  * Returns null when there is no joined player yet — callers treat that
@@ -299,10 +307,11 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     winnerName: (roomMap.get("winnerName") as string) || null,
     // No || coercion here: "" must stay a string (a forged solved-claim
     // the receiver rejects), while null/undefined mean forfeit/legacy.
-    winnerBoard:
-      typeof roomMap.get("winnerBoard") === "string"
-        ? (roomMap.get("winnerBoard") as string)
-        : null,
+    // Anything else a peer wrote is a claim that carries SOMETHING, so
+    // it projects to the forged sentinel rather than to the absence of
+    // a board — a reader must not judge it a forfeit while the writer
+    // judges it forged.
+    winnerBoard: projectWinnerBoard(roomMap.get("winnerBoard")),
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
   };
 }
