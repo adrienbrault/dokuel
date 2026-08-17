@@ -339,10 +339,6 @@ export function getPlayers(room: P2PRoom): Player[] {
   return result;
 }
 
-export function destroyRoom(room: P2PRoom): void {
-  room.doc.destroy();
-}
-
 /**
  * Seed an empty Yjs room from a localStorage snapshot. Only writes
  * keys that are still missing, so calling this after a partial IDB

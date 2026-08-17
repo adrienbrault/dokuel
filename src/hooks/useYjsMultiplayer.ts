@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IndexeddbPersistence } from "y-indexeddb";
-import { WebrtcProvider } from "y-webrtc";
-import * as Y from "yjs";
-import { fetchTurnIceServers } from "../lib/turn.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import type { Connection, OpenConnection } from "./mp-connection.ts";
+import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
 import { clearSnapshot, loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 import {
   announcePresence,
   claimWinner,
   createRoomFromDoc,
-  destroyRoom,
   getOpponentProgress,
   getPlayers,
   getRoomState,
@@ -35,6 +32,11 @@ type UseYjsMultiplayerOptions = {
   playerId: string;
   playerName: string;
   difficulty: Difficulty | null;
+  /**
+   * Transport adapter. Defaults to the production WebRTC/IndexedDB one;
+   * tests inject the in-memory adapter from ./mp-connection.fake.ts.
+   */
+  openConnection?: OpenConnection;
 };
 
 // How long after our own absence ended a remote forfeit claim is still
@@ -52,55 +54,6 @@ const HYDRATE_GRACE_MS = 3_000;
 const VALID_PUZZLE_RE = /^[1-9.]{81}$/;
 const VALID_SOLUTION_RE = /^[1-9]{81}$/;
 
-/**
- * Optional TURN relay via env config. simple-peer's default is
- * STUN-only, which cannot traverse symmetric NAT — two phones on
- * different mobile carriers never connect. Deployments that provision
- * relay credentials (e.g. Cloudflare Calls TURN) set VITE_TURN_URL /
- * VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL at build time; without
- * them the provider keeps its defaults.
- */
-type WebrtcPeerOptions =
-  | { peerOpts: { config: { iceServers: RTCIceServer[] } } }
-  | Record<string, never>;
-
-function webrtcPeerOptions(): WebrtcPeerOptions {
-  const url = import.meta.env.VITE_TURN_URL;
-  if (!url) return {};
-  const turn: RTCIceServer = {
-    urls: url,
-    username: import.meta.env.VITE_TURN_USERNAME ?? "",
-    credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
-  };
-  return {
-    peerOpts: {
-      config: {
-        iceServers: [
-          // Keep STUN for the direct-connection happy path; the relay
-          // is the fallback.
-          { urls: "stun:stun.l.google.com:19302" },
-          turn,
-        ],
-      },
-    },
-  };
-}
-
-/**
- * Static build-time TURN env wins; otherwise ask the signaling worker
- * to mint ephemeral Cloudflare TURN credentials (cached per page
- * session, 3s timeout); otherwise keep the provider's STUN-only
- * defaults. The resolved iceServers must exist before the provider is
- * constructed — they cannot be added to live peer connections.
- */
-async function resolveWebrtcOptions(): Promise<WebrtcPeerOptions> {
-  const staticOptions = webrtcPeerOptions();
-  if ("peerOpts" in staticOptions) return staticOptions;
-  const iceServers = await fetchTurnIceServers();
-  if (!iceServers) return {};
-  return { peerOpts: { config: { iceServers } } };
-}
-
 type OpponentProgress = {
   cellsRemaining: number;
   completionPercent: number;
@@ -116,6 +69,7 @@ export function useYjsMultiplayer({
   playerId,
   playerName,
   difficulty,
+  openConnection = openWebrtcConnection,
 }: UseYjsMultiplayerOptions) {
   const [connected, setConnected] = useState(false);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
@@ -141,7 +95,7 @@ export function useYjsMultiplayer({
   const [hasStartedGame, setHasStartedGame] = useState(false);
 
   const roomRef = useRef<P2PRoom | null>(null);
-  const providerRef = useRef<WebrtcProvider | null>(null);
+  const connectionRef = useRef<Connection | null>(null);
   const lastGameNumberRef = useRef<number>(0);
   // The puzzle we latched for lastGameNumberRef — lets the observer
   // spot a same-number/different-puzzle merge after a start collision.
@@ -168,6 +122,11 @@ export function useYjsMultiplayer({
   // Captured at mount so the joiner does not stomp on the host's
   // Yjs difficulty when re-renders happen with a different prop value.
   const initialDifficultyRef = useRef(difficulty);
+  // Read through a ref for the same reason as playerName: swapping the
+  // adapter mid-room is not a thing, and a caller passing an inline
+  // factory must not tear the room down on every render.
+  const openConnectionRef = useRef(openConnection);
+  openConnectionRef.current = openConnection;
 
   useEffect(() => {
     // Self-diagnostic for the iOS Safari reload problem. Visible to
@@ -183,32 +142,16 @@ export function useYjsMultiplayer({
     let cancelled = false;
     let teardown: (() => void) | null = null;
 
-    // Everything from doc creation onward lives behind the async ICE
-    // resolution: the provider needs its iceServers at construction,
-    // and the worker round-trip (cached after the first mount) is
-    // bounded by the fetcher's 3s timeout so a broken endpoint only
-    // delays — never blocks — the room.
-    const start = (webrtcOptions: WebrtcPeerOptions): (() => void) => {
-      const doc = new Y.Doc();
-      // Persist the doc locally so a tab refresh, brief disconnect, or
-      // background tab eviction doesn't lose progress. The `dokuel_`
-      // prefix scopes our DBs apart from anything else on the origin.
-      const persistence = new IndexeddbPersistence(`dokuel_${roomId}`, doc);
-      // Room in the signaling URL path: the worker shards rooms into
-      // separate Durable Objects keyed by it, so peers only ever share a
-      // socket fanout with their own room.
-      const provider = new WebrtcProvider(roomId, doc, {
-        signaling: [`wss://signal.dokuel.com/${roomId}`],
-        maxConns: 4,
-        filterBcConns: true,
-        ...webrtcOptions,
-      });
-
+    // Everything below runs once the Connection is open: opening is
+    // async because the relay credentials must be resolved before the
+    // peer connection exists.
+    const start = (connection: Connection): (() => void) => {
+      const doc = connection.doc;
       const room = createRoomFromDoc(doc, roomId);
       roomRef.current = room;
-      providerRef.current = provider;
+      connectionRef.current = connection;
 
-      const awareness = provider.awareness;
+      const awareness = connection.awareness;
 
       const updateState = () => {
         const state = getRoomState(room);
@@ -346,24 +289,22 @@ export function useYjsMultiplayer({
         }
       };
 
-      // Track connection status via provider
-      const onStatus = ({ connected: isConnected }: { connected: boolean }) => {
+      // Track connection status via the transport
+      const unsubscribeStatus = connection.onStatus((isConnected) => {
         setConnected(isConnected);
         if (isConnected) {
           markPresentAgain();
         } else {
           markAbsent();
         }
-      };
-      provider.on("status", onStatus);
+      });
 
       // Also listen for peers to detect when WebRTC connects
-      const onPeers = () => {
+      const unsubscribePeers = connection.onPeersChange(() => {
         updatePresence();
-      };
-      provider.on("peers", onPeers);
+      });
 
-      setConnected(provider.connected);
+      setConnected(connection.connected);
 
       // Synchronous localStorage mirror. y-indexeddb writes are async
       // and iOS Safari doesn't always flush them before killing a
@@ -384,7 +325,7 @@ export function useYjsMultiplayer({
           persistSnapshot();
           if (hideTimer === null) {
             hideTimer = setTimeout(() => {
-              provider.disconnect();
+              connection.disconnect();
               markAbsent();
               hideTimer = null;
             }, HIDE_DEBOUNCE_MS);
@@ -394,8 +335,8 @@ export function useYjsMultiplayer({
             clearTimeout(hideTimer);
             hideTimer = null;
           }
-          if (!provider.connected) {
-            provider.connect();
+          if (!connection.connected) {
+            connection.connect();
             announcePresence(awareness, playerId, playerNameRef.current);
           }
           markPresentAgain();
@@ -415,7 +356,7 @@ export function useYjsMultiplayer({
       // no-ops one already populated.
       let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
       let stopHydrateWatch: (() => void) | null = null;
-      void persistence.whenSynced.then(() => {
+      void connection.whenSynced.then(() => {
         if (cancelled) return;
 
         // The creator (came in from the create flow with a chosen
@@ -489,20 +430,20 @@ export function useYjsMultiplayer({
         stopHydrateWatch = null;
         unobserveRoom();
         awareness.off("change", updatePresence);
-        provider.off("status", onStatus);
-        provider.off("peers", onPeers);
-        provider.disconnect();
-        provider.destroy();
-        persistence.destroy();
-        destroyRoom(room);
+        unsubscribeStatus();
+        unsubscribePeers();
+        connection.close();
         roomRef.current = null;
-        providerRef.current = null;
+        connectionRef.current = null;
       };
     };
 
-    void resolveWebrtcOptions().then((webrtcOptions) => {
-      if (cancelled) return;
-      teardown = start(webrtcOptions);
+    void openConnectionRef.current(roomId).then((connection) => {
+      if (cancelled) {
+        connection.close();
+        return;
+      }
+      teardown = start(connection);
     });
 
     return () => {
@@ -559,11 +500,11 @@ export function useYjsMultiplayer({
     // Recheck at claim time: the countdown was armed from stale state
     // and the opponent may have reconnected in the meantime — don't
     // steamroll a player who just came back.
-    const provider = providerRef.current;
+    const connection = connectionRef.current;
     if (
-      provider &&
+      connection &&
       presenceHasOpponent(
-        provider.awareness,
+        connection.awareness,
         room.doc.clientID,
         playerId,
         getPlayers(room).length,
@@ -587,9 +528,9 @@ export function useYjsMultiplayer({
       updatePlayerName(room, playerId, newName);
 
       // Update awareness too
-      const provider = providerRef.current;
-      if (provider) {
-        announcePresence(provider.awareness, playerId, newName);
+      const connection = connectionRef.current;
+      if (connection) {
+        announcePresence(connection.awareness, playerId, newName);
       }
     },
     [playerId],
