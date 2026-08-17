@@ -144,6 +144,7 @@ src/
 │   └── p2p-room (Yjs CRDT room), mp-snapshot, mp-telemetry
 ├── lib/            # Pure logic — no React dependency
 │   ├── sudoku, board-engine, hint-engine, game-completion (engine)
+│   ├── digit-intent (what a digit does), numpad-gesture (gesture geometry)
 │   ├── types, constants, format, id, storage
 │   ├── daily (seeded RNG), daily-streak, stats, multiplayer-stats, game-storage
 │   └── room-code, name-generator, game-feedback, haptics, sounds
