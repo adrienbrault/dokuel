@@ -93,6 +93,79 @@ describe("NumPad", () => {
     expect(onTapNumber).toHaveBeenCalledWith(7);
   });
 
+  it("does not tap when the click after a skim lands on the origin key", () => {
+    // A mouse skim that starts and ends over the same key still ends
+    // with a browser click on that key. It is the tail of a gesture the
+    // skim already consumed, not an assistive-tech activation — honoring
+    // it toggled the highlight straight back off on release.
+    const onTapNumber = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={onTapNumber}
+        onSkimDigit={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Along-axis pan past the slop → skim.
+    fireEvent.pointerMove(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 50,
+      clientY: 0,
+    });
+    // ...and back onto the key it started on, where the mouse is released.
+    fireEvent.pointerUp(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.click(three);
+    expect(onTapNumber).not.toHaveBeenCalled();
+  });
+
+  it("does not tap when the click after a drag handoff lands on the origin key", () => {
+    const onTapNumber = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={onTapNumber}
+        onStartDrag={vi.fn()}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Perpendicular pan past the slop → drag handoff.
+    fireEvent.pointerMove(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 50,
+    });
+    fireEvent.pointerUp(three, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.click(three);
+    expect(onTapNumber).not.toHaveBeenCalled();
+  });
+
   it("fires onHoldNumber at 200ms and not onTapNumber on the release", () => {
     const onTapNumber = vi.fn();
     const onHoldNumber = vi.fn();
