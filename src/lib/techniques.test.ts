@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { initCandidates } from "./candidates.ts";
 import { solvePuzzle } from "./sudoku.ts";
-import { findUnlockingPlacement, xyWing } from "./techniques.ts";
+import { findUnlockingPlacement, swordfish, xyWing } from "./techniques.ts";
 
 // Boards captured by playing naked/hidden singles to exhaustion on
 // graded puzzles — the exact state a stuck player faces. Verified
@@ -30,6 +30,26 @@ describe("xyWing", () => {
     // Soundness: no removal may strip the solution's own digit.
     const solution = solvePuzzle(XYWING_STATE)!;
     for (const r of elim!.removed) {
+      expect(r.digit).not.toBe(Number(solution[r.cell]));
+    }
+  });
+});
+
+describe("swordfish", () => {
+  const SWORDFISH_STATE =
+    "....1..3519.3.........64...4.65..1......9...89..1..25....7.856.5.8............48.";
+
+  it("clears the digit from the crossing lines outside the fish", () => {
+    const s = initCandidates(SWORDFISH_STATE)!;
+    const elim = swordfish(s);
+
+    expect(elim).not.toBeNull();
+    expect(elim!.kind).toBe("swordfish");
+    expect(elim!.digits).toHaveLength(1);
+    expect(elim!.removed.length).toBeGreaterThan(0);
+    const solution = solvePuzzle(SWORDFISH_STATE)!;
+    for (const r of elim!.removed) {
+      expect(r.digit).toBe(elim!.digits[0]);
       expect(r.digit).not.toBe(Number(solution[r.cell]));
     }
   });

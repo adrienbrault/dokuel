@@ -24,7 +24,8 @@ export type EliminationKind =
   | "naked-triple"
   | "hidden-triple"
   | "x-wing"
-  | "xy-wing";
+  | "xy-wing"
+  | "swordfish";
 
 export type Elimination = {
   kind: EliminationKind;
@@ -258,6 +259,10 @@ export function xWing(s: CandidateState): Elimination | null {
     const cols = xWingOriented(s, v, (col, row) => row * 9 + col);
     if (cols) return cols;
   }
+  return null;
+}
+
+export function swordfish(_s: CandidateState): Elimination | null {
   return null;
 }
 
