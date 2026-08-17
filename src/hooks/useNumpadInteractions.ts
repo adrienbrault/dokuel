@@ -58,10 +58,11 @@ export function useNumpadInteractions({
     applyDigitIntent(intentFor(gesture), digit, ops);
 
   const handleHoldNote = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
-    }
+    const intent = intentFor({ kind: "hold" });
+    applyDigitIntent(intent, n, ops);
+    // The charge animation runs the digit into a note slot, so it only
+    // plays when the hold had somewhere to pencil.
+    if (intent.effect.kind !== "none") setChargingDigit(n);
   };
 
   const handlePressEnd = () => {
