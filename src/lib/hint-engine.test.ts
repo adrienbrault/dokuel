@@ -301,9 +301,8 @@ describe("findHint", () => {
       expect(hint!.position).toEqual({ row: 1, col: 0 });
       expect(hint!.value).toBe(5);
       expect(hint!.explanation).toContain("pivot cell can only be 4 or 5");
-      expect(hint!.explanation).toContain("If it's 4");
-      expect(hint!.explanation).toContain("If it's 5");
-      expect(hint!.explanation).toContain("must be 2");
+      expect(hint!.explanation).toContain("If it's 4, the 4/2 cell must be 2");
+      expect(hint!.explanation).toContain("if it's 5, the 5/2 cell must be 2");
     });
 
     it("labels a naked-quad unlock", () => {

@@ -74,8 +74,17 @@ function describeElimination(e: Elimination): string {
       const unit = sharedUnitName(e.patternCells);
       return `Within ${unit}, ${listDigits(e.digits, "and")} fit only in the highlighted cells, so those cells can hold nothing else.`;
     }
-    case "xy-wing":
-      return `The three highlighted cells form an XY-wing on ${digit}: whichever digit the pivot takes, one of its two pincers becomes ${digit}, so no cell seeing both pincers can hold ${digit}.`;
+    case "xy-wing": {
+      // The pivot never holds the eliminated digit, so the hint must
+      // name each cell's pair and walk the case split — role-free
+      // prose cannot be followed on the board.
+      const [pivot, pincer1, pincer2] = e.patternDigits!;
+      const [x, y] = [
+        pivot!.find((d) => pincer1!.includes(d))!,
+        pivot!.find((d) => pincer2!.includes(d))!,
+      ].sort((a, b) => a - b);
+      return `An XY-wing: the pivot cell can only be ${x} or ${y}. If it's ${x}, the ${x}/${digit} cell must be ${digit}; if it's ${y}, the ${y}/${digit} cell must be ${digit}. Either way a ${digit} lands in one of them, so no cell that sees both can hold ${digit}.`;
+    }
     case "x-wing":
     case "swordfish": {
       // Removals happen along the crossing lines: name both axes from
