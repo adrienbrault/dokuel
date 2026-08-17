@@ -82,8 +82,7 @@ export function digitIntent(
         ? intent({ kind: "note", at: null })
         : intent({ kind: "none" });
     case "drop":
-      // Stub so the commit typechecks; the drop rules land next.
-      return intent({ kind: "none" });
+      return dropIntent(gesture);
   }
 }
 
@@ -108,4 +107,20 @@ function tapIntent(ctx: DigitIntentContext): DigitIntent {
     return intent({ kind: "none" }, "release", true);
   }
   return intent({ kind: "value", at: null });
+}
+
+function dropIntent(
+  gesture: Extract<DigitGesture, { kind: "drop" }>,
+): DigitIntent {
+  // Selecting the target first is what lets the engine place there.
+  if (gesture.mode === "value") {
+    return intent({ kind: "value", at: gesture.target });
+  }
+  // A note drop must not pull the selection onto the drop target — that
+  // would yank the board highlight to wherever the note landed.
+  // Selection instead follows what was dragged, so pencilling one digit
+  // across several cells keeps a stable highlight.
+  return gesture.from
+    ? intent({ kind: "note", at: gesture.target }, gesture.from)
+    : intent({ kind: "note", at: gesture.target }, "release", true);
 }
