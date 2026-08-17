@@ -57,7 +57,6 @@ export function useYjsMultiplayer({
   // this value, and a repeat of the same message must still re-fire
   // their effect.
   const [error, setError] = useState<{ message: string } | null>(null);
-  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
   const roomRef = useRef<Room | null>(null);
   // Second handle on the same doc, for the setup writes the Room does
@@ -112,17 +111,16 @@ export function useYjsMultiplayer({
       });
 
       const updatePresence = () => {
-        const hasOpponent = presenceHasOpponent(
-          awareness,
-          doc.clientID,
-          playerId,
-          room.playerCount(),
-        );
-        // We drop our own WebRTC on hide (see visibility handler), which
-        // clears our awareness — don't blame the opponent for that.
-        setOpponentDisconnected(
-          !document.hidden && !hasOpponent && room.playerCount() > 1,
-        );
+        room.apply({
+          type: "presence-changed",
+          hasOpponent: presenceHasOpponent(
+            awareness,
+            doc.clientID,
+            playerId,
+            room.playerCount(),
+          ),
+          tabHidden: document.hidden,
+        });
       };
 
       awareness.on("change", updatePresence);
@@ -391,7 +389,6 @@ export function useYjsMultiplayer({
   return {
     connected,
     ...projection,
-    opponentDisconnected,
     error,
     sendStartGame,
     sendProgress,

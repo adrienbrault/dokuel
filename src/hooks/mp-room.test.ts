@@ -188,6 +188,66 @@ describe("seats", () => {
   });
 });
 
+describe("presence", () => {
+  it("flags the opponent as disconnected once their presence drops", () => {
+    const { room } = setupStartedGame();
+
+    room.apply({
+      type: "presence-changed",
+      hasOpponent: false,
+      tabHidden: false,
+    });
+
+    expect(room.snapshot().opponentDisconnected).toBe(true);
+  });
+
+  it("clears the flag when the opponent comes back", () => {
+    const { room } = setupStartedGame();
+    room.apply({
+      type: "presence-changed",
+      hasOpponent: false,
+      tabHidden: false,
+    });
+
+    room.apply({
+      type: "presence-changed",
+      hasOpponent: true,
+      tabHidden: false,
+    });
+
+    expect(room.snapshot().opponentDisconnected).toBe(false);
+  });
+
+  it("does not blame the opponent while we are the one who went away", () => {
+    // We release our own transport for a backgrounded tab, which clears
+    // our awareness — from here it looks exactly like the opponent
+    // vanishing.
+    const { room } = setupStartedGame();
+
+    room.apply({
+      type: "presence-changed",
+      hasOpponent: false,
+      tabHidden: true,
+    });
+
+    expect(room.snapshot().opponentDisconnected).toBe(false);
+  });
+
+  it("stays quiet before a second player has ever joined", () => {
+    const { p2p, room } = setup();
+    initializeRoom(p2p, "p1", "easy");
+    joinRoom(p2p, "p1", "Alice");
+
+    room.apply({
+      type: "presence-changed",
+      hasOpponent: false,
+      tabHidden: false,
+    });
+
+    expect(room.snapshot().opponentDisconnected).toBe(false);
+  });
+});
+
 describe("win claims", () => {
   it("accepts a remote claim whose board matches the solution", () => {
     const { p2p, room, solution } = setupStartedGame();

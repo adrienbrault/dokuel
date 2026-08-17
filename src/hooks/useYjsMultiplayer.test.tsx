@@ -458,26 +458,6 @@ describe("useYjsMultiplayer", () => {
         winnerName: "Bob",
       });
     });
-
-    it("does not flag opponent as disconnected while we are the hidden one", async () => {
-      const { result } = renderRoom({
-        roomId: "room-hide-flag",
-        difficulty: "easy",
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      const doc = connections.last!.doc;
-      const fakeRoom = { doc, roomId: "room-hide-flag" };
-      // Two players in the doc, no awareness peers → before the fix
-      // this would flip to true. With the !document.hidden gate it
-      // must stay false because *we* are the one going away.
-      await act(async () => {
-        joinRoom(fakeRoom, "p2", "Bob");
-        setTabHidden(true);
-      });
-      expect(result.current.opponentDisconnected).toBe(false);
-    });
   });
 
   describe("localStorage snapshot fallback", () => {

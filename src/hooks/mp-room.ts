@@ -62,6 +62,11 @@ export type RoomProjection = {
   opponentProgress: OpponentProgress | null;
   gameOver: GameOverInfo | null;
   /**
+   * The opponent is seated but unreachable. Never true while WE are the
+   * one who went away.
+   */
+  opponentDisconnected: boolean;
+  /**
    * Latched true on the first started game and never cleared, so the UI
    * keeps rendering the board even if roomState or puzzle momentarily
    * flicker on a sync race instead of bouncing back to the lobby.
@@ -76,6 +81,7 @@ export const INITIAL_PROJECTION: RoomProjection = {
   solution: null,
   opponentProgress: null,
   gameOver: null,
+  opponentDisconnected: false,
   hasStartedGame: false,
   roomFull: false,
 };
@@ -85,6 +91,13 @@ export const INITIAL_PROJECTION: RoomProjection = {
  * Room observes its own doc, and Yjs delivers those synchronously.
  */
 export type RoomEvent =
+  /**
+   * Presence was recomputed: an awareness change, a peer set change, or
+   * a visibility flip. `tabHidden` is here because we release our own
+   * transport for a backgrounded tab, which clears our awareness — the
+   * opponent must not be blamed for our own disappearance.
+   */
+  | { type: "presence-changed"; hasOpponent: boolean; tabHidden: boolean }
   /** The transport's signaling status flipped. */
   | { type: "connectivity-changed"; connected: boolean; now: number }
   /** The tab was backgrounded or came back to the foreground. */
@@ -294,6 +307,10 @@ export function createRoom({
       trackOpponentProgress();
       settleSeat(state);
     }
+    publish();
+  }
+
+  function publish(): void {
     for (const listener of listeners) listener();
   }
 
@@ -313,6 +330,15 @@ export function createRoom({
   return {
     apply(event) {
       switch (event.type) {
+        case "presence-changed":
+          set(
+            "opponentDisconnected",
+            !event.tabHidden &&
+              !event.hasOpponent &&
+              getPlayers(p2p).length > 1,
+          );
+          publish();
+          break;
         case "connectivity-changed":
           if (event.connected) markPresentAgain(event.now);
           else markAbsent();
