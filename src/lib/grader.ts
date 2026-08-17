@@ -7,7 +7,8 @@
  *   1 — naked/hidden singles
  *   2 — locked candidates, naked/hidden pairs
  *   3 — naked/hidden triples, X-wing
- *   4 — none of the above suffice: chains or trial-and-error required
+ *   4 — naked/hidden quads, XY-wing, swordfish
+ *   5 — none of the above suffice: chains or trial-and-error required
  */
 
 import { findSingle, initCandidates, place } from "./candidates.ts";
@@ -16,10 +17,12 @@ import {
   hiddenSet,
   nakedSet,
   pointing,
+  swordfish,
   xWing,
+  xyWing,
 } from "./techniques.ts";
 
-export type TechniqueTier = 1 | 2 | 3 | 4;
+export type TechniqueTier = 1 | 2 | 3 | 4 | 5;
 
 export type PuzzleGrade = {
   tier: TechniqueTier;
@@ -38,7 +41,7 @@ export type PuzzleGrade = {
  */
 export function gradePuzzle(puzzle: string): PuzzleGrade {
   const s = initCandidates(puzzle);
-  if (!s) return { tier: 4, stuckCells: 81 };
+  if (!s) return { tier: 5, stuckCells: 81 };
   let tier: TechniqueTier = 1;
   while (s.empty > 0) {
     const single = findSingle(s);
@@ -54,7 +57,11 @@ export function gradePuzzle(puzzle: string): PuzzleGrade {
       tier = tier < 3 ? 3 : tier;
       continue;
     }
-    return { tier: 4, stuckCells: s.empty };
+    if (nakedSet(s, 4) || hiddenSet(s, 4) || xyWing(s) || swordfish(s)) {
+      tier = tier < 4 ? 4 : tier;
+      continue;
+    }
+    return { tier: 5, stuckCells: s.empty };
   }
   return { tier, stuckCells: 0 };
 }

@@ -23,9 +23,22 @@ export type EliminationKind =
   | "hidden-pair"
   | "naked-triple"
   | "hidden-triple"
+  | "naked-quad"
+  | "hidden-quad"
   | "x-wing"
   | "xy-wing"
   | "swordfish";
+
+const NAKED_KINDS: Record<number, EliminationKind> = {
+  2: "naked-pair",
+  3: "naked-triple",
+  4: "naked-quad",
+};
+const HIDDEN_KINDS: Record<number, EliminationKind> = {
+  2: "hidden-pair",
+  3: "hidden-triple",
+  4: "hidden-quad",
+};
 
 export type Elimination = {
   kind: EliminationKind;
@@ -152,7 +165,7 @@ export function nakedSet(s: CandidateState, size: number): Elimination | null {
       }
       if (changed) {
         return {
-          kind: size === 2 ? "naked-pair" : "naked-triple",
+          kind: NAKED_KINDS[size]!,
           digits,
           patternCells: combo,
           removed,
@@ -187,7 +200,7 @@ export function hiddenSet(s: CandidateState, size: number): Elimination | null {
       }
       if (changed) {
         return {
-          kind: size === 2 ? "hidden-pair" : "hidden-triple",
+          kind: HIDDEN_KINDS[size]!,
           digits: combo,
           patternCells: holders,
           removed,
@@ -332,6 +345,10 @@ const TECHNIQUES: ((s: CandidateState) => Elimination | null)[] = [
   (s) => nakedSet(s, 3),
   (s) => hiddenSet(s, 3),
   xWing,
+  (s) => nakedSet(s, 4),
+  (s) => hiddenSet(s, 4),
+  xyWing,
+  swordfish,
 ];
 
 /**
