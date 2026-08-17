@@ -20,6 +20,25 @@ export function popcount(mask: number): number {
   return n;
 }
 
+/** All size-k subsets of items, in ascending index order. */
+export function kCombinations<T>(items: T[], k: number): T[][] {
+  const out: T[][] = [];
+  const combo: T[] = [];
+  const rec = (start: number): void => {
+    if (combo.length === k) {
+      out.push([...combo]);
+      return;
+    }
+    for (let i = start; i <= items.length - (k - combo.length); i++) {
+      combo.push(items[i]!);
+      rec(i + 1);
+      combo.pop();
+    }
+  };
+  rec(0);
+  return out;
+}
+
 // The 27 houses a human scans: rows, then columns, then boxes.
 export const UNITS: number[][] = (() => {
   const units: number[][] = [];

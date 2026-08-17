@@ -1,33 +1,25 @@
 /**
- * Candidate-elimination techniques: the deductions between singles and
- * chains. Each scan finds its first application, applies it to the
- * state, and reports the full story — pattern cells, locked digits,
- * removed candidates — so the grader can rank it and the hint engine
- * can explain it. Scan order is part of the grading contract: changing
- * it changes which boards the generator accepts.
+ * Unit-local candidate-elimination techniques and the unlock search.
+ * Each scan finds its first application, applies it to the state, and
+ * reports the full story — pattern cells, locked digits, removed
+ * candidates — so the grader can rank it and the hint engine can
+ * explain it. Scan order is part of the grading contract: changing it
+ * changes which boards the generator accepts. Wing- and fish-family
+ * scans live in wings.ts.
  */
 
-import { boxIndex, PEERS, popcount, UNITS } from "./board-geometry.ts";
+import { boxIndex, kCombinations, popcount, UNITS } from "./board-geometry.ts";
 import {
   type CandidateState,
   cloneCandidates,
+  type Elimination,
+  type EliminationKind,
+  eliminate,
   findSingle,
   initCandidates,
   type SingleFind,
 } from "./candidates.ts";
-
-export type EliminationKind =
-  | "pointing"
-  | "claiming"
-  | "naked-pair"
-  | "hidden-pair"
-  | "naked-triple"
-  | "hidden-triple"
-  | "naked-quad"
-  | "hidden-quad"
-  | "x-wing"
-  | "xy-wing"
-  | "swordfish";
+import { swordfish, xWing, xyWing } from "./wings.ts";
 
 const NAKED_KINDS: Record<number, EliminationKind> = {
   2: "naked-pair",
@@ -39,32 +31,6 @@ const HIDDEN_KINDS: Record<number, EliminationKind> = {
   3: "hidden-triple",
   4: "hidden-quad",
 };
-
-export type Elimination = {
-  kind: EliminationKind;
-  /** Digits the pattern locks (a single digit except for sets). */
-  digits: number[];
-  /** Cells forming the pattern — what a hint should highlight. */
-  patternCells: number[];
-  /** Candidates the pattern removes elsewhere. */
-  removed: { cell: number; digit: number }[];
-};
-
-function eliminate(
-  s: CandidateState,
-  cell: number,
-  bits: number,
-  digitsOf: number[],
-  removed: { cell: number; digit: number }[],
-): boolean {
-  const hit = s.cand[cell]! & bits;
-  if (!hit) return false;
-  s.cand[cell]! &= ~hit;
-  for (const digit of digitsOf) {
-    if (hit & (1 << digit)) removed.push({ cell, digit });
-  }
-  return true;
-}
 
 /** Pointing: a digit confined to one row/col of a box leaves that line. */
 export function pointing(s: CandidateState): Elimination | null {
@@ -117,24 +83,6 @@ export function claiming(s: CandidateState): Elimination | null {
     }
   }
   return null;
-}
-
-function kCombinations<T>(items: T[], k: number): T[][] {
-  const out: T[][] = [];
-  const combo: T[] = [];
-  const rec = (start: number): void => {
-    if (combo.length === k) {
-      out.push([...combo]);
-      return;
-    }
-    for (let i = start; i <= items.length - (k - combo.length); i++) {
-      combo.push(items[i]!);
-      rec(i + 1);
-      combo.pop();
-    }
-  };
-  rec(0);
-  return out;
 }
 
 function maskDigits(mask: number): number[] {
@@ -205,121 +153,6 @@ export function hiddenSet(s: CandidateState, size: number): Elimination | null {
           patternCells: holders,
           removed,
         };
-      }
-    }
-  }
-  return null;
-}
-
-/**
- * Fish of `size` lines: a digit held to the same `size` crossing lines
- * across `size` lines (size 2 = X-wing rectangle, 3 = swordfish); the
- * digit leaves the rest of those crossing lines. `cellAt` maps (line,
- * cross) to a cell so one scan covers both orientations.
- */
-function fishOriented(
-  s: CandidateState,
-  v: number,
-  size: number,
-  cellAt: (line: number, cross: number) => number,
-): Elimination | null {
-  const bit = 1 << v;
-  const crossesOf: number[][] = [];
-  const lines: number[] = [];
-  for (let line = 0; line < 9; line++) {
-    const held: number[] = [];
-    for (let cross = 0; cross < 9; cross++) {
-      if (s.cand[cellAt(line, cross)]! & bit) held.push(cross);
-    }
-    crossesOf.push(held);
-    if (held.length >= 2 && held.length <= size) lines.push(line);
-  }
-  for (const combo of kCombinations(lines, size)) {
-    const union = new Set<number>();
-    for (const line of combo) {
-      for (const cross of crossesOf[line]!) union.add(cross);
-    }
-    if (union.size !== size) continue;
-    const removed: { cell: number; digit: number }[] = [];
-    let changed = false;
-    for (let line = 0; line < 9; line++) {
-      if (combo.includes(line)) continue;
-      for (const cross of union) {
-        changed =
-          eliminate(s, cellAt(line, cross), bit, [v], removed) || changed;
-      }
-    }
-    if (changed) {
-      return {
-        kind: size === 2 ? "x-wing" : "swordfish",
-        digits: [v],
-        patternCells: combo.flatMap((line) =>
-          crossesOf[line]!.map((cross) => cellAt(line, cross)),
-        ),
-        removed,
-      };
-    }
-  }
-  return null;
-}
-
-function fish(s: CandidateState, size: number): Elimination | null {
-  for (let v = 1; v <= 9; v++) {
-    const rows = fishOriented(s, v, size, (line, cross) => line * 9 + cross);
-    if (rows) return rows;
-    const cols = fishOriented(s, v, size, (line, cross) => cross * 9 + line);
-    if (cols) return cols;
-  }
-  return null;
-}
-
-export function xWing(s: CandidateState): Elimination | null {
-  return fish(s, 2);
-}
-
-export function swordfish(s: CandidateState): Elimination | null {
-  return fish(s, 3);
-}
-
-/**
- * XY-wing: a pivot holding {x,y} with one pincer {x,z} and one {y,z}.
- * Whichever way the pivot resolves, a pincer becomes z, so z leaves
- * every cell that sees both pincers.
- */
-export function xyWing(s: CandidateState): Elimination | null {
-  for (let pivot = 0; pivot < 81; pivot++) {
-    if (s.grid[pivot] !== 0 || popcount(s.cand[pivot]!) !== 2) continue;
-    const pivotMask = s.cand[pivot]!;
-    const peers = PEERS[pivot]!;
-    for (let i = 0; i < peers.length; i++) {
-      const p1 = peers[i]!;
-      const m1 = s.cand[p1]!;
-      if (s.grid[p1] !== 0 || popcount(m1) !== 2) continue;
-      if (popcount(m1 & pivotMask) !== 1) continue;
-      for (let j = i + 1; j < peers.length; j++) {
-        const p2 = peers[j]!;
-        const m2 = s.cand[p2]!;
-        if (s.grid[p2] !== 0 || popcount(m2) !== 2) continue;
-        if (popcount(m2 & pivotMask) !== 1) continue;
-        // Pincers must cover different pivot digits and agree on z.
-        if ((m1 & pivotMask) === (m2 & pivotMask)) continue;
-        const zMask = m1 & m2 & ~pivotMask;
-        if (popcount(zMask) !== 1) continue;
-        const z = 31 - Math.clz32(zMask);
-        const removed: { cell: number; digit: number }[] = [];
-        let changed = false;
-        for (const c of PEERS[p1]!) {
-          if (c === pivot || c === p2 || !PEERS[p2]!.includes(c)) continue;
-          changed = eliminate(s, c, zMask, [z], removed) || changed;
-        }
-        if (changed) {
-          return {
-            kind: "xy-wing",
-            digits: [z],
-            patternCells: [pivot, p1, p2],
-            removed,
-          };
-        }
       }
     }
   }

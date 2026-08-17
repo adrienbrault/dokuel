@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { initCandidates } from "./candidates.ts";
 import { solvePuzzle } from "./sudoku.ts";
-import { findUnlockingPlacement, swordfish, xyWing } from "./techniques.ts";
+import { findUnlockingPlacement } from "./techniques.ts";
+import { swordfish, xyWing } from "./wings.ts";
 
 // Boards captured by playing naked/hidden singles to exhaustion on
 // graded puzzles — the exact state a stuck player faces. Verified

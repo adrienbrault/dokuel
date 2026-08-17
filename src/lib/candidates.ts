@@ -55,6 +55,46 @@ export function place(s: CandidateState, cell: number, value: number): void {
   }
 }
 
+export type EliminationKind =
+  | "pointing"
+  | "claiming"
+  | "naked-pair"
+  | "hidden-pair"
+  | "naked-triple"
+  | "hidden-triple"
+  | "naked-quad"
+  | "hidden-quad"
+  | "x-wing"
+  | "xy-wing"
+  | "swordfish";
+
+/** One applied technique: the pattern, its digits, and what it removed. */
+export type Elimination = {
+  kind: EliminationKind;
+  /** Digits the pattern locks (a single digit except for sets). */
+  digits: number[];
+  /** Cells forming the pattern — what a hint should highlight. */
+  patternCells: number[];
+  /** Candidates the pattern removes elsewhere. */
+  removed: { cell: number; digit: number }[];
+};
+
+export function eliminate(
+  s: CandidateState,
+  cell: number,
+  bits: number,
+  digitsOf: number[],
+  removed: { cell: number; digit: number }[],
+): boolean {
+  const hit = s.cand[cell]! & bits;
+  if (!hit) return false;
+  s.cand[cell]! &= ~hit;
+  for (const digit of digitsOf) {
+    if (hit & (1 << digit)) removed.push({ cell, digit });
+  }
+  return true;
+}
+
 export type SingleFind =
   | { kind: "naked"; cell: number; digit: number }
   | { kind: "hidden"; cell: number; digit: number; unitIndex: number };

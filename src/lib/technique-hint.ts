@@ -5,9 +5,9 @@
  */
 
 import { boxIndex } from "./board-geometry.ts";
+import type { Elimination } from "./candidates.ts";
 import type { HintExplanation } from "./hint-engine.ts";
 import {
-  type Elimination,
   findUnlockingPlacement,
   type UnlockingPlacement,
 } from "./techniques.ts";

@@ -12,15 +12,8 @@
  */
 
 import { findSingle, initCandidates, place } from "./candidates.ts";
-import {
-  claiming,
-  hiddenSet,
-  nakedSet,
-  pointing,
-  swordfish,
-  xWing,
-  xyWing,
-} from "./techniques.ts";
+import { claiming, hiddenSet, nakedSet, pointing } from "./techniques.ts";
+import { swordfish, xWing, xyWing } from "./wings.ts";
 
 export type TechniqueTier = 1 | 2 | 3 | 4 | 5;
 
