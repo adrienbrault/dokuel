@@ -8,7 +8,13 @@
  */
 
 import { boxIndex, popcount, UNITS } from "./board-geometry.ts";
-import type { CandidateState, SingleFind } from "./candidates.ts";
+import {
+  type CandidateState,
+  cloneCandidates,
+  findSingle,
+  initCandidates,
+  type SingleFind,
+} from "./candidates.ts";
 
 export type EliminationKind =
   | "pointing"
@@ -263,8 +269,49 @@ export type UnlockingPlacement = {
   priorSteps: number;
 };
 
+// Cheapest-first, matching the grader's ladder so a hint never cites
+// an X-wing where a pointing pair would do.
+const TECHNIQUES: ((s: CandidateState) => Elimination | null)[] = [
+  pointing,
+  claiming,
+  (s) => nakedSet(s, 2),
+  (s) => hiddenSet(s, 2),
+  (s) => nakedSet(s, 3),
+  (s) => hiddenSet(s, 3),
+  xWing,
+];
+
+/**
+ * On a board whose singles have run dry, find the elimination that
+ * makes the next placement visible. Prefers an elimination that
+ * unlocks a single immediately — its explanation stands on the visible
+ * board alone. When no technique unlocks anything directly, cheaper
+ * eliminations are applied silently and the search repeats; priorSteps
+ * counts them so a hint can be honest about the depth. Null when only
+ * chains or guessing can progress, or when a single is still available
+ * (the caller explains those itself).
+ */
 export function findUnlockingPlacement(
-  _puzzle: string,
+  puzzle: string,
 ): UnlockingPlacement | null {
+  const s = initCandidates(puzzle);
+  if (!s || findSingle(s)) return null;
+  // Eliminations strictly shrink the candidate pool, so the walk
+  // terminates; the cap is a backstop, not a tuning knob.
+  for (let priorSteps = 0; priorSteps < 128; priorSteps++) {
+    for (const technique of TECHNIQUES) {
+      const preview = cloneCandidates(s);
+      const elimination = technique(preview);
+      if (!elimination) continue;
+      const single = findSingle(preview);
+      if (single) return { elimination, single, priorSteps };
+    }
+    let applied: Elimination | null = null;
+    for (const technique of TECHNIQUES) {
+      applied = technique(s);
+      if (applied) break;
+    }
+    if (!applied) return null;
+  }
   return null;
 }
