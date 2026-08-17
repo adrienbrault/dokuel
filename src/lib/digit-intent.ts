@@ -33,6 +33,19 @@ export type DigitIntent = {
   label: "enter" | "note";
 };
 
+function intent(
+  effect: DigitEffect,
+  selection: "keep" | "release" | Position = "keep",
+  highlight = false,
+): DigitIntent {
+  // The legend cannot disagree with the behaviour: both read the effect.
+  return { effect, after: { selection, highlight }, label: labelFor(effect) };
+}
+
+function labelFor(effect: DigitEffect): "enter" | "note" {
+  return effect.kind === "note" ? "note" : "enter";
+}
+
 /**
  * The single answer to "what does digit n do right now" — the effect on
  * the board, what happens to the selection and the highlight afterwards,
@@ -43,13 +56,34 @@ export type DigitIntent = {
  * the digit when it runs the result.
  */
 export function digitIntent(
-  _gesture: DigitGesture,
-  _ctx: DigitIntentContext,
+  gesture: DigitGesture,
+  ctx: DigitIntentContext,
 ): DigitIntent {
-  // Stub so the commit typechecks; the tap rules land next.
-  return {
-    effect: { kind: "none" },
-    after: { selection: "keep", highlight: false },
-    label: "enter",
-  };
+  switch (gesture.kind) {
+    case "tap":
+      return tapIntent(ctx);
+  }
+}
+
+function tapIntent(ctx: DigitIntentContext): DigitIntent {
+  if (ctx.selectedCell === null && ctx.selectedCells.size === 0) {
+    return intent({ kind: "toggleHighlight" });
+  }
+  // A range is armed: the only meaningful bulk action is a pencil note.
+  // Same semantics as dropping a note from a numpad drag — the note
+  // lands, the selection is released, and the board highlights the noted
+  // digit, so the NEXT tap toggles another digit's highlight (the
+  // scan-the-grid rhythm).
+  if (ctx.selectedCells.size > 1) {
+    return intent({ kind: "note", at: null }, "release", true);
+  }
+  const cell = ctx.selectedCell
+    ? ctx.board[ctx.selectedCell.row]?.[ctx.selectedCell.col]
+    : undefined;
+  // A tap cannot overwrite a filled cell, so it is repurposed: drop the
+  // selection and spotlight the digit instead.
+  if (cell && cell.value !== null) {
+    return intent({ kind: "none" }, "release", true);
+  }
+  return intent({ kind: "value", at: null });
 }
