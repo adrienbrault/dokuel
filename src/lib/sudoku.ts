@@ -20,14 +20,14 @@ const MAX_ATTEMPTS = 4;
 // Clue count is a weak difficulty signal — half the boards dug into the
 // hard band fall to naked/hidden singles. Medium, hard, and expert
 // therefore re-dig until the technique grader signs off. A dig+grade
-// attempt runs in single-digit milliseconds and each bar accepts at
-// least a fifth of attempts, so the loop converges almost always; the
-// rare exhaustion returns the best-ranked board seen instead of
-// blocking the UI.
+// attempt runs in single-digit milliseconds, and the rare exhaustion
+// returns the best-ranked board seen instead of blocking the UI.
 const GRADE_ATTEMPTS = 32;
-// Hard must need triples/X-wing at minimum, but a tier-4 board may
-// leave at most this many cells unresolved — deeper is expert country.
-const HARD_MAX_STUCK = 35;
+// Chain-free hard boards are rare (~4% of digs), so hard alone gets a
+// deeper attempt budget: misses shrink to ~1-in-700 while the typical
+// cost stays a few dozen milliseconds (the loop exits on first hit)
+// and the exhausted worst case stays under half a second.
+const HARD_GRADE_ATTEMPTS = 160;
 // Expert must defeat every graded technique with at least this many
 // cells still open — chains or trial-and-error for most of the board.
 const EXPERT_MIN_STUCK = 40;
@@ -58,6 +58,7 @@ type GradedDigSpec = {
   // part of the seeded-generation contract the daily vectors pin.
   digTarget: (rng: Rng) => number;
   maxClues: number;
+  attempts: number;
   accepts: (grade: PuzzleGrade) => boolean;
   // Ranks boards when every attempt misses the bar; highest ships.
   fallbackScore: (grade: PuzzleGrade) => number;
@@ -67,6 +68,7 @@ const GRADED_DIGS: Record<Exclude<Difficulty, "easy">, GradedDigSpec> = {
   medium: {
     digTarget: (rng) => randomClueTarget(DIFFICULTY_CLUES.medium, rng),
     maxClues: DIFFICULTY_CLUES.medium.max,
+    attempts: GRADE_ATTEMPTS,
     accepts: (grade) => grade.tier <= MEDIUM_MAX_TIER,
     // Err toward too easy — over-hard boards are the bug this bar
     // exists to keep out.
@@ -75,16 +77,22 @@ const GRADED_DIGS: Record<Exclude<Difficulty, "easy">, GradedDigSpec> = {
   hard: {
     digTarget: (rng) => randomClueTarget(DIFFICULTY_CLUES.hard, rng),
     maxClues: DIFFICULTY_CLUES.hard.max,
-    accepts: (grade) => grade.tier >= 3 && grade.stuckCells <= HARD_MAX_STUCK,
-    // Err toward too hard: higher tier first, then shallower stuck.
-    fallbackScore: (grade) => grade.tier * 100 - grade.stuckCells,
+    attempts: HARD_GRADE_ATTEMPTS,
+    // The chain-free guarantee: solvable start to finish on the
+    // ladder, demanding at least triples/X-wing along the way.
+    accepts: (grade) => grade.tier >= 3 && grade.stuckCells === 0,
+    // Fallback prefers chain-free boards, then the higher tier, then
+    // the shallower stuck depth.
+    fallbackScore: (grade) =>
+      (grade.stuckCells === 0 ? 1000 : 0) + grade.tier * 100 - grade.stuckCells,
   },
   expert: {
     // Minimal puzzles: dig to exhaustion, every remaining clue necessary.
     digTarget: () => 17,
     maxClues: EXPERT_MAX_CLUES,
+    attempts: GRADE_ATTEMPTS,
     accepts: (grade) =>
-      grade.tier === 4 && grade.stuckCells >= EXPERT_MIN_STUCK,
+      grade.tier === 5 && grade.stuckCells >= EXPERT_MIN_STUCK,
     // The higher tier, then the deeper stuck.
     fallbackScore: (grade) => grade.tier * 100 + grade.stuckCells,
   },
@@ -96,7 +104,7 @@ function generateGradedPuzzle(
 ): { puzzle: string; solution: string } {
   let best: { puzzle: string; solution: string } | null = null;
   let bestScore = Number.NEGATIVE_INFINITY;
-  for (let attempt = 0; attempt < GRADE_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < spec.attempts; attempt++) {
     const solution = generateSolvedGrid(rng);
     const puzzle = digPuzzle(solution, spec.digTarget(rng), rng);
     const grade = gradePuzzle(puzzle);
