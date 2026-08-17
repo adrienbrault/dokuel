@@ -34,6 +34,26 @@ describe("xyWing", () => {
       expect(r.digit).not.toBe(Number(solution[r.cell]));
     }
   });
+
+  it("reports each pattern cell's candidate pair for the hint", () => {
+    // Without the roles a player cannot follow the wing: the pivot
+    // does not even contain the eliminated digit, so a hint naming
+    // only that digit sends their eyes to the wrong cells.
+    const s = initCandidates(XYWING_STATE)!;
+    const elim = xyWing(s)!;
+    const z = elim.digits[0]!;
+
+    const [pivot, pincer1, pincer2] = elim.patternDigits!;
+    expect(pivot).toHaveLength(2);
+    expect(pivot).not.toContain(z);
+    for (const pincer of [pincer1!, pincer2!]) {
+      expect(pincer).toHaveLength(2);
+      expect(pincer).toContain(z);
+      // Each pincer covers one pivot digit; together they cover both.
+      expect(pivot!.filter((d) => pincer.includes(d))).toHaveLength(1);
+    }
+    expect(pincer1!.filter((d) => pincer2!.includes(d))).toEqual([z]);
+  });
 });
 
 describe("swordfish", () => {

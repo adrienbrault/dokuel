@@ -77,6 +77,13 @@ export type Elimination = {
   patternCells: number[];
   /** Candidates the pattern removes elsewhere. */
   removed: { cell: number; digit: number }[];
+  /**
+   * XY-wing only: each pattern cell's candidate pair, aligned with
+   * patternCells ([pivot, pincer, pincer]) so a hint can name the
+   * roles — the pivot never holds the eliminated digit, so without
+   * these the pattern is unreadable from the highlight alone.
+   */
+  patternDigits?: number[][];
 };
 
 export function eliminate(
