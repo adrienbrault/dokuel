@@ -7,7 +7,7 @@
  * it changes which boards the generator accepts.
  */
 
-import { boxIndex, popcount, UNITS } from "./board-geometry.ts";
+import { boxIndex, PEERS, popcount, UNITS } from "./board-geometry.ts";
 import {
   type CandidateState,
   cloneCandidates,
@@ -261,7 +261,48 @@ export function xWing(s: CandidateState): Elimination | null {
   return null;
 }
 
-export function xyWing(_s: CandidateState): Elimination | null {
+/**
+ * XY-wing: a pivot holding {x,y} with one pincer {x,z} and one {y,z}.
+ * Whichever way the pivot resolves, a pincer becomes z, so z leaves
+ * every cell that sees both pincers.
+ */
+export function xyWing(s: CandidateState): Elimination | null {
+  for (let pivot = 0; pivot < 81; pivot++) {
+    if (s.grid[pivot] !== 0 || popcount(s.cand[pivot]!) !== 2) continue;
+    const pivotMask = s.cand[pivot]!;
+    const peers = PEERS[pivot]!;
+    for (let i = 0; i < peers.length; i++) {
+      const p1 = peers[i]!;
+      const m1 = s.cand[p1]!;
+      if (s.grid[p1] !== 0 || popcount(m1) !== 2) continue;
+      if (popcount(m1 & pivotMask) !== 1) continue;
+      for (let j = i + 1; j < peers.length; j++) {
+        const p2 = peers[j]!;
+        const m2 = s.cand[p2]!;
+        if (s.grid[p2] !== 0 || popcount(m2) !== 2) continue;
+        if (popcount(m2 & pivotMask) !== 1) continue;
+        // Pincers must cover different pivot digits and agree on z.
+        if ((m1 & pivotMask) === (m2 & pivotMask)) continue;
+        const zMask = m1 & m2 & ~pivotMask;
+        if (popcount(zMask) !== 1) continue;
+        const z = 31 - Math.clz32(zMask);
+        const removed: { cell: number; digit: number }[] = [];
+        let changed = false;
+        for (const c of PEERS[p1]!) {
+          if (c === pivot || c === p2 || !PEERS[p2]!.includes(c)) continue;
+          changed = eliminate(s, c, zMask, [z], removed) || changed;
+        }
+        if (changed) {
+          return {
+            kind: "xy-wing",
+            digits: [z],
+            patternCells: [pivot, p1, p2],
+            removed,
+          };
+        }
+      }
+    }
+  }
   return null;
 }
 
