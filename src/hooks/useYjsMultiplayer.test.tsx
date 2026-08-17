@@ -70,6 +70,24 @@ describe("useYjsMultiplayer", () => {
     expect(connections.last!.closed).toBe(true);
   });
 
+  it("builds one transport when the room remounts while opening", async () => {
+    // React StrictMode double-invokes effects, so the first mount's
+    // open is still in flight when the second one starts. y-webrtc
+    // keeps ONE global registry keyed by room name: a transport built
+    // for the abandoned open claims the room's slot, and the live
+    // one's own claim throws inside a detached promise — leaving the
+    // lobby permanently disconnected.
+    const first = renderRoom({ roomId: "room-remount", difficulty: "easy" });
+    first.unmount();
+    const second = renderRoom({ roomId: "room-remount", difficulty: "easy" });
+
+    await flushSync();
+
+    expect(connections.all).toHaveLength(1);
+    expect(connections.last?.closed).toBe(false);
+    second.unmount();
+  });
+
   it("closes the connection on unmount", async () => {
     const { unmount } = renderRoom({
       roomId: "room-idb-destroy",

@@ -33,6 +33,12 @@ export type FakeConnection = Omit<Connection, "connected"> & {
 
 export type FakeConnections = {
   open: OpenConnection;
+  /**
+   * Every connection this factory has CONSTRUCTED, in order. An open
+   * that never got that far leaves no entry, so a test can tell an
+   * abandoned open apart from a transport that was really built.
+   */
+  readonly all: readonly FakeConnection[];
   /** The most recently opened connection, or null before the first. */
   readonly last: FakeConnection | null;
   /**
@@ -48,6 +54,9 @@ export function createFakeConnections(): FakeConnections {
 
   const factory: FakeConnections = {
     persistedUpdate: null,
+    get all() {
+      return opened;
+    },
     get last() {
       return opened.at(-1) ?? null;
     },
