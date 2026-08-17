@@ -30,7 +30,8 @@ Plus contextual entries:
 ### Difficulty Selection
 Available before every game (solo or multiplayer):
 - Easy (~45 clues)
-- Medium (~35 clues)
+- Medium (~35 clues) — technique-graded ceiling: pairs and locked
+  candidates at most, never triples, X-wings, or guessing
 - Hard (~28 clues) — technique-graded: demands triples or an X-wing at
   minimum, never falls to singles and pairs alone
 - Expert (~22 clues) — technique-graded: singles, locked candidates,
@@ -240,8 +241,7 @@ Speced or desired, deliberately not built yet:
 - **Service worker / offline play** — the manifest already makes the app
   installable; offline caching needs careful interplay with live WebRTC
   rooms before it ships
-- **Technique-graded easy/medium** — hard and expert are graded by the
-  techniques they require (see Difficulty Selection); easy and medium
-  still rely on clue bands alone. Extending grading to them needs a
-  versioned rollout because the daily challenge is medium and pins
-  golden vectors for reproducibility
+- **Technique-graded easy** — medium, hard, and expert are graded by
+  the techniques they require (see Difficulty Selection); easy still
+  relies on its clue band alone, which in practice already yields
+  singles-only boards
