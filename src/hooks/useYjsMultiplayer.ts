@@ -2,12 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
-import {
-  createRoom,
-  HYDRATE_GRACE_MS,
-  INITIAL_PROJECTION,
-  type Room,
-} from "./mp-room.ts";
+import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 
 type UseYjsMultiplayerOptions = {
@@ -156,13 +151,17 @@ export function useYjsMultiplayer({
       void connection.whenSynced.then(() => {
         if (cancelled) return;
         connection.announce({ id: playerId, name: playerNameRef.current });
-        room.apply({ type: "local-sync-complete", now: Date.now() });
-        // The Room may now be holding a local snapshot back to give a
-        // live peer first chance; this is the deadline it waits on.
-        hydrateTimer = setTimeout(() => {
-          hydrateTimer = null;
-          room.apply({ type: "tick", now: Date.now() });
-        }, HYDRATE_GRACE_MS);
+        const syncedAt = Date.now();
+        room.apply({ type: "local-sync-complete", now: syncedAt });
+        // The Room may now be waiting on a deadline of its own. It says
+        // when it wants a tick; owning the timer is all we do about it.
+        const wakeAt = room.nextWakeAt();
+        if (wakeAt !== null) {
+          hydrateTimer = setTimeout(() => {
+            hydrateTimer = null;
+            room.apply({ type: "tick", now: Date.now() });
+          }, wakeAt - syncedAt);
+        }
       });
 
       return () => {

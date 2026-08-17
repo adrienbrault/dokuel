@@ -56,11 +56,11 @@ const VALID_SOLUTION_RE = /^[1-9]{81}$/;
 /**
  * Grace window before a local snapshot is applied to an empty room:
  * long enough for a peer to deliver the live room when one is up, short
- * enough that a genuine solo restore feels instant-ish. The binding
- * owns the timer and feeds a `tick` back; this is the deadline it
- * schedules against.
+ * enough that a genuine solo restore feels instant-ish. Deliberately
+ * not exported: the binding schedules against `nextWakeAt()` and never
+ * has to know a grace window exists.
  */
-export const HYDRATE_GRACE_MS = 3_000;
+const HYDRATE_GRACE_MS = 3_000;
 
 export type OpponentProgress = {
   cellsRemaining: number;
@@ -149,6 +149,12 @@ export type Room = {
   snapshot(): RoomProjection;
   /** Called after every projection change, including the Room's own writes. */
   subscribe(listener: () => void): () => void;
+  /**
+   * The instant the Room wants a `tick` at, or null when it is waiting
+   * on nothing. The binding owns the timer; the deadline and its meaning
+   * stay here, so neither side has to restate the other's arithmetic.
+   */
+  nextWakeAt(): number | null;
   /**
    * Claim the win with a completed board. Silently refused unless the
    * board actually solves the room's puzzle — client-side honesty, not
@@ -478,6 +484,9 @@ export function createRoom({
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    nextWakeAt() {
+      return pendingHydration?.deadline ?? null;
     },
     complete(board) {
       if (judgeClaim(board, verifiedSolution) !== "solved") return;

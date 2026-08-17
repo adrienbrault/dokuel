@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
-import { createRoom, HYDRATE_GRACE_MS } from "./mp-room.ts";
+import { createRoom } from "./mp-room.ts";
 import {
   claimWinner,
   createRoomFromDoc,
@@ -485,9 +485,12 @@ describe("hydration", () => {
     seedSnapshot();
     const { room } = setup(null);
     room.apply({ type: "local-sync-complete", now: T0 });
+    // The deadline is the Room's to define; the binding only schedules
+    // a timer for whatever instant it names.
+    expect(room.nextWakeAt()).toBe(T0 + 3_000);
     expect(room.snapshot().hasStartedGame).toBe(false);
 
-    room.apply({ type: "tick", now: T0 + HYDRATE_GRACE_MS });
+    room.apply({ type: "tick", now: room.nextWakeAt() ?? 0 });
 
     expect(room.snapshot().hasStartedGame).toBe(true);
     expect(room.snapshot().puzzle).toBe(".".repeat(81));
@@ -505,6 +508,9 @@ describe("hydration", () => {
     // deterministically visible instead of a clientID coin flip.
     doc.clientID = 0x7fffffff;
     room.apply({ type: "local-sync-complete", now: T0 });
+    // Read before the peer update lands: once it does, the Room is
+    // waiting on nothing and would name no instant at all.
+    const wakeAt = room.nextWakeAt() ?? 0;
 
     const peer = new Doc();
     const peerRoom = createRoomFromDoc(peer, ROOM_ID);
@@ -514,7 +520,7 @@ describe("hydration", () => {
     for (let i = 0; i < 7; i++) startGame(peerRoom);
     applyUpdate(doc, encodeStateAsUpdate(peer));
 
-    room.apply({ type: "tick", now: T0 + HYDRATE_GRACE_MS });
+    room.apply({ type: "tick", now: wakeAt });
 
     expect(room.snapshot().roomState?.gameNumber).toBe(7);
     expect(room.snapshot().roomState?.difficulty).toBe("medium");
@@ -530,6 +536,7 @@ describe("hydration", () => {
 
     room.apply({ type: "local-sync-complete", now: T0 });
 
+    expect(room.nextWakeAt()).toBeNull();
     expect(room.snapshot().roomState?.gameNumber).toBe(7);
     expect(room.snapshot().roomState?.difficulty).not.toBe("hard");
   });
