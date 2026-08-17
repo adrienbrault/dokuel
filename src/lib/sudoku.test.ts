@@ -83,6 +83,15 @@ describe("generatePuzzle", () => {
   // the hard clue band fall to singles. These bars are the actual
   // difficulty contract: hard must demand advanced techniques, expert
   // must defeat them outright across most of the board.
+  it("medium never demands more than pairs and locked candidates", () => {
+    // These seeds produced chains-grade boards under clue-band-only
+    // digging — a "medium" a player could not finish without guessing.
+    for (const seed of [6, 18, 19]) {
+      const grade = gradePuzzle(generatePuzzle("medium", seededRandom(seed)));
+      expect(grade.tier).toBeLessThanOrEqual(2);
+    }
+  });
+
   it("hard demands advanced techniques but stays within reach", () => {
     for (const seed of [1, 2, 3]) {
       const grade = gradePuzzle(generatePuzzle("hard", seededRandom(seed)));
