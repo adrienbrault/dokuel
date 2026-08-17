@@ -63,18 +63,24 @@ function describeElimination(e: Elimination): string {
       return `In ${line}, ${digit} fits only inside box ${box}, so the rest of box ${box} can't hold ${digit}.`;
     }
     case "naked-pair":
-    case "naked-triple": {
+    case "naked-triple":
+    case "naked-quad": {
       const unit = sharedUnitName(e.patternCells);
       return `The highlighted cells in ${unit} hold only ${listDigits(e.digits, "and")} between them, so those digits fall out of the rest of ${unit}.`;
     }
     case "hidden-pair":
-    case "hidden-triple": {
+    case "hidden-triple":
+    case "hidden-quad": {
       const unit = sharedUnitName(e.patternCells);
       return `Within ${unit}, ${listDigits(e.digits, "and")} fit only in the highlighted cells, so those cells can hold nothing else.`;
     }
-    case "x-wing": {
+    case "xy-wing":
+      return `The three highlighted cells form an XY-wing on ${digit}: whichever digit the pivot takes, one of its two pincers becomes ${digit}, so no cell seeing both pincers can hold ${digit}.`;
+    case "x-wing":
+    case "swordfish": {
       // Removals happen along the crossing lines: name both axes from
-      // the rectangle itself.
+      // the pattern itself.
+      const name = e.kind === "x-wing" ? "an X-wing" : "a swordfish";
       const rows = [...new Set(e.patternCells.map((c) => Math.floor(c / 9)))];
       const cols = [...new Set(e.patternCells.map((c) => c % 9))];
       const removedInCols = e.removed.every((r) => cols.includes(r.cell % 9));
@@ -89,9 +95,14 @@ function describeElimination(e: Elimination): string {
             rows.map((r) => `row ${r + 1}`),
             "rows",
           ];
-      return `${digit} forms an X-wing: in ${lines.join(" and ")} it can only sit in ${crosses.join(" and ")}, so ${digit} falls out of the rest of those ${crossKind}.`;
+      return `${digit} forms ${name}: in ${listNames(lines)} it can only sit in ${listNames(crosses)}, so ${digit} falls out of the rest of those ${crossKind}.`;
     }
   }
+}
+
+function listNames(names: string[]): string {
+  if (names.length <= 2) return names.join(" and ");
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
 function describeConsequence(unlock: UnlockingPlacement): string {
@@ -115,7 +126,11 @@ const TECHNIQUE_OF_KIND: Record<Elimination["kind"], HintTechnique> = {
   "hidden-pair": "hidden-pair",
   "naked-triple": "naked-triple",
   "hidden-triple": "hidden-triple",
+  "naked-quad": "naked-quad",
+  "hidden-quad": "hidden-quad",
   "x-wing": "x-wing",
+  "xy-wing": "xy-wing",
+  swordfish: "swordfish",
 };
 
 /** The technique hint for a board whose singles have run dry — null

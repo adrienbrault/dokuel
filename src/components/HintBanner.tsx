@@ -14,7 +14,11 @@ export function HintBanner({ hint, onDismiss }: HintBannerProps) {
     "hidden-pair": "Hidden Pair",
     "naked-triple": "Naked Triple",
     "hidden-triple": "Hidden Triple",
+    "naked-quad": "Naked Quad",
+    "hidden-quad": "Hidden Quad",
     "x-wing": "X-Wing",
+    "xy-wing": "XY-Wing",
+    swordfish: "Swordfish",
     mistake: "Mistake",
     reveal: "Reveal",
   };

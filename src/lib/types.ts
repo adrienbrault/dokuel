@@ -59,7 +59,11 @@ export type HintTechnique =
   | "hidden-pair"
   | "naked-triple"
   | "hidden-triple"
+  | "naked-quad"
+  | "hidden-quad"
   | "x-wing"
+  | "xy-wing"
+  | "swordfish"
   | "mistake"
   | "reveal";
 
