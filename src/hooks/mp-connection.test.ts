@@ -186,6 +186,74 @@ describe("minting TURN credentials from the signaling worker", () => {
 });
 
 /**
+ * The WebRTC adapter's open sequence — what it builds, and in which
+ * order. Stated here rather than in the contract suite because it is
+ * about this adapter's own outside world (a relay mint that may hang
+ * for its whole timeout) rather than about the Connection interface.
+ */
+describe("the WebRTC adapter's open sequence", () => {
+  function neverDestroyedPersistence() {
+    return { whenSynced: Promise.resolve(), destroy() {} };
+  }
+
+  it("opens local persistence without waiting for relay credentials", () => {
+    // Only the peer connection needs the iceServers. Blocking the doc
+    // and its local database on the mint puts the restore the player
+    // is waiting for behind a round trip to a host that may be
+    // unreachable.
+    let openedPersistence = false;
+    const open = createWebrtcConnectionOpener({
+      resolveIceServers: () => new Promise(() => {}),
+      openPersistence: () => {
+        openedPersistence = true;
+        return neverDestroyedPersistence();
+      },
+      openProvider: () => {
+        throw new Error("the provider must wait for the iceServers");
+      },
+    });
+
+    void open("ice-pending-room");
+
+    expect(openedPersistence).toBe(true);
+  });
+
+  it("closes what it already built when the open is abandoned", () => {
+    // The doc and its database handle exist before the credentials
+    // land, and no caller ever sees them — an abort after that point
+    // is their only chance to close.
+    const controller = new AbortController();
+    let destroyed = false;
+    let mint: (servers: RTCIceServer[] | null) => void = () => {};
+    const open = createWebrtcConnectionOpener({
+      resolveIceServers: () =>
+        new Promise((resolve) => {
+          mint = resolve;
+        }),
+      openPersistence: () => ({
+        whenSynced: Promise.resolve(),
+        destroy() {
+          destroyed = true;
+        },
+      }),
+      openProvider: () => {
+        throw new Error("no provider for an abandoned open");
+      },
+    });
+
+    const opening = open("abandoned-room", { signal: controller.signal });
+    controller.abort();
+    mint(null);
+
+    return expect(opening)
+      .rejects.toMatchObject({ name: "AbortError" })
+      .then(() => {
+        expect(destroyed).toBe(true);
+      });
+  });
+});
+
+/**
  * One contract, two adapters. Everything below is stated against the
  * {@link Connection} interface and run against both implementations of
  * it, so a divergence between the in-memory adapter the hook tests rely

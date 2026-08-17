@@ -53,18 +53,30 @@ export function createWebrtcConnectionOpener({
   openProvider,
 }: WebrtcInternals): OpenConnection {
   return async (roomId: string, options?: OpenOptions): Promise<Connection> => {
-    // Resolved before anything else exists: iceServers cannot be added
-    // to a live peer connection, and the fetch behind this is bounded so
-    // a broken endpoint only delays — never blocks — the room.
-    const iceServers = await resolveIceServers();
-    // The caller may have walked away during that await. Nothing has
-    // been built yet, so abandoning costs nothing — and building a
-    // provider for a room nobody is in would claim y-webrtc's globally
-    // named room slot away from the open that replaced us.
     options?.signal?.throwIfAborted();
+    // Started here, awaited below: only the peer connection needs the
+    // relay credentials. The local restore — the thing the player is
+    // actually waiting for — must not queue behind a round trip to a
+    // signaling host that may be unreachable for its whole timeout.
+    const minting = resolveIceServers();
 
     const doc = new Doc();
     const persistence = openPersistence(roomDatabaseName(roomId), doc);
+
+    // The one thing that genuinely has to wait: iceServers cannot be
+    // added to a live peer connection.
+    const iceServers = await minting;
+    if (options?.signal?.aborted) {
+      // Abandoned while the credentials were in flight. Nothing else
+      // holds the doc or the database handle, so this is their only
+      // chance to close — and building a provider for a room nobody is
+      // in would claim y-webrtc's globally named room slot away from
+      // the open that replaced us.
+      persistence.destroy();
+      doc.destroy();
+    }
+    options?.signal?.throwIfAborted();
+
     const provider = openProvider(roomId, doc, iceServers);
 
     const statusListeners = new Set<
