@@ -159,9 +159,28 @@ export type DigitIntentOps = {
  * select lives inside the effect and not in `after`.
  */
 export function applyDigitIntent(
-  _intent: DigitIntent,
-  _digit: number,
-  _ops: DigitIntentOps,
+  { effect, after }: DigitIntent,
+  digit: number,
+  ops: DigitIntentOps,
 ): void {
-  // Stub so the commit typechecks; the ordering lands next.
+  switch (effect.kind) {
+    case "toggleHighlight":
+      ops.toggleHighlight(digit);
+      break;
+    case "value":
+      if (effect.at) ops.selectCell(effect.at.row, effect.at.col);
+      ops.placeNumber(digit, false);
+      break;
+    case "note":
+      if (effect.at) ops.placeNoteAt(effect.at.row, effect.at.col, digit);
+      else ops.placeNumber(digit, true);
+      break;
+    case "none":
+      break;
+  }
+  if (after.selection === "release") ops.deselectCell();
+  else if (after.selection !== "keep") {
+    ops.selectCell(after.selection.row, after.selection.col);
+  }
+  if (after.highlight) ops.setHighlight(digit);
 }
