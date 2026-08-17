@@ -92,18 +92,21 @@ describe("generatePuzzle", () => {
     }
   });
 
-  it("hard demands advanced techniques but stays within reach", () => {
+  it("hard demands advanced techniques and never needs chains", () => {
+    // The chain-free guarantee: every hard board must be solvable
+    // start to finish on the ladder (stuckCells 0), while demanding
+    // at least tier 3 so it stays genuinely hard.
     for (const seed of [1, 2, 3]) {
       const grade = gradePuzzle(generatePuzzle("hard", seededRandom(seed)));
       expect(grade.tier).toBeGreaterThanOrEqual(3);
-      expect(grade.stuckCells).toBeLessThanOrEqual(35);
+      expect(grade.stuckCells).toBe(0);
     }
   });
 
   it("expert defeats every graded technique across most of the board", () => {
     for (const seed of [1, 2, 3]) {
       const grade = gradePuzzle(generatePuzzle("expert", seededRandom(seed)));
-      expect(grade.tier).toBe(4);
+      expect(grade.tier).toBe(5);
       expect(grade.stuckCells).toBeGreaterThanOrEqual(40);
     }
   });
