@@ -143,9 +143,12 @@ Gesture model (`tap = enter · hold = note · drag = place`):
   peer discovery; each room is sharded to its own Durable Object via the
   URL path
 - Game state syncs directly between players via CRDTs
-- Optional TURN relay injected at build time (`VITE_TURN_URL` /
-  `VITE_TURN_USERNAME` / `VITE_TURN_CREDENTIAL`) for symmetric-NAT
-  traversal; STUN-only by default
+- TURN relay for symmetric-NAT traversal (cellular <-> wifi games):
+  the signaling worker mints ephemeral Cloudflare Realtime TURN
+  credentials at `GET /turn-credentials`, fetched by the client before
+  connecting (cached per page session, 3s timeout). Build-time env
+  (`VITE_TURN_URL` / `VITE_TURN_USERNAME` / `VITE_TURN_CREDENTIAL`)
+  overrides it with static credentials; with neither, STUN-only
 
 ### Player Identity
 - Auto-generated fun names (adjective + animal, e.g. "Swift Panda")

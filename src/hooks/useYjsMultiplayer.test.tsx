@@ -24,6 +24,14 @@ const mocks = vi.hoisted(() => ({
   // the new doc as part of whenSynced, mirroring how the real
   // y-indexeddb loads persisted updates asynchronously.
   idbSeedUpdate: null as Uint8Array | null,
+  // What the mocked turn module resolves with: null mirrors "worker
+  // has no TURN key / fetch failed" (the default), an array mirrors a
+  // successful ephemeral-credential mint.
+  turnIceServers: null as RTCIceServer[] | null,
+}));
+
+vi.mock("../lib/turn.ts", () => ({
+  fetchTurnIceServers: () => Promise.resolve(mocks.turnIceServers),
 }));
 
 vi.mock("y-webrtc", async () => {
@@ -103,6 +111,7 @@ async function flushSync() {
 beforeEach(() => {
   mocks.idbSeedUpdate = null;
   mocks.lastProvider = null;
+  mocks.turnIceServers = null;
 });
 
 // Force document.hidden + dispatch the visibilitychange event so the
@@ -219,10 +228,12 @@ describe("useYjsMultiplayer", () => {
         difficulty: "easy",
       }),
     );
+    // Setup is async (ICE resolution precedes doc creation) — flush
+    // before asserting.
+    await flushSync();
 
     expect(mocks.lastIdbName).toBe("dokuel_room-idb");
     expect(mocks.lastIdbDoc).toBe(mocks.lastDoc);
-    await flushSync();
   });
 
   it("destroys the IndexedDB persistence on unmount", async () => {
@@ -235,8 +246,8 @@ describe("useYjsMultiplayer", () => {
       }),
     );
 
-    expect(mocks.idbDestroyed).toBe(false);
     await flushSync();
+    expect(mocks.idbDestroyed).toBe(false);
     unmount();
     expect(mocks.idbDestroyed).toBe(true);
   });
@@ -253,10 +264,10 @@ describe("useYjsMultiplayer", () => {
       { initialProps: { playerName: "Alice" } },
     );
 
+    await flushSync();
     const docBefore = mocks.lastDoc;
     expect(docBefore).not.toBeNull();
 
-    await flushSync();
     rerender({ playerName: "Alice Renamed" });
     await flushSync();
 
@@ -509,6 +520,55 @@ describe("useYjsMultiplayer", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it("passes worker-minted iceServers to the provider without TURN env", async () => {
+    // No VITE_TURN_URL build-time override: the hook asks the
+    // signaling worker for ephemeral Cloudflare TURN credentials and
+    // hands them to the provider, so cellular<->wifi peers get a
+    // relay without any secret shipping in the bundle.
+    const minted = [
+      { urls: ["stun:stun.cloudflare.com:3478"] },
+      {
+        urls: ["turn:turn.cloudflare.com:3478?transport=udp"],
+        username: "ephemeral-user",
+        credential: "ephemeral-pass",
+      },
+    ];
+    mocks.turnIceServers = minted;
+
+    renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-minted-turn",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+    await flushSync();
+
+    const peerOpts = mocks.lastProviderOptions?.peerOpts as
+      | { config?: { iceServers?: unknown[] } }
+      | undefined;
+    expect(peerOpts?.config?.iceServers).toEqual(minted);
+  });
+
+  it("keeps the provider's STUN-only defaults when no relay is available", async () => {
+    // fetchTurnIceServers resolved null (worker unconfigured or
+    // unreachable): the provider must be constructed with its default
+    // config — today's behavior, no broken peerOpts.
+    renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-no-relay",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+      }),
+    );
+    await flushSync();
+
+    expect(mocks.lastProvider).not.toBeNull();
+    expect(mocks.lastProviderOptions?.peerOpts).toBeUndefined();
   });
 
   it("scopes the signaling connection to the room via the URL path", async () => {

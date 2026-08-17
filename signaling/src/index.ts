@@ -54,7 +54,48 @@ function isAllowedOrigin(origin: string | null): boolean {
 
 type Env = {
   SIGNALING_ROOM: DurableObjectNamespace;
+  // Cloudflare Realtime TURN key — set via `wrangler secret put`. Both
+  // optional: without them /turn-credentials 404s and clients fall
+  // back to STUN-only.
+  TURN_KEY_ID?: string;
+  TURN_KEY_API_TOKEN?: string;
 };
+
+// Credential lifetime. TURN allocations refresh with the credential
+// they were minted with, so it must outlive an entire play session —
+// expiry mid-game would drop the relay. 24h matches the Cloudflare
+// docs' recommendation of "longer than you expect users to connect".
+const TURN_CREDENTIAL_TTL_SECONDS = 86_400;
+
+/**
+ * Mint ephemeral TURN credentials via the Cloudflare Realtime API.
+ * Proxied through the worker so the account-scoped API token never
+ * ships in the client bundle — browsers only ever see short-lived
+ * credentials.
+ */
+async function generateTurnCredentials(env: Env): Promise<Response> {
+  if (!env.TURN_KEY_ID || !env.TURN_KEY_API_TOKEN) {
+    return new Response("TURN not configured", { status: 404 });
+  }
+  const apiResponse = await fetch(
+    `https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.TURN_KEY_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ttl: TURN_CREDENTIAL_TTL_SECONDS }),
+    },
+  );
+  if (!apiResponse.ok) {
+    return new Response("TURN credential generation failed", { status: 502 });
+  }
+  // Pass the { iceServers } body through verbatim.
+  return new Response(apiResponse.body, {
+    headers: { "Content-Type": "application/json", ...corsHeaders() },
+  });
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -78,8 +119,19 @@ export default {
       return stub.fetch(request);
     }
 
-    // Health check (non-WebSocket requests)
     const url = new URL(request.url);
+
+    // Ephemeral TURN credentials for WebRTC NAT traversal. Same
+    // origin gate as the WebSocket upgrade: abuse mitigation, not
+    // authentication — the credentials themselves expire.
+    if (url.pathname === "/turn-credentials") {
+      if (!isAllowedOrigin(request.headers.get("Origin"))) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      return generateTurnCredentials(env);
+    }
+
+    // Health check (non-WebSocket requests)
     if (url.pathname === "/" || url.pathname === "/health") {
       return new Response("ok", { headers: corsHeaders() });
     }
