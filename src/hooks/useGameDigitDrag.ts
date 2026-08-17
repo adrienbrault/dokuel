@@ -1,34 +1,28 @@
 import { useCallback } from "react";
-import type { Board, Position } from "../lib/types.ts";
+import type { Board, NumPadGesturePoint, Position } from "../lib/types.ts";
 import {
   type DigitDragSource,
   type DigitDropMode,
   useDigitDrag,
 } from "./useDigitDrag.ts";
 
-type Game = {
-  board: Board;
-  selectCell: (row: number, col: number) => void;
-  deselectCell: () => void;
-  placeNumber: (
-    value: number,
-    autoEliminateNotes?: boolean,
-    asNote?: boolean,
-  ) => void;
-  placeNoteAt: (row: number, col: number, value: number) => void;
+/** A completed drop, in the terms digitIntent asks about. */
+export type DigitDrop = {
+  digit: number;
+  /** Which half of the cell the digit landed in. */
+  mode: DigitDropMode;
+  target: Position;
+  /** The cell the digit was dragged from, or null for the numpad. */
+  from: Position | null;
 };
 
 type Options = {
-  game: Game;
-  /** When true (paused, game over, ...), drag-starts are ignored and drops no-op. */
+  /** Read to decide which cells a digit may land in. */
+  board: Board;
+  /** When true (paused, game over, ...), drag-starts and drops no-op. */
   disabled?: boolean | undefined;
-  /** Auto-eliminate peer notes when committing the dropped value. */
-  autoEliminateNotes: boolean;
-  /**
-   * Highlight a digit board-wide. A note dragged from the numpad keeps
-   * the highlight on that digit instead of jumping to the drop target.
-   */
-  onHighlightDigit: (digit: number) => void;
+  /** Runs the drop. What it does to the board is not decided here. */
+  onDrop: (drop: DigitDrop) => void;
   /**
    * Forwarded to the drag layer: fires when a numpad drag is brought
    * back over the numpad, so the caller can resume a numpad skim.
@@ -43,34 +37,29 @@ type Options = {
 };
 
 /**
- * Bundles the digit drag-and-drop wiring shared by SoloGame and
- * MultiplayerBoard. The drop zone within the cell decides intent: the
- * top half commits the value, the bottom half adds a note.
- *
- * A value drop selects the cell it lands in. A note drop deliberately
- * does not — selection follows what was dragged (the source cell, or
- * the dragged digit's board-wide highlight) so repeated note drops
- * leave the highlight where the player is working.
- *
- * Start handlers gate themselves on the caller's disabled flag.
+ * The digit drag-and-drop wiring shared by SoloGame and
+ * MultiplayerBoard: which cells accept a digit, where a drag may start,
+ * and turning a landed drag into a `DigitDrop`. The drop zone within the
+ * cell decides the mode — the top half is a value, the bottom half a
+ * note — but what either one does to the board is the caller's answer,
+ * via digitIntent.
  */
 export function useGameDigitDrag({
-  game,
+  board,
   disabled,
-  autoEliminateNotes,
-  onHighlightDigit,
+  onDrop,
   onReturnToNumpad,
 }: Options) {
   const isDroppable = useCallback(
     (row: number, col: number) => {
-      const cell = game.board[row]?.[col];
+      const cell = board[row]?.[col];
       if (!cell) return false;
       return !cell.isGiven && cell.value === null;
     },
-    [game.board],
+    [board],
   );
 
-  const onDrop = useCallback(
+  const handleDrop = useCallback(
     (
       digit: number,
       source: DigitDragSource,
@@ -78,49 +67,25 @@ export function useGameDigitDrag({
       mode: DigitDropMode,
     ) => {
       if (disabled) return;
-      if (mode === "note") {
-        // A note drop must not pull the selection onto the drop target
-        // — that would yank the board highlight to wherever the note
-        // landed. The note lands at `target`; selection instead
-        // follows what was dragged, so penciling one digit across
-        // several cells keeps a stable highlight.
-        game.placeNoteAt(target.row, target.col, digit);
-        if (source.kind === "cell") {
-          game.selectCell(source.row, source.col);
-        } else {
-          game.deselectCell();
-          onHighlightDigit(digit);
-        }
-        return;
-      }
-      game.selectCell(target.row, target.col);
-      game.placeNumber(digit, autoEliminateNotes, false);
+      onDrop({
+        digit,
+        mode,
+        target,
+        from:
+          source.kind === "cell" ? { row: source.row, col: source.col } : null,
+      });
     },
-    [
-      disabled,
-      game.selectCell,
-      game.deselectCell,
-      game.placeNumber,
-      game.placeNoteAt,
-      autoEliminateNotes,
-      onHighlightDigit,
-    ],
+    [disabled, onDrop],
   );
 
   const { state: dragState, start } = useDigitDrag({
-    onDrop,
+    onDrop: handleDrop,
     isDroppable,
     onReturnToNumpad,
   });
 
   const startNumpadDrag = useCallback(
-    (args: {
-      digit: number;
-      x: number;
-      y: number;
-      pointerId: number;
-      pointerType: string;
-    }) => {
+    (args: NumPadGesturePoint) => {
       if (disabled) return;
       start({ ...args, source: { kind: "numpad" } });
     },

@@ -1,118 +1,48 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Awareness } from "y-protocols/awareness";
-import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
+import { Doc, encodeStateAsUpdate } from "yjs";
+import type { Difficulty } from "../lib/types.ts";
+import { createFakeConnections } from "./mp-connection.fake.ts";
+import {
+  claimWinner,
+  initializeRoom,
+  joinRoom,
+  startGame,
+} from "./p2p-room.ts";
+import { useYjsMultiplayer } from "./useYjsMultiplayer.ts";
 
-type FakeProvider = {
-  awareness: Awareness;
-  connected: boolean;
-  connectCount: number;
-  disconnectCount: number;
-  connect(): void;
-  disconnect(): void;
-};
+// The transport is injected, not module-mocked: the in-memory adapter
+// is the second implementation of the same Connection seam the WebRTC
+// one satisfies, so these tests exercise the hook's real wiring.
+let connections: ReturnType<typeof createFakeConnections>;
 
-const mocks = vi.hoisted(() => ({
-  lastDoc: null as Doc | null,
-  lastProvider: null as FakeProvider | null,
-  lastProviderOptions: null as Record<string, unknown> | null,
-  lastIdbName: null as string | null,
-  lastIdbDoc: null as Doc | null,
-  idbDestroyed: false,
-  // Optional seed: tests set this BEFORE renderHook to simulate
-  // pre-existing IndexedDB state. The fake constructor applies it to
-  // the new doc as part of whenSynced, mirroring how the real
-  // y-indexeddb loads persisted updates asynchronously.
-  idbSeedUpdate: null as Uint8Array | null,
-  // What the mocked turn module resolves with: null mirrors "worker
-  // has no TURN key / fetch failed" (the default), an array mirrors a
-  // successful ephemeral-credential mint.
-  turnIceServers: null as RTCIceServer[] | null,
-}));
+beforeEach(() => {
+  connections = createFakeConnections();
+});
 
-vi.mock("../lib/turn.ts", () => ({
-  fetchTurnIceServers: () => Promise.resolve(mocks.turnIceServers),
-}));
-
-vi.mock("y-webrtc", async () => {
-  // Awareness is the REAL y-protocols implementation — its semantics
-  // (notably: setLocalStateField silently no-ops while local state is
-  // null) are exactly what presence bugs hide behind, so faking it
-  // would fake away the risk. Imported inside the factory because
-  // vi.mock is hoisted above module imports.
-  const { Awareness, removeAwarenessStates } = await import(
-    "y-protocols/awareness"
+function renderRoom({
+  roomId,
+  difficulty,
+}: {
+  roomId: string;
+  difficulty: Difficulty | null;
+}) {
+  return renderHook(() =>
+    useYjsMultiplayer({
+      roomId,
+      playerId: "p1",
+      playerName: "Alice",
+      difficulty,
+      openConnection: connections.open,
+    }),
   );
-  class FakeWebrtcProvider implements FakeProvider {
-    awareness: Awareness;
-    connected = false;
-    connectCount = 0;
-    disconnectCount = 0;
-    #doc: Doc;
-    constructor(_roomId: string, doc: Doc, options?: Record<string, unknown>) {
-      mocks.lastDoc = doc;
-      mocks.lastProvider = this;
-      mocks.lastProviderOptions = options ?? null;
-      this.#doc = doc;
-      this.awareness = new Awareness(doc);
-    }
-    on() {}
-    off() {}
-    connect() {
-      this.connected = true;
-      this.connectCount += 1;
-    }
-    disconnect() {
-      this.connected = false;
-      this.disconnectCount += 1;
-      // Mirror y-webrtc Room.disconnect(): the local client's awareness
-      // entry is removed, leaving local state null until re-announced.
-      removeAwarenessStates(this.awareness, [this.#doc.clientID], "disconnect");
-    }
-    destroy() {
-      this.awareness.destroy();
-    }
-  }
-  return { WebrtcProvider: FakeWebrtcProvider };
-});
-
-vi.mock("y-indexeddb", () => {
-  class FakeIndexeddbPersistence {
-    whenSynced: Promise<FakeIndexeddbPersistence>;
-    synced = false;
-    constructor(name: string, doc: Doc) {
-      mocks.lastIdbName = name;
-      mocks.lastIdbDoc = doc;
-      mocks.idbDestroyed = false;
-      const seed = mocks.idbSeedUpdate;
-      this.whenSynced = Promise.resolve().then(() => {
-        if (seed) applyUpdate(doc, seed);
-        this.synced = true;
-        return this;
-      });
-    }
-    destroy() {
-      mocks.idbDestroyed = true;
-    }
-  }
-  return { IndexeddbPersistence: FakeIndexeddbPersistence };
-});
-
-const { useYjsMultiplayer } = await import("./useYjsMultiplayer.ts");
-const { claimWinner, initializeRoom, joinRoom, setDifficulty, startGame } =
-  await import("./p2p-room.ts");
+}
 
 // Flush the whenSynced microtask + resulting React effect so post-sync
 // init has run before tests assert on state.
 async function flushSync() {
   await act(async () => {});
 }
-
-beforeEach(() => {
-  mocks.idbSeedUpdate = null;
-  mocks.lastProvider = null;
-  mocks.turnIceServers = null;
-});
 
 // Force document.hidden + dispatch the visibilitychange event so the
 // hook's listener fires. jsdom defaults to hidden=false and exposes
@@ -125,131 +55,56 @@ function setTabHidden(hidden: boolean) {
   document.dispatchEvent(new Event("visibilitychange"));
 }
 
-function countClues(puzzle: string): number {
-  return puzzle.split("").filter((c) => c !== ".").length;
-}
-
 describe("useYjsMultiplayer", () => {
-  it("host writes chosen difficulty to Yjs on mount", async () => {
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "abc123",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "expert",
-      }),
-    );
-
-    await flushSync();
-    expect(result.current.roomState?.difficulty).toBe("expert");
-  });
-
-  it("joiner with null difficulty does not initialize the room", async () => {
-    // Joiners came in via a shared link with no chosen difficulty, so
-    // they must not write any room defaults — initialization (and the
-    // host claim it bundles with) is reserved for the creator so the
-    // joiner never races for hostId.
-    renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-joiner",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: null,
-      }),
-    );
-
-    await flushSync();
-    const doc = mocks.lastDoc!;
-    const roomMap = doc.getMap("room");
-    expect(roomMap.get("difficulty")).toBeUndefined();
-    expect(roomMap.get("hostId")).toBeUndefined();
-    expect(roomMap.get("status")).toBeUndefined();
-  });
-
-  it("sendStartGame uses Yjs difficulty, not the local prop", async () => {
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-start",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-
-    await flushSync();
-    const doc = mocks.lastDoc!;
-    const fakeRoom = { doc, roomId: "room-start" };
-
-    // Simulate opponent joining and host switching to expert via Yjs.
-    act(() => {
-      joinRoom(fakeRoom, "p2", "Bob");
-      setDifficulty(fakeRoom, "expert");
-    });
-
-    act(() => {
-      result.current.sendStartGame();
-    });
-
-    const puzzle = doc.getMap("room").get("puzzle") as string;
-    expect(puzzle).toBeTruthy();
-    // Expert digs to a minimal puzzle (~22-28 clues) — well below the
-    // easy band (36-45) the local prop would have produced.
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
-  });
-
-  it("setDifficulty updates the Yjs room difficulty", async () => {
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-set",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-
-    await flushSync();
-    const doc = mocks.lastDoc!;
-    expect(doc.getMap("room").get("difficulty")).toBe("easy");
-
-    act(() => {
-      result.current.setDifficulty("hard");
-    });
-
-    expect(doc.getMap("room").get("difficulty")).toBe("hard");
-  });
-
-  it("persists the Yjs doc to IndexedDB under a per-room namespace", async () => {
-    renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-idb",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-    // Setup is async (ICE resolution precedes doc creation) — flush
-    // before asserting.
-    await flushSync();
-
-    expect(mocks.lastIdbName).toBe("dokuel_room-idb");
-    expect(mocks.lastIdbDoc).toBe(mocks.lastDoc);
-  });
-
-  it("destroys the IndexedDB persistence on unmount", async () => {
+  it("closes a connection that finishes opening after unmount", async () => {
+    // Belt and braces behind the abort: an adapter that ignored the
+    // signal and resolved anyway must still not leave a live transport
+    // behind for a room the player already left.
     const { unmount } = renderHook(() =>
       useYjsMultiplayer({
-        roomId: "room-idb-destroy",
+        roomId: "room-late-open",
         playerId: "p1",
         playerName: "Alice",
         difficulty: "easy",
+        // Drops the signal on the floor — the pre-abort adapter.
+        openConnection: (roomId) => connections.open(roomId),
       }),
     );
+    unmount();
 
     await flushSync();
-    expect(mocks.idbDestroyed).toBe(false);
+
+    expect(connections.last!.closed).toBe(true);
+  });
+
+  it("builds one transport when the room remounts while opening", async () => {
+    // React StrictMode double-invokes effects, so the first mount's
+    // open is still in flight when the second one starts. y-webrtc
+    // keeps ONE global registry keyed by room name: a transport built
+    // for the abandoned open claims the room's slot, and the live
+    // one's own claim throws inside a detached promise — leaving the
+    // lobby permanently disconnected.
+    const first = renderRoom({ roomId: "room-remount", difficulty: "easy" });
+    first.unmount();
+    const second = renderRoom({ roomId: "room-remount", difficulty: "easy" });
+
+    await flushSync();
+
+    expect(connections.all).toHaveLength(1);
+    expect(connections.last?.closed).toBe(false);
+    second.unmount();
+  });
+
+  it("closes the connection on unmount", async () => {
+    const { unmount } = renderRoom({
+      roomId: "room-idb-destroy",
+      difficulty: "easy",
+    });
+
+    await flushSync();
+    expect(connections.last!.closed).toBe(false);
     unmount();
-    expect(mocks.idbDestroyed).toBe(true);
+    expect(connections.last!.closed).toBe(true);
   });
 
   it("keeps the same Y.Doc when playerName changes", async () => {
@@ -260,73 +115,120 @@ describe("useYjsMultiplayer", () => {
           playerId: "p1",
           playerName,
           difficulty: "easy",
+          openConnection: connections.open,
         }),
       { initialProps: { playerName: "Alice" } },
     );
 
     await flushSync();
-    const docBefore = mocks.lastDoc;
+    const docBefore = connections.last?.doc;
     expect(docBefore).not.toBeNull();
 
     rerender({ playerName: "Alice Renamed" });
     await flushSync();
 
-    expect(mocks.lastDoc).toBe(docBefore);
+    expect(connections.last?.doc).toBe(docBefore);
   });
 
-  it("hasStartedGame latches true once gameNumber goes above zero", async () => {
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-latch",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-
+  it("reports the transport's connection status", async () => {
+    const { result } = renderRoom({
+      roomId: "room-status",
+      difficulty: "easy",
+    });
     await flushSync();
-    expect(result.current.hasStartedGame).toBe(false);
-
-    const doc = mocks.lastDoc!;
-    const fakeRoom = { doc, roomId: "room-latch" };
+    expect(result.current.connected).toBe(false);
 
     act(() => {
-      joinRoom(fakeRoom, "p2", "Bob");
-      result.current.sendStartGame();
+      connections.last!.emitStatus(true);
     });
 
-    expect(result.current.hasStartedGame).toBe(true);
+    expect(result.current.connected).toBe(true);
   });
 
-  it("sendRematch uses Yjs difficulty, not the local prop", async () => {
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-rematch",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-
+  it("records a transport drop as an absence the Room can trust", async () => {
+    // Losing signaling is the other way we go away (the hidden-tab path
+    // is covered below). A forfeit claim landing afterwards is real.
+    const { result } = renderRoom({
+      roomId: "room-status-absence",
+      difficulty: "easy",
+    });
     await flushSync();
-    const doc = mocks.lastDoc!;
-    const fakeRoom = { doc, roomId: "room-rematch" };
-
+    const doc = connections.last!.doc;
+    const fakeRoom = { doc, roomId: "room-status-absence" };
     act(() => {
       joinRoom(fakeRoom, "p2", "Bob");
-      setDifficulty(fakeRoom, "expert");
-      result.current.sendStartGame();
+      startGame(fakeRoom);
     });
 
     act(() => {
+      connections.last!.emitStatus(false);
+    });
+    act(() => {
+      claimWinner(fakeRoom, "p2", "Bob", null);
+    });
+
+    expect(result.current.gameOver).toEqual({
+      winnerId: "p2",
+      winnerName: "Bob",
+    });
+  });
+
+  it("recomputes presence when the peer set changes", async () => {
+    const { result } = renderRoom({ roomId: "room-peers", difficulty: "easy" });
+    await flushSync();
+    const doc = connections.last!.doc;
+    act(() => {
+      joinRoom({ doc, roomId: "room-peers" }, "p2", "Bob");
+    });
+    expect(result.current.opponentDisconnected).toBe(false);
+
+    act(() => {
+      connections.last!.emitPresence();
+    });
+
+    expect(result.current.opponentDisconnected).toBe(true);
+  });
+
+  it("routes each command through to the room", async () => {
+    // The binding's job for these is delegation and nothing else; the
+    // rules behind them are tested against the Room.
+    const { result } = renderRoom({
+      roomId: "room-commands",
+      difficulty: "easy",
+    });
+    await flushSync();
+    const doc = connections.last!.doc;
+    act(() => {
+      joinRoom({ doc, roomId: "room-commands" }, "p2", "Bob");
+    });
+
+    act(() => {
+      result.current.setDifficulty("hard");
+      result.current.setAssistLevel("paper");
+      result.current.updateName("Alicia");
+      result.current.sendStartGame();
+    });
+    const solution = doc.getMap("room").get("solution") as string;
+    act(() => {
+      result.current.sendComplete(solution);
+    });
+    expect(doc.getMap("room").get("winnerId")).toBe("p1");
+
+    act(() => {
+      result.current.sendProgress(7, 91);
       result.current.sendRematch();
     });
 
-    const puzzle = doc.getMap("room").get("puzzle") as string;
-    // Expert digs to a minimal puzzle (~22-28 clues) — well below the
-    // easy band (36-45) the local prop would have produced.
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
+    const roomMap = doc.getMap("room");
+    expect(roomMap.get("difficulty")).toBe("hard");
+    expect(roomMap.get("assistLevel")).toBe("paper");
+    expect(roomMap.get("gameNumber")).toBe(2);
+    expect(result.current.roomState?.players[0]?.name).toBe("Alicia");
+    // The rematch resets progress, so assert the write landed before it.
+    expect(connections.last!.awareness.getLocalState()?.user).toEqual({
+      id: "p1",
+      name: "Alicia",
+    });
   });
 
   it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {
@@ -348,16 +250,12 @@ describe("useYjsMultiplayer", () => {
     expect(seedPuzzle).toBeTruthy();
     expect(seedSolution).toBeTruthy();
 
-    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
+    connections.persistedUpdate = encodeStateAsUpdate(seedDoc);
 
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-preserves",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: null,
-      }),
-    );
+    const { result } = renderRoom({
+      roomId: "room-preserves",
+      difficulty: null,
+    });
 
     await flushSync();
 
@@ -369,267 +267,11 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomState?.players).toHaveLength(2);
   });
 
-  it("flags roomFull for a third player arriving at a full room", async () => {
-    // Seed IDB with a room that already has two other players, so the
-    // join attempt no-ops and this client learns it is the odd one out.
-    const seedDoc = new Doc();
-    const seedRoom = { doc: seedDoc, roomId: "room-full" };
-    initializeRoom(seedRoom, "p2", "medium");
-    joinRoom(seedRoom, "p2", "Bob");
-    joinRoom(seedRoom, "p3", "Carol");
-    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
-
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-full",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: null,
-      }),
-    );
-
-    await flushSync();
-    expect(result.current.roomFull).toBe(true);
-    expect(result.current.roomState?.players).toHaveLength(2);
-  });
-
-  it("evicts itself from the players map after a concurrent-join overflow", async () => {
-    // A concurrent-join merge can leave 3 entries even though joinRoom
-    // capped locally. The overflow player (us, by deterministic seat
-    // sort) must delete its own entry — otherwise the two seated
-    // players stare at a lobby whose Start never enables.
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-overflow-evict",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: null,
-      }),
-    );
-    await flushSync();
-    const doc = mocks.lastDoc!;
-    // Simulate the merged remote state: the host's room map plus two
-    // players whose joinOrder/id sort ahead of ours ("a1"/"a2" < "p1"
-    // at joinOrder 0).
-    act(() => {
-      initializeRoom({ doc, roomId: "room-overflow-evict" }, "a1", "medium");
-      doc.transact(() => {
-        const players = doc.getMap("players");
-        for (const id of ["a1", "a2"]) {
-          const pm = new YMap<unknown>();
-          pm.set("name", id);
-          pm.set("color", "blue");
-          pm.set("cellsRemaining", 81);
-          pm.set("completionPercent", 0);
-          pm.set("joinOrder", 0);
-          players.set(id, pm);
-        }
-      });
-    });
-    await flushSync();
-
-    expect(result.current.roomFull).toBe(true);
-    expect(doc.getMap("players").has("p1")).toBe(false);
-    expect(doc.getMap("players").size).toBe(2);
-  });
-
-  it("does not flag roomFull for a player already in the room", async () => {
-    const seedDoc = new Doc();
-    const seedRoom = { doc: seedDoc, roomId: "room-notfull" };
-    initializeRoom(seedRoom, "p1", "medium");
-    joinRoom(seedRoom, "p1", "Alice");
-    joinRoom(seedRoom, "p2", "Bob");
-    mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
-
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-notfull",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: null,
-      }),
-    );
-
-    await flushSync();
-    expect(result.current.roomFull).toBe(false);
-  });
-
-  it("keeps roomState identity stable across no-op doc fires", async () => {
-    // The observer fires for every transaction — including our own
-    // keystrokes' progress writes and same-value sets — and rebuilding
-    // roomState each time re-rendered the whole game tree per
-    // keystroke on both sides. Unchanged content must keep identity.
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-stable-identity",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-    await flushSync();
-    const doc = mocks.lastDoc!;
-    act(() => {
-      joinRoom({ doc, roomId: "room-stable-identity" }, "p2", "Bob");
-    });
-    await flushSync();
-    const before = result.current.roomState;
-    expect(before).not.toBeNull();
-
-    act(() => {
-      doc.transact(() => {
-        doc.getMap("room").set("difficulty", "easy");
-      });
-    });
-    await flushSync();
-
-    expect(result.current.roomState).toBe(before);
-  });
-
-  it("passes TURN servers to the provider when configured", async () => {
-    // simple-peer's default is STUN-only, which cannot traverse
-    // symmetric NAT (mobile carriers) — two phones on different
-    // carriers hang on "Connecting..." forever. A deployment that
-    // provisions TURN credentials must be able to inject them.
-    vi.stubEnv("VITE_TURN_URL", "turn:turn.example.com:3478");
-    vi.stubEnv("VITE_TURN_USERNAME", "user");
-    vi.stubEnv("VITE_TURN_CREDENTIAL", "pass");
-    try {
-      renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-turn",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
-      await flushSync();
-
-      const peerOpts = mocks.lastProviderOptions?.peerOpts as
-        | { config?: { iceServers?: unknown[] } }
-        | undefined;
-      expect(peerOpts?.config?.iceServers).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            urls: "turn:turn.example.com:3478",
-            username: "user",
-            credential: "pass",
-          }),
-        ]),
-      );
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
-
-  it("passes worker-minted iceServers to the provider without TURN env", async () => {
-    // No VITE_TURN_URL build-time override: the hook asks the
-    // signaling worker for ephemeral Cloudflare TURN credentials and
-    // hands them to the provider, so cellular<->wifi peers get a
-    // relay without any secret shipping in the bundle.
-    const minted = [
-      { urls: ["stun:stun.cloudflare.com:3478"] },
-      {
-        urls: ["turn:turn.cloudflare.com:3478?transport=udp"],
-        username: "ephemeral-user",
-        credential: "ephemeral-pass",
-      },
-    ];
-    mocks.turnIceServers = minted;
-
-    renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-minted-turn",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-    await flushSync();
-
-    const peerOpts = mocks.lastProviderOptions?.peerOpts as
-      | { config?: { iceServers?: unknown[] } }
-      | undefined;
-    expect(peerOpts?.config?.iceServers).toEqual(minted);
-  });
-
-  it("keeps the provider's STUN-only defaults when no relay is available", async () => {
-    // fetchTurnIceServers resolved null (worker unconfigured or
-    // unreachable): the provider must be constructed with its default
-    // config — today's behavior, no broken peerOpts.
-    renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-no-relay",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-    await flushSync();
-
-    expect(mocks.lastProvider).not.toBeNull();
-    expect(mocks.lastProviderOptions?.peerOpts).toBeUndefined();
-  });
-
-  it("scopes the signaling connection to the room via the URL path", async () => {
-    // The worker shards rooms into separate Durable Objects keyed by
-    // the URL path. A bare host would land every player in one global
-    // object — a single point of contention and a cross-room fanout
-    // surface — so the client must address its room explicitly.
-    renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "brave-otter-1a2b",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-    await flushSync();
-
-    expect(mocks.lastProviderOptions?.signaling).toEqual([
-      "wss://signal.dokuel.com/brave-otter-1a2b",
-    ]);
-  });
-
-  it("re-raises an identical error so the toast can show again", async () => {
-    // "Need 2 players to start" twice in a row: a string state field
-    // is Object.is-equal on the second set, so the consumer's effect
-    // never re-fires and the second tap silently does nothing.
-    const { result } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-error-retoast",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-      }),
-    );
-    await flushSync();
-
-    act(() => {
-      result.current.sendStartGame();
-    });
-    const first = result.current.error;
-    expect(first?.message).toBe("Need 2 players to start");
-
-    act(() => {
-      result.current.sendStartGame();
-    });
-    expect(result.current.error?.message).toBe("Need 2 players to start");
-    expect(result.current.error).not.toBe(first);
-  });
-
   describe("win claims", () => {
     async function setupStartedGame(roomId: string) {
-      const { result } = renderHook(() =>
-        useYjsMultiplayer({
-          roomId,
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
+      const { result } = renderRoom({ roomId, difficulty: "easy" });
       await flushSync();
-      const doc = mocks.lastDoc!;
+      const doc = connections.last!.doc;
       const fakeRoom = { doc, roomId };
       act(() => {
         joinRoom(fakeRoom, "p2", "Bob");
@@ -639,83 +281,6 @@ describe("useYjsMultiplayer", () => {
       const solution = doc.getMap("room").get("solution") as string;
       return { result, doc, fakeRoom, solution };
     }
-
-    it("rejects a completion claim whose board does not match the solution", async () => {
-      const { result, doc } = await setupStartedGame("room-claim-bad");
-      act(() => {
-        result.current.sendComplete("1".repeat(81));
-      });
-      expect(doc.getMap("room").get("winnerId")).toBeNull();
-    });
-
-    it("claims the win when the submitted board matches the solution", async () => {
-      const { result, doc, solution } = await setupStartedGame("room-claim-ok");
-      act(() => {
-        result.current.sendComplete(solution);
-      });
-      expect(doc.getMap("room").get("winnerId")).toBe("p1");
-      expect(doc.getMap("room").get("winnerBoard")).toBe(solution);
-    });
-
-    it("ignores a remote solved-claim whose board is forged", async () => {
-      // A peer can write any winnerId it likes into the CRDT; the claim
-      // only counts here if the board it ships actually solves the
-      // puzzle.
-      const { result, fakeRoom } = await setupStartedGame("room-claim-forged");
-      act(() => {
-        claimWinner(fakeRoom, "p2", "Bob", "1".repeat(81));
-      });
-      await flushSync();
-      expect(result.current.gameOver).toBeNull();
-    });
-
-    it("treats an empty-string winner board as forged, not forfeit", async () => {
-      // getRoomState must not coerce "" to null: null means an explicit
-      // forfeit claim, while "" is just a solved-claim with no board —
-      // the original one-liner cheat. If "" collapses to null it gets
-      // accepted down the forfeit path.
-      const { result, fakeRoom } = await setupStartedGame("room-claim-empty");
-      act(() => {
-        claimWinner(fakeRoom, "p2", "Bob", "");
-      });
-      await flushSync();
-      expect(result.current.gameOver).toBeNull();
-    });
-
-    it("accepts a remote claim whose board matches the solution", async () => {
-      const { result, fakeRoom, solution } =
-        await setupStartedGame("room-claim-valid");
-      act(() => {
-        claimWinner(fakeRoom, "p2", "Bob", solution);
-      });
-      await flushSync();
-      expect(result.current.gameOver).toEqual({
-        winnerId: "p2",
-        winnerName: "Bob",
-      });
-    });
-
-    it("lets the real winner claim over a forged claim", async () => {
-      const { result, doc, fakeRoom, solution } = await setupStartedGame(
-        "room-claim-override",
-      );
-      act(() => {
-        claimWinner(fakeRoom, "p2", "Bob", "1".repeat(81));
-      });
-      act(() => {
-        result.current.sendComplete(solution);
-      });
-      expect(doc.getMap("room").get("winnerId")).toBe("p1");
-    });
-
-    it("claimForfeitWin records a win with no board", async () => {
-      const { result, doc } = await setupStartedGame("room-claim-forfeit");
-      act(() => {
-        result.current.claimForfeitWin();
-      });
-      expect(doc.getMap("room").get("winnerId")).toBe("p1");
-      expect(doc.getMap("room").get("winnerBoard")).toBeNull();
-    });
 
     it("claimForfeitWin no-ops when the opponent's presence is back", async () => {
       // The 60s countdown races the opponent's reconnect: if their
@@ -729,7 +294,7 @@ describe("useYjsMultiplayer", () => {
       otherAwareness.setLocalStateField("user", { id: "p2", name: "Bob" });
       act(() => {
         applyAwarenessUpdate(
-          mocks.lastProvider!.awareness,
+          connections.last!.awareness,
           encodeAwarenessUpdate(otherAwareness, [otherDoc.clientID]),
           "test",
         );
@@ -741,70 +306,6 @@ describe("useYjsMultiplayer", () => {
 
       expect(doc.getMap("room").get("winnerId")).toBeNull();
       otherAwareness.destroy();
-    });
-
-    it("does not adopt a malformed remote puzzle", async () => {
-      // The CRDT is peer-writable: a malicious or buggy peer can set
-      // puzzle/solution to anything. Adopting garbage renders a NaN
-      // board and bricks completion — keep the last valid game instead.
-      const { result, doc } = await setupStartedGame("room-bad-puzzle");
-      const goodPuzzle = result.current.puzzle;
-
-      act(() => {
-        doc.transact(() => {
-          const roomMap = doc.getMap("room");
-          roomMap.set("gameNumber", 99);
-          roomMap.set("puzzle", "lol-not-a-board");
-          roomMap.set("solution", "also-not-a-board");
-        });
-      });
-      await flushSync();
-
-      expect(result.current.puzzle).toBe(goodPuzzle);
-    });
-
-    it("adopts the merged puzzle after a concurrent start collides on gameNumber", async () => {
-      // Both players tapping Start (or Rematch) inside sync latency
-      // write the SAME gameNumber with different puzzles; Yjs LWW keeps
-      // one. The losing writer already latched that number from its own
-      // local write — without a content resync it would keep rendering
-      // its own board while the room holds the other puzzle, and its
-      // completion could never validate: a soft-locked game.
-      const { result, doc } = await setupStartedGame("room-start-collision");
-      const { generatePuzzleWithSolution } = await import("../lib/sudoku.ts");
-      const other = generatePuzzleWithSolution("easy");
-
-      act(() => {
-        doc.transact(() => {
-          const roomMap = doc.getMap("room");
-          roomMap.set("puzzle", other.puzzle);
-          roomMap.set("solution", other.solution);
-        });
-      });
-      await flushSync();
-
-      expect(result.current.puzzle).toBe(other.puzzle);
-      expect(result.current.solution).toBe(other.solution);
-
-      // And the game is actually winnable on the merged board.
-      act(() => {
-        result.current.sendComplete(other.solution);
-      });
-      expect(doc.getMap("room").get("winnerId")).toBe("p1");
-    });
-
-    it("ignores a forfeit claim received while we were continuously present", async () => {
-      // A forfeit claim asserts that WE left. This client has been
-      // connected and visible the whole game, so the claim is
-      // fabricated (the one-liner devtools cheat) — don't lose on it.
-      const { result, fakeRoom } = await setupStartedGame(
-        "room-forfeit-present",
-      );
-      act(() => {
-        claimWinner(fakeRoom, "p2", "Bob", null);
-      });
-      await flushSync();
-      expect(result.current.gameOver).toBeNull();
     });
   });
 
@@ -824,18 +325,11 @@ describe("useYjsMultiplayer", () => {
     });
 
     it("disconnects the WebRTC provider after the hide debounce", async () => {
-      renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-hide",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
+      renderRoom({ roomId: "room-hide", difficulty: "easy" });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      const provider = mocks.lastProvider!;
+      const provider = connections.last!;
       provider.connected = true;
       provider.disconnectCount = 0;
 
@@ -852,18 +346,11 @@ describe("useYjsMultiplayer", () => {
     });
 
     it("does not disconnect if the tab returns before the debounce", async () => {
-      renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-hide-cancel",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
+      renderRoom({ roomId: "room-hide-cancel", difficulty: "easy" });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      const provider = mocks.lastProvider!;
+      const provider = connections.last!;
       provider.connected = true;
       provider.disconnectCount = 0;
 
@@ -884,18 +371,11 @@ describe("useYjsMultiplayer", () => {
     });
 
     it("reconnects when the tab returns after disconnecting", async () => {
-      renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-rejoin",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
+      renderRoom({ roomId: "room-rejoin", difficulty: "easy" });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      const provider = mocks.lastProvider!;
+      const provider = connections.last!;
       provider.connected = true;
       provider.connectCount = 0;
 
@@ -915,18 +395,11 @@ describe("useYjsMultiplayer", () => {
     });
 
     it("re-announces presence after the reconnect", async () => {
-      renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-reannounce",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
+      renderRoom({ roomId: "room-reannounce", difficulty: "easy" });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      const provider = mocks.lastProvider!;
+      const provider = connections.last!;
       provider.connected = true;
 
       act(() => {
@@ -952,18 +425,14 @@ describe("useYjsMultiplayer", () => {
     });
 
     it("accepts a forfeit claim after we really were away", async () => {
-      const { result } = renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-forfeit-away",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
+      const { result } = renderRoom({
+        roomId: "room-forfeit-away",
+        difficulty: "easy",
+      });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      const doc = mocks.lastDoc!;
+      const doc = connections.last!.doc;
       const fakeRoom = { doc, roomId: "room-forfeit-away" };
       act(() => {
         joinRoom(fakeRoom, "p2", "Bob");
@@ -995,30 +464,6 @@ describe("useYjsMultiplayer", () => {
         winnerId: "p2",
         winnerName: "Bob",
       });
-    });
-
-    it("does not flag opponent as disconnected while we are the hidden one", async () => {
-      const { result } = renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-hide-flag",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      const doc = mocks.lastDoc!;
-      const fakeRoom = { doc, roomId: "room-hide-flag" };
-      // Two players in the doc, no awareness peers → before the fix
-      // this would flip to true. With the !document.hidden gate it
-      // must stay false because *we* are the one going away.
-      await act(async () => {
-        joinRoom(fakeRoom, "p2", "Bob");
-        setTabHidden(true);
-      });
-      expect(result.current.opponentDisconnected).toBe(false);
     });
   });
 
@@ -1065,14 +510,10 @@ describe("useYjsMultiplayer", () => {
       try {
         seedSnapshot("room-hydrate");
 
-        const { result } = renderHook(() =>
-          useYjsMultiplayer({
-            roomId: "room-hydrate",
-            playerId: "p1",
-            playerName: "Alice",
-            difficulty: null,
-          }),
-        );
+        const { result } = renderRoom({
+          roomId: "room-hydrate",
+          difficulty: null,
+        });
 
         // The snapshot is applied only after a grace window in which no
         // live peer state arrived.
@@ -1089,105 +530,44 @@ describe("useYjsMultiplayer", () => {
       }
     });
 
-    it("prefers live peer state that arrives during the hydration grace window", async () => {
-      // Hydrating a ≤1h-old snapshot into a FRESH doc makes every key
-      // causally concurrent with the live room — per-key LWW can then
-      // roll a finished/advanced game back for both peers. When real
-      // state arrives first, the snapshot must stay unapplied.
+    it("hydrates even if the wall clock steps back mid-window", async () => {
+      // NTP corrections and VM restores move the wall clock backwards.
+      // A tick timed against a clock that went back reads as early, and
+      // an early tick the binding never re-armed used to strand the
+      // pending snapshot for good: setup never ran, so the player never
+      // took a seat in their own room.
       vi.useFakeTimers();
       try {
-        seedSnapshot("room-snap-race");
+        seedSnapshot("room-clock-step");
 
-        const { result } = renderHook(() =>
-          useYjsMultiplayer({
-            roomId: "room-snap-race",
-            playerId: "p1",
-            playerName: "Alice",
-            difficulty: null,
-          }),
-        );
-        // Make our writes win LWW ties so a premature hydration is
-        // deterministically visible instead of a clientID coin flip.
-        mocks.lastDoc!.clientID = 0x7fffffff;
-
+        const { result } = renderRoom({
+          roomId: "room-clock-step",
+          difficulty: null,
+        });
+        // Let local sync land so the grace window is armed.
         await act(async () => {
           await vi.advanceTimersByTimeAsync(1_000);
         });
 
-        // The peer's real room arrives over WebRTC: game 7, different
-        // puzzle, already finished.
-        const seedDoc = new Doc();
-        const seedRoom = { doc: seedDoc, roomId: "room-snap-race" };
-        initializeRoom(seedRoom, "p2", "medium");
-        joinRoom(seedRoom, "p2", "Bob");
-        joinRoom(seedRoom, "p1", "Alice");
-        for (let i = 0; i < 7; i++) startGame(seedRoom);
-        act(() => {
-          applyUpdate(mocks.lastDoc!, encodeStateAsUpdate(seedDoc));
-        });
-
+        vi.setSystemTime(Date.now() - 5_000);
         await act(async () => {
-          await vi.advanceTimersByTimeAsync(5_000);
+          await vi.advanceTimersByTimeAsync(2_000);
         });
 
-        expect(result.current.roomState?.gameNumber).toBe(7);
-        expect(result.current.roomState?.difficulty).toBe("medium");
+        expect(result.current.hasStartedGame).toBe(true);
+        expect(result.current.roomState?.gameNumber).toBe(4);
       } finally {
         vi.useRealTimers();
       }
     });
 
-    it("does not hydrate when IndexedDB already has a started game", async () => {
-      const seedDoc = new Doc();
-      const seedRoom = { doc: seedDoc, roomId: "room-no-hydrate" };
-      initializeRoom(seedRoom, "p1", "medium");
-      joinRoom(seedRoom, "p1", "Alice");
-      joinRoom(seedRoom, "p2", "Bob");
-      for (let i = 0; i < 7; i++) startGame(seedRoom);
-      mocks.idbSeedUpdate = encodeStateAsUpdate(seedDoc);
-
-      localStorage.setItem(
-        "dokuel_mp_snap_room-no-hydrate",
-        JSON.stringify({
-          gameNumber: 2,
-          puzzle: "1".padEnd(81, "."),
-          status: "playing",
-          difficulty: "easy",
-          assistLevel: "standard",
-          hostId: "p1",
-          players: [],
-          winnerId: null,
-          winnerName: null,
-          savedAt: Date.now(),
-        }),
-      );
-
-      const { result } = renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-no-hydrate",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: null,
-        }),
-      );
-
-      await flushSync();
-
-      expect(result.current.roomState?.gameNumber).toBe(7);
-      expect(result.current.roomState?.difficulty).not.toBe("easy");
-    });
-
     it("writes a snapshot to localStorage on pagehide", async () => {
-      const { result } = renderHook(() =>
-        useYjsMultiplayer({
-          roomId: "room-pagehide",
-          playerId: "p1",
-          playerName: "Alice",
-          difficulty: "easy",
-        }),
-      );
+      const { result } = renderRoom({
+        roomId: "room-pagehide",
+        difficulty: "easy",
+      });
       await flushSync();
-      const doc = mocks.lastDoc!;
+      const doc = connections.last!.doc;
       const fakeRoom = { doc, roomId: "room-pagehide" };
       act(() => {
         joinRoom(fakeRoom, "p2", "Bob");

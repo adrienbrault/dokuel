@@ -1,9 +1,7 @@
-import { type Ref, useImperativeHandle, useState } from "react";
-import { useNumPadPress } from "../hooks/useNumPadPress.ts";
-import { useNumPadSkim } from "../hooks/useNumPadSkim.ts";
+import { type Ref, useImperativeHandle } from "react";
+import { useNumPadGesture } from "../hooks/useNumPadGesture.ts";
 import { DIGITS } from "../lib/constants.ts";
-import { haptics } from "../lib/haptics.ts";
-import type { NumPadPosition } from "../lib/types.ts";
+import type { NumPadGesturePoint, NumPadPosition } from "../lib/types.ts";
 import { NumPadKeyFace, numPadKeyLabel } from "./NumPadKeyFace.tsx";
 import { NumPadLegend } from "./NumPadLegend.tsx";
 
@@ -23,15 +21,7 @@ type NumPadProps = {
    * Fires once the finger has slid PERPENDICULAR to the numpad axis,
    * handing control to the parent's drag-and-drop layer.
    */
-  onStartDrag?:
-    | ((args: {
-        digit: number;
-        x: number;
-        y: number;
-        pointerId: number;
-        pointerType: string;
-      }) => void)
-    | undefined;
+  onStartDrag?: ((args: NumPadGesturePoint) => void) | undefined;
   /** Fires when an ALONG-axis skim crosses into another digit's button. */
   onSkimDigit?: ((n: number) => void) | undefined;
   /** What a tap currently does; drives the legend and the key faces. */
@@ -74,44 +64,22 @@ export function NumPad({
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
 
-  // Visual press feedback (drives bg-accent without CSS :active, which
-  // sticks on touch devices after pointer-capture release).
-  const [pressedDigit, setPressedDigit] = useState<number | null>(null);
-  // Once a press is classified as a skim, the gesture is owned at the
-  // document level so the finger can be tracked outside this button —
-  // and promoted into a drag if it slides off toward the board.
-  const { beginSkim, groupRef } = useNumPadSkim({
-    position,
-    onSkimDigit,
-    onPressEnd,
-    onStartDrag,
-    setPressedDigit,
-  });
-  // Per-button press state machine: tap vs hold vs skim vs drag.
-  const { handlePointerDown, handlePointerMove, endPress, handleClick } =
-    useNumPadPress({
-      isVertical,
-      onTapNumber,
-      onHoldNumber,
-      onPressEnd,
-      onStartDrag,
-      skimEnabled: onSkimDigit !== undefined,
-      beginSkim,
-      setPressedDigit,
-    });
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      resumeSkimFromDrag: ({ digit, pointerId, pointerType }) => {
-        setPressedDigit(digit);
-        onSkimDigit?.(digit);
-        haptics.tap();
-        beginSkim(digit, pointerId, pointerType);
-      },
-    }),
-    [beginSkim, onSkimDigit],
+  // One press → tap | hold | skim | drag, plus the pressed-digit visual
+  // that follows the finger across skim transitions.
+  const { keyProps, groupRef, pressedDigit, resumeFromDrag } = useNumPadGesture(
+    {
+      position,
+      onTap: onTapNumber,
+      onHold: onHoldNumber,
+      onSkim: onSkimDigit,
+      onDrag: onStartDrag,
+      onEnd: onPressEnd,
+    },
   );
+
+  useImperativeHandle(ref, () => ({ resumeSkimFromDrag: resumeFromDrag }), [
+    resumeFromDrag,
+  ]);
 
   return (
     <div
@@ -140,12 +108,7 @@ export function NumPad({
               data-numpad-digit={n}
               disabled={(showRemainingCounts || disableCompleted) && isComplete}
               className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 short:h-10 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16 lg:w-16 lg:flex-none"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
-              onPointerDown={handlePointerDown(n)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={() => endPress(true)}
-              onPointerLeave={() => endPress(false)}
-              onPointerCancel={() => endPress(false)}
-              onClick={handleClick(n)}
+              {...keyProps(n)}
               aria-label={numPadKeyLabel({
                 digit: n,
                 remaining,

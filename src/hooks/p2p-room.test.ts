@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { Awareness, removeAwarenessStates } from "y-protocols/awareness";
 import * as Y from "yjs";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
-  announcePresence,
   claimWinner,
   createRoomFromDoc,
   getHostId,
@@ -14,6 +12,7 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  judgeClaim,
   leaveRoom,
   observeRoomChanges,
   type P2PRoom,
@@ -287,6 +286,47 @@ describe("p2p-room", () => {
     });
   });
 
+  describe("judgeClaim", () => {
+    const SOLUTION = "1".repeat(81);
+
+    it("credits a board that equals the room's solution", () => {
+      expect(judgeClaim(SOLUTION, SOLUTION)).toBe("solved");
+    });
+
+    it("reads a missing board as a forfeit claim", () => {
+      // Nothing in the doc can verify "the opponent vanished" — only
+      // the receiver's own absence record can back it.
+      expect(judgeClaim(null, SOLUTION)).toBe("forfeit");
+      expect(judgeClaim(undefined, SOLUTION)).toBe("forfeit");
+    });
+
+    it("treats an empty-string board as forged, not forfeit", () => {
+      // The original one-liner cheat: a solved-claim with no board. If
+      // "" collapsed to a forfeit it would be judged by absence instead
+      // of by the solution.
+      expect(judgeClaim("", SOLUTION)).toBe("forged");
+    });
+
+    it("rejects a board that does not solve the puzzle", () => {
+      expect(judgeClaim("2".repeat(81), SOLUTION)).toBe("forged");
+    });
+
+    it("treats a board that is not even a string as forged", () => {
+      // The projection hands this function a string or null while the
+      // write path hands it the raw Yjs value, so a peer writing a
+      // number must reach ONE verdict — otherwise the same claim can
+      // be honoured on the read side and undisplaceable on the write
+      // side.
+      expect(judgeClaim(42, SOLUTION)).toBe("forged");
+    });
+
+    it("cannot prove anything without a solution in the room", () => {
+      // Not provably forged — callers that punish forgery must leave a
+      // claim in this state alone rather than assume the worst.
+      expect(judgeClaim(SOLUTION, null)).toBe("unverifiable");
+    });
+  });
+
   describe("claimWinner", () => {
     it("sets winnerId when no current winner", () => {
       const room = createTestRoom();
@@ -316,6 +356,28 @@ describe("p2p-room", () => {
 
       expect(claimed).toBe(false);
       expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
+    });
+
+    it("lets a real solve displace a claim carrying a nonsense board", () => {
+      // Nothing stops a peer from writing a number into winnerBoard.
+      // It proves nothing, so it must not lock the room's real winner
+      // out any more than an empty-string board does.
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "medium");
+      const solution = room.doc.getMap("room").get("solution") as string;
+      const roomMap = room.doc.getMap("room");
+      room.doc.transact(() => {
+        roomMap.set("winnerId", "player2");
+        roomMap.set("winnerName", "Bob");
+        roomMap.set("winnerBoard", 42);
+      });
+
+      const claimed = claimWinner(room, "player1", "Alice", solution);
+
+      expect(claimed).toBe(true);
+      expect(roomMap.get("winnerId")).toBe("player1");
     });
 
     it("lets a verified solved claim displace a forfeit claim", () => {
@@ -693,37 +755,6 @@ describe("p2p-room", () => {
       expect(getPlayers(roomA)).toHaveLength(2);
       expect(getPlayers(roomB)).toHaveLength(2);
       expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
-    });
-  });
-
-  describe("announcePresence", () => {
-    it("publishes the player identity into awareness", () => {
-      const doc = new Y.Doc();
-      const awareness = new Awareness(doc);
-
-      announcePresence(awareness, "player1", "Alice");
-
-      expect(awareness.getLocalState()).toEqual({
-        user: { id: "player1", name: "Alice" },
-      });
-      awareness.destroy();
-    });
-
-    it("restores presence after a disconnect cleared the local state", () => {
-      const doc = new Y.Doc();
-      const awareness = new Awareness(doc);
-      // y-webrtc's Room.disconnect() removes the local client's
-      // awareness entry, leaving local state null — the situation
-      // after the tab was backgrounded long enough to drop WebRTC.
-      removeAwarenessStates(awareness, [doc.clientID], "disconnect");
-      expect(awareness.getLocalState()).toBeNull();
-
-      announcePresence(awareness, "player1", "Alice");
-
-      expect(awareness.getLocalState()).toEqual({
-        user: { id: "player1", name: "Alice" },
-      });
-      awareness.destroy();
     });
   });
 });

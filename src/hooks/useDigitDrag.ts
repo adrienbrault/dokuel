@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Position } from "../lib/types.ts";
+import { digitButtonAt, skimDigitOf } from "../lib/numpad-gesture.ts";
+import type { NumPadGesturePoint, Position } from "../lib/types.ts";
 
 export type DigitDragSource =
   | { kind: "numpad" }
@@ -29,15 +30,8 @@ export type DigitDragState = {
   lift: number;
 };
 
-type StartParams = {
-  digit: number;
-  source: DigitDragSource;
-  x: number;
-  y: number;
-  pointerId: number;
-  /** From PointerEvent.pointerType — "touch" | "mouse" | "pen". */
-  pointerType: string;
-};
+/** The gesture packet plus where the carried digit came from. */
+type StartParams = NumPadGesturePoint & { source: DigitDragSource };
 
 type Options = {
   onDrop: (
@@ -92,22 +86,6 @@ function cellHitFromPoint(
   const col = Number(btn.dataset.col);
   if (Number.isNaN(row) || Number.isNaN(col)) return null;
   return { position: { row, col }, mode: cellModeAt(btn, x, y) };
-}
-
-/**
- * The numpad digit the raw pointer point sits over, or null. Unlike
- * the cell hit-test this uses the unlifted point — numpad re-entry is
- * decided by the finger itself, not by the lifted aim point above it.
- */
-function numpadDigitAtPoint(x: number, y: number): number | null {
-  const el = document.elementFromPoint(x, y);
-  if (!el) return null;
-  const btn = (el as HTMLElement).closest?.(
-    "[data-numpad-digit]",
-  ) as HTMLButtonElement | null;
-  if (!btn || btn.disabled) return null;
-  const digit = Number(btn.dataset.numpadDigit);
-  return Number.isNaN(digit) ? null : digit;
 }
 
 function cellModeAt(cell: HTMLElement, _x: number, y: number): DigitDropMode {
@@ -191,8 +169,10 @@ export function useDigitDrag({
       // A numpad-sourced drag brought back over the numpad digits —
       // after having left them — is demoted: cancel the drag and hand
       // the gesture back so the finger resumes skimming/highlighting.
+      // The raw pointer point, not the lifted aim point: re-entry is
+      // decided by the finger itself, not by the cell it points at.
       if (current.source.kind === "numpad" && onReturnToNumpadRef.current) {
-        const numpadDigit = numpadDigitAtPoint(e.clientX, e.clientY);
+        const numpadDigit = skimDigitOf(digitButtonAt(e.clientX, e.clientY));
         if (numpadDigit === null) {
           leftNumpadRef.current = true;
         } else if (leftNumpadRef.current) {

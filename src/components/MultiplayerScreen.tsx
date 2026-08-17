@@ -14,7 +14,7 @@ function getPlayerId() {
   try {
     let id = localStorage.getItem("sudoku_player_id");
     if (!id) {
-      id = sessionStorage.getItem("sudoku_player_id") ?? generateId();
+      id = generateId();
       localStorage.setItem("sudoku_player_id", id);
     }
     return id;
@@ -27,8 +27,7 @@ function getPlayerName() {
   try {
     let name = localStorage.getItem("sudoku_player_name");
     if (!name) {
-      name =
-        sessionStorage.getItem("sudoku_player_name") ?? generatePlayerName();
+      name = generatePlayerName();
       localStorage.setItem("sudoku_player_name", name);
     }
     return name;

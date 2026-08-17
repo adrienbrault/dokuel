@@ -139,11 +139,12 @@ src/
 ├── hooks/          # React state hooks + multiplayer logic
 │   ├── useSudoku, useResumableSudoku, useKeyboard, useAssistLevel
 │   ├── useNumPadPosition, useDarkMode, useLocalStorage, useDelayedFlag
-│   ├── useDigitHighlight, useDigitDrag, useGameDigitDrag, useDragSelect, useNumPadSkim
+│   ├── useDigitHighlight, useDigitDrag, useGameDigitDrag, useDragSelect, useNumPadGesture
 │   ├── useYjsMultiplayer, useOpponentProgressVisible, useRecordMultiplayerMatch
 │   └── p2p-room (Yjs CRDT room), mp-snapshot, mp-telemetry
 ├── lib/            # Pure logic — no React dependency
 │   ├── sudoku, board-engine, hint-engine, game-completion (engine)
+│   ├── digit-intent (what a digit does), numpad-gesture (gesture geometry)
 │   ├── types, constants, format, id, storage
 │   ├── daily (seeded RNG), daily-streak, stats, multiplayer-stats, game-storage
 │   └── room-code, name-generator, game-feedback, haptics, sounds
@@ -154,7 +155,7 @@ src/
 - **Peer-to-peer multiplayer** — game state syncs via Yjs CRDTs over WebRTC. A self-hosted Cloudflare Worker at `signal.dokuel.com` handles peer discovery; all game data flows directly between players
 - **React hooks only** — `useReducer` for game state, no external state library
 - **Soft validation** — conflicts are visual feedback, not hard constraints. The board is complete only when fully filled with no violations
-- **No accounts** — auto-generated fun names (adjective + animal), persisted in localStorage; session identity in sessionStorage for reconnect
+- **No accounts** — auto-generated fun names (adjective + animal), persisted in localStorage so the same identity survives reloads and reconnects
 - **Colocated tests** — `*.test.ts` / `*.test.tsx` files sit next to the code they test
 
 ## Deployment

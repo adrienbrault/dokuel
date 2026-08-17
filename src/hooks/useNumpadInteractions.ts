@@ -1,5 +1,11 @@
 import { useRef, useState } from "react";
 import type { NumPadHandle } from "../components/NumPad.tsx";
+import {
+  applyDigitIntent,
+  type DigitGesture,
+  type DigitIntentOps,
+  digitIntent,
+} from "../lib/digit-intent.ts";
 import type { AssistLevel } from "../lib/types.ts";
 import { useDigitHighlight } from "./useDigitHighlight.ts";
 import { useGameDigitDrag } from "./useGameDigitDrag.ts";
@@ -25,19 +31,44 @@ export function useNumpadInteractions({
   disabled: boolean;
   assistLevel: AssistLevel;
 }) {
-  // A quick tap commits the value into the selected empty cell; on a
-  // filled cell it highlights the digit instead, and a hold adds a
-  // pencil note (see useDigitHighlight). With no cell selected, a tap
-  // toggles the digit's board-wide highlight.
   const [chargingDigit, setChargingDigit] = useState<number | null>(null);
-  const highlight = useDigitHighlight(game, assistLevel !== "paper");
+  const highlight = useDigitHighlight(game);
+  const autoEliminateNotes = assistLevel !== "paper";
+
+  // What a digit does, and what it says it does, both come from
+  // digitIntent — see src/lib/digit-intent.ts. This is the only place
+  // that turns an intent into game calls, so the ordering the engine
+  // requires (place before the selection moves) is stated once.
+  const ops: DigitIntentOps = {
+    placeNumber: (value, asNote) =>
+      game.placeNumber(value, autoEliminateNotes, asNote),
+    placeNoteAt: game.placeNoteAt,
+    selectCell: game.selectCell,
+    deselectCell: game.deselectCell,
+    toggleHighlight: highlight.toggle,
+    setHighlight: highlight.setDigit,
+  };
+  const intentFor = (gesture: DigitGesture) =>
+    digitIntent(gesture, {
+      board: game.board,
+      selectedCell: game.selectedCell,
+      selectedCells: game.selectedCells,
+    });
+  const runIntent = (gesture: DigitGesture, digit: number) =>
+    applyDigitIntent(intentFor(gesture), digit, ops);
 
   const handleHoldNote = (n: number) => {
-    if (game.selectedCell || game.selectedCells.size > 0) {
-      game.placeNumber(n, assistLevel !== "paper", true);
-      setChargingDigit(n);
-    }
+    const intent = intentFor({ kind: "hold" });
+    applyDigitIntent(intent, n, ops);
+    // The charge animation runs the digit into a note slot, so it only
+    // plays when the hold had somewhere to pencil.
+    if (intent.effect.kind !== "none") setChargingDigit(n);
   };
+
+  // The keyboard's digit keys, which follow the N-toggled notes flag
+  // rather than the selection shape. Multiplayer has no keyboard path.
+  const keyDigit = (n: number) =>
+    runIntent({ kind: "key", notesMode: game.notesMode }, n);
 
   const handlePressEnd = () => {
     setChargingDigit(null);
@@ -47,26 +78,24 @@ export function useNumpadInteractions({
   // A drag brought back over the numpad demotes to a skim (see NumPad).
   const numPadRef = useRef<NumPadHandle>(null);
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
-    game,
+    board: game.board,
     disabled,
-    autoEliminateNotes: assistLevel !== "paper",
-    onHighlightDigit: highlight.setDigit,
+    onDrop: ({ digit, mode, target, from }) =>
+      runIntent({ kind: "drop", mode, target, from }, digit),
     onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
   });
 
   // Prop bag for <NumPad {...numPadProps} ref={numPadRef} position=.../>.
   const numPadProps = {
-    // With a range selected, a tap pencils notes — the legend says so.
-    tapAction: (game.selectedCells.size > 1 ? "note" : "enter") as
-      | "note"
-      | "enter",
+    // The legend reads the same intent the tap will run.
+    tapAction: intentFor({ kind: "tap" }).label,
     remainingCounts: game.remainingCounts,
     selectedValue: game.selectedCell
       ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
       : highlight.highlightedDigit,
     showRemainingCounts: assistLevel === "full",
     disableCompleted: assistLevel !== "paper",
-    onTapNumber: highlight.tapDigit,
+    onTapNumber: (n: number) => runIntent({ kind: "tap" }, n),
     onHoldNumber: handleHoldNote,
     onPressEnd: handlePressEnd,
     onStartDrag: startNumpadDrag,
@@ -76,6 +105,7 @@ export function useNumpadInteractions({
   return {
     highlight,
     chargingDigit,
+    keyDigit,
     numPadRef,
     numPadProps,
     dragState,

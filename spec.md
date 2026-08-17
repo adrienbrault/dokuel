@@ -153,7 +153,7 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 ### Player Identity
 - Auto-generated fun names (adjective + animal, e.g. "Swift Panda")
 - Inline name editing in lobby — players can rename themselves
-- Player id and name persisted in localStorage (sessionStorage fallback)
+- Player id and name persisted in localStorage
 
 ### Opponent Visibility
 - Nickname + assigned color

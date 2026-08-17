@@ -75,6 +75,21 @@ export type AssistLevel = "paper" | "standard" | "full";
 
 export type NumPadPosition = "bottom" | "left" | "right";
 
+/**
+ * A digit being carried by a live pointer: what the numpad's gesture
+ * recognizer hands to the drag layer, and what the drag layer needs to
+ * start following the pointer. `x`/`y` are viewport (client) pixels;
+ * `pointerType` comes straight from `PointerEvent.pointerType`
+ * ("touch" | "mouse" | "pen") and decides the touch lift.
+ */
+export type NumPadGesturePoint = {
+  digit: number;
+  x: number;
+  y: number;
+  pointerId: number;
+  pointerType: string;
+};
+
 // --- Multiplayer ---
 
 export type RoomStatus = "lobby" | "playing" | "finished";
