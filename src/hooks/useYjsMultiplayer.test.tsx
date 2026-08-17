@@ -56,6 +56,20 @@ function setTabHidden(hidden: boolean) {
 }
 
 describe("useYjsMultiplayer", () => {
+  it("closes a connection that finishes opening after unmount", async () => {
+    // Opening is async (relay credentials first); a room the player left
+    // during that window must not leave a live transport behind.
+    const { unmount } = renderRoom({
+      roomId: "room-late-open",
+      difficulty: "easy",
+    });
+    unmount();
+
+    await flushSync();
+
+    expect(connections.last!.closed).toBe(true);
+  });
+
   it("closes the connection on unmount", async () => {
     const { unmount } = renderRoom({
       roomId: "room-idb-destroy",
@@ -89,6 +103,107 @@ describe("useYjsMultiplayer", () => {
     await flushSync();
 
     expect(connections.last?.doc).toBe(docBefore);
+  });
+
+  it("reports the transport's connection status", async () => {
+    const { result } = renderRoom({
+      roomId: "room-status",
+      difficulty: "easy",
+    });
+    await flushSync();
+    expect(result.current.connected).toBe(false);
+
+    act(() => {
+      connections.last!.emitStatus(true);
+    });
+
+    expect(result.current.connected).toBe(true);
+  });
+
+  it("records a transport drop as an absence the Room can trust", async () => {
+    // Losing signaling is the other way we go away (the hidden-tab path
+    // is covered below). A forfeit claim landing afterwards is real.
+    const { result } = renderRoom({
+      roomId: "room-status-absence",
+      difficulty: "easy",
+    });
+    await flushSync();
+    const doc = connections.last!.doc;
+    const fakeRoom = { doc, roomId: "room-status-absence" };
+    act(() => {
+      joinRoom(fakeRoom, "p2", "Bob");
+      startGame(fakeRoom);
+    });
+
+    act(() => {
+      connections.last!.emitStatus(false);
+    });
+    act(() => {
+      claimWinner(fakeRoom, "p2", "Bob", null);
+    });
+
+    expect(result.current.gameOver).toEqual({
+      winnerId: "p2",
+      winnerName: "Bob",
+    });
+  });
+
+  it("recomputes presence when the peer set changes", async () => {
+    const { result } = renderRoom({ roomId: "room-peers", difficulty: "easy" });
+    await flushSync();
+    const doc = connections.last!.doc;
+    act(() => {
+      joinRoom({ doc, roomId: "room-peers" }, "p2", "Bob");
+    });
+    expect(result.current.opponentDisconnected).toBe(false);
+
+    act(() => {
+      connections.last!.emitPeers();
+    });
+
+    expect(result.current.opponentDisconnected).toBe(true);
+  });
+
+  it("routes each command through to the room", async () => {
+    // The binding's job for these is delegation and nothing else; the
+    // rules behind them are tested against the Room.
+    const { result } = renderRoom({
+      roomId: "room-commands",
+      difficulty: "easy",
+    });
+    await flushSync();
+    const doc = connections.last!.doc;
+    act(() => {
+      joinRoom({ doc, roomId: "room-commands" }, "p2", "Bob");
+    });
+
+    act(() => {
+      result.current.setDifficulty("hard");
+      result.current.setAssistLevel("paper");
+      result.current.updateName("Alicia");
+      result.current.sendStartGame();
+    });
+    const solution = doc.getMap("room").get("solution") as string;
+    act(() => {
+      result.current.sendComplete(solution);
+    });
+    expect(doc.getMap("room").get("winnerId")).toBe("p1");
+
+    act(() => {
+      result.current.sendProgress(7, 91);
+      result.current.sendRematch();
+    });
+
+    const roomMap = doc.getMap("room");
+    expect(roomMap.get("difficulty")).toBe("hard");
+    expect(roomMap.get("assistLevel")).toBe("paper");
+    expect(roomMap.get("gameNumber")).toBe(2);
+    expect(result.current.roomState?.players[0]?.name).toBe("Alicia");
+    // The rematch resets progress, so assert the write landed before it.
+    expect(connections.last!.awareness.getLocalState()?.user).toEqual({
+      id: "p1",
+      name: "Alicia",
+    });
   });
 
   it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {
