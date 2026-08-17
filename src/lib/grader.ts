@@ -229,15 +229,16 @@ function kCombinations<T>(items: T[], k: number): T[][] {
   return out;
 }
 
-/** Naked pair: two cells sharing the same two candidates own them. */
-function nakedPair(s: GradeState): boolean {
+/** Naked set: `size` cells sharing the same `size` candidates own them. */
+function nakedSet(s: GradeState, size: number): boolean {
   for (const unit of UNITS) {
     const open = unit.filter((c) => s.grid[c] === 0);
-    if (open.length <= 2) continue;
-    const narrow = open.filter((c) => popcount(s.cand[c]!) === 2);
-    for (const combo of kCombinations(narrow, 2)) {
-      const union = s.cand[combo[0]!]! | s.cand[combo[1]!]!;
-      if (popcount(union) !== 2) continue;
+    if (open.length <= size) continue;
+    const narrow = open.filter((c) => popcount(s.cand[c]!) <= size);
+    for (const combo of kCombinations(narrow, size)) {
+      let union = 0;
+      for (const c of combo) union |= s.cand[c]!;
+      if (popcount(union) !== size) continue;
       let changed = false;
       for (const c of open) {
         if (!combo.includes(c)) changed = eliminate(s, c, union) || changed;
@@ -248,26 +249,78 @@ function nakedPair(s: GradeState): boolean {
   return false;
 }
 
-/** Hidden pair: two digits confined to the same two cells own them. */
-function hiddenPair(s: GradeState): boolean {
+/** Hidden set: `size` digits confined to the same `size` cells own them. */
+function hiddenSet(s: GradeState, size: number): boolean {
   for (const unit of UNITS) {
     const open = unit.filter((c) => s.grid[c] === 0);
-    if (open.length <= 2) continue;
+    if (open.length <= size) continue;
     const digits: number[] = [];
     for (let v = 1; v <= 9; v++) {
       if (open.some((c) => s.cand[c]! & (1 << v))) digits.push(v);
     }
-    if (digits.length <= 2) continue;
-    for (const combo of kCombinations(digits, 2)) {
-      const mask = (1 << combo[0]!) | (1 << combo[1]!);
+    if (digits.length <= size) continue;
+    for (const combo of kCombinations(digits, size)) {
+      let mask = 0;
+      for (const v of combo) mask |= 1 << v;
       const holders = open.filter((c) => s.cand[c]! & mask);
-      if (holders.length !== 2) continue;
+      if (holders.length !== size) continue;
       let changed = false;
       for (const c of holders) {
         changed = eliminate(s, c, s.cand[c]! & ~mask) || changed;
       }
       if (changed) return true;
     }
+  }
+  return false;
+}
+
+/**
+ * X-wing: a digit held to the same two lines in two crossing lines
+ * forms a rectangle; the digit leaves the rest of the crossing lines.
+ * `lineOf`/`crossOf` map (line, position) to a cell so one scan covers
+ * both the row-based and the column-based orientation.
+ */
+function xWingOriented(
+  s: GradeState,
+  bit: number,
+  cellAt: (line: number, cross: number) => number,
+): boolean {
+  const crosses: number[][] = [];
+  for (let line = 0; line < 9; line++) {
+    const held: number[] = [];
+    for (let cross = 0; cross < 9; cross++) {
+      if (s.cand[cellAt(line, cross)]! & bit) held.push(cross);
+    }
+    crosses.push(held);
+  }
+  for (let a = 0; a < 9; a++) {
+    if (crosses[a]!.length !== 2) continue;
+    for (let b = a + 1; b < 9; b++) {
+      if (crosses[b]!.length !== 2) continue;
+      if (
+        crosses[a]![0] !== crosses[b]![0] ||
+        crosses[a]![1] !== crosses[b]![1]
+      ) {
+        continue;
+      }
+      let changed = false;
+      for (let line = 0; line < 9; line++) {
+        if (line === a || line === b) continue;
+        for (const cross of crosses[a]!) {
+          changed = eliminate(s, cellAt(line, cross), bit) || changed;
+        }
+      }
+      if (changed) return true;
+    }
+  }
+  return false;
+}
+
+function xWing(s: GradeState): boolean {
+  for (let v = 1; v <= 9; v++) {
+    const bit = 1 << v;
+    if (xWingOriented(s, bit, (row, col) => row * 9 + col)) return true;
+    if (xWingOriented(s, bit, (col, row) => row * 9 + col)) return true;
   }
   return false;
 }
@@ -286,10 +339,14 @@ export function gradePuzzle(puzzle: string): PuzzleGrade {
     if (
       pointingCandidates(s) ||
       claimingCandidates(s) ||
-      nakedPair(s) ||
-      hiddenPair(s)
+      nakedSet(s, 2) ||
+      hiddenSet(s, 2)
     ) {
       tier = tier < 2 ? 2 : tier;
+      continue;
+    }
+    if (nakedSet(s, 3) || hiddenSet(s, 3) || xWing(s)) {
+      tier = tier < 3 ? 3 : tier;
       continue;
     }
     return { tier: 4, stuckCells: s.empty };
