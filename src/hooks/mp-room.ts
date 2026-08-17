@@ -122,12 +122,13 @@ export const INITIAL_PROJECTION: RoomProjection = {
  */
 export type RoomEvent =
   /**
-   * Presence was recomputed: an awareness change, a peer set change, or
-   * a visibility flip. `tabHidden` is here because we release our own
-   * transport for a backgrounded tab, which clears our awareness — the
-   * opponent must not be blamed for our own disappearance.
+   * Presence was recomputed: the Connection reports whether any other
+   * peer is reachable, and the Room combines that with its own seated
+   * players. `tabHidden` is here because we release our own transport
+   * for a backgrounded tab, which clears our presence — the opponent
+   * must not be blamed for our own disappearance.
    */
-  | { type: "presence-changed"; hasOpponent: boolean; tabHidden: boolean }
+  | { type: "presence-changed"; hasOtherPeer: boolean; tabHidden: boolean }
   /** The transport's signaling status flipped. */
   | { type: "connectivity-changed"; connected: boolean; now: number }
   /** The tab was backgrounded or came back to the foreground. */
@@ -148,8 +149,6 @@ export type Room = {
   snapshot(): RoomProjection;
   /** Called after every projection change, including the Room's own writes. */
   subscribe(listener: () => void): () => void;
-  /** Seated players, however many the CRDT merge left. */
-  playerCount(): number;
   /**
    * Claim the win with a completed board. Silently refused unless the
    * board actually solves the room's puzzle — client-side honesty, not
@@ -158,12 +157,12 @@ export type Room = {
    */
   complete(board: string): void;
   /**
-   * Claim the win because the opponent vanished. `hasOpponent` is read
-   * at claim time, not from the Room's last presence event: the
-   * countdown was armed from stale state and a player who just came
-   * back must not be steamrolled.
+   * Claim the win because the opponent vanished. `hasOtherPeer` is read
+   * from the Connection at claim time, not from the Room's last presence
+   * event: the countdown was armed from stale state and a player who
+   * just came back must not be steamrolled.
    */
-  claimForfeit(options: { hasOpponent: boolean }): void;
+  claimForfeit(options: { hasOtherPeer: boolean }): void;
   /** Deal a new board. Raises an error instead while the room is alone. */
   start(): void;
   /** Same, for a room that already finished a game. */
@@ -406,6 +405,16 @@ export function createRoom({
     for (const listener of listeners) listener();
   }
 
+  /**
+   * A reachable peer only counts as the opponent once a second player
+   * has taken a seat: before that, the only awareness entries around are
+   * strays, and blaming them would flag a disconnect in a lobby that has
+   * never had anyone to disconnect.
+   */
+  function hasReachableOpponent(hasOtherPeer: boolean): boolean {
+    return hasOtherPeer && getPlayers(p2p).length > 1;
+  }
+
   function markAbsent(): void {
     absence.ongoing = true;
     absence.endedAt = 0;
@@ -442,7 +451,7 @@ export function createRoom({
           set(
             "opponentDisconnected",
             !event.tabHidden &&
-              !event.hasOpponent &&
+              !hasReachableOpponent(event.hasOtherPeer) &&
               getPlayers(p2p).length > 1,
           );
           publish();
@@ -470,15 +479,12 @@ export function createRoom({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    playerCount() {
-      return getPlayers(p2p).length;
-    },
     complete(board) {
       if (judgeClaim(board, verifiedSolution) !== "solved") return;
       claimWinner(p2p, playerId, playerName(), board);
     },
-    claimForfeit({ hasOpponent }) {
-      if (hasOpponent) return;
+    claimForfeit({ hasOtherPeer }) {
+      if (hasReachableOpponent(hasOtherPeer)) return;
       claimWinner(p2p, playerId, playerName(), null);
     },
     start() {

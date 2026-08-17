@@ -196,7 +196,7 @@ describe("presence", () => {
 
     room.apply({
       type: "presence-changed",
-      hasOpponent: false,
+      hasOtherPeer: false,
       tabHidden: false,
     });
 
@@ -207,13 +207,13 @@ describe("presence", () => {
     const { room } = setupStartedGame();
     room.apply({
       type: "presence-changed",
-      hasOpponent: false,
+      hasOtherPeer: false,
       tabHidden: false,
     });
 
     room.apply({
       type: "presence-changed",
-      hasOpponent: true,
+      hasOtherPeer: true,
       tabHidden: false,
     });
 
@@ -228,7 +228,7 @@ describe("presence", () => {
 
     room.apply({
       type: "presence-changed",
-      hasOpponent: false,
+      hasOtherPeer: false,
       tabHidden: true,
     });
 
@@ -242,7 +242,7 @@ describe("presence", () => {
 
     room.apply({
       type: "presence-changed",
-      hasOpponent: false,
+      hasOtherPeer: false,
       tabHidden: false,
     });
 
@@ -361,7 +361,7 @@ describe("win claims", () => {
   it("records a forfeit win with no board", () => {
     const { doc, room } = setupStartedGame();
 
-    room.claimForfeit({ hasOpponent: false });
+    room.claimForfeit({ hasOtherPeer: false });
 
     expect(doc.getMap("room").get("winnerId")).toBe("p1");
     expect(doc.getMap("room").get("winnerBoard")).toBeNull();
@@ -373,9 +373,24 @@ describe("win claims", () => {
     // steamroll a player who just came back.
     const { doc, room } = setupStartedGame();
 
-    room.claimForfeit({ hasOpponent: true });
+    room.claimForfeit({ hasOtherPeer: true });
 
     expect(doc.getMap("room").get("winnerId")).toBeNull();
+  });
+
+  it("ignores a reachable peer that never took a seat", () => {
+    // A stray awareness entry — our own second tab, a peer still
+    // syncing — is not an opponent. Only a seated player can be present
+    // enough to block our claim, which is why the Room folds its own
+    // player list into what the Connection reports.
+    const { doc, p2p, room } = setup();
+    initializeRoom(p2p, "p1", "easy");
+    joinRoom(p2p, "p1", "Alice");
+    startGame(p2p);
+
+    room.claimForfeit({ hasOtherPeer: true });
+
+    expect(doc.getMap("room").get("winnerId")).toBe("p1");
   });
 
   it("drops the stored snapshot once the game is over", () => {

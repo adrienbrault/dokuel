@@ -84,8 +84,7 @@ export function useYjsMultiplayer({
       const updatePresence = () => {
         room.apply({
           type: "presence-changed",
-          hasOpponent:
-            room.playerCount() > 1 && connection.hasOtherPeer(playerId),
+          hasOtherPeer: connection.hasOtherPeer(playerId),
           tabHidden: document.hidden,
         });
       };
@@ -233,11 +232,9 @@ export function useYjsMultiplayer({
     // the countdown was armed from stale state and the opponent may
     // have reconnected in the meantime.
     const connection = connectionRef.current;
-    const hasOpponent =
-      connection !== null &&
-      room.playerCount() > 1 &&
-      connection.hasOtherPeer(playerId);
-    room.claimForfeit({ hasOpponent });
+    room.claimForfeit({
+      hasOtherPeer: connection?.hasOtherPeer(playerId) ?? false,
+    });
   }, [playerId]);
 
   const sendRematch = useCallback(() => {
