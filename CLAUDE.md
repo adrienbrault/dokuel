@@ -8,6 +8,7 @@ bun run test         # Run tests once (vitest run)
 bun run test:watch   # Run tests in watch mode
 bun run lint         # Check lint + format (biome check)
 bun run lint:fix     # Auto-fix lint + format (biome check --write)
+bun run lint:slop    # Anti-slop oxlint rules (advisory — not yet in CI, existing findings pending migration)
 bun run typecheck    # TypeScript check (tsc --noEmit -p tsconfig.app.json)
 bun run ci           # Full CI: lint + typecheck + test
 bun run diff-coverage # Check test coverage on git-changed lines
