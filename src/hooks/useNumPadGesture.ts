@@ -84,7 +84,9 @@ export function useNumPadGesture({
     originY: number;
     pointerId: number;
     button: HTMLButtonElement;
-    gestureMode: "none" | "drag" | "skim";
+    // No "drag": the handoff forgets the press, so a live one is either
+    // still unclassified or skimming.
+    gestureMode: "none" | "skim";
     holdFired: boolean;
     /** Whether the press owns the pointer — see beginPress. */
     captured: boolean;
@@ -186,7 +188,6 @@ export function useNumPadGesture({
       if (mode === null) return;
 
       cancelTimer();
-      press.gestureMode = mode;
       // pointerFiredRef stays set: a gesture released back over the key
       // it started on still ends with a browser click on that key, and
       // that click is the tail of THIS gesture, not an AT activation —
@@ -201,6 +202,11 @@ export function useNumPadGesture({
       haptics.tap();
 
       if (mode === "drag") {
+        // The drag layer owns the gesture from here, and the press is
+        // over. Forgetting it now — the same thing endPress does for a
+        // skim — keeps the release the button still receives from
+        // ending a press that has already ended.
+        pressRef.current = null;
         // The drag ghost now shows the digit; the key stops claiming it.
         setPressedDigit(null);
         cbRef.current.onDrag?.({
@@ -212,6 +218,7 @@ export function useNumPadGesture({
         });
         cbRef.current.onEnd?.();
       } else {
+        press.gestureMode = "skim";
         beginSkim(press.digit, e.pointerId, e.pointerType);
       }
     },
