@@ -311,6 +311,15 @@ describe("p2p-room", () => {
       expect(judgeClaim("2".repeat(81), SOLUTION)).toBe("forged");
     });
 
+    it("treats a board that is not even a string as forged", () => {
+      // The projection hands this function a string or null while the
+      // write path hands it the raw Yjs value, so a peer writing a
+      // number must reach ONE verdict — otherwise the same claim can
+      // be honoured on the read side and undisplaceable on the write
+      // side.
+      expect(judgeClaim(42, SOLUTION)).toBe("forged");
+    });
+
     it("cannot prove anything without a solution in the room", () => {
       // Not provably forged — callers that punish forgery must leave a
       // claim in this state alone rather than assume the worst.
@@ -347,6 +356,28 @@ describe("p2p-room", () => {
 
       expect(claimed).toBe(false);
       expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
+    });
+
+    it("lets a real solve displace a claim carrying a nonsense board", () => {
+      // Nothing stops a peer from writing a number into winnerBoard.
+      // It proves nothing, so it must not lock the room's real winner
+      // out any more than an empty-string board does.
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+      startGame(room, "medium");
+      const solution = room.doc.getMap("room").get("solution") as string;
+      const roomMap = room.doc.getMap("room");
+      room.doc.transact(() => {
+        roomMap.set("winnerId", "player2");
+        roomMap.set("winnerName", "Bob");
+        roomMap.set("winnerBoard", 42);
+      });
+
+      const claimed = claimWinner(room, "player1", "Alice", solution);
+
+      expect(claimed).toBe(true);
+      expect(roomMap.get("winnerId")).toBe("player1");
     });
 
     it("lets a verified solved claim displace a forfeit claim", () => {

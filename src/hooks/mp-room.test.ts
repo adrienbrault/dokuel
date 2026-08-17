@@ -292,6 +292,25 @@ describe("win claims", () => {
     expect(room.snapshot().gameOver).toBeNull();
   });
 
+  it("ignores a claim whose board is not even a board", () => {
+    // A peer can write anything into winnerBoard. A number is not a
+    // solved board and not the absence of one either, so it must not
+    // be read as a forfeit claim — which our own absence record would
+    // then back, handing the room to a cheat.
+    const { doc, room } = setupStartedGame();
+    room.apply({ type: "connectivity-changed", connected: false, now: T0 });
+
+    doc.transact(() => {
+      const roomMap = doc.getMap("room");
+      roomMap.set("winnerId", "p2");
+      roomMap.set("winnerName", "Bob");
+      roomMap.set("winnerBoard", 42);
+      roomMap.set("status", "finished");
+    });
+
+    expect(room.snapshot().gameOver).toBeNull();
+  });
+
   it("ignores a forfeit claim on a clock that only just started", () => {
     // "Never been away" is not "was away at instant zero". The binding
     // feeds the Room a monotonic clock that starts near zero at page
