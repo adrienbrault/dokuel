@@ -90,6 +90,14 @@ describe("generatePuzzle", () => {
       expect(grade.stuckCells).toBeLessThanOrEqual(35);
     }
   });
+
+  it("expert defeats every graded technique across most of the board", () => {
+    for (const seed of [1, 2, 3]) {
+      const grade = gradePuzzle(generatePuzzle("expert", seededRandom(seed)));
+      expect(grade.tier).toBe(4);
+      expect(grade.stuckCells).toBeGreaterThanOrEqual(40);
+    }
+  });
 });
 
 describe("generatePuzzleWithSolution", () => {
