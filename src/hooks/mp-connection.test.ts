@@ -4,18 +4,21 @@ import {
   applyAwarenessUpdate,
   encodeAwarenessUpdate,
 } from "y-protocols/awareness";
+import { WebrtcProvider } from "y-webrtc";
 import { Doc } from "yjs";
 import {
   createFakeConnections,
   type FakeConnection,
 } from "./mp-connection.fake.ts";
 import {
+  type Connection,
   createIceServerResolver,
   MAX_ROOM_KEY_LENGTH,
   roomDatabaseName,
   signalingUrl,
   TURN_CREDENTIALS_URL,
 } from "./mp-connection.ts";
+import { createWebrtcConnectionOpener } from "./mp-connection.webrtc.ts";
 
 const MINTED = [
   { urls: ["stun:stun.cloudflare.com:3478"] },
@@ -181,40 +184,146 @@ describe("minting TURN credentials from the signaling worker", () => {
   });
 });
 
-describe("presence", () => {
+/**
+ * One contract, two adapters. Everything below is stated against the
+ * {@link Connection} interface and run against both implementations of
+ * it, so a divergence between the in-memory adapter the hook tests rely
+ * on and the WebRTC one that actually ships shows up here rather than
+ * in production. The interface is the test surface.
+ *
+ * The WebRTC row runs a REAL `WebrtcProvider` — with a signaling list
+ * that never connects — because its listener bookkeeping is the part
+ * the fake cannot vouch for. Only persistence is substituted: jsdom has
+ * no `indexedDB`, and adding a shim dependency to reach one line would
+ * buy nothing the stub does not.
+ */
+type OpenedConnection = {
+  connection: Connection;
+  /** The awareness the connection's presence rides on. */
+  awareness: Awareness;
+  /** Fire the transport's status event the way the transport would. */
+  fireStatus(connected: boolean): void;
+  /** Idempotent teardown, so a test may close and still be cleaned up. */
+  closeOnce(): void;
+};
+
+type AdapterUnderTest = (roomId: string) => Promise<OpenedConnection>;
+
+function once(teardown: () => void): () => void {
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    teardown();
+  };
+}
+
+const openFake: AdapterUnderTest = async (roomId) => {
+  const connection = (await createFakeConnections().open(
+    roomId,
+  )) as FakeConnection;
+  return {
+    connection,
+    awareness: connection.awareness,
+    fireStatus: (connected) => connection.emitStatus(connected),
+    closeOnce: once(() => {
+      connection.close();
+      connection.awareness.destroy();
+    }),
+  };
+};
+
+const openWebrtc: AdapterUnderTest = async (roomId) => {
+  const providers: WebrtcProvider[] = [];
+  const open = createWebrtcConnectionOpener({
+    resolveIceServers: async () => null,
+    openPersistence: () => ({
+      whenSynced: Promise.resolve(),
+      destroy() {},
+    }),
+    openProvider: (name, doc) => {
+      // No signaling endpoints: the provider is real and its listener
+      // plumbing is live, but it never reaches the network.
+      const provider = new WebrtcProvider(name, doc, {
+        signaling: [],
+        filterBcConns: true,
+      });
+      providers.push(provider);
+      return provider;
+    },
+  });
+  const connection = await open(roomId);
+  const provider = providers[0];
+  if (!provider) throw new Error("the adapter constructed no provider");
+  const { awareness } = provider;
+  return {
+    connection,
+    awareness,
+    fireStatus: (connected) => provider.emit("status", [{ connected }]),
+    closeOnce: once(() => {
+      connection.close();
+      awareness.destroy();
+    }),
+  };
+};
+
+let contractRoomSeq = 0;
+
+describe.each([
+  ["in-memory adapter", openFake],
+  ["WebRTC adapter", openWebrtc],
+])("Connection contract: %s", (_label, openAdapter) => {
+  let opened: OpenedConnection[] = [];
+
+  async function openConnection(): Promise<OpenedConnection> {
+    contractRoomSeq += 1;
+    // y-webrtc keeps one global registry keyed by room name, so every
+    // connection in this suite needs a name of its own.
+    const room = await openAdapter(`contract-room-${contractRoomSeq}`);
+    opened.push(room);
+    return room;
+  }
+
   /**
    * Play a second client: build a remote awareness, announce a user on
-   * it, and merge it into the connection's own — what the transport
-   * does when a peer shows up.
+   * it, and merge it in — what the transport does when a peer shows up.
    */
   function peerAnnounces(
-    connection: FakeConnection,
+    room: OpenedConnection,
     user: { id: string; name: string },
-  ): () => void {
+  ): void {
     const peerDoc = new Doc();
     const peerAwareness = new Awareness(peerDoc);
     peerAwareness.setLocalState({ user });
     applyAwarenessUpdate(
-      connection.awareness,
+      room.awareness,
       encodeAwarenessUpdate(peerAwareness, [peerDoc.clientID]),
       "test",
     );
-    return () => peerAwareness.destroy();
+    peerAwareness.destroy();
   }
 
-  async function openConnection(roomId: string) {
-    return (await createFakeConnections().open(roomId)) as FakeConnection;
-  }
+  afterEach(() => {
+    for (const room of opened) room.closeOnce();
+    opened = [];
+  });
+
+  it("resolves whenSynced once local persistence has loaded", async () => {
+    // Nothing may be written before this settles, so a caller blocked on
+    // it must never be left hanging — or rejected.
+    const { connection } = await openConnection();
+
+    await expect(connection.whenSynced).resolves.toBeUndefined();
+  });
 
   it("publishes the player identity for peers to read", async () => {
-    const connection = await openConnection("presence-announce");
+    const room = await openConnection();
 
-    connection.announce({ id: "p1", name: "Alice" });
+    room.connection.announce({ id: "p1", name: "Alice" });
 
-    expect(connection.awareness.getLocalState()).toEqual({
+    expect(room.awareness.getLocalState()).toEqual({
       user: { id: "p1", name: "Alice" },
     });
-    connection.close();
   });
 
   it("re-announces after a disconnect cleared our presence", async () => {
@@ -222,73 +331,101 @@ describe("presence", () => {
     // awareness entry, leaving local state null. Announcing must work
     // from that starting point or the opponent keeps seeing us as gone
     // and is offered a forfeit win while we are actively playing.
-    const connection = await openConnection("presence-reannounce");
-    connection.announce({ id: "p1", name: "Alice" });
+    const room = await openConnection();
+    room.connection.announce({ id: "p1", name: "Alice" });
 
-    connection.disconnect();
-    expect(connection.awareness.getLocalState()).toBeNull();
-    connection.announce({ id: "p1", name: "Alice" });
+    room.connection.disconnect();
+    expect(room.awareness.getLocalState()).toBeNull();
+    room.connection.announce({ id: "p1", name: "Alice" });
 
-    expect(connection.awareness.getLocalState()).toEqual({
+    expect(room.awareness.getLocalState()).toEqual({
       user: { id: "p1", name: "Alice" },
     });
-    connection.close();
   });
 
   it("does not mistake our own announcement for another peer", async () => {
-    const connection = await openConnection("presence-self");
+    const room = await openConnection();
 
-    connection.announce({ id: "p1", name: "Alice" });
+    room.connection.announce({ id: "p1", name: "Alice" });
 
-    expect(connection.hasOtherPeer("p1")).toBe(false);
-    connection.close();
+    expect(room.connection.hasOtherPeer("p1")).toBe(false);
   });
 
   it("sees a peer that announced a different player", async () => {
-    const connection = await openConnection("presence-opponent");
-    connection.announce({ id: "p1", name: "Alice" });
+    const room = await openConnection();
+    room.connection.announce({ id: "p1", name: "Alice" });
 
-    const destroyPeer = peerAnnounces(connection, { id: "p2", name: "Bob" });
+    peerAnnounces(room, { id: "p2", name: "Bob" });
 
-    expect(connection.hasOtherPeer("p1")).toBe(true);
-    destroyPeer();
-    connection.close();
+    expect(room.connection.hasOtherPeer("p1")).toBe(true);
   });
 
   it("ignores another client carrying our own player id", async () => {
-    // Our previous tab, or our own reload, still lingering in awareness:
+    // Our own second tab, or the entry our previous session left behind:
     // a different clientID but the same player. Counting it would keep
     // the room looking populated to a player who is actually alone.
-    const connection = await openConnection("presence-ghost");
+    const room = await openConnection();
 
-    const destroyPeer = peerAnnounces(connection, { id: "p1", name: "Alice" });
+    peerAnnounces(room, { id: "p1", name: "Alice" });
 
-    expect(connection.hasOtherPeer("p1")).toBe(false);
-    destroyPeer();
-    connection.close();
+    expect(room.connection.hasOtherPeer("p1")).toBe(false);
   });
 
-  it("notifies subscribers when presence changes", async () => {
-    const connection = await openConnection("presence-notify");
+  it("notifies presence subscribers when a peer announces", async () => {
+    const room = await openConnection();
     const listener = vi.fn();
-    connection.onPresenceChange(listener);
+    room.connection.onPresenceChange(listener);
 
-    const destroyPeer = peerAnnounces(connection, { id: "p2", name: "Bob" });
+    peerAnnounces(room, { id: "p2", name: "Bob" });
 
     expect(listener).toHaveBeenCalled();
-    destroyPeer();
-    connection.close();
   });
 
-  it("stops notifying an unsubscribed listener", async () => {
-    const connection = await openConnection("presence-unsubscribe");
+  it("stops notifying an unsubscribed presence listener", async () => {
+    const room = await openConnection();
     const listener = vi.fn();
 
-    connection.onPresenceChange(listener)();
-    const destroyPeer = peerAnnounces(connection, { id: "p2", name: "Bob" });
+    room.connection.onPresenceChange(listener)();
+    peerAnnounces(room, { id: "p2", name: "Bob" });
 
     expect(listener).not.toHaveBeenCalled();
-    destroyPeer();
-    connection.close();
+  });
+
+  it("reports the transport's status to subscribers", async () => {
+    const room = await openConnection();
+    const listener = vi.fn();
+    room.connection.onStatus(listener);
+
+    room.fireStatus(true);
+
+    expect(listener).toHaveBeenCalledWith(true);
+  });
+
+  it("stops notifying an unsubscribed status listener", async () => {
+    // The WebRTC adapter wraps the listener before handing it to the
+    // provider, so its unsubscribe has to remember the wrapper — an
+    // easy thing to get wrong and impossible to see from the fake.
+    const room = await openConnection();
+    const listener = vi.fn();
+
+    room.connection.onStatus(listener)();
+    room.fireStatus(true);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("delivers nothing to listeners left over at close", async () => {
+    const room = await openConnection();
+    const onStatus = vi.fn();
+    const onPresence = vi.fn();
+    room.connection.onStatus(onStatus);
+    room.connection.onPresenceChange(onPresence);
+
+    room.closeOnce();
+    room.fireStatus(true);
+    peerAnnounces(room, { id: "p2", name: "Bob" });
+
+    expect(onStatus).not.toHaveBeenCalled();
+    expect(onPresence).not.toHaveBeenCalled();
   });
 });
