@@ -10,7 +10,8 @@ export type DigitGesture =
       target: Position;
       /** The cell the digit was dragged from, or null for the numpad. */
       from: Position | null;
-    };
+    }
+  | { kind: "key"; notesMode: boolean };
 
 /** The selection state the answer depends on. Nothing more is read. */
 export type DigitIntentContext = {
@@ -83,6 +84,9 @@ export function digitIntent(
         : intent({ kind: "none" });
     case "drop":
       return dropIntent(gesture);
+    case "key":
+      // Stub so the commit typechecks; the keyboard rules land next.
+      return intent({ kind: "none" });
   }
 }
 

@@ -140,3 +140,35 @@ describe("digitIntent — drop", () => {
     });
   });
 });
+
+describe("digitIntent — keyboard", () => {
+  it("places the value into the selection when notes mode is off", () => {
+    expect(
+      digitIntent({ kind: "key", notesMode: false }, cellSelected(0, 0)),
+    ).toEqual({
+      effect: { kind: "value", at: null },
+      after: { selection: "keep", highlight: false },
+      label: "enter",
+    });
+  });
+
+  it("pencils a note and releases the selection when notes mode is on", () => {
+    // Unlike a range tap, the keyboard note does NOT spotlight the digit
+    // — the N-then-1 workflow just moves on.
+    expect(
+      digitIntent({ kind: "key", notesMode: true }, cellSelected(0, 0)),
+    ).toEqual({
+      effect: { kind: "note", at: null },
+      after: { selection: "release", highlight: false },
+      label: "note",
+    });
+  });
+
+  it("does nothing when nothing is selected", () => {
+    expect(digitIntent({ kind: "key", notesMode: false }, ctx())).toEqual({
+      effect: { kind: "none" },
+      after: { selection: "keep", highlight: false },
+      label: "enter",
+    });
+  });
+});
