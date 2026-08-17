@@ -3,7 +3,7 @@ import { useNumPadPress } from "../hooks/useNumPadPress.ts";
 import { useNumPadSkim } from "../hooks/useNumPadSkim.ts";
 import { DIGITS } from "../lib/constants.ts";
 import { haptics } from "../lib/haptics.ts";
-import type { NumPadPosition } from "../lib/types.ts";
+import type { NumPadGesturePoint, NumPadPosition } from "../lib/types.ts";
 import { NumPadKeyFace, numPadKeyLabel } from "./NumPadKeyFace.tsx";
 import { NumPadLegend } from "./NumPadLegend.tsx";
 
@@ -23,15 +23,7 @@ type NumPadProps = {
    * Fires once the finger has slid PERPENDICULAR to the numpad axis,
    * handing control to the parent's drag-and-drop layer.
    */
-  onStartDrag?:
-    | ((args: {
-        digit: number;
-        x: number;
-        y: number;
-        pointerId: number;
-        pointerType: string;
-      }) => void)
-    | undefined;
+  onStartDrag?: ((args: NumPadGesturePoint) => void) | undefined;
   /** Fires when an ALONG-axis skim crosses into another digit's button. */
   onSkimDigit?: ((n: number) => void) | undefined;
   /** What a tap currently does; drives the legend and the key faces. */

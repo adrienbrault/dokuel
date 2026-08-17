@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Position } from "../lib/types.ts";
+import type { NumPadGesturePoint, Position } from "../lib/types.ts";
 
 export type DigitDragSource =
   | { kind: "numpad" }
@@ -29,15 +29,8 @@ export type DigitDragState = {
   lift: number;
 };
 
-type StartParams = {
-  digit: number;
-  source: DigitDragSource;
-  x: number;
-  y: number;
-  pointerId: number;
-  /** From PointerEvent.pointerType — "touch" | "mouse" | "pen". */
-  pointerType: string;
-};
+/** The gesture packet plus where the carried digit came from. */
+type StartParams = NumPadGesturePoint & { source: DigitDragSource };
 
 type Options = {
   onDrop: (

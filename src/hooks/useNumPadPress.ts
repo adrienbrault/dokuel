@@ -1,5 +1,6 @@
 import { type PointerEvent, useCallback, useRef } from "react";
 import { haptics } from "../lib/haptics.ts";
+import type { NumPadGesturePoint } from "../lib/types.ts";
 
 const LONG_PRESS_MS = 200;
 // Pointer must travel this far FROM THE POINTERDOWN POINT before we
@@ -24,15 +25,7 @@ type Options = {
   /** Fires when the press ends (pointerup/cancel/leave or post-drag). */
   onPressEnd?: (() => void) | undefined;
   /** Hands the gesture to the drag-and-drop layer. */
-  onStartDrag?:
-    | ((args: {
-        digit: number;
-        x: number;
-        y: number;
-        pointerId: number;
-        pointerType: string;
-      }) => void)
-    | undefined;
+  onStartDrag?: ((args: NumPadGesturePoint) => void) | undefined;
   /** Presence makes along-axis pans eligible to become skims. */
   skimEnabled: boolean;
   /** Arms document-level skim tracking (see useNumPadSkim). */

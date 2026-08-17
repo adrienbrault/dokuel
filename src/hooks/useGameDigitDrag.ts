@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { Board, Position } from "../lib/types.ts";
+import type { Board, NumPadGesturePoint, Position } from "../lib/types.ts";
 import {
   type DigitDragSource,
   type DigitDropMode,
@@ -114,13 +114,7 @@ export function useGameDigitDrag({
   });
 
   const startNumpadDrag = useCallback(
-    (args: {
-      digit: number;
-      x: number;
-      y: number;
-      pointerId: number;
-      pointerType: string;
-    }) => {
+    (args: NumPadGesturePoint) => {
       if (disabled) return;
       start({ ...args, source: { kind: "numpad" } });
     },

@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haptics } from "../lib/haptics.ts";
-import type { NumPadPosition } from "../lib/types.ts";
+import type { NumPadGesturePoint, NumPadPosition } from "../lib/types.ts";
 
-type DragStart = (args: {
-  digit: number;
-  x: number;
-  y: number;
-  pointerId: number;
-  pointerType: string;
-}) => void;
+type DragStart = (args: NumPadGesturePoint) => void;
 
 type Options = {
   /** Which edge of the screen the numpad sits on. */
