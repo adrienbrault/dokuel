@@ -255,6 +255,48 @@ describe("findHint", () => {
       expect(hint!.position).toEqual({ row: 5, col: 7 });
       expect(hint!.value).toBe(4);
     });
+
+    it("teaches a swordfish where the old ladder revealed", () => {
+      const SWORDFISH_STUCK =
+        "....1..3519.3.........64...4.65..1......9...89..1..25....7.856.5.8............48.";
+      const board = parsePuzzle(SWORDFISH_STUCK);
+      const hint = findHint(board, solvePuzzle(SWORDFISH_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("swordfish");
+      expect(hint!.position).toEqual({ row: 1, col: 6 });
+      expect(hint!.value).toBe(8);
+      expect(hint!.explanation).toContain("8");
+    });
+
+    it("teaches an XY-wing and owns up to its depth", () => {
+      // priorSteps is 1 here: one quieter elimination precedes the
+      // XY-wing, and the hint must say so instead of pretending the
+      // deduction reads straight off the visible board.
+      const XYWING_STUCK =
+        "1...539466....4382.436.27..3...4829...4.216372..3.64.87..4358.94.9..75.3538269174";
+      const board = parsePuzzle(XYWING_STUCK);
+      const hint = findHint(board, solvePuzzle(XYWING_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("xy-wing");
+      expect(hint!.position).toEqual({ row: 3, col: 3 });
+      expect(hint!.value).toBe(5);
+      expect(hint!.explanation).toContain("XY-wing");
+      expect(hint!.explanation).toContain("eliminations deep");
+    });
+
+    it("labels a naked-quad unlock", () => {
+      const QUAD_STUCK =
+        "6.4..8..72..59184689...63.....8.267...8.57..972.9..518.82..5...5........1....97.5";
+      const board = parsePuzzle(QUAD_STUCK);
+      const hint = findHint(board, solvePuzzle(QUAD_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("naked-quad");
+      expect(hint!.position).toEqual({ row: 3, col: 0 });
+      expect(hint!.value).toBe(9);
+    });
   });
 
   describe("fallback", () => {
