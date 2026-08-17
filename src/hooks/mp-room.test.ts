@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { Doc, Map as YMap } from "yjs";
+import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
-import { createRoom } from "./mp-room.ts";
+import type { Difficulty } from "../lib/types.ts";
+import { createRoom, HYDRATE_GRACE_MS } from "./mp-room.ts";
 import {
   claimWinner,
   createRoomFromDoc,
@@ -17,7 +18,7 @@ const ROOM_ID = "test-room";
 // never touches the clock reads "we have been present all along".
 const T0 = 10_000_000;
 
-function setup() {
+function setup(initialDifficulty: Difficulty | null = null) {
   const doc = new Doc();
   const p2p = createRoomFromDoc(doc, ROOM_ID);
   let clock = T0;
@@ -26,6 +27,7 @@ function setup() {
     roomId: ROOM_ID,
     playerId: "p1",
     playerName: () => "Alice",
+    initialDifficulty,
     now: () => clock,
   });
   return {
@@ -385,6 +387,236 @@ describe("win claims", () => {
 
     expect(room.snapshot().gameOver).not.toBeNull();
     expect(localStorage.getItem(`dokuel_mp_snap_${ROOM_ID}`)).toBeNull();
+  });
+});
+
+describe("setup", () => {
+  it("lets the creator write its chosen difficulty and claim host", () => {
+    const { doc, room } = setup("expert");
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(doc.getMap("room").get("difficulty")).toBe("expert");
+    expect(doc.getMap("room").get("hostId")).toBe("p1");
+    expect(room.snapshot().roomState?.players).toHaveLength(1);
+  });
+
+  it("lets a joiner write nothing but its own seat", () => {
+    // Initializing both peers concurrently would race for hostId: each
+    // fresh doc sees "no host yet" before sync, both write, and LWW can
+    // hand the room to the wrong peer. Only the creator initializes.
+    const { doc, room } = setup(null);
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    const roomMap = doc.getMap("room");
+    expect(roomMap.get("status")).toBeUndefined();
+    expect(roomMap.get("hostId")).toBeUndefined();
+    expect(doc.getMap("players").has("p1")).toBe(true);
+  });
+
+  it("flags roomFull when a full room refuses our seat", () => {
+    // joinRoom no-ops rather than overflowing, which writes nothing and
+    // fires no observer — the projection still has to move.
+    const { p2p, room } = setup(null);
+    initializeRoom(p2p, "p2", "medium");
+    joinRoom(p2p, "p2", "Bob");
+    joinRoom(p2p, "p3", "Carol");
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(room.snapshot().roomFull).toBe(true);
+    expect(room.snapshot().roomState?.players).toHaveLength(2);
+  });
+});
+
+describe("hydration", () => {
+  const SNAPSHOT = {
+    gameNumber: 4,
+    puzzle: ".".repeat(81),
+    solution: null,
+    status: "playing",
+    difficulty: "hard",
+    assistLevel: "standard",
+    hostId: "p1",
+    players: [
+      {
+        id: "p1",
+        name: "Alice",
+        color: "#3B82F6",
+        cellsRemaining: 30,
+        completionPercent: 63,
+      },
+      {
+        id: "p2",
+        name: "Bob",
+        color: "#EF4444",
+        cellsRemaining: 25,
+        completionPercent: 69,
+      },
+    ],
+    winnerId: null,
+    winnerName: null,
+  };
+
+  function seedSnapshot() {
+    localStorage.setItem(
+      `dokuel_mp_snap_${ROOM_ID}`,
+      JSON.stringify({ ...SNAPSHOT, savedAt: Date.now() }),
+    );
+  }
+
+  it("applies the snapshot once the grace window lapses", () => {
+    seedSnapshot();
+    const { room } = setup(null);
+    room.apply({ type: "local-sync-complete", now: T0 });
+    expect(room.snapshot().hasStartedGame).toBe(false);
+
+    room.apply({ type: "tick", now: T0 + HYDRATE_GRACE_MS });
+
+    expect(room.snapshot().hasStartedGame).toBe(true);
+    expect(room.snapshot().puzzle).toBe(".".repeat(81));
+    expect(room.snapshot().roomState?.gameNumber).toBe(4);
+    expect(room.snapshot().roomState?.difficulty).toBe("hard");
+  });
+
+  it("prefers live peer state that arrives during the grace window", () => {
+    // Hydrating a recent snapshot into a FRESH doc makes every key
+    // causally concurrent with the live room — per-key LWW can then roll
+    // a finished game back for both peers.
+    seedSnapshot();
+    const { doc, room } = setup(null);
+    // Make our writes win LWW ties so a premature hydration is
+    // deterministically visible instead of a clientID coin flip.
+    doc.clientID = 0x7fffffff;
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    const peer = new Doc();
+    const peerRoom = createRoomFromDoc(peer, ROOM_ID);
+    initializeRoom(peerRoom, "p2", "medium");
+    joinRoom(peerRoom, "p2", "Bob");
+    joinRoom(peerRoom, "p1", "Alice");
+    for (let i = 0; i < 7; i++) startGame(peerRoom);
+    applyUpdate(doc, encodeStateAsUpdate(peer));
+
+    room.apply({ type: "tick", now: T0 + HYDRATE_GRACE_MS });
+
+    expect(room.snapshot().roomState?.gameNumber).toBe(7);
+    expect(room.snapshot().roomState?.difficulty).toBe("medium");
+  });
+
+  it("does not hold setup back when the doc already has a started game", () => {
+    seedSnapshot();
+    const { p2p, room } = setup(null);
+    initializeRoom(p2p, "p1", "medium");
+    joinRoom(p2p, "p1", "Alice");
+    joinRoom(p2p, "p2", "Bob");
+    for (let i = 0; i < 7; i++) startGame(p2p);
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(room.snapshot().roomState?.gameNumber).toBe(7);
+    expect(room.snapshot().roomState?.difficulty).not.toBe("hard");
+  });
+});
+
+describe("commands", () => {
+  function countClues(puzzle: string): number {
+    return puzzle.split("").filter((c) => c !== ".").length;
+  }
+
+  it("refuses to start a game the room has no opponent for", () => {
+    const { doc, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    room.start();
+
+    expect(room.snapshot().error?.message).toBe("Need 2 players to start");
+    expect(doc.getMap("room").get("puzzle")).toBeNull();
+  });
+
+  it("re-raises an identical error so the toast can show again", () => {
+    // A bare string field is Object.is-equal on the second raise, so the
+    // consumer's effect never re-fires and the second tap silently does
+    // nothing.
+    const { room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    room.start();
+    const first = room.snapshot().error;
+
+    room.start();
+
+    expect(room.snapshot().error?.message).toBe(first?.message);
+    expect(room.snapshot().error).not.toBe(first);
+  });
+
+  it("starts on the room's difficulty, not the creator's", () => {
+    // The host may switch difficulty in the lobby after the room was
+    // created; the board must follow the room.
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    joinRoom(p2p, "p2", "Bob");
+    room.setDifficulty("expert");
+
+    room.start();
+
+    // Expert digs to a minimal puzzle (~22-28 clues) — well below the
+    // easy band (36-45).
+    const puzzle = doc.getMap("room").get("puzzle") as string;
+    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
+  });
+
+  it("rematches on the room's difficulty too", () => {
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    joinRoom(p2p, "p2", "Bob");
+    room.setDifficulty("expert");
+    room.start();
+
+    room.rematch();
+
+    const puzzle = doc.getMap("room").get("puzzle") as string;
+    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
+    expect(doc.getMap("room").get("gameNumber")).toBe(2);
+  });
+
+  it("mirrors the room to local storage on demand", () => {
+    const { room } = setupStartedGame();
+
+    room.persistSnapshot();
+
+    const raw = localStorage.getItem(`dokuel_mp_snap_${ROOM_ID}`);
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw as string).players).toHaveLength(2);
+  });
+
+  it("renames the player in the room", () => {
+    const { doc, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    room.updateName("Alicia");
+
+    const players = doc.getMap("players");
+    expect((players.get("p1") as YMap<unknown>).get("name")).toBe("Alicia");
+  });
+
+  it("publishes our own progress for the opponent to read", () => {
+    const { doc, room } = setupStartedGame();
+
+    room.progress(12, 85);
+
+    const p1 = doc.getMap("players").get("p1") as YMap<unknown>;
+    expect(p1.get("cellsRemaining")).toBe(12);
+    expect(p1.get("completionPercent")).toBe(85);
+  });
+
+  it("sets the assist level for both players", () => {
+    const { doc, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    room.setAssistLevel("paper");
+
+    expect(doc.getMap("room").get("assistLevel")).toBe("paper");
   });
 });
 

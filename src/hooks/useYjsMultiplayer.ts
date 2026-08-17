@@ -2,27 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
-import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
-import { loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
-import { recordRoomMount } from "./mp-telemetry.ts";
 import {
-  announcePresence,
-  createRoomFromDoc,
-  getPlayers,
-  getRoomState,
-  hydrateRoomFromSnapshot,
-  initializeRoom,
-  joinRoom,
-  observeRoomChanges,
-  type P2PRoom,
-  presenceHasOpponent,
-  requestRematch,
-  setAssistLevel as setRoomAssistLevel,
-  setDifficulty as setRoomDifficulty,
-  startGame,
-  updatePlayerName,
-  updateProgress,
-} from "./p2p-room.ts";
+  createRoom,
+  HYDRATE_GRACE_MS,
+  INITIAL_PROJECTION,
+  type Room,
+} from "./mp-room.ts";
+import { recordRoomMount } from "./mp-telemetry.ts";
+import { announcePresence, presenceHasOpponent } from "./p2p-room.ts";
 
 type UseYjsMultiplayerOptions = {
   roomId: string;
@@ -36,11 +23,6 @@ type UseYjsMultiplayerOptions = {
   openConnection?: OpenConnection;
 };
 
-// Grace window before applying the localStorage snapshot to an empty
-// doc: long enough for WebRTC to deliver the live room when a peer is
-// up, short enough that a genuine solo restore feels instant-ish.
-const HYDRATE_GRACE_MS = 3_000;
-
 export function useYjsMultiplayer({
   roomId,
   playerId,
@@ -53,15 +35,8 @@ export function useYjsMultiplayer({
   // identity stable across no-op doc fires, so React bails out of the
   // re-render without the hook comparing anything.
   const [projection, setProjection] = useState(INITIAL_PROJECTION);
-  // Fresh object per raise (not a bare string): consumers toast off
-  // this value, and a repeat of the same message must still re-fire
-  // their effect.
-  const [error, setError] = useState<{ message: string } | null>(null);
 
   const roomRef = useRef<Room | null>(null);
-  // Second handle on the same doc, for the setup writes the Room does
-  // not own yet.
-  const p2pRef = useRef<P2PRoom | null>(null);
   const connectionRef = useRef<Connection | null>(null);
   const playerNameRef = useRef(playerName);
   playerNameRef.current = playerName;
@@ -93,15 +68,14 @@ export function useYjsMultiplayer({
     // peer connection exists.
     const start = (connection: Connection): (() => void) => {
       const doc = connection.doc;
-      const p2p = createRoomFromDoc(doc, roomId);
       const room = createRoom({
         doc,
         roomId,
         playerId,
         playerName: () => playerNameRef.current,
+        initialDifficulty: initialDifficultyRef.current,
       });
       roomRef.current = room;
-      p2pRef.current = p2p;
       connectionRef.current = connection;
 
       const awareness = connection.awareness;
@@ -142,12 +116,8 @@ export function useYjsMultiplayer({
 
       setConnected(connection.connected);
 
-      // Synchronous localStorage mirror. y-indexeddb writes are async
-      // and iOS Safari doesn't always flush them before killing a
-      // backgrounded tab — saveSnapshot survives that.
       const persistSnapshot = () => {
-        const state = getRoomState(p2p);
-        if (state) saveSnapshot(roomId, state);
+        room.persistSnapshot();
       };
 
       // Release WebRTC peer connections + signaling sockets while the
@@ -190,74 +160,21 @@ export function useYjsMultiplayer({
       document.addEventListener("visibilitychange", handleVisibility);
       window.addEventListener("pagehide", persistSnapshot);
 
-      // Defer the writes until y-indexeddb has loaded any persisted
-      // state. Writing before sync would seed clock-0 ops (initializeRoom
-      // defaults, a fresh player Y.Map from joinRoom) that race the
-      // restored state — under iOS Safari's flaky IDB flushes on memory
-      // pressure, the doc can resolve back to lobby/gameNumber=0 over
-      // several reloads, wiping the in-progress game. Helpers are
-      // idempotent so post-sync invocation either seeds an empty room or
-      // no-ops one already populated.
+      // Nothing may be written before local persistence has loaded:
+      // the Room's setup writes would seed clock-0 ops that race the
+      // restore, and under iOS Safari's flaky IDB flushes the doc can
+      // resolve back to an empty lobby over several reloads, wiping the
+      // game in progress.
       let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
-      let stopHydrateWatch: (() => void) | null = null;
       void connection.whenSynced.then(() => {
         if (cancelled) return;
-
-        // The creator (came in from the create flow with a chosen
-        // difficulty) initializes the room and claims host. Joiners
-        // (difficulty=null, came via shared link) skip this and learn
-        // host + difficulty from Yjs sync.
-        const completeSetup = () => {
-          if (cancelled) return;
-          const initialDifficulty = initialDifficultyRef.current;
-          if (initialDifficulty) {
-            initializeRoom(p2p, playerId, initialDifficulty);
-          }
-          joinRoom(p2p, playerId, playerNameRef.current);
-          // An idempotent write that no-ops fires no Yjs observer, yet
-          // a refused join still makes us the overflow player.
-          room.refresh();
-        };
-
         announcePresence(awareness, playerId, playerNameRef.current);
-
-        // If IDB came back without a started game but localStorage has a
-        // recent snapshot, restore from it — but not immediately. The
-        // snapshot would land in a fresh doc with a new clientID, making
-        // every key causally concurrent with the live peer's state, and
-        // per-key LWW could roll a finished game back for both players.
-        // Give WebRTC a grace window to deliver the real room first; the
-        // snapshot only applies when nothing shows up.
-        const yjs = getRoomState(p2p);
-        const snap = !yjs || yjs.gameNumber === 0 ? loadSnapshot(roomId) : null;
-        if (!snap) {
-          completeSetup();
-          return;
-        }
-
-        const finish = (applySnapshot: boolean) => {
-          if (hydrateTimer !== null) {
-            clearTimeout(hydrateTimer);
-            hydrateTimer = null;
-          }
-          stopHydrateWatch?.();
-          stopHydrateWatch = null;
-          if (cancelled) return;
-          if (applySnapshot) {
-            const current = getRoomState(p2p);
-            if (!current || current.gameNumber === 0) {
-              hydrateRoomFromSnapshot(p2p, snap);
-            }
-          }
-          completeSetup();
-        };
-        stopHydrateWatch = observeRoomChanges(p2p, () => {
-          const current = getRoomState(p2p);
-          if (current && current.gameNumber > 0) finish(false);
-        });
+        room.apply({ type: "local-sync-complete", now: Date.now() });
+        // The Room may now be holding a local snapshot back to give a
+        // live peer first chance; this is the deadline it waits on.
         hydrateTimer = setTimeout(() => {
           hydrateTimer = null;
-          finish(true);
+          room.apply({ type: "tick", now: Date.now() });
         }, HYDRATE_GRACE_MS);
       });
 
@@ -272,8 +189,6 @@ export function useYjsMultiplayer({
           clearTimeout(hydrateTimer);
           hydrateTimer = null;
         }
-        stopHydrateWatch?.();
-        stopHydrateWatch = null;
         awareness.off("change", updatePresence);
         unsubscribeStatus();
         unsubscribePeers();
@@ -283,7 +198,6 @@ export function useYjsMultiplayer({
         room.close();
         connection.close();
         roomRef.current = null;
-        p2pRef.current = null;
         connectionRef.current = null;
       };
     };
@@ -308,24 +222,14 @@ export function useYjsMultiplayer({
   }, [roomId, playerId]);
 
   const sendStartGame = useCallback(() => {
-    const p2p = p2pRef.current;
-    if (!p2p) return;
-
-    const players = getPlayers(p2p);
-    if (players.length < 2) {
-      setError({ message: "Need 2 players to start" });
-      return;
-    }
-    startGame(p2p);
+    roomRef.current?.start();
   }, []);
 
   const sendProgress = useCallback(
     (cellsRemaining: number, completionPercent: number) => {
-      const p2p = p2pRef.current;
-      if (!p2p) return;
-      updateProgress(p2p, playerId, cellsRemaining, completionPercent);
+      roomRef.current?.progress(cellsRemaining, completionPercent);
     },
-    [playerId],
+    [],
   );
 
   const sendComplete = useCallback((board: string) => {
@@ -354,18 +258,15 @@ export function useYjsMultiplayer({
   }, [playerId]);
 
   const sendRematch = useCallback(() => {
-    const p2p = p2pRef.current;
-    if (!p2p) return;
-    requestRematch(p2p);
+    roomRef.current?.rematch();
   }, []);
 
   const updateName = useCallback(
     (newName: string) => {
-      const p2p = p2pRef.current;
-      if (!p2p) return;
-      updatePlayerName(p2p, playerId, newName);
-
-      // Update awareness too
+      const room = roomRef.current;
+      if (!room) return;
+      room.updateName(newName);
+      // Presence carries the name too, and that lives on the Connection.
       const connection = connectionRef.current;
       if (connection) {
         announcePresence(connection.awareness, playerId, newName);
@@ -375,21 +276,16 @@ export function useYjsMultiplayer({
   );
 
   const setAssistLevel = useCallback((level: AssistLevel) => {
-    const p2p = p2pRef.current;
-    if (!p2p) return;
-    setRoomAssistLevel(p2p, level);
+    roomRef.current?.setAssistLevel(level);
   }, []);
 
   const setDifficulty = useCallback((level: Difficulty) => {
-    const p2p = p2pRef.current;
-    if (!p2p) return;
-    setRoomDifficulty(p2p, level);
+    roomRef.current?.setDifficulty(level);
   }, []);
 
   return {
     connected,
     ...projection,
-    error,
     sendStartGame,
     sendProgress,
     sendComplete,

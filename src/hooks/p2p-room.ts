@@ -9,12 +9,13 @@ import type {
 import type { MpSnapshot } from "./mp-snapshot.ts";
 
 /**
- * Internal to the multiplayer module. The only sanctioned production
- * consumer is {@link ./useYjsMultiplayer.ts} (the external seam). The
- * Yjs schema lives here; the hook owns React lifecycle and projects
- * room state for the UI. Co-located in `src/hooks/` so a schema
- * migration touches one directory. Do not import from outside this
- * directory.
+ * Internal to the multiplayer module. The Yjs schema and its
+ * transactions live here; {@link ./mp-room.ts} builds the room's rules
+ * on top of them, and {@link ./useYjsMultiplayer.ts} is the React
+ * binding (it reaches in here only for the two awareness helpers, which
+ * belong to presence rather than to the schema). Co-located in
+ * `src/hooks/` so a schema migration touches one directory. Do not
+ * import from outside this directory.
  */
 
 const PLAYER_COLORS = [

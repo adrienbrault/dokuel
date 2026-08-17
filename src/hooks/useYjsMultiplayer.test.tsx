@@ -1,13 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyUpdate, Doc, encodeStateAsUpdate } from "yjs";
+import { Doc, encodeStateAsUpdate } from "yjs";
 import type { Difficulty } from "../lib/types.ts";
 import { createFakeConnections } from "./mp-connection.fake.ts";
 import {
   claimWinner,
   initializeRoom,
   joinRoom,
-  setDifficulty,
   startGame,
 } from "./p2p-room.ts";
 import { useYjsMultiplayer } from "./useYjsMultiplayer.ts";
@@ -56,72 +55,7 @@ function setTabHidden(hidden: boolean) {
   document.dispatchEvent(new Event("visibilitychange"));
 }
 
-function countClues(puzzle: string): number {
-  return puzzle.split("").filter((c) => c !== ".").length;
-}
-
 describe("useYjsMultiplayer", () => {
-  it("host writes chosen difficulty to Yjs on mount", async () => {
-    const { result } = renderRoom({ roomId: "abc123", difficulty: "expert" });
-
-    await flushSync();
-    expect(result.current.roomState?.difficulty).toBe("expert");
-  });
-
-  it("joiner with null difficulty does not initialize the room", async () => {
-    // Joiners came in via a shared link with no chosen difficulty, so
-    // they must not write any room defaults — initialization (and the
-    // host claim it bundles with) is reserved for the creator so the
-    // joiner never races for hostId.
-    renderRoom({ roomId: "room-joiner", difficulty: null });
-
-    await flushSync();
-    const doc = connections.last!.doc;
-    const roomMap = doc.getMap("room");
-    expect(roomMap.get("difficulty")).toBeUndefined();
-    expect(roomMap.get("hostId")).toBeUndefined();
-    expect(roomMap.get("status")).toBeUndefined();
-  });
-
-  it("sendStartGame uses Yjs difficulty, not the local prop", async () => {
-    const { result } = renderRoom({ roomId: "room-start", difficulty: "easy" });
-
-    await flushSync();
-    const doc = connections.last!.doc;
-    const fakeRoom = { doc, roomId: "room-start" };
-
-    // Simulate opponent joining and host switching to expert via Yjs.
-    act(() => {
-      joinRoom(fakeRoom, "p2", "Bob");
-      setDifficulty(fakeRoom, "expert");
-    });
-
-    act(() => {
-      result.current.sendStartGame();
-    });
-
-    const puzzle = doc.getMap("room").get("puzzle") as string;
-    expect(puzzle).toBeTruthy();
-    // Expert digs to a minimal puzzle (~22-28 clues) — well below the
-    // easy band (36-45) the local prop would have produced.
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
-  });
-
-  it("setDifficulty updates the Yjs room difficulty", async () => {
-    const { result } = renderRoom({ roomId: "room-set", difficulty: "easy" });
-
-    await flushSync();
-    const doc = connections.last!.doc;
-    expect(doc.getMap("room").get("difficulty")).toBe("easy");
-
-    act(() => {
-      result.current.setDifficulty("hard");
-    });
-
-    expect(doc.getMap("room").get("difficulty")).toBe("hard");
-  });
-
   it("closes the connection on unmount", async () => {
     const { unmount } = renderRoom({
       roomId: "room-idb-destroy",
@@ -155,33 +89,6 @@ describe("useYjsMultiplayer", () => {
     await flushSync();
 
     expect(connections.last?.doc).toBe(docBefore);
-  });
-
-  it("sendRematch uses Yjs difficulty, not the local prop", async () => {
-    const { result } = renderRoom({
-      roomId: "room-rematch",
-      difficulty: "easy",
-    });
-
-    await flushSync();
-    const doc = connections.last!.doc;
-    const fakeRoom = { doc, roomId: "room-rematch" };
-
-    act(() => {
-      joinRoom(fakeRoom, "p2", "Bob");
-      setDifficulty(fakeRoom, "expert");
-      result.current.sendStartGame();
-    });
-
-    act(() => {
-      result.current.sendRematch();
-    });
-
-    const puzzle = doc.getMap("room").get("puzzle") as string;
-    // Expert digs to a minimal puzzle (~22-28 clues) — well below the
-    // easy band (36-45) the local prop would have produced.
-    expect(countClues(puzzle)).toBeGreaterThanOrEqual(17);
-    expect(countClues(puzzle)).toBeLessThanOrEqual(28);
   });
 
   it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {
@@ -218,46 +125,6 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.roomState?.gameNumber).toBe(seedGameNumber);
     expect(result.current.roomState?.status).toBe("playing");
     expect(result.current.roomState?.players).toHaveLength(2);
-  });
-
-  it("flags roomFull for a third player arriving at a full room", async () => {
-    // Seed IDB with a room that already has two other players, so the
-    // join attempt no-ops and this client learns it is the odd one out.
-    const seedDoc = new Doc();
-    const seedRoom = { doc: seedDoc, roomId: "room-full" };
-    initializeRoom(seedRoom, "p2", "medium");
-    joinRoom(seedRoom, "p2", "Bob");
-    joinRoom(seedRoom, "p3", "Carol");
-    connections.persistedUpdate = encodeStateAsUpdate(seedDoc);
-
-    const { result } = renderRoom({ roomId: "room-full", difficulty: null });
-
-    await flushSync();
-    expect(result.current.roomFull).toBe(true);
-    expect(result.current.roomState?.players).toHaveLength(2);
-  });
-
-  it("re-raises an identical error so the toast can show again", async () => {
-    // "Need 2 players to start" twice in a row: a string state field
-    // is Object.is-equal on the second set, so the consumer's effect
-    // never re-fires and the second tap silently does nothing.
-    const { result } = renderRoom({
-      roomId: "room-error-retoast",
-      difficulty: "easy",
-    });
-    await flushSync();
-
-    act(() => {
-      result.current.sendStartGame();
-    });
-    const first = result.current.error;
-    expect(first?.message).toBe("Need 2 players to start");
-
-    act(() => {
-      result.current.sendStartGame();
-    });
-    expect(result.current.error?.message).toBe("Need 2 players to start");
-    expect(result.current.error).not.toBe(first);
   });
 
   describe("win claims", () => {
@@ -521,86 +388,6 @@ describe("useYjsMultiplayer", () => {
       } finally {
         vi.useRealTimers();
       }
-    });
-
-    it("prefers live peer state that arrives during the hydration grace window", async () => {
-      // Hydrating a ≤1h-old snapshot into a FRESH doc makes every key
-      // causally concurrent with the live room — per-key LWW can then
-      // roll a finished/advanced game back for both peers. When real
-      // state arrives first, the snapshot must stay unapplied.
-      vi.useFakeTimers();
-      try {
-        seedSnapshot("room-snap-race");
-
-        const { result } = renderRoom({
-          roomId: "room-snap-race",
-          difficulty: null,
-        });
-        // Make our writes win LWW ties so a premature hydration is
-        // deterministically visible instead of a clientID coin flip.
-        connections.last!.doc.clientID = 0x7fffffff;
-
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(1_000);
-        });
-
-        // The peer's real room arrives over WebRTC: game 7, different
-        // puzzle, already finished.
-        const seedDoc = new Doc();
-        const seedRoom = { doc: seedDoc, roomId: "room-snap-race" };
-        initializeRoom(seedRoom, "p2", "medium");
-        joinRoom(seedRoom, "p2", "Bob");
-        joinRoom(seedRoom, "p1", "Alice");
-        for (let i = 0; i < 7; i++) startGame(seedRoom);
-        act(() => {
-          applyUpdate(connections.last!.doc, encodeStateAsUpdate(seedDoc));
-        });
-
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(5_000);
-        });
-
-        expect(result.current.roomState?.gameNumber).toBe(7);
-        expect(result.current.roomState?.difficulty).toBe("medium");
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it("does not hydrate when IndexedDB already has a started game", async () => {
-      const seedDoc = new Doc();
-      const seedRoom = { doc: seedDoc, roomId: "room-no-hydrate" };
-      initializeRoom(seedRoom, "p1", "medium");
-      joinRoom(seedRoom, "p1", "Alice");
-      joinRoom(seedRoom, "p2", "Bob");
-      for (let i = 0; i < 7; i++) startGame(seedRoom);
-      connections.persistedUpdate = encodeStateAsUpdate(seedDoc);
-
-      localStorage.setItem(
-        "dokuel_mp_snap_room-no-hydrate",
-        JSON.stringify({
-          gameNumber: 2,
-          puzzle: "1".padEnd(81, "."),
-          status: "playing",
-          difficulty: "easy",
-          assistLevel: "standard",
-          hostId: "p1",
-          players: [],
-          winnerId: null,
-          winnerName: null,
-          savedAt: Date.now(),
-        }),
-      );
-
-      const { result } = renderRoom({
-        roomId: "room-no-hydrate",
-        difficulty: null,
-      });
-
-      await flushSync();
-
-      expect(result.current.roomState?.gameNumber).toBe(7);
-      expect(result.current.roomState?.difficulty).not.toBe("easy");
     });
 
     it("writes a snapshot to localStorage on pagehide", async () => {

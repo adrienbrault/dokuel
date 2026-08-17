@@ -1,16 +1,30 @@
 import type { Doc } from "yjs";
-import type { RoomState } from "../lib/types.ts";
-import { clearSnapshot } from "./mp-snapshot.ts";
+import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import {
+  clearSnapshot,
+  loadSnapshot,
+  type MpSnapshot,
+  saveSnapshot,
+} from "./mp-snapshot.ts";
 import {
   claimWinner,
   createRoomFromDoc,
   getOpponentProgress,
   getPlayers,
   getRoomState,
+  hydrateRoomFromSnapshot,
+  initializeRoom,
+  joinRoom,
   judgeClaim,
   leaveRoom,
   MAX_PLAYERS,
   observeRoomChanges,
+  requestRematch,
+  setAssistLevel as setRoomAssistLevel,
+  setDifficulty as setRoomDifficulty,
+  startGame,
+  updatePlayerName,
+  updateProgress,
 } from "./p2p-room.ts";
 
 /**
@@ -38,6 +52,15 @@ const FORFEIT_TRUST_WINDOW_MS = 120_000;
 // "." holes for a puzzle, digits only for a solution.
 const VALID_PUZZLE_RE = /^[1-9.]{81}$/;
 const VALID_SOLUTION_RE = /^[1-9]{81}$/;
+
+/**
+ * Grace window before a local snapshot is applied to an empty room:
+ * long enough for a peer to deliver the live room when one is up, short
+ * enough that a genuine solo restore feels instant-ish. The binding
+ * owns the timer and feeds a `tick` back; this is the deadline it
+ * schedules against.
+ */
+export const HYDRATE_GRACE_MS = 3_000;
 
 export type OpponentProgress = {
   cellsRemaining: number;
@@ -73,6 +96,12 @@ export type RoomProjection = {
    */
   hasStartedGame: boolean;
   roomFull: boolean;
+  /**
+   * A fresh object per raise, never a bare string: consumers toast off
+   * this value and a repeat of the same message must still re-fire
+   * their effect.
+   */
+  error: { message: string } | null;
 };
 
 export const INITIAL_PROJECTION: RoomProjection = {
@@ -84,6 +113,7 @@ export const INITIAL_PROJECTION: RoomProjection = {
   opponentDisconnected: false,
   hasStartedGame: false,
   roomFull: false,
+  error: null,
 };
 
 /**
@@ -101,7 +131,16 @@ export type RoomEvent =
   /** The transport's signaling status flipped. */
   | { type: "connectivity-changed"; connected: boolean; now: number }
   /** The tab was backgrounded or came back to the foreground. */
-  | { type: "visibility-changed"; hidden: boolean; now: number };
+  | { type: "visibility-changed"; hidden: boolean; now: number }
+  /**
+   * Local persistence finished loading into the doc. Nothing may be
+   * written before this: a clock-0 seed would race the restore, and
+   * under flaky IDB flushes the room can resolve back to an empty lobby
+   * over several reloads and wipe the game in progress.
+   */
+  | { type: "local-sync-complete"; now: number }
+  /** The binding's timer fired. Only the hydration deadline reads it. */
+  | { type: "tick"; now: number };
 
 export type Room = {
   apply(event: RoomEvent): void;
@@ -109,13 +148,6 @@ export type Room = {
   snapshot(): RoomProjection;
   /** Called after every projection change, including the Room's own writes. */
   subscribe(listener: () => void): () => void;
-  /**
-   * Re-project after a write made through another handle on the same
-   * doc: an idempotent write that no-ops fires no Yjs observer, yet the
-   * projection may still need to move (a refused join makes us the
-   * overflow player).
-   */
-  refresh(): void;
   /** Seated players, however many the CRDT merge left. */
   playerCount(): number;
   /**
@@ -132,6 +164,20 @@ export type Room = {
    * back must not be steamrolled.
    */
   claimForfeit(options: { hasOpponent: boolean }): void;
+  /** Deal a new board. Raises an error instead while the room is alone. */
+  start(): void;
+  /** Same, for a room that already finished a game. */
+  rematch(): void;
+  progress(cellsRemaining: number, completionPercent: number): void;
+  updateName(name: string): void;
+  setAssistLevel(level: AssistLevel): void;
+  setDifficulty(level: Difficulty): void;
+  /**
+   * Mirror the room to synchronous local storage. Local persistence is
+   * async and a backgrounded tab is not always given time to flush it
+   * before the process is killed.
+   */
+  persistSnapshot(): void;
   /** Stop observing the doc and drop all subscribers. */
   close(): void;
 };
@@ -145,6 +191,13 @@ export type RoomConfig = {
    * claim or a join that has not happened yet.
    */
   playerName: () => string;
+  /**
+   * Set only by the creator, who came in from the create flow with a
+   * chosen difficulty and initialises the room. A joiner arrives by
+   * code with null and learns everything — including who the host is —
+   * from sync, so it never races the creator for `hostId`.
+   */
+  initialDifficulty: Difficulty | null;
   /** Injected clock. Only the forfeit trust window reads it. */
   now?: () => number;
 };
@@ -154,6 +207,7 @@ export function createRoom({
   roomId,
   playerId,
   playerName,
+  initialDifficulty,
   now = Date.now,
 }: RoomConfig): Room {
   const p2p = createRoomFromDoc(doc, roomId);
@@ -177,6 +231,11 @@ export function createRoom({
   // asserts that we did — it is only honored when this record backs it
   // up, otherwise it is the one-liner devtools cheat.
   const absence = { ongoing: false, endedAt: 0 };
+  // A local snapshot waiting out its grace window. Applying it to a
+  // fresh doc makes every key causally concurrent with the live peer's
+  // state, and per-key LWW could roll a finished game back for both
+  // players — so live state gets first chance.
+  let pendingHydration: { snap: MpSnapshot; deadline: number } | null = null;
 
   const draft: RoomProjection = { ...INITIAL_PROJECTION };
   let published: RoomProjection = { ...INITIAL_PROJECTION };
@@ -290,8 +349,41 @@ export function createRoom({
     );
   }
 
+  /**
+   * Seed the room and take a seat. Both helpers are idempotent, so this
+   * either populates an empty room or no-ops one that sync already
+   * filled.
+   */
+  function completeSetup(): void {
+    if (initialDifficulty) {
+      initializeRoom(p2p, playerId, initialDifficulty);
+    }
+    joinRoom(p2p, playerId, playerName());
+    // A refused join writes nothing and so fires no observer, yet it
+    // still means we are the overflow player.
+    project();
+  }
+
+  function finishHydration(applySnapshot: boolean): void {
+    const pending = pendingHydration;
+    if (!pending) return;
+    pendingHydration = null;
+    if (applySnapshot) {
+      const current = getRoomState(p2p);
+      if (!current || current.gameNumber === 0) {
+        hydrateRoomFromSnapshot(p2p, pending.snap);
+      }
+    }
+    completeSetup();
+  }
+
   function project(): void {
     const state = getRoomState(p2p);
+    // Live peer state beat the snapshot to it — drop the snapshot.
+    if (pendingHydration && state && state.gameNumber > 0) {
+      finishHydration(false);
+      return;
+    }
     // The observer fires per transaction — including our own
     // keystrokes' progress writes. A cheap content compare (the state
     // is ~1KB) keeps identity stable across no-op fires.
@@ -330,6 +422,22 @@ export function createRoom({
   return {
     apply(event) {
       switch (event.type) {
+        case "local-sync-complete": {
+          const current = getRoomState(p2p);
+          const snap =
+            !current || current.gameNumber === 0 ? loadSnapshot(roomId) : null;
+          if (!snap) {
+            completeSetup();
+            break;
+          }
+          pendingHydration = { snap, deadline: event.now + HYDRATE_GRACE_MS };
+          break;
+        }
+        case "tick":
+          if (pendingHydration && event.now >= pendingHydration.deadline) {
+            finishHydration(true);
+          }
+          break;
         case "presence-changed":
           set(
             "opponentDisconnected",
@@ -362,7 +470,6 @@ export function createRoom({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    refresh: project,
     playerCount() {
       return getPlayers(p2p).length;
     },
@@ -373,6 +480,33 @@ export function createRoom({
     claimForfeit({ hasOpponent }) {
       if (hasOpponent) return;
       claimWinner(p2p, playerId, playerName(), null);
+    },
+    start() {
+      if (getPlayers(p2p).length < 2) {
+        set("error", { message: "Need 2 players to start" });
+        publish();
+        return;
+      }
+      startGame(p2p);
+    },
+    rematch() {
+      requestRematch(p2p);
+    },
+    progress(cellsRemaining, completionPercent) {
+      updateProgress(p2p, playerId, cellsRemaining, completionPercent);
+    },
+    updateName(name) {
+      updatePlayerName(p2p, playerId, name);
+    },
+    setAssistLevel(level) {
+      setRoomAssistLevel(p2p, level);
+    },
+    setDifficulty(level) {
+      setRoomDifficulty(p2p, level);
+    },
+    persistSnapshot() {
+      const state = getRoomState(p2p);
+      if (state) saveSnapshot(roomId, state);
     },
     close() {
       unobserve();
