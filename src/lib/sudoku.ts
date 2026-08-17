@@ -1,3 +1,4 @@
+import { gradePuzzle, type PuzzleGrade } from "./grader.ts";
 import { digPuzzle, generateSolvedGrid, type Rng, solve } from "./solver.ts";
 import type { Board, Cell, Difficulty } from "./types.ts";
 
@@ -15,7 +16,21 @@ const DIFFICULTY_CLUES: Record<
 };
 
 const MAX_ATTEMPTS = 4;
-const EXPERT_ATTEMPTS = 3;
+
+// Clue count is a weak difficulty signal — half the boards dug into the
+// hard band fall to naked/hidden singles. Hard and expert therefore
+// re-dig until the technique grader signs off. A dig+grade attempt runs
+// in single-digit milliseconds and each bar accepts roughly a fifth of
+// attempts, so the loop converges almost always; the rare exhaustion
+// returns the hardest board seen instead of blocking the UI.
+const GRADE_ATTEMPTS = 32;
+// Hard must need triples/X-wing at minimum, but a tier-4 board may
+// leave at most this many cells unresolved — deeper is expert country.
+const HARD_MAX_STUCK = 35;
+
+function meetsHardBar(grade: PuzzleGrade): boolean {
+  return grade.tier >= 3 && grade.stuckCells <= HARD_MAX_STUCK;
+}
 
 function countClues(puzzle: string): number {
   let clues = 0;
@@ -39,13 +54,36 @@ export function generatePuzzleWithSolution(
     // Minimal puzzles: dig each grid to exhaustion, keep the sparsest.
     let best: { puzzle: string; solution: string } | null = null;
     let bestClues = 82;
-    for (let attempt = 0; attempt < EXPERT_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       const solution = generateSolvedGrid(rng);
       const puzzle = digPuzzle(solution, 17, rng);
       const clues = countClues(puzzle);
       if (clues < bestClues) {
         best = { puzzle, solution };
         bestClues = clues;
+      }
+    }
+    return best!;
+  }
+
+  if (difficulty === "hard") {
+    const { min, max } = DIFFICULTY_CLUES.hard;
+    let best: { puzzle: string; solution: string } | null = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (let attempt = 0; attempt < GRADE_ATTEMPTS; attempt++) {
+      const solution = generateSolvedGrid(rng);
+      const target = min + Math.floor(rng() * (max - min + 1));
+      const puzzle = digPuzzle(solution, target, rng);
+      const grade = gradePuzzle(puzzle);
+      if (meetsHardBar(grade) && countClues(puzzle) <= max) {
+        return { puzzle, solution };
+      }
+      // Fallback ranking errs toward too hard rather than too easy:
+      // higher tier first, then the shallower stuck depth.
+      const score = grade.tier * 100 - grade.stuckCells;
+      if (score > bestScore) {
+        best = { puzzle, solution };
+        bestScore = score;
       }
     }
     return best!;
