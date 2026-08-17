@@ -8,7 +8,7 @@
  */
 
 import { boxIndex, popcount, UNITS } from "./board-geometry.ts";
-import type { CandidateState } from "./candidates.ts";
+import type { CandidateState, SingleFind } from "./candidates.ts";
 
 export type EliminationKind =
   | "pointing"
@@ -251,5 +251,20 @@ export function xWing(s: CandidateState): Elimination | null {
     const cols = xWingOriented(s, v, (col, row) => row * 9 + col);
     if (cols) return cols;
   }
+  return null;
+}
+
+export type UnlockingPlacement = {
+  /** The elimination whose removals make the placement visible. */
+  elimination: Elimination;
+  /** The single that emerges once the elimination is applied. */
+  single: SingleFind;
+  /** Eliminations silently applied before the unlocking one. */
+  priorSteps: number;
+};
+
+export function findUnlockingPlacement(
+  _puzzle: string,
+): UnlockingPlacement | null {
   return null;
 }
