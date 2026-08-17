@@ -41,16 +41,6 @@ function emptyBoard(): Board {
   );
 }
 
-function makeGame() {
-  return {
-    board: emptyBoard(),
-    selectCell: vi.fn(),
-    deselectCell: vi.fn(),
-    placeNumber: vi.fn(),
-    placeNoteAt: vi.fn(),
-  };
-}
-
 // Drop target is cell (0,0), a 100×100 square at the viewport origin.
 // With the 10px mouse lift, clientY 30 → local 20 (top/value half)
 // and clientY 85 → local 75 (bottom/note half).
@@ -91,6 +81,8 @@ function drop(
   });
 }
 
+// What a drop DOES is digitIntent's answer (see lib/digit-intent.test.ts);
+// this hook only has to report what landed where, and from where.
 describe("useGameDigitDrag", () => {
   beforeEach(() => {
     document.elementFromPoint = (() =>
@@ -102,103 +94,56 @@ describe("useGameDigitDrag", () => {
       null) as typeof document.elementFromPoint;
   });
 
-  it("leaves placement feedback to the game actions (no double buzz)", async () => {
-    // game.placeNumber / placeNoteAt already play the placement
-    // haptic+tone inside useSudoku. A second call at the drag layer
-    // meant every drop double-buzzed and double-beeped.
-    const { gameFeedback } = await import("../lib/game-feedback.ts");
-    const onPlace = vi.spyOn(gameFeedback, "onPlace");
-    try {
-      const game = makeGame();
-      const { result } = renderHook(() =>
-        useGameDigitDrag({
-          game,
-          autoEliminateNotes: true,
-          onHighlightDigit: vi.fn(),
-        }),
-      );
-
-      drop(result, "numpad", 5, VALUE_Y);
-
-      expect(game.placeNumber).toHaveBeenCalled();
-      expect(onPlace).not.toHaveBeenCalled();
-    } finally {
-      onPlace.mockRestore();
-    }
-  });
-
-  it("a note dropped from the numpad lands at the target without selecting it", () => {
-    const game = makeGame();
-    const onHighlightDigit = vi.fn();
+  it("reports a numpad drop on the top half as a value with no source cell", () => {
+    const onDrop = vi.fn();
     const { result } = renderHook(() =>
-      useGameDigitDrag({ game, autoEliminateNotes: true, onHighlightDigit }),
-    );
-
-    drop(result, "numpad", 5, NOTE_Y);
-
-    expect(game.placeNoteAt).toHaveBeenCalledWith(0, 0, 5);
-    expect(game.selectCell).not.toHaveBeenCalled();
-    expect(game.placeNumber).not.toHaveBeenCalled();
-  });
-
-  it("a note dragged from the numpad keeps the highlight on that digit", () => {
-    const game = makeGame();
-    const onHighlightDigit = vi.fn();
-    const { result } = renderHook(() =>
-      useGameDigitDrag({ game, autoEliminateNotes: true, onHighlightDigit }),
-    );
-
-    drop(result, "numpad", 5, NOTE_Y);
-
-    expect(game.deselectCell).toHaveBeenCalled();
-    expect(onHighlightDigit).toHaveBeenCalledWith(5);
-  });
-
-  it("a note dragged from a cell selects the source cell, not the target", () => {
-    const game = makeGame();
-    const onHighlightDigit = vi.fn();
-    const { result } = renderHook(() =>
-      useGameDigitDrag({ game, autoEliminateNotes: true, onHighlightDigit }),
-    );
-
-    drop(result, "cell", 7, NOTE_Y);
-
-    expect(game.placeNoteAt).toHaveBeenCalledWith(0, 0, 7);
-    expect(game.selectCell).toHaveBeenCalledWith(3, 4);
-    expect(game.placeNumber).not.toHaveBeenCalled();
-    expect(game.deselectCell).not.toHaveBeenCalled();
-    expect(onHighlightDigit).not.toHaveBeenCalled();
-  });
-
-  it("a value drop selects the cell it lands in", () => {
-    const game = makeGame();
-    const { result } = renderHook(() =>
-      useGameDigitDrag({
-        game,
-        autoEliminateNotes: true,
-        onHighlightDigit: vi.fn(),
-      }),
+      useGameDigitDrag({ board: emptyBoard(), onDrop }),
     );
 
     drop(result, "numpad", 9, VALUE_Y);
 
-    expect(game.selectCell).toHaveBeenCalledWith(0, 0);
-    expect(game.placeNumber).toHaveBeenCalledWith(9, true, false);
-    expect(game.placeNoteAt).not.toHaveBeenCalled();
+    expect(onDrop).toHaveBeenCalledWith({
+      digit: 9,
+      mode: "value",
+      target: { row: 0, col: 0 },
+      from: null,
+    });
+  });
+
+  it("reports a cell drop on the bottom half as a note carrying its source", () => {
+    const onDrop = vi.fn();
+    const { result } = renderHook(() =>
+      useGameDigitDrag({ board: emptyBoard(), onDrop }),
+    );
+
+    drop(result, "cell", 7, NOTE_Y);
+
+    expect(onDrop).toHaveBeenCalledWith({
+      digit: 7,
+      mode: "note",
+      target: { row: 0, col: 0 },
+      from: { row: 3, col: 4 },
+    });
+  });
+
+  it("ignores a drop while disabled", () => {
+    const onDrop = vi.fn();
+    const { result } = renderHook(() =>
+      useGameDigitDrag({ board: emptyBoard(), disabled: true, onDrop }),
+    );
+
+    drop(result, "numpad", 5, VALUE_Y);
+
+    expect(onDrop).not.toHaveBeenCalled();
   });
 
   it("forwards onReturnToNumpad when a numpad drag returns over the numpad", () => {
-    const game = makeGame();
+    const onDrop = vi.fn();
     const onReturnToNumpad = vi.fn();
     const numpadButton = document.createElement("button");
     numpadButton.dataset.numpadDigit = "8";
     const { result } = renderHook(() =>
-      useGameDigitDrag({
-        game,
-        autoEliminateNotes: true,
-        onHighlightDigit: vi.fn(),
-        onReturnToNumpad,
-      }),
+      useGameDigitDrag({ board: emptyBoard(), onDrop, onReturnToNumpad }),
     );
 
     act(() => {
@@ -229,6 +174,6 @@ describe("useGameDigitDrag", () => {
       pointerId: 1,
       pointerType: "touch",
     });
-    expect(game.placeNumber).not.toHaveBeenCalled();
+    expect(onDrop).not.toHaveBeenCalled();
   });
 });

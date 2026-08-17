@@ -73,10 +73,10 @@ export function useNumpadInteractions({
   // A drag brought back over the numpad demotes to a skim (see NumPad).
   const numPadRef = useRef<NumPadHandle>(null);
   const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
-    game,
+    board: game.board,
     disabled,
-    autoEliminateNotes: assistLevel !== "paper",
-    onHighlightDigit: highlight.setDigit,
+    onDrop: ({ digit, mode, target, from }) =>
+      runIntent({ kind: "drop", mode, target, from }, digit),
     onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
   });
 
