@@ -27,9 +27,19 @@ const GRADE_ATTEMPTS = 32;
 // Hard must need triples/X-wing at minimum, but a tier-4 board may
 // leave at most this many cells unresolved — deeper is expert country.
 const HARD_MAX_STUCK = 35;
+// Expert must defeat every graded technique with at least this many
+// cells still open — chains or trial-and-error for most of the board.
+const EXPERT_MIN_STUCK = 40;
+// Random minimal digs land 20-28 clues; a sparser cap keeps the pinned
+// expert clue band honest even when the grade bar is met late.
+const EXPERT_MAX_CLUES = 28;
 
 function meetsHardBar(grade: PuzzleGrade): boolean {
   return grade.tier >= 3 && grade.stuckCells <= HARD_MAX_STUCK;
+}
+
+function meetsExpertBar(grade: PuzzleGrade): boolean {
+  return grade.tier === 4 && grade.stuckCells >= EXPERT_MIN_STUCK;
 }
 
 function countClues(puzzle: string): number {
@@ -51,16 +61,22 @@ export function generatePuzzleWithSolution(
   rng: Rng = Math.random,
 ): { puzzle: string; solution: string } {
   if (difficulty === "expert") {
-    // Minimal puzzles: dig each grid to exhaustion, keep the sparsest.
+    // Minimal puzzles (every remaining clue necessary), re-dug until
+    // the grade bar confirms the board resists every technique deeply.
     let best: { puzzle: string; solution: string } | null = null;
-    let bestClues = 82;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (let attempt = 0; attempt < GRADE_ATTEMPTS; attempt++) {
       const solution = generateSolvedGrid(rng);
       const puzzle = digPuzzle(solution, 17, rng);
-      const clues = countClues(puzzle);
-      if (clues < bestClues) {
+      const grade = gradePuzzle(puzzle);
+      if (meetsExpertBar(grade) && countClues(puzzle) <= EXPERT_MAX_CLUES) {
+        return { puzzle, solution };
+      }
+      // Fallback ranking: the higher tier, then the deeper stuck.
+      const score = grade.tier * 100 + grade.stuckCells;
+      if (score > bestScore) {
         best = { puzzle, solution };
-        bestClues = clues;
+        bestScore = score;
       }
     }
     return best!;
