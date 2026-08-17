@@ -1,37 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { Board, Position } from "../lib/types.ts";
 import { useDigitHighlight } from "./useDigitHighlight.ts";
 
-function emptyBoard(): Board {
-  return Array.from({ length: 9 }, () =>
-    Array.from({ length: 9 }, () => ({
-      value: null as number | null,
-      isGiven: false,
-      notes: new Set<number>(),
-    })),
-  );
-}
-
-function makeHandlers(
-  selectedCell: Position | null = null,
-  selectedCellValue: number | null = null,
-) {
-  const board = emptyBoard();
-  if (selectedCell && selectedCellValue !== null) {
-    board[selectedCell.row]![selectedCell.col]!.value = selectedCellValue;
-  }
+function makeHandlers() {
   return {
-    board,
-    selectedCell,
-    selectedCells:
-      selectedCell === null
-        ? new Set<number>()
-        : new Set([selectedCell.row * 9 + selectedCell.col]),
     selectCell: vi.fn(),
     setSelectedCells: vi.fn(),
     deselectCell: vi.fn(),
-    placeNumber: vi.fn(),
   };
 }
 
@@ -155,72 +130,5 @@ describe("useDigitHighlight", () => {
       result.current.setDigit(8);
     });
     expect(result.current.highlightedDigit).toBe(8);
-  });
-
-  it("tapDigit toggles the highlight when no cell is selected", () => {
-    const { result } = renderHook(() => useDigitHighlight(makeHandlers()));
-
-    act(() => {
-      result.current.tapDigit(3);
-    });
-    expect(result.current.highlightedDigit).toBe(3);
-
-    act(() => {
-      result.current.tapDigit(3);
-    });
-    expect(result.current.highlightedDigit).toBeNull();
-  });
-
-  it("tapDigit places the value when the selected cell is empty", () => {
-    const handlers = makeHandlers({ row: 0, col: 0 });
-    const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    act(() => {
-      result.current.tapDigit(5);
-    });
-    expect(handlers.placeNumber).toHaveBeenCalledWith(5, true, false);
-    expect(result.current.highlightedDigit).toBeNull();
-  });
-
-  it("tapDigit drops the selection and highlights the digit when the selected cell is filled", () => {
-    const handlers = makeHandlers({ row: 0, col: 0 }, 7);
-    const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    act(() => {
-      result.current.tapDigit(4);
-    });
-    expect(handlers.deselectCell).toHaveBeenCalled();
-    expect(handlers.placeNumber).not.toHaveBeenCalled();
-    expect(result.current.highlightedDigit).toBe(4);
-  });
-
-  it("tapDigit notes a multi-cell selection, releases it, and highlights the digit", () => {
-    // Mirrors the numpad note-DROP semantics (useGameDigitDrag): a
-    // numpad-sourced note releases the selection and leaves the board
-    // highlighting that digit. So: tap 4 → notes land AND all 4s light
-    // up (placement confirmed); tap 7 next → selection is gone, so the
-    // tap toggles the 7 highlight — the scan-the-grid rhythm. Stacking
-    // pairs stays on hold, the one gesture that keeps the selection.
-    const handlers = makeHandlers({ row: 0, col: 0 });
-    // Simulate a multi-cell selection: the primary plus another cell.
-    handlers.selectedCells = new Set([0, 1]);
-    const { result } = renderHook(() => useDigitHighlight(handlers));
-
-    act(() => {
-      result.current.tapDigit(6);
-    });
-    expect(handlers.placeNumber).toHaveBeenCalledWith(6, true, true);
-    expect(handlers.deselectCell).toHaveBeenCalled();
-    expect(result.current.highlightedDigit).toBe(6);
-  });
-
-  it("tapDigit forwards the autoEliminateNotes flag to placeNumber", () => {
-    const handlers = makeHandlers({ row: 0, col: 0 });
-    const { result } = renderHook(() => useDigitHighlight(handlers, false));
-
-    act(() => {
-      result.current.tapDigit(5);
-    });
-    expect(handlers.placeNumber).toHaveBeenCalledWith(5, false, false);
   });
 });
