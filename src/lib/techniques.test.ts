@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { initCandidates } from "./candidates.ts";
 import { solvePuzzle } from "./sudoku.ts";
-import { findUnlockingPlacement } from "./techniques.ts";
+import { findUnlockingPlacement, xyWing } from "./techniques.ts";
 
 // Boards captured by playing naked/hidden singles to exhaustion on
 // graded puzzles — the exact state a stuck player faces. Verified
@@ -10,6 +11,29 @@ const PAIRS_STUCK =
   "5.....3277.982.4656..57.891.7....1.49.31.5.78..1..7..9497.1.5823..4927161..758943";
 const CHAINS_STUCK =
   "..982..454....5982582.9..372.8...519154982376.9.5.14289.7...8513657182948.1.59763";
+
+describe("xyWing", () => {
+  // Mined from a graded solve: no single is available on this board,
+  // but an XY-wing fires on freshly computed candidates.
+  const XYWING_STATE =
+    "3.42.1.69..6.8.....5..63...541...79663.....5.7....6341.....5......6.791........74";
+
+  it("eliminates the pincers' shared digit from cells seeing both", () => {
+    const s = initCandidates(XYWING_STATE)!;
+    const elim = xyWing(s);
+
+    expect(elim).not.toBeNull();
+    expect(elim!.kind).toBe("xy-wing");
+    expect(elim!.patternCells).toHaveLength(3);
+    expect(elim!.digits).toHaveLength(1);
+    expect(elim!.removed.length).toBeGreaterThan(0);
+    // Soundness: no removal may strip the solution's own digit.
+    const solution = solvePuzzle(XYWING_STATE)!;
+    for (const r of elim!.removed) {
+      expect(r.digit).not.toBe(Number(solution[r.cell]));
+    }
+  });
+});
 
 describe("findUnlockingPlacement", () => {
   it("finds the elimination that unlocks the next placement", () => {
