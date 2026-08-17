@@ -103,3 +103,40 @@ describe("digitIntent — hold", () => {
     });
   });
 });
+
+describe("digitIntent — drop", () => {
+  const target = { row: 4, col: 5 };
+
+  it("a value drop places into the cell it lands in", () => {
+    expect(
+      digitIntent({ kind: "drop", mode: "value", target, from: null }, ctx()),
+    ).toEqual({
+      effect: { kind: "value", at: target },
+      after: { selection: "keep", highlight: false },
+      label: "enter",
+    });
+  });
+
+  it("a note dropped from the numpad releases the selection and spotlights the digit", () => {
+    // The selection must not follow the note to the drop target — that
+    // would yank the board highlight to wherever the note landed.
+    expect(
+      digitIntent({ kind: "drop", mode: "note", target, from: null }, ctx()),
+    ).toEqual({
+      effect: { kind: "note", at: target },
+      after: { selection: "release", highlight: true },
+      label: "note",
+    });
+  });
+
+  it("a note dropped from a cell selects the source cell, not the target", () => {
+    const from = { row: 3, col: 4 };
+    expect(
+      digitIntent({ kind: "drop", mode: "note", target, from }, ctx()),
+    ).toEqual({
+      effect: { kind: "note", at: target },
+      after: { selection: from, highlight: false },
+      label: "note",
+    });
+  });
+});

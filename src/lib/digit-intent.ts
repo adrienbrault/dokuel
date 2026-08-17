@@ -1,7 +1,16 @@
 import type { Board, Position } from "./types.ts";
 
 /** What the player did to a digit. Widened as gestures are routed. */
-export type DigitGesture = { kind: "tap" } | { kind: "hold" };
+export type DigitGesture =
+  | { kind: "tap" }
+  | { kind: "hold" }
+  | {
+      kind: "drop";
+      mode: "value" | "note";
+      target: Position;
+      /** The cell the digit was dragged from, or null for the numpad. */
+      from: Position | null;
+    };
 
 /** The selection state the answer depends on. Nothing more is read. */
 export type DigitIntentContext = {
@@ -72,6 +81,9 @@ export function digitIntent(
       return hasSelection(ctx)
         ? intent({ kind: "note", at: null })
         : intent({ kind: "none" });
+    case "drop":
+      // Stub so the commit typechecks; the drop rules land next.
+      return intent({ kind: "none" });
   }
 }
 
