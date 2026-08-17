@@ -34,6 +34,14 @@ const EXPERT_MIN_STUCK = 40;
 // expert clue band honest even when the grade bar is met late.
 const EXPERT_MAX_CLUES = 28;
 
+// Medium's ceiling sits strictly below hard's floor: pairs and locked
+// candidates at most, never triples, X-wings, or a stuck board.
+const MEDIUM_MAX_TIER = 2;
+
+function meetsMediumBar(grade: PuzzleGrade): boolean {
+  return grade.tier <= MEDIUM_MAX_TIER;
+}
+
 function meetsHardBar(grade: PuzzleGrade): boolean {
   return grade.tier >= 3 && grade.stuckCells <= HARD_MAX_STUCK;
 }
@@ -105,7 +113,30 @@ export function generatePuzzleWithSolution(
     return best!;
   }
 
-  const { min, max } = DIFFICULTY_CLUES[difficulty];
+  if (difficulty === "medium") {
+    const { min, max } = DIFFICULTY_CLUES.medium;
+    let best: { puzzle: string; solution: string } | null = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (let attempt = 0; attempt < GRADE_ATTEMPTS; attempt++) {
+      const solution = generateSolvedGrid(rng);
+      const target = min + Math.floor(rng() * (max - min + 1));
+      const puzzle = digPuzzle(solution, target, rng);
+      const grade = gradePuzzle(puzzle);
+      if (meetsMediumBar(grade) && countClues(puzzle) <= max) {
+        return { puzzle, solution };
+      }
+      // Fallback ranking errs toward too easy — over-hard boards are
+      // the bug this bar exists to keep out.
+      const score = -(grade.tier * 100 + grade.stuckCells);
+      if (score > bestScore) {
+        best = { puzzle, solution };
+        bestScore = score;
+      }
+    }
+    return best!;
+  }
+
+  const { min, max } = DIFFICULTY_CLUES.easy;
   const target = min + Math.floor(rng() * (max - min + 1));
   let best: { puzzle: string; solution: string } | null = null;
   let bestClues = 82;
