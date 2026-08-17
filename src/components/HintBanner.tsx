@@ -9,6 +9,12 @@ export function HintBanner({ hint, onDismiss }: HintBannerProps) {
   const TECHNIQUE_LABELS: Record<typeof hint.technique, string> = {
     "naked-single": "Naked Single",
     "hidden-single": "Hidden Single",
+    "locked-candidates": "Locked Candidates",
+    "naked-pair": "Naked Pair",
+    "hidden-pair": "Hidden Pair",
+    "naked-triple": "Naked Triple",
+    "hidden-triple": "Hidden Triple",
+    "x-wing": "X-Wing",
     mistake: "Mistake",
     reveal: "Reveal",
   };

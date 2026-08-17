@@ -1,0 +1,127 @@
+/**
+ * Turns an unlocking elimination into a player-facing hint: names the
+ * pattern in board language (rows, columns, boxes), says which digits
+ * do the work, and states what the elimination leaves behind.
+ */
+
+import { boxIndex } from "./board-geometry.ts";
+import type { HintExplanation } from "./hint-engine.ts";
+import type { Elimination, UnlockingPlacement } from "./techniques.ts";
+import type { HintTechnique, Position } from "./types.ts";
+
+function toPosition(cell: number): Position {
+  return { row: Math.floor(cell / 9), col: cell % 9 };
+}
+
+/** Name the row, column, or box that contains every given cell. */
+function sharedUnitName(cells: number[]): string {
+  const rows = new Set(cells.map((c) => Math.floor(c / 9)));
+  if (rows.size === 1) return `row ${[...rows][0]! + 1}`;
+  const cols = new Set(cells.map((c) => c % 9));
+  if (cols.size === 1) return `column ${[...cols][0]! + 1}`;
+  return `box ${boxIndex(cells[0]!) + 1}`;
+}
+
+/** The row/col the pattern shares — pointing and claiming always have
+ * one, since their cells sit in a single line of a single box. */
+function sharedLineName(cells: number[]): string {
+  const rows = new Set(cells.map((c) => Math.floor(c / 9)));
+  if (rows.size === 1) return `row ${[...rows][0]! + 1}`;
+  return `column ${(cells[0]! % 9) + 1}`;
+}
+
+function listDigits(digits: number[], joiner: string): string {
+  if (digits.length === 1) return String(digits[0]);
+  return `${digits.slice(0, -1).join(", ")} ${joiner} ${digits.at(-1)}`;
+}
+
+function describeElimination(e: Elimination): string {
+  const digit = e.digits[0]!;
+  switch (e.kind) {
+    case "pointing": {
+      const line = sharedLineName(e.patternCells);
+      const box = boxIndex(e.patternCells[0]!) + 1;
+      return `In box ${box}, every place for ${digit} sits in ${line}, so ${digit} can't appear anywhere else in ${line}.`;
+    }
+    case "claiming": {
+      const line = sharedLineName(e.patternCells);
+      const box = boxIndex(e.patternCells[0]!) + 1;
+      return `In ${line}, ${digit} fits only inside box ${box}, so the rest of box ${box} can't hold ${digit}.`;
+    }
+    case "naked-pair":
+    case "naked-triple": {
+      const unit = sharedUnitName(e.patternCells);
+      return `The highlighted cells in ${unit} hold only ${listDigits(e.digits, "and")} between them, so those digits fall out of the rest of ${unit}.`;
+    }
+    case "hidden-pair":
+    case "hidden-triple": {
+      const unit = sharedUnitName(e.patternCells);
+      return `Within ${unit}, ${listDigits(e.digits, "and")} fit only in the highlighted cells, so those cells can hold nothing else.`;
+    }
+    case "x-wing": {
+      // Removals happen along the crossing lines: name both axes from
+      // the rectangle itself.
+      const rows = [...new Set(e.patternCells.map((c) => Math.floor(c / 9)))];
+      const cols = [...new Set(e.patternCells.map((c) => c % 9))];
+      const removedInCols = e.removed.every((r) => cols.includes(r.cell % 9));
+      const [lines, crosses, crossKind] = removedInCols
+        ? [
+            rows.map((r) => `row ${r + 1}`),
+            cols.map((c) => `column ${c + 1}`),
+            "columns",
+          ]
+        : [
+            cols.map((c) => `column ${c + 1}`),
+            rows.map((r) => `row ${r + 1}`),
+            "rows",
+          ];
+      return `${digit} forms an X-wing: in ${lines.join(" and ")} it can only sit in ${crosses.join(" and ")}, so ${digit} falls out of the rest of those ${crossKind}.`;
+    }
+  }
+}
+
+function describeConsequence(unlock: UnlockingPlacement): string {
+  const { single } = unlock;
+  if (single.kind === "naked") {
+    return ` That leaves this cell just one option: ${single.digit}.`;
+  }
+  const unit =
+    single.unitIndex < 9
+      ? `row ${single.unitIndex + 1}`
+      : single.unitIndex < 18
+        ? `column ${single.unitIndex - 9 + 1}`
+        : `box ${single.unitIndex - 18 + 1}`;
+  return ` That makes this cell the only place for ${single.digit} in ${unit}.`;
+}
+
+const TECHNIQUE_OF_KIND: Record<Elimination["kind"], HintTechnique> = {
+  pointing: "locked-candidates",
+  claiming: "locked-candidates",
+  "naked-pair": "naked-pair",
+  "hidden-pair": "hidden-pair",
+  "naked-triple": "naked-triple",
+  "hidden-triple": "hidden-triple",
+  "x-wing": "x-wing",
+};
+
+export function buildTechniqueHint(
+  unlock: UnlockingPlacement,
+): HintExplanation {
+  const { elimination, single, priorSteps } = unlock;
+  const preamble =
+    priorSteps > 0
+      ? `This one sits ${priorSteps + 1} eliminations deep — the decisive step: `
+      : "";
+  const related = [
+    ...elimination.patternCells,
+    ...elimination.removed.map((r) => r.cell),
+  ];
+  return {
+    position: toPosition(single.cell),
+    value: single.digit,
+    technique: TECHNIQUE_OF_KIND[elimination.kind],
+    explanation:
+      preamble + describeElimination(elimination) + describeConsequence(unlock),
+    relatedCells: [...new Set(related)].map(toPosition),
+  };
+}
