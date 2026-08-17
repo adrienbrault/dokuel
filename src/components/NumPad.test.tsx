@@ -813,6 +813,39 @@ describe("NumPad", () => {
     expect(onPressEnd).toHaveBeenCalled();
   });
 
+  it("fires onPressEnd once when a drag handoff is followed by the release", () => {
+    // The handoff ends the press: the drag layer owns the gesture from
+    // there. The release the origin key still receives is the tail of a
+    // press that is already over, and must not end it a second time —
+    // onPressEnd is not promised to be idempotent.
+    const onPressEnd = vi.fn();
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        onStartDrag={vi.fn()}
+        onPressEnd={onPressEnd}
+      />,
+    );
+    const three = screen.getByRole("button", { name: /^3, / });
+    fireEvent.pointerDown(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(three, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 50,
+    });
+    expect(onPressEnd).toHaveBeenCalledTimes(1);
+    fireEvent.pointerUp(three, { pointerType: "touch", pointerId: 1 });
+    expect(onPressEnd).toHaveBeenCalledTimes(1);
+  });
+
   it("does not fire onSkimDigit when the finger drifts over a disabled (completed) digit", () => {
     const onSkimDigit = vi.fn();
     // 5 is complete (0 remaining) so its button will be disabled.
