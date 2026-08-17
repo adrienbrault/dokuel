@@ -33,6 +33,10 @@ export type DigitIntent = {
   label: "enter" | "note";
 };
 
+function hasSelection({ selectedCell, selectedCells }: DigitIntentContext) {
+  return selectedCell !== null || selectedCells.size > 0;
+}
+
 function intent(
   effect: DigitEffect,
   selection: "keep" | "release" | Position = "keep",
@@ -63,8 +67,11 @@ export function digitIntent(
     case "tap":
       return tapIntent(ctx);
     case "hold":
-      // Stub so the commit typechecks; the hold rules land next.
-      return intent({ kind: "none" });
+      // Hold is the gesture that KEEPS the selection, for stacking
+      // pairs/triples into the same cell or range.
+      return hasSelection(ctx)
+        ? intent({ kind: "note", at: null })
+        : intent({ kind: "none" });
   }
 }
 
