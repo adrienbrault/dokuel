@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededRandom } from "./daily.ts";
+import { gradePuzzle } from "./grader.ts";
 import { countSolutions } from "./solver.ts";
 import {
   cellKey,
@@ -76,6 +77,18 @@ describe("generatePuzzle", () => {
     expect(generatePuzzle("hard", seededRandom(5))).toBe(
       generatePuzzle("hard", seededRandom(5)),
     );
+  });
+
+  // Clue count alone is a weak difficulty signal — half the puzzles in
+  // the hard clue band fall to singles. These bars are the actual
+  // difficulty contract: hard must demand advanced techniques, expert
+  // must defeat them outright across most of the board.
+  it("hard demands advanced techniques but stays within reach", () => {
+    for (const seed of [1, 2, 3]) {
+      const grade = gradePuzzle(generatePuzzle("hard", seededRandom(seed)));
+      expect(grade.tier).toBeGreaterThanOrEqual(3);
+      expect(grade.stuckCells).toBeLessThanOrEqual(35);
+    }
   });
 });
 
