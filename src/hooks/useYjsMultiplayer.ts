@@ -5,6 +5,16 @@ import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
 import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 
+/**
+ * The clock every instant the Room is told about is measured on. It is
+ * monotonic where `Date.now` is not: the Room only ever compares and
+ * spans instants, and a wall clock that steps backwards (NTP
+ * correction, VM restore) would make a deadline unreachable and a
+ * countdown negative. Nothing here is persisted or shown to a player,
+ * so epoch time buys nothing.
+ */
+const now = () => performance.now();
+
 type UseYjsMultiplayerOptions = {
   roomId: string;
   playerId: string;
@@ -74,6 +84,7 @@ export function useYjsMultiplayer({
         playerId,
         playerName: () => playerNameRef.current,
         initialDifficulty: initialDifficultyRef.current,
+        now,
       });
       roomRef.current = room;
       connectionRef.current = connection;
@@ -96,7 +107,7 @@ export function useYjsMultiplayer({
         room.apply({
           type: "connectivity-changed",
           connected: isConnected,
-          now: Date.now(),
+          now: now(),
         });
       });
 
@@ -123,7 +134,7 @@ export function useYjsMultiplayer({
               room.apply({
                 type: "connectivity-changed",
                 connected: false,
-                now: Date.now(),
+                now: now(),
               });
               hideTimer = null;
             }, HIDE_DEBOUNCE_MS);
@@ -141,7 +152,7 @@ export function useYjsMultiplayer({
         room.apply({
           type: "visibility-changed",
           hidden: document.hidden,
-          now: Date.now(),
+          now: now(),
         });
         updatePresence();
       };
@@ -154,20 +165,28 @@ export function useYjsMultiplayer({
       // resolve back to an empty lobby over several reloads, wiping the
       // game in progress.
       let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
+      // The Room says when it wants a tick; owning the timer is all we
+      // do about it. Re-armed after every tick rather than scheduled
+      // once: a timer that fires early leaves the deadline standing,
+      // and a deadline nothing wakes up for is a room the player never
+      // takes a seat in.
+      const armWake = () => {
+        const wakeAt = room.nextWakeAt();
+        if (wakeAt === null) return;
+        hydrateTimer = setTimeout(
+          () => {
+            hydrateTimer = null;
+            room.apply({ type: "tick", now: now() });
+            armWake();
+          },
+          Math.max(0, wakeAt - now()),
+        );
+      };
       void connection.whenSynced.then(() => {
         if (cancelled) return;
         connection.announce({ id: playerId, name: playerNameRef.current });
-        const syncedAt = Date.now();
-        room.apply({ type: "local-sync-complete", now: syncedAt });
-        // The Room may now be waiting on a deadline of its own. It says
-        // when it wants a tick; owning the timer is all we do about it.
-        const wakeAt = room.nextWakeAt();
-        if (wakeAt !== null) {
-          hydrateTimer = setTimeout(() => {
-            hydrateTimer = null;
-            room.apply({ type: "tick", now: Date.now() });
-          }, wakeAt - syncedAt);
-        }
+        room.apply({ type: "local-sync-complete", now: now() });
+        armWake();
       });
 
       return () => {

@@ -234,8 +234,11 @@ export function createRoom({
   // Whether this client actually went away (the transport dropped, or
   // we released it for a backgrounded tab). A remote forfeit claim
   // asserts that we did — it is only honored when this record backs it
-  // up, otherwise it is the one-liner devtools cheat.
-  const absence = { ongoing: false, endedAt: 0 };
+  // up, otherwise it is the one-liner devtools cheat. `endedAt` starts
+  // at "never": zero would be an absence that just ended on a clock
+  // measured from page load, honouring a fabricated forfeit for the
+  // whole first trust window of every session.
+  const absence = { ongoing: false, endedAt: Number.NEGATIVE_INFINITY };
   // A local snapshot waiting out its grace window. Applying it to a
   // fresh doc makes every key causally concurrent with the live peer's
   // state, and per-key LWW could roll a finished game back for both
@@ -423,7 +426,7 @@ export function createRoom({
 
   function markAbsent(): void {
     absence.ongoing = true;
-    absence.endedAt = 0;
+    absence.endedAt = Number.NEGATIVE_INFINITY;
   }
 
   function markPresentAgain(at: number): void {
