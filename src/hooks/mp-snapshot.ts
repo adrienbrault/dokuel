@@ -1,4 +1,5 @@
 import type { Player, RoomState } from "../lib/types.ts";
+import { roomDatabaseName } from "./mp-connection.ts";
 
 /**
  * Synchronous localStorage mirror of the room's Yjs state. y-indexeddb
@@ -118,7 +119,8 @@ export function sweepStaleSnapshots(): string[] {
 /**
  * Best-effort deletion of the y-indexeddb databases behind rooms whose
  * snapshot just aged out — each holds the room's full Yjs update log
- * and otherwise accumulates per room forever. indexedDB.databases() is
+ * and otherwise accumulates per room forever. The database name comes
+ * from the Connection, which is what created it. indexedDB.databases() is
  * not universal (and a DB open in another tab blocks deletion); both
  * cases fail silently and the next sweep retries.
  */
@@ -126,7 +128,7 @@ export function sweepStaleRoomDatabases(roomIds: string[]): void {
   if (roomIds.length === 0) return;
   try {
     for (const roomId of roomIds) {
-      indexedDB.deleteDatabase(`dokuel_${roomId}`);
+      indexedDB.deleteDatabase(roomDatabaseName(roomId));
     }
   } catch {
     // IndexedDB unavailable — ignore.
