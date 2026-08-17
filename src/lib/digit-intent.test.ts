@@ -64,6 +64,18 @@ describe("digitIntent — tap", () => {
     });
   });
 
+  it("asks for a value when a cell is selected without a primary", () => {
+    // Degenerate state — one cell in the selection but no primary cell.
+    // It is neither "nothing selected" nor a range, so it falls through
+    // to a value placement that the engine then no-ops.
+    const orphan = ctx({ selectedCell: null, selectedCells: new Set([0]) });
+    expect(digitIntent({ kind: "tap" }, orphan)).toEqual({
+      effect: { kind: "value", at: null },
+      after: { selection: "keep", highlight: false },
+      label: "enter",
+    });
+  });
+
   it("notes into an armed range, releases it, and spotlights the digit", () => {
     const armed = ctx({
       selectedCell: { row: 0, col: 0 },
