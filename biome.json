@@ -172,7 +172,8 @@
       "includes": [
         "src/lib/board-engine.ts",
         "src/hooks/mp-room.ts",
-        "src/hooks/p2p-room.ts"
+        "src/hooks/p2p-room.ts",
+        "src/hooks/useNumPadGesture.ts"
       ],
       "linter": {
         "rules": {
