@@ -20,6 +20,15 @@ export function popcount(mask: number): number {
   return n;
 }
 
+/** The digits (1-9) set in a candidate bitmask, ascending. */
+export function maskDigits(mask: number): number[] {
+  const digits: number[] = [];
+  for (let v = 1; v <= 9; v++) {
+    if (mask & (1 << v)) digits.push(v);
+  }
+  return digits;
+}
+
 /** All size-k subsets of items, in ascending index order. */
 export function kCombinations<T>(items: T[], k: number): T[][] {
   const out: T[][] = [];

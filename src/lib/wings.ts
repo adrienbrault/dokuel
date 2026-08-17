@@ -5,7 +5,12 @@
  * applied to the state and reported in full.
  */
 
-import { kCombinations, PEERS, popcount } from "./board-geometry.ts";
+import {
+  kCombinations,
+  maskDigits,
+  PEERS,
+  popcount,
+} from "./board-geometry.ts";
 import {
   type CandidateState,
   type Elimination,
@@ -118,6 +123,11 @@ export function xyWing(s: CandidateState): Elimination | null {
             kind: "xy-wing",
             digits: [z],
             patternCells: [pivot, p1, p2],
+            patternDigits: [
+              maskDigits(pivotMask),
+              maskDigits(m1),
+              maskDigits(m2),
+            ],
             removed,
           };
         }

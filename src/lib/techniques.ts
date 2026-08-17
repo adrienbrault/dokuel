@@ -8,7 +8,13 @@
  * scans live in wings.ts.
  */
 
-import { boxIndex, kCombinations, popcount, UNITS } from "./board-geometry.ts";
+import {
+  boxIndex,
+  kCombinations,
+  maskDigits,
+  popcount,
+  UNITS,
+} from "./board-geometry.ts";
 import {
   type CandidateState,
   cloneCandidates,
@@ -83,14 +89,6 @@ export function claiming(s: CandidateState): Elimination | null {
     }
   }
   return null;
-}
-
-function maskDigits(mask: number): number[] {
-  const digits: number[] = [];
-  for (let v = 1; v <= 9; v++) {
-    if (mask & (1 << v)) digits.push(v);
-  }
-  return digits;
 }
 
 /** Naked set: `size` cells sharing the same `size` candidates own them. */
