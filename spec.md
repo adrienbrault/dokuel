@@ -32,10 +32,11 @@ Available before every game (solo or multiplayer):
 - Easy (~45 clues)
 - Medium (~35 clues) — technique-graded ceiling: pairs and locked
   candidates at most, never triples, X-wings, or guessing
-- Hard (~28 clues) — technique-graded: demands triples or an X-wing at
-  minimum, never falls to singles and pairs alone
-- Expert (~22 clues) — technique-graded: singles, locked candidates,
-  pairs, triples, and X-wings all run dry with 40+ cells still open;
+- Hard (~28 clues) — technique-graded: demands at least triples or an
+  X-wing, may go up to quads, XY-wings, and swordfish, and is
+  guaranteed solvable start to finish without chains or guessing
+- Expert (~22 clues) — technique-graded: the full ladder (through
+  quads, XY-wings, and swordfish) runs dry with 40+ cells still open;
   chains or trial-and-error required
 
 **Assistance selector** (three levels, also switchable mid-game from the
