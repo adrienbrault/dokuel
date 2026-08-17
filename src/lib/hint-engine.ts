@@ -307,8 +307,8 @@ export function findHint(
     technique: "reveal",
     explanation:
       candidates.size <= 3
-        ? `This cell's candidates are ${[...candidates].sort().join(", ")}. The answer is ${value} — try analyzing which values are possible in neighboring cells to narrow it down.`
-        : `This cell has ${candidates.size} candidates: ${[...candidates].sort().join(", ")}. The answer is ${value}. Look for cells with fewer candidates first, or try finding where ${value} must go in this row, column, or box.`,
+        ? `No single, pair, triple, or X-wing decides a cell right now — this board needs chain logic. This cell can be ${[...candidates].sort().join(", ")}; the answer is ${value}, and placing it will open the board back up.`
+        : `No single, pair, triple, or X-wing decides a cell right now — this board needs chain logic. This cell still has ${candidates.size} candidates; the answer is ${value}, and placing it will open the board back up.`,
     relatedCells: eliminatingCells(board, targetRow, targetCol),
   };
 }
