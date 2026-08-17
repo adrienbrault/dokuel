@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Awareness,
   applyAwarenessUpdate,
@@ -14,6 +14,7 @@ import {
   type Connection,
   createIceServerResolver,
   MAX_ROOM_KEY_LENGTH,
+  type OpenOptions,
   roomDatabaseName,
   signalingUrl,
   TURN_CREDENTIALS_URL,
@@ -207,7 +208,11 @@ type OpenedConnection = {
   closeOnce(): void;
 };
 
-type AdapterUnderTest = (roomId: string) => Promise<OpenedConnection>;
+type AdapterUnderTest = {
+  open(roomId: string, options?: OpenOptions): Promise<OpenedConnection>;
+  /** How many transports the adapter has actually built. */
+  built(): number;
+};
 
 function once(teardown: () => void): () => void {
   let done = false;
@@ -218,22 +223,29 @@ function once(teardown: () => void): () => void {
   };
 }
 
-const openFake: AdapterUnderTest = async (roomId) => {
-  const connection = (await createFakeConnections().open(
-    roomId,
-  )) as FakeConnection;
+function fakeAdapter(): AdapterUnderTest {
+  const connections = createFakeConnections();
   return {
-    connection,
-    awareness: connection.awareness,
-    fireStatus: (connected) => connection.emitStatus(connected),
-    closeOnce: once(() => {
-      connection.close();
-      connection.awareness.destroy();
-    }),
+    built: () => connections.all.length,
+    async open(roomId, options) {
+      const connection = (await connections.open(
+        roomId,
+        options,
+      )) as FakeConnection;
+      return {
+        connection,
+        awareness: connection.awareness,
+        fireStatus: (connected) => connection.emitStatus(connected),
+        closeOnce: once(() => {
+          connection.close();
+          connection.awareness.destroy();
+        }),
+      };
+    },
   };
-};
+}
 
-const openWebrtc: AdapterUnderTest = async (roomId) => {
+function webrtcAdapter(): AdapterUnderTest {
   const providers: WebrtcProvider[] = [];
   const open = createWebrtcConnectionOpener({
     resolveIceServers: async () => null,
@@ -252,34 +264,49 @@ const openWebrtc: AdapterUnderTest = async (roomId) => {
       return provider;
     },
   });
-  const connection = await open(roomId);
-  const provider = providers[0];
-  if (!provider) throw new Error("the adapter constructed no provider");
-  const { awareness } = provider;
   return {
-    connection,
-    awareness,
-    fireStatus: (connected) => provider.emit("status", [{ connected }]),
-    closeOnce: once(() => {
-      connection.close();
-      awareness.destroy();
-    }),
+    built: () => providers.length,
+    async open(roomId, options) {
+      const connection = await open(roomId, options);
+      const provider = providers.at(-1);
+      if (!provider) throw new Error("the adapter constructed no provider");
+      const { awareness } = provider;
+      return {
+        connection,
+        awareness,
+        fireStatus: (connected) => provider.emit("status", [{ connected }]),
+        closeOnce: once(() => {
+          connection.close();
+          awareness.destroy();
+        }),
+      };
+    },
   };
-};
+}
 
 let contractRoomSeq = 0;
 
 describe.each([
-  ["in-memory adapter", openFake],
-  ["WebRTC adapter", openWebrtc],
-])("Connection contract: %s", (_label, openAdapter) => {
+  ["in-memory adapter", fakeAdapter],
+  ["WebRTC adapter", webrtcAdapter],
+])("Connection contract: %s", (_label, createAdapter) => {
   let opened: OpenedConnection[] = [];
+  let adapter: AdapterUnderTest;
 
-  async function openConnection(): Promise<OpenedConnection> {
+  beforeEach(() => {
+    adapter = createAdapter();
+  });
+
+  /** A name no other connection in this suite has used. */
+  function freshRoomId(): string {
     contractRoomSeq += 1;
     // y-webrtc keeps one global registry keyed by room name, so every
     // connection in this suite needs a name of its own.
-    const room = await openAdapter(`contract-room-${contractRoomSeq}`);
+    return `contract-room-${contractRoomSeq}`;
+  }
+
+  async function openConnection(): Promise<OpenedConnection> {
+    const room = await adapter.open(freshRoomId());
     opened.push(room);
     return room;
   }
@@ -306,6 +333,21 @@ describe.each([
   afterEach(() => {
     for (const room of opened) room.closeOnce();
     opened = [];
+  });
+
+  it("builds nothing for an open that was aborted", async () => {
+    // The caller left the room while the open was in flight. Building
+    // the transport anyway would claim y-webrtc's globally named room
+    // slot away from the open that replaced this one, and the live
+    // room would never connect.
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      adapter.open(freshRoomId(), { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+
+    expect(adapter.built()).toBe(0);
   });
 
   it("resolves whenSynced once local persistence has loaded", async () => {

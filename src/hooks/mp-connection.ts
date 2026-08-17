@@ -162,10 +162,29 @@ export type Connection = {
   close(): void;
 };
 
+/** What a caller may ask of an {@link OpenConnection}. */
+export type OpenOptions = {
+  /**
+   * Abandons an open the caller no longer wants. Opening is async, and
+   * a transport built for a room nobody is in any more is not merely
+   * wasteful: y-webrtc keys its room registry globally by name, so the
+   * abandoned one claims the slot the live one needs.
+   */
+  signal?: AbortSignal;
+};
+
 /**
  * The seam. Two adapters satisfy it: the WebRTC/IndexedDB/TURN one used
  * in production and the in-memory one used by tests. Resolution is
  * async because ICE servers must be known before the peer connection
  * exists.
+ *
+ * An aborted open constructs nothing and leaves nothing behind: it
+ * rejects with an `AbortError` DOMException, tearing down anything it
+ * had already built before the abort landed. A caller that aborts must
+ * expect that rejection and treat it as the normal outcome.
  */
-export type OpenConnection = (roomId: string) => Promise<Connection>;
+export type OpenConnection = (
+  roomId: string,
+  options?: OpenOptions,
+) => Promise<Connection>;

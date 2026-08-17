@@ -56,6 +56,12 @@ export function useYjsMultiplayer({
 
     let cancelled = false;
     let teardown: (() => void) | null = null;
+    // Abandons an open this effect no longer wants. React double-invokes
+    // effects under StrictMode, and any remount inside the open window
+    // does the same thing in production: without this, the abandoned
+    // open still builds a transport, and y-webrtc's globally named room
+    // registry hands it the slot the live one needs.
+    const opening = new AbortController();
 
     // Everything below runs once the Connection is open: opening is
     // async because the relay credentials must be resolved before the
@@ -187,16 +193,27 @@ export function useYjsMultiplayer({
       };
     };
 
-    void openConnectionRef.current(roomId).then((connection) => {
-      if (cancelled) {
-        connection.close();
-        return;
-      }
-      teardown = start(connection);
-    });
+    void openConnectionRef
+      .current(roomId, { signal: opening.signal })
+      .then((connection) => {
+        // Belt and braces: an adapter that resolved anyway still has to
+        // leave nothing running behind us.
+        if (cancelled) {
+          connection.close();
+          return;
+        }
+        teardown = start(connection);
+      })
+      .catch((error: unknown) => {
+        // Our own abort is the expected way an open ends when the room
+        // is left; anything else is a real transport failure and stays
+        // as loud as it was before.
+        if (!cancelled) throw error;
+      });
 
     return () => {
       cancelled = true;
+      opening.abort();
       teardown?.();
       teardown = null;
     };

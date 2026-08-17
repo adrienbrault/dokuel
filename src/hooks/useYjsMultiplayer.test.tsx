@@ -57,12 +57,19 @@ function setTabHidden(hidden: boolean) {
 
 describe("useYjsMultiplayer", () => {
   it("closes a connection that finishes opening after unmount", async () => {
-    // Opening is async (relay credentials first); a room the player left
-    // during that window must not leave a live transport behind.
-    const { unmount } = renderRoom({
-      roomId: "room-late-open",
-      difficulty: "easy",
-    });
+    // Belt and braces behind the abort: an adapter that ignored the
+    // signal and resolved anyway must still not leave a live transport
+    // behind for a room the player already left.
+    const { unmount } = renderHook(() =>
+      useYjsMultiplayer({
+        roomId: "room-late-open",
+        playerId: "p1",
+        playerName: "Alice",
+        difficulty: "easy",
+        // Drops the signal on the floor — the pre-abort adapter.
+        openConnection: (roomId) => connections.open(roomId),
+      }),
+    );
     unmount();
 
     await flushSync();

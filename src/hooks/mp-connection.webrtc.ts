@@ -6,6 +6,7 @@ import {
   type Connection,
   createIceServerResolver,
   type OpenConnection,
+  type OpenOptions,
   roomDatabaseName,
   signalingUrl,
 } from "./mp-connection.ts";
@@ -51,11 +52,16 @@ export function createWebrtcConnectionOpener({
   openPersistence,
   openProvider,
 }: WebrtcInternals): OpenConnection {
-  return async (roomId: string): Promise<Connection> => {
+  return async (roomId: string, options?: OpenOptions): Promise<Connection> => {
     // Resolved before anything else exists: iceServers cannot be added
     // to a live peer connection, and the fetch behind this is bounded so
     // a broken endpoint only delays — never blocks — the room.
     const iceServers = await resolveIceServers();
+    // The caller may have walked away during that await. Nothing has
+    // been built yet, so abandoning costs nothing — and building a
+    // provider for a room nobody is in would claim y-webrtc's globally
+    // named room slot away from the open that replaced us.
+    options?.signal?.throwIfAborted();
 
     const doc = new Doc();
     const persistence = openPersistence(roomDatabaseName(roomId), doc);

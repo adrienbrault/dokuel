@@ -1,7 +1,11 @@
 import { Awareness, removeAwarenessStates } from "y-protocols/awareness";
 import { applyUpdate, Doc } from "yjs";
 import { awarenessPresence } from "./mp-connection.presence.ts";
-import type { Connection, OpenConnection } from "./mp-connection.ts";
+import type {
+  Connection,
+  OpenConnection,
+  OpenOptions,
+} from "./mp-connection.ts";
 
 /**
  * Test adapter for the {@link Connection} seam: an in-memory doc with
@@ -60,7 +64,14 @@ export function createFakeConnections(): FakeConnections {
     get last() {
       return opened.at(-1) ?? null;
     },
-    open: async (roomId: string) => {
+    open: async (roomId: string, options?: OpenOptions) => {
+      // The production adapter resolves ICE servers before it builds
+      // anything, so every open has a window in which the caller can
+      // walk away. Yielding once here keeps that window — and the
+      // abort contract that covers it — real for the tests.
+      await Promise.resolve();
+      options?.signal?.throwIfAborted();
+
       const doc = new Doc();
       const awareness = new Awareness(doc);
       const statusListeners = new Set<(connected: boolean) => void>();
