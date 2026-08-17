@@ -158,7 +158,7 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.opponentDisconnected).toBe(false);
 
     act(() => {
-      connections.last!.emitPeers();
+      connections.last!.emitPresence();
     });
 
     expect(result.current.opponentDisconnected).toBe(true);

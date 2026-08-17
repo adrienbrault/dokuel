@@ -1,5 +1,5 @@
-import type { Awareness } from "y-protocols/awareness";
 import type { Doc } from "yjs";
+import type { Presence } from "./mp-connection.presence.ts";
 
 /**
  * The Connection: how a room's state reaches its peers and survives
@@ -122,8 +122,8 @@ export function createIceServerResolver(
  * best transport available.
  *
  * Invariants a caller must know:
- * - `doc` and `awareness` are live from the moment `open()` resolves;
- *   `doc` may still be empty until `whenSynced` settles.
+ * - `doc` is live from the moment `open()` resolves; it may still be
+ *   empty until `whenSynced` settles.
  * - `whenSynced` resolves once local persistence has finished loading
  *   into `doc`. Writing before then races the restore. It never
  *   rejects.
@@ -131,20 +131,24 @@ export function createIceServerResolver(
  *   be absent while it is true.
  * - `disconnect()` drops peer connections and signaling sockets but
  *   keeps `doc` and local persistence alive, and (mirroring y-webrtc)
- *   clears the local awareness state — presence must be re-announced
- *   after `connect()`.
+ *   clears our own presence — `announce()` must run again after
+ *   `connect()`.
  * - `close()` is terminal: it removes every listener, tears the
  *   transport and persistence down, and destroys `doc`.
  * - The `onX` subscribers return their own unsubscribe function; all of
  *   them are also removed by `close()`.
+ *
+ * Presence rides on the Connection rather than the Room because it
+ * answers "is the opponent reachable", which is a property of the
+ * transport. `onPresenceChange` covers both halves of that — a peer
+ * joining or leaving the mesh and a peer publishing or clearing its own
+ * entry — because no caller has ever wanted to tell them apart.
  */
-export type Connection = {
+export type Connection = Omit<Presence, "removeAllListeners"> & {
   doc: Doc;
-  awareness: Awareness;
   whenSynced: Promise<void>;
   readonly connected: boolean;
   onStatus(listener: (connected: boolean) => void): () => void;
-  onPeersChange(listener: () => void): () => void;
   connect(): void;
   disconnect(): void;
   close(): void;

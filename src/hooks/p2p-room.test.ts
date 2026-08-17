@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { Awareness, removeAwarenessStates } from "y-protocols/awareness";
 import * as Y from "yjs";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
-  announcePresence,
   claimWinner,
   createRoomFromDoc,
   getHostId,
@@ -726,37 +724,6 @@ describe("p2p-room", () => {
       expect(getPlayers(roomA)).toHaveLength(2);
       expect(getPlayers(roomB)).toHaveLength(2);
       expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
-    });
-  });
-
-  describe("announcePresence", () => {
-    it("publishes the player identity into awareness", () => {
-      const doc = new Y.Doc();
-      const awareness = new Awareness(doc);
-
-      announcePresence(awareness, "player1", "Alice");
-
-      expect(awareness.getLocalState()).toEqual({
-        user: { id: "player1", name: "Alice" },
-      });
-      awareness.destroy();
-    });
-
-    it("restores presence after a disconnect cleared the local state", () => {
-      const doc = new Y.Doc();
-      const awareness = new Awareness(doc);
-      // y-webrtc's Room.disconnect() removes the local client's
-      // awareness entry, leaving local state null — the situation
-      // after the tab was backgrounded long enough to drop WebRTC.
-      removeAwarenessStates(awareness, [doc.clientID], "disconnect");
-      expect(awareness.getLocalState()).toBeNull();
-
-      announcePresence(awareness, "player1", "Alice");
-
-      expect(awareness.getLocalState()).toEqual({
-        user: { id: "player1", name: "Alice" },
-      });
-      awareness.destroy();
     });
   });
 });

@@ -11,11 +11,9 @@ import type { MpSnapshot } from "./mp-snapshot.ts";
 /**
  * Internal to the multiplayer module. The Yjs schema and its
  * transactions live here; {@link ./mp-room.ts} builds the room's rules
- * on top of them, and {@link ./useYjsMultiplayer.ts} is the React
- * binding (it reaches in here only for the two awareness helpers, which
- * belong to presence rather than to the schema). Co-located in
- * `src/hooks/` so a schema migration touches one directory. Do not
- * import from outside this directory.
+ * on top of them and is the only importer. Co-located in `src/hooks/`
+ * so a schema migration touches one directory. Do not import from
+ * outside this directory.
  */
 
 const PLAYER_COLORS = [
@@ -396,54 +394,4 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
       playersMap.set(p.id, pm);
     });
   });
-}
-
-/**
- * Schema for the WebRTC awareness payload — kept here next to the rest
- * of the multiplayer schema so a rename of "user"/"id"/"name" lands in
- * one place. The hook just hands the awareness object in.
- */
-type Awareness = {
-  getLocalState: () => Record<string, unknown> | null;
-  setLocalState: (state: Record<string, unknown>) => void;
-  getStates: () => Map<number, { user?: { id: string; name: string } }>;
-};
-
-export function announcePresence(
-  awareness: Awareness,
-  playerId: string,
-  playerName: string,
-): void {
-  // Not setLocalStateField: that helper silently no-ops while the local
-  // state is null — which is what y-webrtc's disconnect() leaves behind
-  // after we drop WebRTC for a backgrounded tab. Rebuilding the state
-  // object makes re-announcing work from any starting point.
-  awareness.setLocalState({
-    ...(awareness.getLocalState() ?? {}),
-    user: { id: playerId, name: playerName },
-  });
-}
-
-/**
- * True when an awareness peer other than us is present in the room.
- * `playersInRoomCount` lets the caller suppress "opponent disconnected"
- * before a second player has ever joined.
- */
-export function presenceHasOpponent(
-  awareness: Awareness,
-  ownClientId: number,
-  ownPlayerId: string,
-  playersInRoomCount: number,
-): boolean {
-  if (playersInRoomCount <= 1) return false;
-  for (const [clientId, state] of awareness.getStates()) {
-    if (
-      clientId !== ownClientId &&
-      state.user &&
-      state.user.id !== ownPlayerId
-    ) {
-      return true;
-    }
-  }
-  return false;
 }

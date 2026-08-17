@@ -9,7 +9,6 @@ import {
   type Room,
 } from "./mp-room.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
-import { announcePresence, presenceHasOpponent } from "./p2p-room.ts";
 
 type UseYjsMultiplayerOptions = {
   roomId: string;
@@ -78,8 +77,6 @@ export function useYjsMultiplayer({
       roomRef.current = room;
       connectionRef.current = connection;
 
-      const awareness = connection.awareness;
-
       const unsubscribeRoom = room.subscribe(() => {
         setProjection(room.snapshot());
       });
@@ -87,17 +84,11 @@ export function useYjsMultiplayer({
       const updatePresence = () => {
         room.apply({
           type: "presence-changed",
-          hasOpponent: presenceHasOpponent(
-            awareness,
-            doc.clientID,
-            playerId,
-            room.playerCount(),
-          ),
+          hasOpponent:
+            room.playerCount() > 1 && connection.hasOtherPeer(playerId),
           tabHidden: document.hidden,
         });
       };
-
-      awareness.on("change", updatePresence);
 
       // Track connection status via the transport
       const unsubscribeStatus = connection.onStatus((isConnected) => {
@@ -109,10 +100,7 @@ export function useYjsMultiplayer({
         });
       });
 
-      // Also listen for peers to detect when WebRTC connects
-      const unsubscribePeers = connection.onPeersChange(() => {
-        updatePresence();
-      });
+      const unsubscribePresence = connection.onPresenceChange(updatePresence);
 
       setConnected(connection.connected);
 
@@ -147,7 +135,7 @@ export function useYjsMultiplayer({
           }
           if (!connection.connected) {
             connection.connect();
-            announcePresence(awareness, playerId, playerNameRef.current);
+            connection.announce({ id: playerId, name: playerNameRef.current });
           }
         }
         room.apply({
@@ -168,7 +156,7 @@ export function useYjsMultiplayer({
       let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
       void connection.whenSynced.then(() => {
         if (cancelled) return;
-        announcePresence(awareness, playerId, playerNameRef.current);
+        connection.announce({ id: playerId, name: playerNameRef.current });
         room.apply({ type: "local-sync-complete", now: Date.now() });
         // The Room may now be holding a local snapshot back to give a
         // live peer first chance; this is the deadline it waits on.
@@ -189,9 +177,8 @@ export function useYjsMultiplayer({
           clearTimeout(hydrateTimer);
           hydrateTimer = null;
         }
-        awareness.off("change", updatePresence);
         unsubscribeStatus();
-        unsubscribePeers();
+        unsubscribePresence();
         unsubscribeRoom();
         // The Room observes the doc the Connection owns — it has to let
         // go before close() destroys it.
@@ -248,12 +235,8 @@ export function useYjsMultiplayer({
     const connection = connectionRef.current;
     const hasOpponent =
       connection !== null &&
-      presenceHasOpponent(
-        connection.awareness,
-        connection.doc.clientID,
-        playerId,
-        room.playerCount(),
-      );
+      room.playerCount() > 1 &&
+      connection.hasOtherPeer(playerId);
     room.claimForfeit({ hasOpponent });
   }, [playerId]);
 
@@ -267,10 +250,7 @@ export function useYjsMultiplayer({
       if (!room) return;
       room.updateName(newName);
       // Presence carries the name too, and that lives on the Connection.
-      const connection = connectionRef.current;
-      if (connection) {
-        announcePresence(connection.awareness, playerId, newName);
-      }
+      connectionRef.current?.announce({ id: playerId, name: newName });
     },
     [playerId],
   );

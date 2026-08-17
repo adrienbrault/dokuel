@@ -1,5 +1,6 @@
 import { Awareness, removeAwarenessStates } from "y-protocols/awareness";
 import { applyUpdate, Doc } from "yjs";
+import { awarenessPresence } from "./mp-connection.presence.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 
 /**
@@ -15,14 +16,19 @@ import type { Connection, OpenConnection } from "./mp-connection.ts";
 
 export type FakeConnection = Omit<Connection, "connected"> & {
   roomId: string;
+  /**
+   * The awareness behind `announce`/`hasOtherPeer`, exposed so a test
+   * can play the opponent by merging in a remote awareness update.
+   */
+  awareness: Awareness;
   connected: boolean;
   connectCount: number;
   disconnectCount: number;
   closed: boolean;
   /** Fire the transport status listeners. */
   emitStatus(connected: boolean): void;
-  /** Fire the peer-set listeners. */
-  emitPeers(): void;
+  /** Fire the presence listeners as a peer-set change would. */
+  emitPresence(): void;
 };
 
 export type FakeConnections = {
@@ -50,6 +56,7 @@ export function createFakeConnections(): FakeConnections {
       const awareness = new Awareness(doc);
       const statusListeners = new Set<(connected: boolean) => void>();
       const peerListeners = new Set<() => void>();
+      const presence = awarenessPresence(awareness);
       const seed = factory.persistedUpdate;
 
       const connection: FakeConnection = {
@@ -63,13 +70,19 @@ export function createFakeConnections(): FakeConnections {
         connectCount: 0,
         disconnectCount: 0,
         closed: false,
+        announce: presence.announce,
+        hasOtherPeer: presence.hasOtherPeer,
         onStatus(listener) {
           statusListeners.add(listener);
           return () => statusListeners.delete(listener);
         },
-        onPeersChange(listener) {
+        onPresenceChange(listener) {
+          const unsubscribeAwareness = presence.onPresenceChange(listener);
           peerListeners.add(listener);
-          return () => peerListeners.delete(listener);
+          return () => {
+            unsubscribeAwareness();
+            peerListeners.delete(listener);
+          };
         },
         connect() {
           connection.connected = true;
@@ -87,13 +100,14 @@ export function createFakeConnections(): FakeConnections {
           connection.closed = true;
           statusListeners.clear();
           peerListeners.clear();
+          presence.removeAllListeners();
           awareness.destroy();
         },
         emitStatus(connected) {
           connection.connected = connected;
           for (const listener of statusListeners) listener(connected);
         },
-        emitPeers() {
+        emitPresence() {
           for (const listener of peerListeners) listener();
         },
       };

@@ -1,6 +1,7 @@
 import { IndexeddbPersistence } from "y-indexeddb";
 import { WebrtcProvider } from "y-webrtc";
 import { Doc } from "yjs";
+import { awarenessPresence } from "./mp-connection.presence.ts";
 import {
   type Connection,
   createIceServerResolver,
@@ -46,14 +47,16 @@ export const openWebrtcConnection: OpenConnection = async (
 
   const statusListeners = new Set<(payload: { connected: boolean }) => void>();
   const peerListeners = new Set<() => void>();
+  const presence = awarenessPresence(provider.awareness);
 
   return {
     doc,
-    awareness: provider.awareness,
     whenSynced: persistence.whenSynced.then(() => undefined),
     get connected() {
       return provider.connected;
     },
+    announce: presence.announce,
+    hasOtherPeer: presence.hasOtherPeer,
     onStatus(listener) {
       const wrapped = ({ connected }: { connected: boolean }) =>
         listener(connected);
@@ -64,10 +67,14 @@ export const openWebrtcConnection: OpenConnection = async (
         provider.off("status", wrapped);
       };
     },
-    onPeersChange(listener) {
+    onPresenceChange(listener) {
+      // Two transport events answer the same question: the peer set
+      // changed, or a peer rewrote its awareness entry.
+      const unsubscribeAwareness = presence.onPresenceChange(listener);
       peerListeners.add(listener);
       provider.on("peers", listener);
       return () => {
+        unsubscribeAwareness();
         peerListeners.delete(listener);
         provider.off("peers", listener);
       };
@@ -83,6 +90,7 @@ export const openWebrtcConnection: OpenConnection = async (
       for (const listener of peerListeners) provider.off("peers", listener);
       statusListeners.clear();
       peerListeners.clear();
+      presence.removeAllListeners();
       provider.disconnect();
       provider.destroy();
       persistence.destroy();

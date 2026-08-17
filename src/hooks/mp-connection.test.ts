@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  Awareness,
+  applyAwarenessUpdate,
+  encodeAwarenessUpdate,
+} from "y-protocols/awareness";
+import { Doc } from "yjs";
+import {
+  createFakeConnections,
+  type FakeConnection,
+} from "./mp-connection.fake.ts";
+import {
   createIceServerResolver,
   MAX_ROOM_KEY_LENGTH,
   roomDatabaseName,
@@ -168,5 +178,117 @@ describe("minting TURN credentials from the signaling worker", () => {
     stubFetchOk({ error: "unexpected shape" });
 
     expect(await createIceServerResolver()()).toBeNull();
+  });
+});
+
+describe("presence", () => {
+  /**
+   * Play a second client: build a remote awareness, announce a user on
+   * it, and merge it into the connection's own — what the transport
+   * does when a peer shows up.
+   */
+  function peerAnnounces(
+    connection: FakeConnection,
+    user: { id: string; name: string },
+  ): () => void {
+    const peerDoc = new Doc();
+    const peerAwareness = new Awareness(peerDoc);
+    peerAwareness.setLocalState({ user });
+    applyAwarenessUpdate(
+      connection.awareness,
+      encodeAwarenessUpdate(peerAwareness, [peerDoc.clientID]),
+      "test",
+    );
+    return () => peerAwareness.destroy();
+  }
+
+  async function openConnection(roomId: string) {
+    return (await createFakeConnections().open(roomId)) as FakeConnection;
+  }
+
+  it("publishes the player identity for peers to read", async () => {
+    const connection = await openConnection("presence-announce");
+
+    connection.announce({ id: "p1", name: "Alice" });
+
+    expect(connection.awareness.getLocalState()).toEqual({
+      user: { id: "p1", name: "Alice" },
+    });
+    connection.close();
+  });
+
+  it("re-announces after a disconnect cleared our presence", async () => {
+    // Dropping the transport for a backgrounded tab removes our own
+    // awareness entry, leaving local state null. Announcing must work
+    // from that starting point or the opponent keeps seeing us as gone
+    // and is offered a forfeit win while we are actively playing.
+    const connection = await openConnection("presence-reannounce");
+    connection.announce({ id: "p1", name: "Alice" });
+
+    connection.disconnect();
+    expect(connection.awareness.getLocalState()).toBeNull();
+    connection.announce({ id: "p1", name: "Alice" });
+
+    expect(connection.awareness.getLocalState()).toEqual({
+      user: { id: "p1", name: "Alice" },
+    });
+    connection.close();
+  });
+
+  it("does not mistake our own announcement for another peer", async () => {
+    const connection = await openConnection("presence-self");
+
+    connection.announce({ id: "p1", name: "Alice" });
+
+    expect(connection.hasOtherPeer("p1")).toBe(false);
+    connection.close();
+  });
+
+  it("sees a peer that announced a different player", async () => {
+    const connection = await openConnection("presence-opponent");
+    connection.announce({ id: "p1", name: "Alice" });
+
+    const destroyPeer = peerAnnounces(connection, { id: "p2", name: "Bob" });
+
+    expect(connection.hasOtherPeer("p1")).toBe(true);
+    destroyPeer();
+    connection.close();
+  });
+
+  it("ignores another client carrying our own player id", async () => {
+    // Our previous tab, or our own reload, still lingering in awareness:
+    // a different clientID but the same player. Counting it would keep
+    // the room looking populated to a player who is actually alone.
+    const connection = await openConnection("presence-ghost");
+
+    const destroyPeer = peerAnnounces(connection, { id: "p1", name: "Alice" });
+
+    expect(connection.hasOtherPeer("p1")).toBe(false);
+    destroyPeer();
+    connection.close();
+  });
+
+  it("notifies subscribers when presence changes", async () => {
+    const connection = await openConnection("presence-notify");
+    const listener = vi.fn();
+    connection.onPresenceChange(listener);
+
+    const destroyPeer = peerAnnounces(connection, { id: "p2", name: "Bob" });
+
+    expect(listener).toHaveBeenCalled();
+    destroyPeer();
+    connection.close();
+  });
+
+  it("stops notifying an unsubscribed listener", async () => {
+    const connection = await openConnection("presence-unsubscribe");
+    const listener = vi.fn();
+
+    connection.onPresenceChange(listener)();
+    const destroyPeer = peerAnnounces(connection, { id: "p2", name: "Bob" });
+
+    expect(listener).not.toHaveBeenCalled();
+    destroyPeer();
+    connection.close();
   });
 });
