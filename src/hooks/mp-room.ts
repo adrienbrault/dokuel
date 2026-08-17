@@ -1,0 +1,356 @@
+import type { Doc } from "yjs";
+import type { RoomState } from "../lib/types.ts";
+import { clearSnapshot } from "./mp-snapshot.ts";
+import {
+  claimWinner,
+  createRoomFromDoc,
+  getOpponentProgress,
+  getPlayers,
+  getRoomState,
+  judgeClaim,
+  leaveRoom,
+  MAX_PLAYERS,
+  observeRoomChanges,
+} from "./p2p-room.ts";
+
+/**
+ * The Room: the rules of one multiplayer match space, with no React, no
+ * timers of its own, and no DOM. It reads and writes the Y.Doc it is
+ * handed — that doc is its state store — and projects a plain snapshot
+ * the UI can render.
+ *
+ * Everything it cannot observe from the doc arrives as an event
+ * ({@link RoomEvent}); everything the player does arrives as a command.
+ * Time arrives as an injected clock rather than `Date.now`, so the
+ * forfeit trust window is testable without fake timers.
+ *
+ * {@link ./useYjsMultiplayer.ts} is the React binding around this and
+ * the Connection; it owns the timers and the DOM listeners that produce
+ * the events.
+ */
+
+// How long after our own absence ended a remote forfeit claim is still
+// honored. Covers the opponent's 60s countdown plus sync latency for
+// the case where we return just as their claim lands.
+const FORFEIT_TRUST_WINDOW_MS = 120_000;
+
+// Shape checks for peer-written game content. 81 cells, digits with
+// "." holes for a puzzle, digits only for a solution.
+const VALID_PUZZLE_RE = /^[1-9.]{81}$/;
+const VALID_SOLUTION_RE = /^[1-9]{81}$/;
+
+export type OpponentProgress = {
+  cellsRemaining: number;
+  completionPercent: number;
+};
+
+export type GameOverInfo = {
+  winnerId: string;
+  winnerName: string;
+};
+
+/**
+ * Everything the UI renders about the room. Identity is stable while
+ * nothing changed, so a consumer can compare snapshots by reference —
+ * the Yjs observer fires on every keystroke's progress write and a
+ * fresh object each time would re-render the whole game tree.
+ */
+export type RoomProjection = {
+  roomState: RoomState | null;
+  puzzle: string | null;
+  solution: string | null;
+  opponentProgress: OpponentProgress | null;
+  gameOver: GameOverInfo | null;
+  /**
+   * Latched true on the first started game and never cleared, so the UI
+   * keeps rendering the board even if roomState or puzzle momentarily
+   * flicker on a sync race instead of bouncing back to the lobby.
+   */
+  hasStartedGame: boolean;
+  roomFull: boolean;
+};
+
+export const INITIAL_PROJECTION: RoomProjection = {
+  roomState: null,
+  puzzle: null,
+  solution: null,
+  opponentProgress: null,
+  gameOver: null,
+  hasStartedGame: false,
+  roomFull: false,
+};
+
+/**
+ * What the Room cannot see for itself. Doc changes are not in here: the
+ * Room observes its own doc, and Yjs delivers those synchronously.
+ */
+export type RoomEvent =
+  /** The transport's signaling status flipped. */
+  | { type: "connectivity-changed"; connected: boolean; now: number }
+  /** The tab was backgrounded or came back to the foreground. */
+  | { type: "visibility-changed"; hidden: boolean; now: number };
+
+export type Room = {
+  apply(event: RoomEvent): void;
+  /** Stable-identity projection; unchanged rounds return the same object. */
+  snapshot(): RoomProjection;
+  /** Called after every projection change, including the Room's own writes. */
+  subscribe(listener: () => void): () => void;
+  /**
+   * Re-project after a write made through another handle on the same
+   * doc: an idempotent write that no-ops fires no Yjs observer, yet the
+   * projection may still need to move (a refused join makes us the
+   * overflow player).
+   */
+  refresh(): void;
+  /** Seated players, however many the CRDT merge left. */
+  playerCount(): number;
+  /**
+   * Claim the win with a completed board. Silently refused unless the
+   * board actually solves the room's puzzle — client-side honesty, not
+   * server enforcement, but it kills the accidental and one-liner cheat
+   * paths.
+   */
+  complete(board: string): void;
+  /**
+   * Claim the win because the opponent vanished. `hasOpponent` is read
+   * at claim time, not from the Room's last presence event: the
+   * countdown was armed from stale state and a player who just came
+   * back must not be steamrolled.
+   */
+  claimForfeit(options: { hasOpponent: boolean }): void;
+  /** Stop observing the doc and drop all subscribers. */
+  close(): void;
+};
+
+export type RoomConfig = {
+  doc: Doc;
+  roomId: string;
+  playerId: string;
+  /**
+   * Read at write time rather than captured: a rename must reach a
+   * claim or a join that has not happened yet.
+   */
+  playerName: () => string;
+  /** Injected clock. Only the forfeit trust window reads it. */
+  now?: () => number;
+};
+
+export function createRoom({
+  doc,
+  roomId,
+  playerId,
+  playerName,
+  now = Date.now,
+}: RoomConfig): Room {
+  const p2p = createRoomFromDoc(doc, roomId);
+  const listeners = new Set<() => void>();
+
+  // Serialized last-published room state for the no-op-fire guard.
+  let lastRoomStateJson: string | undefined;
+  let lastGameNumber = 0;
+  // The puzzle latched for lastGameNumber — lets the projection spot a
+  // same-number/different-puzzle merge after a start collision.
+  let latchedPuzzle: string | null = null;
+  // One-shot: this client removed its own overflow entry after losing a
+  // concurrent-join seat race.
+  let evictedSelf = false;
+  // The room's solution, mirrored only when it is shaped like a real
+  // grid, so claim verification cannot be poisoned by a peer writing
+  // garbage into the CRDT.
+  let verifiedSolution: string | null = null;
+  // Whether this client actually went away (the transport dropped, or
+  // we released it for a backgrounded tab). A remote forfeit claim
+  // asserts that we did — it is only honored when this record backs it
+  // up, otherwise it is the one-liner devtools cheat.
+  const absence = { ongoing: false, endedAt: 0 };
+
+  const draft: RoomProjection = { ...INITIAL_PROJECTION };
+  let published: RoomProjection = { ...INITIAL_PROJECTION };
+  let dirty = false;
+
+  function set<K extends keyof RoomProjection>(
+    key: K,
+    value: RoomProjection[K],
+  ): void {
+    if (Object.is(draft[key], value)) return;
+    draft[key] = value;
+    dirty = true;
+  }
+
+  function mirrorSolution(state: RoomState): void {
+    if (state.solution === null || VALID_SOLUTION_RE.test(state.solution)) {
+      verifiedSolution = state.solution;
+    }
+  }
+
+  /**
+   * Adopt a start or a rematch. Content is checked as well as the
+   * counter: concurrent starts write the SAME gameNumber with different
+   * puzzles and Yjs LWW keeps one, so the losing writer — which latched
+   * that number from its own local write — must notice the merge or
+   * keep rendering a board whose completion can never validate. A game
+   * is only adopted when its content is shaped like a real board; a
+   * peer writing garbage must not brick the client.
+   */
+  function adoptNewGame(state: RoomState): void {
+    const contentValid =
+      state.puzzle !== null &&
+      VALID_PUZZLE_RE.test(state.puzzle) &&
+      (state.solution === null || VALID_SOLUTION_RE.test(state.solution));
+    const isNewGame = contentValid && state.gameNumber > lastGameNumber;
+    const isCollidedGame =
+      contentValid &&
+      !isNewGame &&
+      state.gameNumber === lastGameNumber &&
+      state.puzzle !== null &&
+      latchedPuzzle !== null &&
+      state.puzzle !== latchedPuzzle;
+    if (!isNewGame && !isCollidedGame) return;
+
+    lastGameNumber = state.gameNumber;
+    latchedPuzzle = state.puzzle;
+    set("puzzle", state.puzzle);
+    set("solution", state.solution);
+    set("gameOver", null);
+    set("opponentProgress", null);
+    set("hasStartedGame", true);
+  }
+
+  /**
+   * Judge whoever claimed the win. A remote solved-claim only counts
+   * when the board it ships actually equals the solution. A forfeit
+   * claim asserts that WE went away, so it only counts when our own
+   * absence record agrees; a fabricated forfeit is ignored and later
+   * displaced by our verified solve. Our own claims were judged before
+   * they were written.
+   */
+  function detectWinner(state: RoomState, at: number): void {
+    if (!state.winnerId || !state.winnerName) return;
+    const forfeitBackedByAbsence =
+      absence.ongoing || at - absence.endedAt < FORFEIT_TRUST_WINDOW_MS;
+    const verdict = judgeClaim(state.winnerBoard, state.solution);
+    const claimValid =
+      state.winnerId === playerId ||
+      (verdict === "forfeit" ? forfeitBackedByAbsence : verdict === "solved");
+    if (!claimValid) return;
+
+    set("gameOver", { winnerId: state.winnerId, winnerName: state.winnerName });
+    clearSnapshot(roomId);
+  }
+
+  function trackOpponentProgress(): void {
+    const progress = getOpponentProgress(p2p, playerId);
+    if (!progress) return;
+    const prev = draft.opponentProgress;
+    if (
+      prev &&
+      prev.cellsRemaining === progress.cellsRemaining &&
+      prev.completionPercent === progress.completionPercent
+    ) {
+      return;
+    }
+    set("opponentProgress", progress);
+  }
+
+  /**
+   * Excess-player detection: not among the first MAX_PLAYERS (our join
+   * no-oped), or sorted into the overflow after a concurrent-join
+   * merge. The overflow player deletes its own entry so the two seated
+   * players get their startable lobby back instead of a ghost row and a
+   * disabled Start button.
+   */
+  function settleSeat(state: RoomState): void {
+    const seat = state.players.findIndex((p) => p.id === playerId);
+    if (
+      state.players.length > MAX_PLAYERS &&
+      seat >= MAX_PLAYERS &&
+      !evictedSelf
+    ) {
+      evictedSelf = true;
+      leaveRoom(p2p, playerId);
+    }
+    set(
+      "roomFull",
+      state.players.length >= MAX_PLAYERS &&
+        (seat === -1 || seat >= MAX_PLAYERS),
+    );
+  }
+
+  function project(): void {
+    const state = getRoomState(p2p);
+    // The observer fires per transaction — including our own
+    // keystrokes' progress writes. A cheap content compare (the state
+    // is ~1KB) keeps identity stable across no-op fires.
+    const stateJson = JSON.stringify(state);
+    if (stateJson === lastRoomStateJson) return;
+    lastRoomStateJson = stateJson;
+
+    set("roomState", state);
+    if (state) {
+      mirrorSolution(state);
+      adoptNewGame(state);
+      detectWinner(state, now());
+      trackOpponentProgress();
+      settleSeat(state);
+    }
+    for (const listener of listeners) listener();
+  }
+
+  function markAbsent(): void {
+    absence.ongoing = true;
+    absence.endedAt = 0;
+  }
+
+  function markPresentAgain(at: number): void {
+    if (!absence.ongoing) return;
+    absence.ongoing = false;
+    absence.endedAt = at;
+  }
+
+  const unobserve = observeRoomChanges(p2p, project);
+
+  return {
+    apply(event) {
+      switch (event.type) {
+        case "connectivity-changed":
+          if (event.connected) markPresentAgain(event.now);
+          else markAbsent();
+          break;
+        case "visibility-changed":
+          // Going hidden is not yet an absence: the binding keeps the
+          // transport for a debounce window first, and tells us when it
+          // actually releases it.
+          if (!event.hidden) markPresentAgain(event.now);
+          break;
+      }
+    },
+    snapshot() {
+      if (dirty) {
+        published = { ...draft };
+        dirty = false;
+      }
+      return published;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    refresh: project,
+    playerCount() {
+      return getPlayers(p2p).length;
+    },
+    complete(board) {
+      if (judgeClaim(board, verifiedSolution) !== "solved") return;
+      claimWinner(p2p, playerId, playerName(), board);
+    },
+    claimForfeit({ hasOpponent }) {
+      if (hasOpponent) return;
+      claimWinner(p2p, playerId, playerName(), null);
+    },
+    close() {
+      unobserve();
+      listeners.clear();
+    },
+  };
+}

@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
-import { clearSnapshot, loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
+import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
+import { loadSnapshot, saveSnapshot } from "./mp-snapshot.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 import {
   announcePresence,
-  claimWinner,
   createRoomFromDoc,
-  getOpponentProgress,
   getPlayers,
   getRoomState,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
-  judgeClaim,
-  leaveRoom,
-  MAX_PLAYERS,
   observeRoomChanges,
   type P2PRoom,
   presenceHasOpponent,
@@ -40,30 +36,10 @@ type UseYjsMultiplayerOptions = {
   openConnection?: OpenConnection;
 };
 
-// How long after our own absence ended a remote forfeit claim is still
-// honored. Covers the opponent's 60s countdown plus sync latency for
-// the case where we return just as their claim lands.
-const FORFEIT_TRUST_WINDOW_MS = 120_000;
-
 // Grace window before applying the localStorage snapshot to an empty
 // doc: long enough for WebRTC to deliver the live room when a peer is
 // up, short enough that a genuine solo restore feels instant-ish.
 const HYDRATE_GRACE_MS = 3_000;
-
-// Shape checks for peer-written game content. 81 cells, digits with
-// "." holes for a puzzle, digits only for a solution.
-const VALID_PUZZLE_RE = /^[1-9.]{81}$/;
-const VALID_SOLUTION_RE = /^[1-9]{81}$/;
-
-type OpponentProgress = {
-  cellsRemaining: number;
-  completionPercent: number;
-};
-
-type GameOverInfo = {
-  winnerId: string;
-  winnerName: string;
-};
 
 export function useYjsMultiplayer({
   roomId,
@@ -73,51 +49,21 @@ export function useYjsMultiplayer({
   openConnection = openWebrtcConnection,
 }: UseYjsMultiplayerOptions) {
   const [connected, setConnected] = useState(false);
-  const [roomState, setRoomState] = useState<RoomState | null>(null);
-  const [puzzle, setPuzzle] = useState<string | null>(null);
-  const [solution, setSolution] = useState<string | null>(null);
-  const [opponentProgress, setOpponentProgress] =
-    useState<OpponentProgress | null>(null);
-  const [gameOver, setGameOver] = useState<GameOverInfo | null>(null);
+  // Everything the Room projects, in one value: the Room keeps its
+  // identity stable across no-op doc fires, so React bails out of the
+  // re-render without the hook comparing anything.
+  const [projection, setProjection] = useState(INITIAL_PROJECTION);
   // Fresh object per raise (not a bare string): consumers toast off
   // this value, and a repeat of the same message must still re-fire
   // their effect.
   const [error, setError] = useState<{ message: string } | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
-  // True when this client is the odd one out of a full 1v1 room —
-  // either it arrived after two players had joined (its joinRoom
-  // no-oped), or a concurrent-join merge left three entries and this
-  // player sorts into the overflow.
-  const [roomFull, setRoomFull] = useState(false);
-  // Latched true on first gameNumber > 0 and never cleared. Lets the UI
-  // keep rendering the board even if roomState or puzzle momentarily
-  // flicker (Yjs sync race, transient peer state), instead of bouncing
-  // back to the lobby/connecting screen and unmounting local state.
-  const [hasStartedGame, setHasStartedGame] = useState(false);
 
-  const roomRef = useRef<P2PRoom | null>(null);
+  const roomRef = useRef<Room | null>(null);
+  // Second handle on the same doc, for the setup writes the Room does
+  // not own yet.
+  const p2pRef = useRef<P2PRoom | null>(null);
   const connectionRef = useRef<Connection | null>(null);
-  const lastGameNumberRef = useRef<number>(0);
-  // The puzzle we latched for lastGameNumberRef — lets the observer
-  // spot a same-number/different-puzzle merge after a start collision.
-  const latchedPuzzleRef = useRef<string | null>(null);
-  // One-shot: this client removed its own overflow entry after losing
-  // a concurrent-join seat race.
-  const evictedSelfRef = useRef(false);
-  // Serialized last-published room snapshot for the no-op-fire guard.
-  const lastRoomStateJsonRef = useRef<string | undefined>(undefined);
-  // Tracks whether this client actually went away (WebRTC dropped for a
-  // hidden tab, or the signaling connection fell over). A remote
-  // forfeit claim asserts that we did — it is only honored when this
-  // record backs it up, otherwise it's the one-liner devtools cheat.
-  const absenceRef = useRef<{ ongoing: boolean; endedAt: number }>({
-    ongoing: false,
-    endedAt: 0,
-  });
-  // Mirrors the room's current solution so the sendComplete callback
-  // (stable identity, created once) can validate claims without a
-  // stale closure over the `solution` state.
-  const solutionRef = useRef<string | null>(null);
   const playerNameRef = useRef(playerName);
   playerNameRef.current = playerName;
   // Captured at mount so the joiner does not stomp on the host's
@@ -148,157 +94,47 @@ export function useYjsMultiplayer({
     // peer connection exists.
     const start = (connection: Connection): (() => void) => {
       const doc = connection.doc;
-      const room = createRoomFromDoc(doc, roomId);
+      const p2p = createRoomFromDoc(doc, roomId);
+      const room = createRoom({
+        doc,
+        roomId,
+        playerId,
+        playerName: () => playerNameRef.current,
+      });
       roomRef.current = room;
+      p2pRef.current = p2p;
       connectionRef.current = connection;
 
       const awareness = connection.awareness;
 
-      const updateState = () => {
-        const state = getRoomState(room);
-        // The observer fires per transaction — including our own
-        // keystrokes' progress writes — and a fresh object each time
-        // re-renders the whole game tree. Cheap content compare (the
-        // snapshot is ~1KB) keeps identity stable across no-op fires.
-        const stateJson = JSON.stringify(state);
-        if (stateJson === lastRoomStateJsonRef.current) return;
-        lastRoomStateJsonRef.current = stateJson;
-        setRoomState(state);
-        if (!state) return;
-        // Any peer can write anything into the doc; only mirror a
-        // solution that is actually a full grid so sendComplete's
-        // verification can't be poisoned by garbage.
-        if (state.solution === null || VALID_SOLUTION_RE.test(state.solution)) {
-          solutionRef.current = state.solution;
-        }
-
-        // Detect new game (start or rematch). Content is checked as well
-        // as the counter: concurrent starts/rematches write the SAME
-        // gameNumber with different puzzles and LWW keeps one — the
-        // losing writer latched the number from its own local write, so
-        // without the puzzle comparison it would keep a board whose
-        // completion never validates against the room's solution.
-        // A game is only adopted when its content is shaped like a real
-        // board — a peer writing garbage must not brick the client.
-        const contentValid =
-          state.puzzle !== null &&
-          VALID_PUZZLE_RE.test(state.puzzle) &&
-          (state.solution === null || VALID_SOLUTION_RE.test(state.solution));
-        const isNewGame =
-          contentValid && state.gameNumber > lastGameNumberRef.current;
-        const isCollidedGame =
-          contentValid &&
-          !isNewGame &&
-          state.gameNumber === lastGameNumberRef.current &&
-          state.puzzle !== null &&
-          latchedPuzzleRef.current !== null &&
-          state.puzzle !== latchedPuzzleRef.current;
-        if (isNewGame || isCollidedGame) {
-          lastGameNumberRef.current = state.gameNumber;
-          latchedPuzzleRef.current = state.puzzle;
-          setPuzzle(state.puzzle);
-          setSolution(state.solution);
-          setGameOver(null);
-          setOpponentProgress(null);
-          setHasStartedGame(true);
-        }
-
-        // Detect winner. A remote solved-claim only counts when the
-        // board it ships actually equals the solution — a peer can write
-        // anything into the CRDT. A forfeit claim (null board) asserts
-        // that WE went away, so it only counts when our own absence
-        // record agrees; a fabricated forfeit is ignored and later
-        // displaced by our verified solve. Our own claims were validated
-        // before writing.
-        if (state.winnerId && state.winnerName) {
-          const absence = absenceRef.current;
-          const forfeitBackedByAbsence =
-            absence.ongoing ||
-            Date.now() - absence.endedAt < FORFEIT_TRUST_WINDOW_MS;
-          const verdict = judgeClaim(state.winnerBoard, state.solution);
-          const claimValid =
-            state.winnerId === playerId ||
-            (verdict === "forfeit"
-              ? forfeitBackedByAbsence
-              : verdict === "solved");
-          if (claimValid) {
-            setGameOver({
-              winnerId: state.winnerId,
-              winnerName: state.winnerName,
-            });
-            clearSnapshot(roomId);
-          }
-        }
-
-        // Update opponent progress (functional set keeps identity when
-        // the numbers didn't move)
-        const progress = getOpponentProgress(room, playerId);
-        if (progress) {
-          setOpponentProgress((prev) =>
-            prev &&
-            prev.cellsRemaining === progress.cellsRemaining &&
-            prev.completionPercent === progress.completionPercent
-              ? prev
-              : progress,
-          );
-        }
-
-        // Excess-player detection: not among the first MAX_PLAYERS
-        // (joinRoom no-oped), or sorted into the overflow after a
-        // concurrent-join merge.
-        const seat = state.players.findIndex((p) => p.id === playerId);
-        if (
-          state.players.length > MAX_PLAYERS &&
-          seat >= MAX_PLAYERS &&
-          !evictedSelfRef.current
-        ) {
-          // We hold an entry but lost the seat race — delete it so the
-          // two seated players get their startable lobby back instead of
-          // a ghost row and a disabled Start button.
-          evictedSelfRef.current = true;
-          leaveRoom(room, playerId);
-        }
-        setRoomFull(
-          state.players.length >= MAX_PLAYERS &&
-            (seat === -1 || seat >= MAX_PLAYERS),
-        );
-      };
-
-      const unobserveRoom = observeRoomChanges(room, updateState);
+      const unsubscribeRoom = room.subscribe(() => {
+        setProjection(room.snapshot());
+      });
 
       const updatePresence = () => {
         const hasOpponent = presenceHasOpponent(
           awareness,
           doc.clientID,
           playerId,
-          getPlayers(room).length,
+          room.playerCount(),
         );
         // We drop our own WebRTC on hide (see visibility handler), which
         // clears our awareness — don't blame the opponent for that.
         setOpponentDisconnected(
-          !document.hidden && !hasOpponent && getPlayers(room).length > 1,
+          !document.hidden && !hasOpponent && room.playerCount() > 1,
         );
       };
 
       awareness.on("change", updatePresence);
 
-      const markAbsent = () => {
-        absenceRef.current = { ongoing: true, endedAt: 0 };
-      };
-      const markPresentAgain = () => {
-        if (absenceRef.current.ongoing) {
-          absenceRef.current = { ongoing: false, endedAt: Date.now() };
-        }
-      };
-
       // Track connection status via the transport
       const unsubscribeStatus = connection.onStatus((isConnected) => {
         setConnected(isConnected);
-        if (isConnected) {
-          markPresentAgain();
-        } else {
-          markAbsent();
-        }
+        room.apply({
+          type: "connectivity-changed",
+          connected: isConnected,
+          now: Date.now(),
+        });
       });
 
       // Also listen for peers to detect when WebRTC connects
@@ -312,7 +148,7 @@ export function useYjsMultiplayer({
       // and iOS Safari doesn't always flush them before killing a
       // backgrounded tab — saveSnapshot survives that.
       const persistSnapshot = () => {
-        const state = getRoomState(room);
+        const state = getRoomState(p2p);
         if (state) saveSnapshot(roomId, state);
       };
 
@@ -328,7 +164,11 @@ export function useYjsMultiplayer({
           if (hideTimer === null) {
             hideTimer = setTimeout(() => {
               connection.disconnect();
-              markAbsent();
+              room.apply({
+                type: "connectivity-changed",
+                connected: false,
+                now: Date.now(),
+              });
               hideTimer = null;
             }, HIDE_DEBOUNCE_MS);
           }
@@ -341,8 +181,12 @@ export function useYjsMultiplayer({
             connection.connect();
             announcePresence(awareness, playerId, playerNameRef.current);
           }
-          markPresentAgain();
         }
+        room.apply({
+          type: "visibility-changed",
+          hidden: document.hidden,
+          now: Date.now(),
+        });
         updatePresence();
       };
       document.addEventListener("visibilitychange", handleVisibility);
@@ -369,10 +213,12 @@ export function useYjsMultiplayer({
           if (cancelled) return;
           const initialDifficulty = initialDifficultyRef.current;
           if (initialDifficulty) {
-            initializeRoom(room, playerId, initialDifficulty);
+            initializeRoom(p2p, playerId, initialDifficulty);
           }
-          joinRoom(room, playerId, playerNameRef.current);
-          updateState();
+          joinRoom(p2p, playerId, playerNameRef.current);
+          // An idempotent write that no-ops fires no Yjs observer, yet
+          // a refused join still makes us the overflow player.
+          room.refresh();
         };
 
         announcePresence(awareness, playerId, playerNameRef.current);
@@ -384,7 +230,7 @@ export function useYjsMultiplayer({
         // per-key LWW could roll a finished game back for both players.
         // Give WebRTC a grace window to deliver the real room first; the
         // snapshot only applies when nothing shows up.
-        const yjs = getRoomState(room);
+        const yjs = getRoomState(p2p);
         const snap = !yjs || yjs.gameNumber === 0 ? loadSnapshot(roomId) : null;
         if (!snap) {
           completeSetup();
@@ -400,15 +246,15 @@ export function useYjsMultiplayer({
           stopHydrateWatch = null;
           if (cancelled) return;
           if (applySnapshot) {
-            const current = getRoomState(room);
+            const current = getRoomState(p2p);
             if (!current || current.gameNumber === 0) {
-              hydrateRoomFromSnapshot(room, snap);
+              hydrateRoomFromSnapshot(p2p, snap);
             }
           }
           completeSetup();
         };
-        stopHydrateWatch = observeRoomChanges(room, () => {
-          const current = getRoomState(room);
+        stopHydrateWatch = observeRoomChanges(p2p, () => {
+          const current = getRoomState(p2p);
           if (current && current.gameNumber > 0) finish(false);
         });
         hydrateTimer = setTimeout(() => {
@@ -430,12 +276,16 @@ export function useYjsMultiplayer({
         }
         stopHydrateWatch?.();
         stopHydrateWatch = null;
-        unobserveRoom();
         awareness.off("change", updatePresence);
         unsubscribeStatus();
         unsubscribePeers();
+        unsubscribeRoom();
+        // The Room observes the doc the Connection owns — it has to let
+        // go before close() destroys it.
+        room.close();
         connection.close();
         roomRef.current = null;
+        p2pRef.current = null;
         connectionRef.current = null;
       };
     };
@@ -460,39 +310,29 @@ export function useYjsMultiplayer({
   }, [roomId, playerId]);
 
   const sendStartGame = useCallback(() => {
-    const room = roomRef.current;
-    if (!room) return;
+    const p2p = p2pRef.current;
+    if (!p2p) return;
 
-    const players = getPlayers(room);
+    const players = getPlayers(p2p);
     if (players.length < 2) {
       setError({ message: "Need 2 players to start" });
       return;
     }
-    startGame(room);
+    startGame(p2p);
   }, []);
 
   const sendProgress = useCallback(
     (cellsRemaining: number, completionPercent: number) => {
-      const room = roomRef.current;
-      if (!room) return;
-      updateProgress(room, playerId, cellsRemaining, completionPercent);
+      const p2p = p2pRef.current;
+      if (!p2p) return;
+      updateProgress(p2p, playerId, cellsRemaining, completionPercent);
     },
     [playerId],
   );
 
-  const sendComplete = useCallback(
-    (board: string) => {
-      const room = roomRef.current;
-      if (!room) return;
-      // Only a board that actually solves the puzzle may claim — the
-      // same guard the receiver applies to a remote claim. This is
-      // client-side honesty, not server enforcement, but it kills the
-      // accidental and one-liner cheat paths.
-      if (judgeClaim(board, solutionRef.current) !== "solved") return;
-      claimWinner(room, playerId, playerNameRef.current, board);
-    },
-    [playerId],
-  );
+  const sendComplete = useCallback((board: string) => {
+    roomRef.current?.complete(board);
+  }, []);
 
   // Forfeit path: the opponent's presence dropped and the grace period
   // ran out. Distinct from sendComplete so an unfinished board is never
@@ -500,35 +340,32 @@ export function useYjsMultiplayer({
   const claimForfeitWin = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
-    // Recheck at claim time: the countdown was armed from stale state
-    // and the opponent may have reconnected in the meantime — don't
-    // steamroll a player who just came back.
+    // Presence is re-read here, not taken from the Room's last event:
+    // the countdown was armed from stale state and the opponent may
+    // have reconnected in the meantime.
     const connection = connectionRef.current;
-    if (
-      connection &&
+    const hasOpponent =
+      connection !== null &&
       presenceHasOpponent(
         connection.awareness,
-        room.doc.clientID,
+        connection.doc.clientID,
         playerId,
-        getPlayers(room).length,
-      )
-    ) {
-      return;
-    }
-    claimWinner(room, playerId, playerNameRef.current, null);
+        room.playerCount(),
+      );
+    room.claimForfeit({ hasOpponent });
   }, [playerId]);
 
   const sendRematch = useCallback(() => {
-    const room = roomRef.current;
-    if (!room) return;
-    requestRematch(room);
+    const p2p = p2pRef.current;
+    if (!p2p) return;
+    requestRematch(p2p);
   }, []);
 
   const updateName = useCallback(
     (newName: string) => {
-      const room = roomRef.current;
-      if (!room) return;
-      updatePlayerName(room, playerId, newName);
+      const p2p = p2pRef.current;
+      if (!p2p) return;
+      updatePlayerName(p2p, playerId, newName);
 
       // Update awareness too
       const connection = connectionRef.current;
@@ -540,27 +377,21 @@ export function useYjsMultiplayer({
   );
 
   const setAssistLevel = useCallback((level: AssistLevel) => {
-    const room = roomRef.current;
-    if (!room) return;
-    setRoomAssistLevel(room, level);
+    const p2p = p2pRef.current;
+    if (!p2p) return;
+    setRoomAssistLevel(p2p, level);
   }, []);
 
   const setDifficulty = useCallback((level: Difficulty) => {
-    const room = roomRef.current;
-    if (!room) return;
-    setRoomDifficulty(room, level);
+    const p2p = p2pRef.current;
+    if (!p2p) return;
+    setRoomDifficulty(p2p, level);
   }, []);
 
   return {
     connected,
-    roomState,
-    puzzle,
-    solution,
-    opponentProgress,
+    ...projection,
     opponentDisconnected,
-    gameOver,
-    hasStartedGame,
-    roomFull,
     error,
     sendStartGame,
     sendProgress,
