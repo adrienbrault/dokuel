@@ -169,7 +169,10 @@ export function useNumPadGesture({
 
       cancelTimer();
       press.gestureMode = mode;
-      pointerFiredRef.current = false; // suppress the click that follows
+      // pointerFiredRef stays set: a gesture released back over the key
+      // it started on still ends with a browser click on that key, and
+      // that click is the tail of THIS gesture, not an AT activation —
+      // handleClick must swallow it rather than tap.
       // Release pointer capture so document-level listeners can see moves
       // outside this button.
       try {
