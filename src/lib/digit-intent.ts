@@ -85,8 +85,12 @@ export function digitIntent(
     case "drop":
       return dropIntent(gesture);
     case "key":
-      // Stub so the commit typechecks; the keyboard rules land next.
-      return intent({ kind: "none" });
+      if (!hasSelection(ctx)) return intent({ kind: "none" });
+      // A pencilled key releases the selection — but, unlike a range
+      // tap, without spotlighting the digit.
+      return gesture.notesMode
+        ? intent({ kind: "note", at: null }, "release")
+        : intent({ kind: "value", at: null });
   }
 }
 
