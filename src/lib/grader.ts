@@ -10,13 +10,13 @@
  *   4 — none of the above suffice: chains or trial-and-error required
  */
 
+import { boxIndex, popcount, UNITS } from "./board-geometry.ts";
 import {
-  ALL_DIGITS,
-  boxIndex,
-  PEERS,
-  popcount,
-  UNITS,
-} from "./board-geometry.ts";
+  type CandidateState,
+  findSingle,
+  initCandidates,
+  place,
+} from "./candidates.ts";
 
 export type TechniqueTier = 1 | 2 | 3 | 4;
 
@@ -30,81 +30,7 @@ export type PuzzleGrade = {
   stuckCells: number;
 };
 
-type GradeState = {
-  grid: Uint8Array;
-  cand: Uint16Array;
-  empty: number;
-};
-
-function initState(puzzle: string): GradeState | null {
-  if (!/^[1-9.]{81}$/.test(puzzle)) return null;
-  const grid = new Uint8Array(81);
-  for (let i = 0; i < 81; i++) {
-    const code = puzzle.charCodeAt(i);
-    grid[i] = code === 46 ? 0 : code - 48;
-  }
-  const cand = new Uint16Array(81);
-  let empty = 0;
-  for (let i = 0; i < 81; i++) {
-    if (grid[i] !== 0) continue;
-    empty++;
-    let mask = ALL_DIGITS;
-    for (const p of PEERS[i]!) {
-      const v = grid[p]!;
-      if (v) mask &= ~(1 << v);
-    }
-    if (mask === 0) return null;
-    cand[i] = mask;
-  }
-  return { grid, cand, empty };
-}
-
-function place(s: GradeState, cell: number, value: number): void {
-  s.grid[cell] = value;
-  s.cand[cell] = 0;
-  s.empty--;
-  const bit = 1 << value;
-  for (const p of PEERS[cell]!) {
-    s.cand[p]! &= ~bit;
-  }
-}
-
-function nakedSingle(s: GradeState): boolean {
-  for (let i = 0; i < 81; i++) {
-    if (s.grid[i] === 0 && popcount(s.cand[i]!) === 1) {
-      place(s, i, 31 - Math.clz32(s.cand[i]!));
-      return true;
-    }
-  }
-  return false;
-}
-
-function hiddenSingle(s: GradeState): boolean {
-  for (const unit of UNITS) {
-    for (let v = 1; v <= 9; v++) {
-      const bit = 1 << v;
-      let count = 0;
-      let where = -1;
-      let placed = false;
-      for (const cell of unit) {
-        if (s.grid[cell] === v) {
-          placed = true;
-          break;
-        }
-        if (s.cand[cell]! & bit) {
-          count++;
-          where = cell;
-        }
-      }
-      if (placed || count !== 1) continue;
-      // A naked single would already have caught a one-candidate cell,
-      // so this placement is progress only singles-in-a-unit can see.
-      place(s, where, v);
-      return true;
-    }
-  }
-  return false;
-}
+type GradeState = CandidateState;
 
 function eliminate(s: GradeState, cell: number, bits: number): boolean {
   if (!(s.cand[cell]! & bits)) return false;
@@ -279,11 +205,15 @@ function xWing(s: GradeState): boolean {
  * stuck — nothing a human technique could do with it.
  */
 export function gradePuzzle(puzzle: string): PuzzleGrade {
-  const s = initState(puzzle);
+  const s = initCandidates(puzzle);
   if (!s) return { tier: 4, stuckCells: 81 };
   let tier: TechniqueTier = 1;
   while (s.empty > 0) {
-    if (nakedSingle(s) || hiddenSingle(s)) continue;
+    const single = findSingle(s);
+    if (single) {
+      place(s, single.cell, single.digit);
+      continue;
+    }
     if (
       pointingCandidates(s) ||
       claimingCandidates(s) ||
