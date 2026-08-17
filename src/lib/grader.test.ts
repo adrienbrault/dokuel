@@ -37,4 +37,11 @@ describe("gradePuzzle", () => {
   it("treats a malformed puzzle as maximally stuck", () => {
     expect(gradePuzzle("123")).toEqual({ tier: 4, stuckCells: 81 });
   });
+
+  it("treats a contradictory puzzle as maximally stuck", () => {
+    // Cell (0,8) sees 1-8 in its row and 9 in its column: no candidate
+    // remains, though no two givens clash directly.
+    const contradictory = `12345678.........9${".".repeat(63)}`;
+    expect(gradePuzzle(contradictory)).toEqual({ tier: 4, stuckCells: 81 });
+  });
 });
