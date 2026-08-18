@@ -1,4 +1,5 @@
 import { getErrors } from "./sudoku.ts";
+import { findTechniqueHint } from "./technique-hint.ts";
 import type { ActiveHint, Board, Position } from "./types.ts";
 
 // Alias, not a parallel definition: board-engine stores findHint's
@@ -258,6 +259,12 @@ export function findHint(
   const hiddenSingle = findHiddenSingle(board);
   if (hiddenSingle) return hiddenSingle;
 
+  // No single anywhere — the state graded boards put players in. Look
+  // for the elimination (locked candidates, pairs, triples, X-wing)
+  // whose removals make the next placement visible, and teach that.
+  const techniqueHint = findTechniqueHint(board);
+  if (techniqueHint) return techniqueHint;
+
   // Fallback: use solution to find the target cell and explain what's possible
   let targetRow = -1;
   let targetCol = -1;
@@ -289,8 +296,8 @@ export function findHint(
     technique: "reveal",
     explanation:
       candidates.size <= 3
-        ? `This cell's candidates are ${[...candidates].sort().join(", ")}. The answer is ${value} — try analyzing which values are possible in neighboring cells to narrow it down.`
-        : `This cell has ${candidates.size} candidates: ${[...candidates].sort().join(", ")}. The answer is ${value}. Look for cells with fewer candidates first, or try finding where ${value} must go in this row, column, or box.`,
+        ? `No single, pair, triple, or X-wing decides a cell right now — this board needs chain logic. This cell can be ${[...candidates].sort().join(", ")}; the answer is ${value}, and placing it will open the board back up.`
+        : `No single, pair, triple, or X-wing decides a cell right now — this board needs chain logic. This cell still has ${candidates.size} candidates; the answer is ${value}, and placing it will open the board back up.`,
     relatedCells: eliminatingCells(board, targetRow, targetCol),
   };
 }

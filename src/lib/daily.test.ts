@@ -34,21 +34,22 @@ describe("getDailyPuzzle", () => {
   // generator, clue bands, seeding, or rng silently forks the daily
   // between differently-cached bundles — if one of these fails, that
   // is what just happened. Regenerate the vectors only when forking
-  // every future daily is the intended outcome.
+  // every future daily is the intended outcome. Last regenerated when
+  // medium gained its technique-grade cap (tier ≤ 2).
   it("matches the pinned golden vectors", () => {
     const jan = getDailyPuzzle("2026-01-01", "medium");
     expect(jan.puzzle).toBe(
-      "1...6.73.....7.....7.5..6293.9..51......3.29.6.79.1.4.93.8...7.7..1....3864.57.1.",
+      "...231..8..........8.4..531..7.5....6...243..8.49..7...1389..6.2..3761.9.....2.7.",
     );
     expect(jan.solution).toBe(
-      "185269734296473851473518629349725168518634297627981345931842576752196483864357912",
+      "475231698136589247982467531327658914691724385854913726713895462248376159569142873",
     );
     const jul = getDailyPuzzle("2026-07-27", "medium");
     expect(jul.puzzle).toBe(
-      "71....6...46....799...3.2...3.2.5..68.......4569.....3.7..86...2..1..4.7.5..7.3..",
+      "7.86....9.9..7.6.1.2.15.....4......7..73...822.37..5.48..236...1.....2.6..2.15..8",
     );
     expect(jul.solution).toBe(
-      "712894635346521879985637241437215986821369754569748123173486592298153467654972318",
+      "718623459395478621426159873941582367567394182283761594874236915159847236632915748",
     );
   });
 });

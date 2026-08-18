@@ -30,9 +30,14 @@ Plus contextual entries:
 ### Difficulty Selection
 Available before every game (solo or multiplayer):
 - Easy (~45 clues)
-- Medium (~35 clues)
-- Hard (~28 clues)
-- Expert (~22 clues)
+- Medium (~35 clues) — technique-graded ceiling: pairs and locked
+  candidates at most, never triples, X-wings, or guessing
+- Hard (~28 clues) — technique-graded: demands at least triples or an
+  X-wing, may go up to quads, XY-wings, and swordfish, and is
+  guaranteed solvable start to finish without chains or guessing
+- Expert (~22 clues) — technique-graded: the full ladder (through
+  quads, XY-wings, and swordfish) runs dry with 40+ cells still open;
+  chains or trial-and-error required
 
 **Assistance selector** (three levels, also switchable mid-game from the
 settings popover):
@@ -237,6 +242,7 @@ Speced or desired, deliberately not built yet:
 - **Service worker / offline play** — the manifest already makes the app
   installable; offline caching needs careful interplay with live WebRTC
   rooms before it ships
-- **Technique-graded difficulty** — grade generated puzzles by the solving
-  techniques they require instead of clue count; needs a versioned rollout
-  because the daily challenge pins golden vectors for reproducibility
+- **Technique-graded easy** — medium, hard, and expert are graded by
+  the techniques they require (see Difficulty Selection); easy still
+  relies on its clue band alone, which in practice already yields
+  singles-only boards

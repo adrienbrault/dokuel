@@ -54,6 +54,16 @@ export type MoveAction =
 export type HintTechnique =
   | "naked-single"
   | "hidden-single"
+  | "locked-candidates"
+  | "naked-pair"
+  | "hidden-pair"
+  | "naked-triple"
+  | "hidden-triple"
+  | "naked-quad"
+  | "hidden-quad"
+  | "x-wing"
+  | "xy-wing"
+  | "swordfish"
   | "mistake"
   | "reveal";
 

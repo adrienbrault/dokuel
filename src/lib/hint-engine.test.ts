@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
-import { parsePuzzle } from "./sudoku.ts";
+import { parsePuzzle, solvePuzzle } from "./sudoku.ts";
 
 describe("findHint", () => {
   describe("mistake redirection", () => {
@@ -220,6 +220,101 @@ describe("findHint", () => {
       const hint = findHint(board, solved, { row: 8, col: 8 });
       expect(hint).not.toBeNull();
       expect(hint!.position).toEqual({ row: 8, col: 8 });
+    });
+  });
+
+  describe("technique unlock", () => {
+    // Boards captured by playing singles to exhaustion on graded
+    // puzzles — the state where the old engine gave up and revealed.
+    const PAIRS_STUCK =
+      "5.....3277.982.4656..57.891.7....1.49.31.5.78..1..7..9497.1.5823..4927161..758943";
+    const TRIPLES_STUCK =
+      "57....8....87..9.....5.873468..59..7..567..98.9728....8....647.7413256899.6847..1";
+
+    it("explains the unlocking elimination instead of revealing", () => {
+      // Box 2 confines 3 to column 6, which strips r7c6 down to a
+      // lone 6 — a real deduction with proving cells, not a reveal.
+      const board = parsePuzzle(PAIRS_STUCK);
+      const hint = findHint(board, solvePuzzle(PAIRS_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("locked-candidates");
+      expect(hint!.position).toEqual({ row: 6, col: 5 });
+      expect(hint!.value).toBe(6);
+      expect(hint!.explanation).toContain("3");
+      expect(hint!.explanation).toContain("6");
+      expect(hint!.relatedCells.length).toBeGreaterThan(0);
+    });
+
+    it("labels an X-wing unlock as an X-wing", () => {
+      const board = parsePuzzle(TRIPLES_STUCK);
+      const hint = findHint(board, solvePuzzle(TRIPLES_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("x-wing");
+      expect(hint!.position).toEqual({ row: 5, col: 7 });
+      expect(hint!.value).toBe(4);
+    });
+
+    it("teaches a swordfish where the old ladder revealed", () => {
+      const SWORDFISH_STUCK =
+        "....1..3519.3.........64...4.65..1......9...89..1..25....7.856.5.8............48.";
+      const board = parsePuzzle(SWORDFISH_STUCK);
+      const hint = findHint(board, solvePuzzle(SWORDFISH_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("swordfish");
+      expect(hint!.position).toEqual({ row: 1, col: 6 });
+      expect(hint!.value).toBe(8);
+      expect(hint!.explanation).toContain("8");
+    });
+
+    it("teaches an XY-wing and owns up to its depth", () => {
+      // priorSteps is 1 here: one quieter elimination precedes the
+      // XY-wing, and the hint must say so instead of pretending the
+      // deduction reads straight off the visible board.
+      const XYWING_STUCK =
+        "1...539466....4382.436.27..3...4829...4.216372..3.64.87..4358.94.9..75.3538269174";
+      const board = parsePuzzle(XYWING_STUCK);
+      const hint = findHint(board, solvePuzzle(XYWING_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("xy-wing");
+      expect(hint!.position).toEqual({ row: 3, col: 3 });
+      expect(hint!.value).toBe(5);
+      expect(hint!.explanation).toContain("XY-wing");
+      expect(hint!.explanation).toContain("eliminations deep");
+    });
+
+    it("walks the XY-wing through both pivot cases with real digits", () => {
+      // The live board behind the "I don't understand" report: the
+      // pivot holds 4/5 and never the eliminated 2, so a hint naming
+      // only "an XY-wing on 2" reads as nonsense. The fix: name the
+      // pivot's digits and walk what each choice forces.
+      const USER_BOARD =
+        ".738.1.69.61..9.8.8946...1.42756839115.3..87.38..17.4.745126938912783654638...127";
+      const board = parsePuzzle(USER_BOARD);
+      const hint = findHint(board, solvePuzzle(USER_BOARD)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("xy-wing");
+      expect(hint!.position).toEqual({ row: 1, col: 0 });
+      expect(hint!.value).toBe(5);
+      expect(hint!.explanation).toContain("pivot cell can only be 4 or 5");
+      expect(hint!.explanation).toContain("If it's 4, the 4/2 cell must be 2");
+      expect(hint!.explanation).toContain("if it's 5, the 5/2 cell must be 2");
+    });
+
+    it("labels a naked-quad unlock", () => {
+      const QUAD_STUCK =
+        "6.4..8..72..59184689...63.....8.267...8.57..972.9..518.82..5...5........1....97.5";
+      const board = parsePuzzle(QUAD_STUCK);
+      const hint = findHint(board, solvePuzzle(QUAD_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("naked-quad");
+      expect(hint!.position).toEqual({ row: 3, col: 0 });
+      expect(hint!.value).toBe(9);
     });
   });
 

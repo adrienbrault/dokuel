@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededRandom } from "./daily.ts";
+import { gradePuzzle } from "./grader.ts";
 import { countSolutions } from "./solver.ts";
 import {
   cellKey,
@@ -76,6 +77,47 @@ describe("generatePuzzle", () => {
     expect(generatePuzzle("hard", seededRandom(5))).toBe(
       generatePuzzle("hard", seededRandom(5)),
     );
+  });
+
+  // Clue count alone is a weak difficulty signal — half the puzzles in
+  // the hard clue band fall to singles. These bars are the actual
+  // difficulty contract: hard must demand advanced techniques, expert
+  // must defeat them outright across most of the board.
+  it("medium never demands more than pairs and locked candidates", () => {
+    // These seeds produced chains-grade boards under clue-band-only
+    // digging — a "medium" a player could not finish without guessing.
+    for (const seed of [6, 18, 19]) {
+      const grade = gradePuzzle(generatePuzzle("medium", seededRandom(seed)));
+      expect(grade.tier).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it("hard demands advanced techniques and never needs chains", () => {
+    // The chain-free guarantee: every hard board must be solvable
+    // start to finish on the ladder (stuckCells 0), while demanding
+    // at least tier 3 so it stays genuinely hard.
+    for (const seed of [1, 2, 3]) {
+      const grade = gradePuzzle(generatePuzzle("hard", seededRandom(seed)));
+      expect(grade.tier).toBeGreaterThanOrEqual(3);
+      expect(grade.stuckCells).toBe(0);
+    }
+  });
+
+  it("expert defeats every graded technique across most of the board", () => {
+    for (const seed of [1, 2, 3]) {
+      const grade = gradePuzzle(generatePuzzle("expert", seededRandom(seed)));
+      expect(grade.tier).toBe(5);
+      expect(grade.stuckCells).toBeGreaterThanOrEqual(40);
+    }
+  });
+
+  it("still ships a valid board when the grade bar is unreachable", () => {
+    // A constant rng makes every dig identical, so the graded loop can
+    // never meet its bar — generation must fall back to the best board
+    // seen instead of blocking the UI.
+    const puzzle = generatePuzzle("expert", () => 0);
+    expect(puzzle).toMatch(/^[1-9.]{81}$/);
+    expect(countSolutions(puzzle)).toBe(1);
   });
 });
 
