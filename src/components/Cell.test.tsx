@@ -260,6 +260,24 @@ describe("Cell chargingDigit", () => {
     expect(screen.queryByTestId("drop-preview")).toBeNull();
   });
 
+  it("marks a filled cell as holding a draggable digit", () => {
+    // The grab cursor keys off this attribute rather than a utility
+    // class: Tailwind's utilities live in a cascade layer, and ANY
+    // unlayered rule on the page — an extension, a user stylesheet —
+    // beats a layered one whatever its specificity. The drag-time
+    // cursors are unlayered and survive that; the resting ones have to
+    // be too, which means an attribute the unlayered CSS can select.
+    render(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
+    expect(screen.getByRole("button")).toHaveAttribute("data-cell-filled");
+  });
+
+  it("leaves an empty cell unmarked so it keeps the range-select cursor", () => {
+    // Empty cells can be swept to build a multi-cell selection — they
+    // inherit the grid's cell cursor instead of the grab one.
+    render(<Cell {...defaultProps()} cell={makeCell()} />);
+    expect(screen.getByRole("button")).not.toHaveAttribute("data-cell-filled");
+  });
+
   it("hides the static note glyph for the digit being charged", () => {
     // Notes 1, 3, 5 in the cell; charging digit 3 — only 1 and 5
     // should remain visible in the notes grid (the 3 is being shown

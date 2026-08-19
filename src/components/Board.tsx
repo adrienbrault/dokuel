@@ -171,6 +171,11 @@ export function Board({
         role="region"
         aria-label="Sudoku board"
         data-board-glow
+        // Cursor hook: the seams between cells and the board's own
+        // padding belong to this element, so the resting cursor is
+        // declared here and inherited by every cell. Filled cells
+        // override it with the grab cursor.
+        data-board-grid
         onPointerDown={
           onSetSelectedCells ? dragHandlers.onPointerDown : undefined
         }

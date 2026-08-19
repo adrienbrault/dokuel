@@ -538,6 +538,59 @@ body {
 /* Drop landing: the receiving cell's digit gets the existing
    .animate-pop-in via the Cell render path; nothing extra needed. */
 
+/* ─── Cursor affordances ─── */
+
+/* Every cursor in the app is declared HERE, unlayered, rather than
+   with Tailwind's cursor-* utilities. Utilities live in @layer
+   utilities, and an unlayered rule beats a layered one no matter how
+   specific — so a single unlayered `cursor` declaration anywhere on
+   the page (a browser extension, a user stylesheet, a userscript)
+   silently outranks a cursor-grab class while leaving the drag rules
+   below untouched. That asymmetry is exactly what a stuck default
+   arrow at rest, next to a working drag cursor, looks like.
+   Declaring both at the same level removes it.
+
+   Cursors are declared on the CONTAINERS: the seams between cells and
+   the gutters between keys belong to the grid and the key group, and
+   a bare container hands the pointer back to the default arrow at
+   every boundary it crosses. Descendants are matched explicitly
+   because the cursor resolves from the deepest element under the
+   pointer — inside a cell that is the notes grid or the drop preview,
+   not the cell button.
+
+   Order matters where specificity ties: the filled-cell rule must
+   follow the grid rule to win the grab cursor. */
+[data-board-grid],
+[data-board-grid] * {
+  cursor: cell;
+}
+[data-cell-filled],
+[data-cell-filled] * {
+  cursor: grab;
+}
+[data-numpad-keys],
+[data-numpad-keys] * {
+  cursor: grab;
+}
+
+/* Cursor during a drag. The pointer holds a digit no matter which
+   surface it is over, so the closed hand is applied page-wide and
+   only the cell under the pointer overrides it — copy where the
+   digit would land, not-allowed where it can't. The `body` in the
+   selector is what lifts these above the resting rules above. */
+body[data-digit-drag],
+body[data-digit-drag] * {
+  cursor: grabbing;
+}
+body[data-digit-drag] [data-drop-target="valid"],
+body[data-digit-drag] [data-drop-target="valid"] * {
+  cursor: copy;
+}
+body[data-digit-drag] [data-drop-target="invalid"],
+body[data-digit-drag] [data-drop-target="invalid"] * {
+  cursor: not-allowed;
+}
+
 /* ─── Design System: Component Classes ─── */
 
 /* Buttons */

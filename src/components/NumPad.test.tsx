@@ -63,6 +63,21 @@ describe("NumPad", () => {
     expect(onTapNumber).toHaveBeenCalledWith(7);
   });
 
+  it("leaves the keys unmarked when they cannot be dragged", () => {
+    // No drag handler means no drag gesture to advertise: the pad falls
+    // back to the plain button cursor instead of the open hand.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("group", { name: "Number pad" }),
+    ).not.toHaveAttribute("data-numpad-keys");
+  });
+
   it("does not double-fire onTapNumber when click follows a pointer tap", () => {
     const onTapNumber = vi.fn();
     render(
@@ -1146,5 +1161,24 @@ describe("NumPad", () => {
       pointerId: 1,
       pointerType: "touch",
     });
+  });
+});
+
+describe("NumPad cursor affordance", () => {
+  it("marks the key group so the cursor covers the gaps between keys", () => {
+    // The gaps between keys belong to the group element, so a bare
+    // group drops the pointer back to the default arrow between every
+    // key the pointer crosses.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        onStartDrag={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("group", { name: "Number pad" })).toHaveAttribute(
+      "data-numpad-keys",
+    );
   });
 });

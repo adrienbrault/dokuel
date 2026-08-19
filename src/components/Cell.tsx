@@ -128,6 +128,11 @@ export const Cell = memo(function Cell({
       }
       data-row={row}
       data-col={col}
+      // Cursor hook, not styling: a filled cell holds a digit that can
+      // be picked up, so the unlayered resting-cursor rules give it the
+      // open hand. See "Cursor affordances" in index.css for why this
+      // isn't a cursor-grab utility class.
+      data-cell-filled={cell.value !== null ? "true" : undefined}
       data-drag-source={isDragSource ? "true" : undefined}
       data-drop-target={dropTargetState ?? undefined}
       data-drop-mode={

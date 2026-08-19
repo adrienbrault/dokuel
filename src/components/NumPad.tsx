@@ -88,6 +88,10 @@ export function NumPad({
       <NumPadLegend isVertical={isVertical} tapAction={tapAction} />
       <div
         ref={groupRef}
+        // Cursor hook: the gutters between keys belong to this element,
+        // so the grab cursor is declared here and inherited by every
+        // key. Only set when the keys can actually be dragged.
+        data-numpad-keys={onStartDrag ? "true" : undefined}
         className={`flex gap-1 lg:gap-1.5 ${isVertical ? "flex-col w-12 lg:w-16" : "flex-row justify-center w-full lg:grid lg:grid-cols-3 lg:w-auto lg:gap-2"}`}
         role="group"
         aria-label="Number pad"

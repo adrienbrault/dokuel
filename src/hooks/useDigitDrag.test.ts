@@ -111,6 +111,25 @@ describe("useDigitDrag", () => {
     expect(result.current.state).toBeNull();
   });
 
+  it("marks the document while a drag is in flight, and clears it on drop", () => {
+    // The pointer roams the whole page during a drag — board, numpad,
+    // margins — so the "carrying something" cursor has to be a document
+    // level state rather than a per-element class.
+    mockElementFromPoint(() => makeCellElement(3, 4));
+    const { result } = renderHook(() =>
+      useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+    );
+    expect(document.body.dataset.digitDrag).toBeUndefined();
+    act(() => {
+      result.current.start(startParams({ digit: 5, x: 50, y: 80 }));
+    });
+    expect(document.body.dataset.digitDrag).toBe("true");
+    act(() => {
+      document.dispatchEvent(pointerEvent("pointerup"));
+    });
+    expect(document.body.dataset.digitDrag).toBeUndefined();
+  });
+
   it("activates a drag when start is called", () => {
     const { result } = renderHook(() =>
       useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
