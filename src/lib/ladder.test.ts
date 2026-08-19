@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { type EliminationKind, initCandidates } from "./candidates.ts";
-import { LADDER } from "./ladder.ts";
+import { findUnlockingPlacement, LADDER } from "./ladder.ts";
+import { solvePuzzle } from "./sudoku.ts";
 
 // Two boards captured mid-solve, singles played to exhaustion — the
 // state a stuck player faces. Between them every rung's pattern is on
@@ -63,5 +64,33 @@ describe("LADDER", () => {
     expect([...found].sort((a, b) => a.localeCompare(b))).toEqual(
       Object.keys(EVERY_KIND).sort((a, b) => a.localeCompare(b)),
     );
+  });
+});
+
+describe("findUnlockingPlacement", () => {
+  const PAIRS_STUCK = STUCK_BOARDS[0]!;
+  const CHAINS_STUCK =
+    "..982..454....5982582.9..372.8...519154982376.9.5.14289.7...8513657182948.1.59763";
+
+  it("finds the elimination that unlocks the next placement", () => {
+    const unlock = findUnlockingPlacement(PAIRS_STUCK);
+    expect(unlock).not.toBeNull();
+    const { elimination, single } = unlock!;
+    expect(elimination.patternCells.length).toBeGreaterThan(0);
+    expect(elimination.removed.length).toBeGreaterThan(0);
+    // The unlocked placement must match the puzzle's actual solution.
+    const solution = solvePuzzle(PAIRS_STUCK)!;
+    expect(single.digit).toBe(Number(solution[single.cell]));
+  });
+
+  it("returns null when only chains can progress", () => {
+    expect(findUnlockingPlacement(CHAINS_STUCK)).toBeNull();
+  });
+
+  it("returns null when a single is already available", () => {
+    // Precondition guard: the hint engine explains singles itself with
+    // richer wording; this path must not shadow them.
+    const nearlyDone = `.${solvePuzzle(PAIRS_STUCK)!.slice(1)}`;
+    expect(findUnlockingPlacement(nearlyDone)).toBeNull();
   });
 });

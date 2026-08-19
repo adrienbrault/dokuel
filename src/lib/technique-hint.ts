@@ -7,10 +7,7 @@
 import { boxIndex } from "./board-geometry.ts";
 import type { Elimination } from "./candidates.ts";
 import type { HintExplanation } from "./hint-engine.ts";
-import {
-  findUnlockingPlacement,
-  type UnlockingPlacement,
-} from "./techniques.ts";
+import { findUnlockingPlacement, type UnlockingPlacement } from "./ladder.ts";
 import type { Board, HintTechnique, Position } from "./types.ts";
 
 function toPosition(cell: number): Position {

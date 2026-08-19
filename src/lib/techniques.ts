@@ -1,11 +1,10 @@
 /**
- * Unit-local candidate-elimination techniques and the unlock search.
- * Each scan finds its first application, applies it to the state, and
- * reports the full story — pattern cells, locked digits, removed
- * candidates — so the grader can rank it and the hint engine can
- * explain it. Scan order is part of the grading contract: changing it
- * changes which boards the generator accepts. Wing- and fish-family
- * scans live in wings.ts.
+ * Unit-local candidate-elimination techniques. Each scan finds its
+ * first application, applies it to the state, and reports the full
+ * story — pattern cells, locked digits, removed candidates — so the
+ * grader can rank it and the hint engine can explain it. Wing- and
+ * fish-family scans live in wings.ts; the order the scans are tried
+ * in, and what each one is worth, live in ladder.ts.
  */
 
 import {
@@ -17,15 +16,10 @@ import {
 } from "./board-geometry.ts";
 import {
   type CandidateState,
-  cloneCandidates,
   type Elimination,
   type EliminationKind,
   eliminate,
-  findSingle,
-  initCandidates,
-  type SingleFind,
 } from "./candidates.ts";
-import { swordfish, xWing, xyWing } from "./wings.ts";
 
 const NAKED_KINDS: Record<number, EliminationKind> = {
   2: "naked-pair",
@@ -153,66 +147,6 @@ export function hiddenSet(s: CandidateState, size: number): Elimination | null {
         };
       }
     }
-  }
-  return null;
-}
-
-export type UnlockingPlacement = {
-  /** The elimination whose removals make the placement visible. */
-  elimination: Elimination;
-  /** The single that emerges once the elimination is applied. */
-  single: SingleFind;
-  /** Eliminations silently applied before the unlocking one. */
-  priorSteps: number;
-};
-
-// Cheapest-first, matching the grader's ladder so a hint never cites
-// an X-wing where a pointing pair would do.
-const TECHNIQUES: ((s: CandidateState) => Elimination | null)[] = [
-  pointing,
-  claiming,
-  (s) => nakedSet(s, 2),
-  (s) => hiddenSet(s, 2),
-  (s) => nakedSet(s, 3),
-  (s) => hiddenSet(s, 3),
-  xWing,
-  (s) => nakedSet(s, 4),
-  (s) => hiddenSet(s, 4),
-  xyWing,
-  swordfish,
-];
-
-/**
- * On a board whose singles have run dry, find the elimination that
- * makes the next placement visible. Prefers an elimination that
- * unlocks a single immediately — its explanation stands on the visible
- * board alone. When no technique unlocks anything directly, cheaper
- * eliminations are applied silently and the search repeats; priorSteps
- * counts them so a hint can be honest about the depth. Null when only
- * chains or guessing can progress, or when a single is still available
- * (the caller explains those itself).
- */
-export function findUnlockingPlacement(
-  puzzle: string,
-): UnlockingPlacement | null {
-  const s = initCandidates(puzzle);
-  if (!s || findSingle(s)) return null;
-  // Eliminations strictly shrink the candidate pool, so the walk
-  // terminates; the cap is a backstop, not a tuning knob.
-  for (let priorSteps = 0; priorSteps < 128; priorSteps++) {
-    for (const technique of TECHNIQUES) {
-      const preview = cloneCandidates(s);
-      const elimination = technique(preview);
-      if (!elimination) continue;
-      const single = findSingle(preview);
-      if (single) return { elimination, single, priorSteps };
-    }
-    let applied: Elimination | null = null;
-    for (const technique of TECHNIQUES) {
-      applied = technique(s);
-      if (applied) break;
-    }
-    if (!applied) return null;
   }
   return null;
 }

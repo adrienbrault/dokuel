@@ -13,10 +13,14 @@
  *   5 — none of the above suffice: chains or trial-and-error required
  */
 
-import type {
-  CandidateState,
-  Elimination,
-  EliminationKind,
+import {
+  type CandidateState,
+  cloneCandidates,
+  type Elimination,
+  type EliminationKind,
+  findSingle,
+  initCandidates,
+  type SingleFind,
 } from "./candidates.ts";
 import { claiming, hiddenSet, nakedSet, pointing } from "./techniques.ts";
 import type { HintTechnique } from "./types.ts";
@@ -114,3 +118,47 @@ export const LADDER: readonly Rung[] = [
     scan: swordfish,
   },
 ];
+
+export type UnlockingPlacement = {
+  /** The elimination whose removals make the placement visible. */
+  elimination: Elimination;
+  /** The single that emerges once the elimination is applied. */
+  single: SingleFind;
+  /** Eliminations silently applied before the unlocking one. */
+  priorSteps: number;
+};
+
+/**
+ * On a board whose singles have run dry, find the elimination that
+ * makes the next placement visible. Prefers an elimination that
+ * unlocks a single immediately — its explanation stands on the visible
+ * board alone. When no technique unlocks anything directly, cheaper
+ * eliminations are applied silently and the search repeats; priorSteps
+ * counts them so a hint can be honest about the depth. Null when only
+ * chains or guessing can progress, or when a single is still available
+ * (the caller explains those itself).
+ */
+export function findUnlockingPlacement(
+  puzzle: string,
+): UnlockingPlacement | null {
+  const s = initCandidates(puzzle);
+  if (!s || findSingle(s)) return null;
+  // Eliminations strictly shrink the candidate pool, so the walk
+  // terminates; the cap is a backstop, not a tuning knob.
+  for (let priorSteps = 0; priorSteps < 128; priorSteps++) {
+    for (const rung of LADDER) {
+      const preview = cloneCandidates(s);
+      const elimination = rung.scan(preview);
+      if (!elimination) continue;
+      const single = findSingle(preview);
+      if (single) return { elimination, single, priorSteps };
+    }
+    let applied: Elimination | null = null;
+    for (const rung of LADDER) {
+      applied = rung.scan(s);
+      if (applied) break;
+    }
+    if (!applied) return null;
+  }
+  return null;
+}
