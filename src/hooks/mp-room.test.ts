@@ -40,6 +40,16 @@ function seatClient(
   return peer;
 }
 
+/**
+ * Wire two docs together the way a live peer link does: every update
+ * either side produces lands on the other. Yjs emits nothing for an
+ * update a doc already holds, so the echo terminates on its own.
+ */
+function linkDocs(a: Doc, b: Doc): void {
+  a.on("update", (update: Uint8Array) => applyUpdate(b, update));
+  b.on("update", (update: Uint8Array) => applyUpdate(a, update));
+}
+
 function setup(initialDifficulty: Difficulty | null = null) {
   const doc = new Doc();
   let clock = T0;
@@ -464,6 +474,92 @@ describe("win claims", () => {
 
     expect(room.snapshot().gameOver).not.toBeNull();
     expect(localStorage.getItem(`dokuel_mp_snap_${ROOM_ID}`)).toBeNull();
+  });
+});
+
+describe("claim precedence", () => {
+  /**
+   * Two clients, each with its own doc and its own Room, linked the way
+   * a peer connection links them. A claim is judged by the Room that
+   * writes it and by the Room that receives it, and the point of every
+   * test here is that the two verdicts agree — a claim one side treats
+   * as undisplaceable while the other treats it as worthless leaves the
+   * room with no winner it can ever settle on.
+   */
+  function setupMatch() {
+    const ourDoc = new Doc();
+    const theirDoc = new Doc();
+    linkDocs(ourDoc, theirDoc);
+    const us = createRoom({
+      doc: ourDoc,
+      roomId: ROOM_ID,
+      playerId: "p1",
+      playerName: () => "Alice",
+      initialDifficulty: "easy",
+      now: () => T0,
+    });
+    us.apply({ type: "local-sync-complete", now: T0 });
+    const them = createRoom({
+      doc: theirDoc,
+      roomId: `peer-of-${ROOM_ID}`,
+      playerId: "p2",
+      playerName: () => "Bob",
+      initialDifficulty: null,
+      now: () => T0,
+    });
+    them.apply({ type: "local-sync-complete", now: T0 });
+    us.start();
+    return { us, them, theirDoc, solution: us.snapshot().solution as string };
+  }
+
+  it("keeps the first verified solve when both players finish", () => {
+    const { us, them, solution } = setupMatch();
+
+    us.complete(solution);
+    them.complete(solution);
+
+    const winner = { winnerId: "p1", winnerName: "Alice" };
+    expect(us.snapshot().gameOver).toEqual(winner);
+    expect(them.snapshot().gameOver).toEqual(winner);
+  });
+
+  it("lets a verified solve displace a forfeit claim", () => {
+    // A forfeit only means anything while the supposedly absent player
+    // never finishes. Completing the real board proves the claim was
+    // premature or fabricated, so the solve takes the room.
+    const { us, them, solution } = setupMatch();
+    them.claimForfeit({ hasOtherPeer: false });
+
+    us.complete(solution);
+
+    const winner = { winnerId: "p1", winnerName: "Alice" };
+    expect(us.snapshot().gameOver).toEqual(winner);
+    expect(them.snapshot().gameOver).toEqual(winner);
+  });
+
+  it("judges a claim carrying a nonsense board forged on both sides", () => {
+    // Regression for a claim whose board is not a board at all. The
+    // side reading it must not mistake the value for a missing board —
+    // our own absence record would then vouch for it — and the side
+    // writing over it must agree the claim proves nothing, or the real
+    // winner is locked out of a room that shows no winner.
+    const { us, them, theirDoc, solution } = setupMatch();
+    us.apply({ type: "connectivity-changed", connected: false, now: T0 });
+
+    theirDoc.transact(() => {
+      const roomMap = theirDoc.getMap("room");
+      roomMap.set("winnerId", "p2");
+      roomMap.set("winnerName", "Bob");
+      roomMap.set("winnerBoard", 42);
+      roomMap.set("status", "finished");
+    });
+    expect(us.snapshot().gameOver).toBeNull();
+
+    us.complete(solution);
+
+    const winner = { winnerId: "p1", winnerName: "Alice" };
+    expect(us.snapshot().gameOver).toEqual(winner);
+    expect(them.snapshot().gameOver).toEqual(winner);
   });
 });
 
