@@ -218,4 +218,94 @@ describe("SoloGame numpad selection", () => {
     expect(five.className).toContain("bg-accent");
     expect(three.className).not.toContain("bg-accent");
   });
+
+  // The whole point of a numpad drag is that it LANDS something: press,
+  // pull off the pad, aim at a cell, release. Every layer of that path
+  // was covered in isolation and nothing asserted the journey end to
+  // end, so these two pin it at the game's own surface — a real board,
+  // a real numpad, one continuous gesture, and the digit visible in the
+  // cell afterwards.
+  //
+  // A mouse pointer is deliberate: it takes no touch lift, so the drop
+  // Y maps straight onto the cell's local Y and the value/note split at
+  // the midline is stated by the coordinates themselves.
+  function dropDraggedDigit(digitLabel: string, dropY: number) {
+    const digit = screen.getByRole("button", { name: digitLabel });
+    const cell = screen.getByLabelText(/^Cell row 1 column 1, empty/);
+    // jsdom gives every element a zero-sized rect, and a zero-height
+    // cell has no halves to aim at — cellModeAt would answer "value"
+    // whatever the pointer does. Give the target a real 100×100 box.
+    cell.getBoundingClientRect = (() => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    })) as typeof cell.getBoundingClientRect;
+
+    fireEvent.pointerDown(digit, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    // Straight off the pad toward the board — perpendicular to a bottom
+    // numpad, so the press classifies as a drag rather than a skim.
+    fireEvent.pointerMove(digit, {
+      pointerType: "mouse",
+      pointerId: 1,
+      clientX: 0,
+      clientY: 50,
+    });
+    expect(screen.queryByTestId("digit-drag-indicator")).not.toBeNull();
+
+    document.elementFromPoint = (() =>
+      cell) as typeof document.elementFromPoint;
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          pointerId: 1,
+          clientX: 50,
+          clientY: dropY,
+        }),
+      );
+      document.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          pointerId: 1,
+          clientX: 50,
+          clientY: dropY,
+        }),
+      );
+    });
+  }
+
+  it("places the digit when a numpad drag is dropped on a cell's top half", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    dropDraggedDigit("5", 30);
+
+    expect(
+      screen.getByLabelText(/^Cell row 1 column 1, value 5/),
+    ).toBeInTheDocument();
+  });
+
+  it("pencils a note when a numpad drag is dropped on a cell's bottom half", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    dropDraggedDigit("7", 85);
+
+    // The cell takes no value — the digit landed in its note grid.
+    const cell = screen.getByLabelText(/^Cell row 1 column 1, empty/);
+    expect(cell.textContent).toContain("7");
+  });
 });
