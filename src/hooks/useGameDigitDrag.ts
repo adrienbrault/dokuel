@@ -1,10 +1,7 @@
 import { useCallback } from "react";
+import type { DigitDropMode } from "../lib/numpad-gesture.ts";
 import type { Board, NumPadGesturePoint, Position } from "../lib/types.ts";
-import {
-  type DigitDragSource,
-  type DigitDropMode,
-  useDigitDrag,
-} from "./useDigitDrag.ts";
+import { type DigitDragSource, useDigitDrag } from "./useDigitDrag.ts";
 
 /** A completed drop, in the terms digitIntent asks about. */
 export type DigitDrop = {

@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { digitButtonAt, skimDigitOf } from "../lib/numpad-gesture.ts";
+import {
+  cellHitFromPoint,
+  type DigitDropMode,
+  digitButtonAt,
+  liftForPointerType,
+  skimDigitOf,
+} from "../lib/numpad-gesture.ts";
 import type { NumPadGesturePoint, Position } from "../lib/types.ts";
 
 export type DigitDragSource =
   | { kind: "numpad" }
   | { kind: "cell"; row: number; col: number };
-
-/**
- * Which slot in the cell receives the dropped digit. The cell is
- * split horizontally: aim for the top half to commit the value, the
- * bottom half to add a note. A single drag gesture expresses both
- * intents without switching modes mid-drag.
- */
-export type DigitDropMode = "value" | "note";
 
 export type DigitDragState = {
   digit: number;
@@ -55,49 +53,6 @@ type Options = {
       }) => void)
     | undefined;
 };
-
-type CellHit = { position: Position; mode: DigitDropMode };
-
-/**
- * Upward offset applied to a touch drag, in CSS pixels. A fingertip
- * occludes the cell directly underneath it, so the hit point — and
- * the chip — are raised clear of the hand. Mouse and pen are precise
- * pointers that occlude nothing, so they get no lift: the chip sits
- * right at the cursor.
- */
-const TOUCH_LIFT_PX = 46;
-
-export function liftForPointerType(pointerType: string): number {
-  return pointerType === "touch" ? TOUCH_LIFT_PX : 0;
-}
-
-function cellHitFromPoint(
-  pointerX: number,
-  pointerY: number,
-  lift: number,
-): CellHit | null {
-  const x = pointerX;
-  const y = pointerY - lift;
-  const el = document.elementFromPoint(x, y);
-  if (!el) return null;
-  const btn = (el as HTMLElement).closest?.("[data-row]") as HTMLElement | null;
-  if (!btn) return null;
-  const row = Number(btn.dataset.row);
-  const col = Number(btn.dataset.col);
-  if (Number.isNaN(row) || Number.isNaN(col)) return null;
-  return { position: { row, col }, mode: cellModeAt(btn, x, y) };
-}
-
-function cellModeAt(cell: HTMLElement, _x: number, y: number): DigitDropMode {
-  const rect = cell.getBoundingClientRect();
-  if (rect.height <= 0) return "value";
-  // Horizontal split at the cell's midline: the upper half is the
-  // value zone, the lower half is the note zone. Top sits closer to
-  // where the pointer enters from above on a numpad drag, which
-  // matches the dominant "commit the digit" intent.
-  const localY = (y - rect.top) / rect.height;
-  return localY < 0.5 ? "value" : "note";
-}
 
 export function useDigitDrag({
   onDrop,

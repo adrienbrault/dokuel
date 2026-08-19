@@ -1,10 +1,11 @@
-import type { NumPadPosition } from "./types.ts";
+import type { NumPadPosition, Position } from "./types.ts";
 
 /**
- * The geometry of a numpad gesture: when a pan has moved far enough to
- * mean something, which gesture it means, and where the pad's
- * board-facing edge is. Pure — the recognizer hook owns the state
- * machine, this file owns the arithmetic.
+ * The geometry of a digit gesture: when a pan has moved far enough to
+ * mean something, which gesture it means, where the pad's board-facing
+ * edge is, and which cell — and which half of it — a carried digit is
+ * aimed at. Pure — the recognizer hook owns the state machine, this
+ * file owns the arithmetic and the two hit-tests it consults.
  */
 
 /** How long a press must be held before it means "pencil a note". */
@@ -111,4 +112,62 @@ export function skimHandoffDigit(
   return crossedTowardBoard(group.getBoundingClientRect(), position, x, y)
     ? skimDigit
     : null;
+}
+
+/**
+ * Which slot in the cell receives the dropped digit. The cell is
+ * split horizontally: aim for the top half to commit the value, the
+ * bottom half to add a note. A single drag gesture expresses both
+ * intents without switching modes mid-drag.
+ */
+export type DigitDropMode = "value" | "note";
+
+/** The cell a carried digit is aimed at, and the slot within it. */
+export type CellHit = { position: Position; mode: DigitDropMode };
+
+/**
+ * Upward offset applied to a touch drag, in CSS pixels. A fingertip
+ * occludes the cell directly underneath it, so the hit point — and
+ * the chip — are raised clear of the hand. Mouse and pen are precise
+ * pointers that occlude nothing, so they get no lift: the chip sits
+ * right at the cursor.
+ */
+const TOUCH_LIFT_PX = 46;
+
+export function liftForPointerType(pointerType: string): number {
+  return pointerType === "touch" ? TOUCH_LIFT_PX : 0;
+}
+
+function cellModeAt(cell: HTMLElement, y: number): DigitDropMode {
+  const rect = cell.getBoundingClientRect();
+  if (rect.height <= 0) return "value";
+  // Horizontal split at the cell's midline: the upper half is the
+  // value zone, the lower half is the note zone. Top sits closer to
+  // where the pointer enters from above on a numpad drag, which
+  // matches the dominant "commit the digit" intent.
+  const localY = (y - rect.top) / rect.height;
+  return localY < 0.5 ? "value" : "note";
+}
+
+/**
+ * The board cell a lifted pointer is aimed at, and which half of it, or
+ * null when the aim point is off the grid. Cells are found by their
+ * `data-row`/`data-col` attributes, so anything a cell renders inside
+ * itself still resolves to the cell.
+ */
+export function cellHitFromPoint(
+  pointerX: number,
+  pointerY: number,
+  lift: number,
+): CellHit | null {
+  const x = pointerX;
+  const y = pointerY - lift;
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  const btn = (el as HTMLElement).closest?.("[data-row]") as HTMLElement | null;
+  if (!btn) return null;
+  const row = Number(btn.dataset.row);
+  const col = Number(btn.dataset.col);
+  if (Number.isNaN(row) || Number.isNaN(col)) return null;
+  return { position: { row, col }, mode: cellModeAt(btn, y) };
 }
