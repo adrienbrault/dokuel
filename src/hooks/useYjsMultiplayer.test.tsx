@@ -3,18 +3,40 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Doc, encodeStateAsUpdate } from "yjs";
 import type { Difficulty } from "../lib/types.ts";
 import { createFakeConnections } from "./mp-connection.fake.ts";
-import {
-  claimWinner,
-  initializeRoom,
-  joinRoom,
-  startGame,
-} from "./p2p-room.ts";
+import { createRoom, type Room } from "./mp-room.ts";
 import { useYjsMultiplayer } from "./useYjsMultiplayer.ts";
 
 // The transport is injected, not module-mocked: the in-memory adapter
 // is the second implementation of the same Connection seam the WebRTC
 // one satisfies, so these tests exercise the hook's real wiring.
 let connections: ReturnType<typeof createFakeConnections>;
+
+/**
+ * Play the opponent with a real Room over the same doc. The peer obeys
+ * the rules the hook's own Room obeys, so nothing about starting a game
+ * or claiming a win is restated here — this suite is about the binding.
+ */
+function seatOpponent(
+  doc: Doc,
+  roomId: string,
+  playerId: string,
+  playerName: string,
+  initialDifficulty: Difficulty | null = null,
+): Room {
+  const peer = createRoom({
+    doc,
+    // Every client keeps its own local snapshot, and jsdom hands them
+    // all the same localStorage: sharing our room id would let the
+    // peer's bookkeeping clear the snapshot under test.
+    roomId: `peer-of-${roomId}`,
+    playerId,
+    playerName: () => playerName,
+    initialDifficulty,
+    now: () => 0,
+  });
+  peer.apply({ type: "local-sync-complete", now: 0 });
+  return peer;
+}
 
 beforeEach(() => {
   connections = createFakeConnections();
@@ -154,17 +176,17 @@ describe("useYjsMultiplayer", () => {
     });
     await flushSync();
     const doc = connections.last!.doc;
-    const fakeRoom = { doc, roomId: "room-status-absence" };
+    let peer!: Room;
     act(() => {
-      joinRoom(fakeRoom, "p2", "Bob");
-      startGame(fakeRoom);
+      peer = seatOpponent(doc, "room-status-absence", "p2", "Bob");
+      peer.start();
     });
 
     act(() => {
       connections.last!.emitStatus(false);
     });
     act(() => {
-      claimWinner(fakeRoom, "p2", "Bob", null);
+      peer.claimForfeit({ hasOtherPeer: false });
     });
 
     expect(result.current.gameOver).toEqual({
@@ -178,7 +200,7 @@ describe("useYjsMultiplayer", () => {
     await flushSync();
     const doc = connections.last!.doc;
     act(() => {
-      joinRoom({ doc, roomId: "room-peers" }, "p2", "Bob");
+      seatOpponent(doc, "room-peers", "p2", "Bob");
     });
     expect(result.current.opponentDisconnected).toBe(false);
 
@@ -199,7 +221,7 @@ describe("useYjsMultiplayer", () => {
     await flushSync();
     const doc = connections.last!.doc;
     act(() => {
-      joinRoom({ doc, roomId: "room-commands" }, "p2", "Bob");
+      seatOpponent(doc, "room-commands", "p2", "Bob");
     });
 
     act(() => {
@@ -238,11 +260,15 @@ describe("useYjsMultiplayer", () => {
     // restore and the persisted state would be lost over multiple iOS
     // reloads. This test guards the fix.
     const seedDoc = new Doc();
-    const seedRoom = { doc: seedDoc, roomId: "room-preserves" };
-    initializeRoom(seedRoom, "p1", "medium");
-    joinRoom(seedRoom, "p1", "Alice");
-    joinRoom(seedRoom, "p2", "Bob");
-    startGame(seedRoom);
+    const seedHost = seatOpponent(
+      seedDoc,
+      "room-preserves",
+      "p1",
+      "Alice",
+      "medium",
+    );
+    seatOpponent(seedDoc, "room-preserves", "p2", "Bob");
+    seedHost.start();
     const seedGameNumber = seedDoc.getMap("room").get("gameNumber") as number;
     const seedPuzzle = seedDoc.getMap("room").get("puzzle") as string;
     const seedSolution = seedDoc.getMap("room").get("solution") as string;
@@ -272,14 +298,14 @@ describe("useYjsMultiplayer", () => {
       const { result } = renderRoom({ roomId, difficulty: "easy" });
       await flushSync();
       const doc = connections.last!.doc;
-      const fakeRoom = { doc, roomId };
+      let peer!: Room;
       act(() => {
-        joinRoom(fakeRoom, "p2", "Bob");
-        startGame(fakeRoom);
+        peer = seatOpponent(doc, roomId, "p2", "Bob");
+        peer.start();
       });
       await flushSync();
       const solution = doc.getMap("room").get("solution") as string;
-      return { result, doc, fakeRoom, solution };
+      return { result, doc, peer, solution };
     }
 
     it("claimForfeitWin no-ops when the opponent's presence is back", async () => {
@@ -433,10 +459,10 @@ describe("useYjsMultiplayer", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
       const doc = connections.last!.doc;
-      const fakeRoom = { doc, roomId: "room-forfeit-away" };
+      let peer!: Room;
       act(() => {
-        joinRoom(fakeRoom, "p2", "Bob");
-        startGame(fakeRoom);
+        peer = seatOpponent(doc, "room-forfeit-away", "p2", "Bob");
+        peer.start();
       });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
@@ -455,7 +481,7 @@ describe("useYjsMultiplayer", () => {
         setTabHidden(false);
       });
       act(() => {
-        claimWinner(fakeRoom, "p2", "Bob", null);
+        peer.claimForfeit({ hasOtherPeer: false });
       });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
@@ -568,9 +594,8 @@ describe("useYjsMultiplayer", () => {
       });
       await flushSync();
       const doc = connections.last!.doc;
-      const fakeRoom = { doc, roomId: "room-pagehide" };
       act(() => {
-        joinRoom(fakeRoom, "p2", "Bob");
+        seatOpponent(doc, "room-pagehide", "p2", "Bob");
         result.current.sendStartGame();
       });
 

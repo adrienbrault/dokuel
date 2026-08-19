@@ -2,15 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
-import { createRoom } from "./mp-room.ts";
-import {
-  claimWinner,
-  createRoomFromDoc,
-  initializeRoom,
-  joinRoom,
-  startGame,
-  updateProgress,
-} from "./p2p-room.ts";
+import { createRoom, type Room } from "./mp-room.ts";
 
 const ROOM_ID = "test-room";
 
@@ -18,9 +10,38 @@ const ROOM_ID = "test-room";
 // never touches the clock reads "we have been present all along".
 const T0 = 10_000_000;
 
+/**
+ * Seat another client in `doc`. The remote peer is a Room like ours,
+ * driven through the same interface — the rules it plays by are the
+ * rules under test, not a second transcription of them in the test
+ * file. Raw doc writes are reserved for what no Room would ever do: a
+ * forged claim, or a merge that only a CRDT can produce.
+ *
+ * Its roomId deliberately differs from ours: every client keeps its own
+ * local snapshot, and jsdom hands them all the same localStorage, so a
+ * peer sharing our room id would clear the snapshot a test seeded for
+ * us.
+ */
+function seatClient(
+  doc: Doc,
+  playerId: string,
+  playerName: string,
+  initialDifficulty: Difficulty | null = null,
+): Room {
+  const peer = createRoom({
+    doc,
+    roomId: `peer-of-${ROOM_ID}`,
+    playerId,
+    playerName: () => playerName,
+    initialDifficulty,
+    now: () => T0,
+  });
+  peer.apply({ type: "local-sync-complete", now: T0 });
+  return peer;
+}
+
 function setup(initialDifficulty: Difficulty | null = null) {
   const doc = new Doc();
-  const p2p = createRoomFromDoc(doc, ROOM_ID);
   let clock = T0;
   const room = createRoom({
     doc,
@@ -32,8 +53,14 @@ function setup(initialDifficulty: Difficulty | null = null) {
   });
   return {
     doc,
-    p2p,
     room,
+    seat(
+      playerId: string,
+      playerName: string,
+      difficulty: Difficulty | null = null,
+    ) {
+      return seatClient(doc, playerId, playerName, difficulty);
+    },
     tickTo(instant: number) {
       clock = instant;
     },
@@ -42,13 +69,11 @@ function setup(initialDifficulty: Difficulty | null = null) {
 
 /** A room with two seated players and a game underway. */
 function setupStartedGame() {
-  const ctx = setup();
-  initializeRoom(ctx.p2p, "p1", "easy");
-  joinRoom(ctx.p2p, "p1", "Alice");
-  joinRoom(ctx.p2p, "p2", "Bob");
-  startGame(ctx.p2p);
-  const solution = ctx.doc.getMap("room").get("solution") as string;
-  return { ...ctx, solution };
+  const ctx = setup("easy");
+  ctx.room.apply({ type: "local-sync-complete", now: T0 });
+  const peer = ctx.seat("p2", "Bob");
+  peer.start();
+  return { ...ctx, peer, solution: ctx.room.snapshot().solution as string };
 }
 
 beforeEach(() => {
@@ -73,13 +98,12 @@ describe("projection", () => {
   });
 
   it("latches hasStartedGame on the first started game", () => {
-    const { p2p, room } = setup();
-    initializeRoom(p2p, "p1", "easy");
-    joinRoom(p2p, "p1", "Alice");
-    joinRoom(p2p, "p2", "Bob");
+    const { room, seat } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    const peer = seat("p2", "Bob");
     expect(room.snapshot().hasStartedGame).toBe(false);
 
-    startGame(p2p);
+    peer.start();
 
     expect(room.snapshot().hasStartedGame).toBe(true);
   });
@@ -129,13 +153,13 @@ describe("projection", () => {
   });
 
   it("projects the opponent's progress and keeps its identity when it stalls", () => {
-    const { p2p, room } = setupStartedGame();
+    const { peer, room } = setupStartedGame();
 
-    updateProgress(p2p, "p2", 40, 50);
+    peer.progress(40, 50);
     const progress = room.snapshot().opponentProgress;
     expect(progress).toEqual({ cellsRemaining: 40, completionPercent: 50 });
 
-    updateProgress(p2p, "p1", 30, 60);
+    room.progress(30, 60);
 
     expect(room.snapshot().opponentProgress).toBe(progress);
   });
@@ -143,34 +167,32 @@ describe("projection", () => {
 
 describe("seats", () => {
   it("flags roomFull for a player with no seat in a full room", () => {
-    const { p2p, room } = setup();
-    initializeRoom(p2p, "p2", "medium");
-    joinRoom(p2p, "p2", "Bob");
-    joinRoom(p2p, "p3", "Carol");
+    const { room, seat } = setup();
+    seat("p2", "Bob", "medium");
+    seat("p3", "Carol");
 
     expect(room.snapshot().roomFull).toBe(true);
   });
 
   it("does not flag roomFull for a seated player", () => {
-    const { p2p, room } = setup();
-    initializeRoom(p2p, "p1", "medium");
-    joinRoom(p2p, "p1", "Alice");
-    joinRoom(p2p, "p2", "Bob");
+    const { room, seat } = setup("medium");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    seat("p2", "Bob");
 
     expect(room.snapshot().roomFull).toBe(false);
   });
 
   it("evicts itself from the players map after a concurrent-join overflow", () => {
-    // A concurrent-join merge can leave 3 entries even though joinRoom
+    // A concurrent-join merge can leave 3 entries even though the join
     // capped locally. The overflow player (us, by deterministic seat
     // sort) must delete its own entry — otherwise the two seated players
     // stare at a lobby whose Start never enables.
-    const { doc, p2p, room } = setup();
-    initializeRoom(p2p, "a1", "medium");
-    joinRoom(p2p, "p1", "Alice");
+    const { doc, room } = setup("medium");
+    room.apply({ type: "local-sync-complete", now: T0 });
 
     // The merged remote state: two players whose joinOrder/id sort ahead
-    // of ours ("a1"/"a2" < "p1" at joinOrder 0).
+    // of ours ("a1"/"a2" < "p1" at joinOrder 0). Only a CRDT merge
+    // produces this, so it is written raw rather than played by a Room.
     doc.transact(() => {
       const players = doc.getMap("players");
       for (const id of ["a1", "a2"]) {
@@ -236,9 +258,8 @@ describe("presence", () => {
   });
 
   it("stays quiet before a second player has ever joined", () => {
-    const { p2p, room } = setup();
-    initializeRoom(p2p, "p1", "easy");
-    joinRoom(p2p, "p1", "Alice");
+    const { room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
 
     room.apply({
       type: "presence-changed",
@@ -251,10 +272,26 @@ describe("presence", () => {
 });
 
 describe("win claims", () => {
-  it("accepts a remote claim whose board matches the solution", () => {
-    const { p2p, room, solution } = setupStartedGame();
+  /**
+   * A claim no Room would ever write: the board does not solve the
+   * puzzle, so every Room's own `complete` refuses it. Forgery only
+   * reaches the CRDT from a peer that bypassed the rules, which is
+   * exactly what the receiving Room has to survive.
+   */
+  function forgeClaim(doc: Doc, board: unknown): void {
+    doc.transact(() => {
+      const roomMap = doc.getMap("room");
+      roomMap.set("winnerId", "p2");
+      roomMap.set("winnerName", "Bob");
+      roomMap.set("winnerBoard", board);
+      roomMap.set("status", "finished");
+    });
+  }
 
-    claimWinner(p2p, "p2", "Bob", solution);
+  it("accepts a remote claim whose board matches the solution", () => {
+    const { peer, room, solution } = setupStartedGame();
+
+    peer.complete(solution);
 
     expect(room.snapshot().gameOver).toEqual({
       winnerId: "p2",
@@ -265,9 +302,9 @@ describe("win claims", () => {
   it("ignores a remote solved-claim whose board is forged", () => {
     // A peer can write any winnerId it likes into the CRDT; the claim
     // only counts here if the board it ships actually solves the puzzle.
-    const { p2p, room } = setupStartedGame();
+    const { doc, room } = setupStartedGame();
 
-    claimWinner(p2p, "p2", "Bob", "1".repeat(81));
+    forgeClaim(doc, "1".repeat(81));
 
     expect(room.snapshot().gameOver).toBeNull();
   });
@@ -275,9 +312,9 @@ describe("win claims", () => {
   it("treats an empty-string winner board as forged, not forfeit", () => {
     // "" is a solved-claim with no board — the original one-liner cheat.
     // If it collapsed to null it would be judged down the forfeit path.
-    const { p2p, room } = setupStartedGame();
+    const { doc, room } = setupStartedGame();
 
-    claimWinner(p2p, "p2", "Bob", "");
+    forgeClaim(doc, "");
 
     expect(room.snapshot().gameOver).toBeNull();
   });
@@ -285,9 +322,9 @@ describe("win claims", () => {
   it("ignores a forfeit claim received while we were continuously present", () => {
     // A forfeit claim asserts that WE left. This client never went away,
     // so the claim is fabricated (the one-liner devtools cheat).
-    const { p2p, room } = setupStartedGame();
+    const { peer, room } = setupStartedGame();
 
-    claimWinner(p2p, "p2", "Bob", null);
+    peer.claimForfeit({ hasOtherPeer: false });
 
     expect(room.snapshot().gameOver).toBeNull();
   });
@@ -300,13 +337,7 @@ describe("win claims", () => {
     const { doc, room } = setupStartedGame();
     room.apply({ type: "connectivity-changed", connected: false, now: T0 });
 
-    doc.transact(() => {
-      const roomMap = doc.getMap("room");
-      roomMap.set("winnerId", "p2");
-      roomMap.set("winnerName", "Bob");
-      roomMap.set("winnerBoard", 42);
-      roomMap.set("status", "finished");
-    });
+    forgeClaim(doc, 42);
 
     expect(room.snapshot().gameOver).toBeNull();
   });
@@ -317,21 +348,21 @@ describe("win claims", () => {
     // load, so an absence record initialised to 0 would read as an
     // absence that just ended and honour a fabricated forfeit for the
     // first two minutes of every session.
-    const { p2p, room, tickTo } = setupStartedGame();
+    const { peer, room, tickTo } = setupStartedGame();
     tickTo(1_000);
 
-    claimWinner(p2p, "p2", "Bob", null);
+    peer.claimForfeit({ hasOtherPeer: false });
 
     expect(room.snapshot().gameOver).toBeNull();
   });
 
   it("accepts a forfeit claim that our own absence record backs", () => {
-    const { p2p, room, tickTo } = setupStartedGame();
+    const { peer, room, tickTo } = setupStartedGame();
     room.apply({ type: "connectivity-changed", connected: false, now: T0 });
     room.apply({ type: "visibility-changed", hidden: false, now: T0 + 1_000 });
     tickTo(T0 + 2_000);
 
-    claimWinner(p2p, "p2", "Bob", null);
+    peer.claimForfeit({ hasOtherPeer: false });
 
     expect(room.snapshot().gameOver).toEqual({
       winnerId: "p2",
@@ -343,21 +374,21 @@ describe("win claims", () => {
     // The window covers the opponent's countdown plus sync latency. A
     // claim landing minutes after we came back is not about that
     // absence.
-    const { p2p, room, tickTo } = setupStartedGame();
+    const { peer, room, tickTo } = setupStartedGame();
     room.apply({ type: "connectivity-changed", connected: false, now: T0 });
     room.apply({ type: "visibility-changed", hidden: false, now: T0 + 1_000 });
     tickTo(T0 + 1_000 + 130_000);
 
-    claimWinner(p2p, "p2", "Bob", null);
+    peer.claimForfeit({ hasOtherPeer: false });
 
     expect(room.snapshot().gameOver).toBeNull();
   });
 
   it("honors a forfeit claim landing while we are still away", () => {
-    const { p2p, room } = setupStartedGame();
+    const { peer, room } = setupStartedGame();
     room.apply({ type: "connectivity-changed", connected: false, now: T0 });
 
-    claimWinner(p2p, "p2", "Bob", null);
+    peer.claimForfeit({ hasOtherPeer: false });
 
     expect(room.snapshot().gameOver).toEqual({
       winnerId: "p2",
@@ -383,8 +414,8 @@ describe("win claims", () => {
   });
 
   it("lets the real winner claim over a forged claim", () => {
-    const { doc, p2p, room, solution } = setupStartedGame();
-    claimWinner(p2p, "p2", "Bob", "1".repeat(81));
+    const { doc, room, solution } = setupStartedGame();
+    forgeClaim(doc, "1".repeat(81));
 
     room.complete(solution);
 
@@ -416,10 +447,8 @@ describe("win claims", () => {
     // syncing — is not an opponent. Only a seated player can be present
     // enough to block our claim, which is why the Room folds its own
     // player list into what the Connection reports.
-    const { doc, p2p, room } = setup();
-    initializeRoom(p2p, "p1", "easy");
-    joinRoom(p2p, "p1", "Alice");
-    startGame(p2p);
+    const { doc, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
 
     room.claimForfeit({ hasOtherPeer: true });
 
@@ -428,10 +457,10 @@ describe("win claims", () => {
 
   it("drops the stored snapshot once the game is over", () => {
     // The room is finished; a resume of it would flash a decided game.
-    const { p2p, room, solution } = setupStartedGame();
+    const { peer, room, solution } = setupStartedGame();
     localStorage.setItem(`dokuel_mp_snap_${ROOM_ID}`, "{}");
 
-    claimWinner(p2p, "p2", "Bob", solution);
+    peer.complete(solution);
 
     expect(room.snapshot().gameOver).not.toBeNull();
     expect(localStorage.getItem(`dokuel_mp_snap_${ROOM_ID}`)).toBeNull();
@@ -464,12 +493,12 @@ describe("setup", () => {
   });
 
   it("flags roomFull when a full room refuses our seat", () => {
-    // joinRoom no-ops rather than overflowing, which writes nothing and
-    // fires no observer — the projection still has to move.
-    const { p2p, room } = setup(null);
-    initializeRoom(p2p, "p2", "medium");
-    joinRoom(p2p, "p2", "Bob");
-    joinRoom(p2p, "p3", "Carol");
+    // A join into a full room no-ops rather than overflowing, which
+    // writes nothing and fires no observer — the projection still has to
+    // move.
+    const { room, seat } = setup(null);
+    seat("p2", "Bob", "medium");
+    seat("p3", "Carol");
 
     room.apply({ type: "local-sync-complete", now: T0 });
 
@@ -512,6 +541,15 @@ describe("hydration", () => {
       `dokuel_mp_snap_${ROOM_ID}`,
       JSON.stringify({ ...SNAPSHOT, savedAt: Date.now() }),
     );
+  }
+
+  /** A doc holding a room seven games in, as another client left it. */
+  function docWithStartedGame(hostId: string, joinerId: string): Doc {
+    const doc = new Doc();
+    const host = seatClient(doc, hostId, "Alice", "medium");
+    seatClient(doc, joinerId, "Bob");
+    for (let i = 0; i < 7; i++) host.start();
+    return doc;
   }
 
   it("applies the snapshot once the grace window lapses", () => {
@@ -560,13 +598,7 @@ describe("hydration", () => {
     // waiting on nothing and would name no instant at all.
     const wakeAt = room.nextWakeAt() ?? 0;
 
-    const peer = new Doc();
-    const peerRoom = createRoomFromDoc(peer, ROOM_ID);
-    initializeRoom(peerRoom, "p2", "medium");
-    joinRoom(peerRoom, "p2", "Bob");
-    joinRoom(peerRoom, "p1", "Alice");
-    for (let i = 0; i < 7; i++) startGame(peerRoom);
-    applyUpdate(doc, encodeStateAsUpdate(peer));
+    applyUpdate(doc, encodeStateAsUpdate(docWithStartedGame("p2", "p1")));
 
     room.apply({ type: "tick", now: wakeAt });
 
@@ -576,12 +608,10 @@ describe("hydration", () => {
 
   it("does not hold setup back when the doc already has a started game", () => {
     seedSnapshot();
-    const { p2p, room } = setup(null);
-    initializeRoom(p2p, "p1", "medium");
-    joinRoom(p2p, "p1", "Alice");
-    joinRoom(p2p, "p2", "Bob");
-    for (let i = 0; i < 7; i++) startGame(p2p);
+    const { doc, room } = setup(null);
 
+    // Local persistence restored a game already in progress.
+    applyUpdate(doc, encodeStateAsUpdate(docWithStartedGame("p1", "p2")));
     room.apply({ type: "local-sync-complete", now: T0 });
 
     expect(room.nextWakeAt()).toBeNull();
@@ -623,9 +653,9 @@ describe("commands", () => {
   it("starts on the room's difficulty, not the creator's", () => {
     // The host may switch difficulty in the lobby after the room was
     // created; the board must follow the room.
-    const { doc, p2p, room } = setup("easy");
+    const { doc, room, seat } = setup("easy");
     room.apply({ type: "local-sync-complete", now: T0 });
-    joinRoom(p2p, "p2", "Bob");
+    seat("p2", "Bob");
     room.setDifficulty("expert");
 
     room.start();
@@ -637,9 +667,9 @@ describe("commands", () => {
   });
 
   it("rematches on the room's difficulty too", () => {
-    const { doc, p2p, room } = setup("easy");
+    const { doc, room, seat } = setup("easy");
     room.apply({ type: "local-sync-complete", now: T0 });
-    joinRoom(p2p, "p2", "Bob");
+    seat("p2", "Bob");
     room.setDifficulty("expert");
     room.start();
 
@@ -692,11 +722,11 @@ describe("commands", () => {
 
 describe("close", () => {
   it("stops projecting doc changes", () => {
-    const { p2p, room } = setupStartedGame();
+    const { peer, room } = setupStartedGame();
     const before = room.snapshot();
 
     room.close();
-    startGame(p2p);
+    peer.start();
 
     expect(room.snapshot()).toBe(before);
   });
