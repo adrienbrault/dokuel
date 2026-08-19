@@ -18,7 +18,9 @@ import type {
   Elimination,
   EliminationKind,
 } from "./candidates.ts";
+import { claiming, hiddenSet, nakedSet, pointing } from "./techniques.ts";
 import type { HintTechnique } from "./types.ts";
+import { swordfish, xWing, xyWing } from "./wings.ts";
 
 export type TechniqueTier = 1 | 2 | 3 | 4 | 5;
 
@@ -30,4 +32,85 @@ export type Rung = {
   scan: (s: CandidateState) => Elimination | null;
 };
 
-export const LADDER: readonly Rung[] = [];
+// Pointing and claiming are one technique to a player — locked
+// candidates — so they share a label and differ only in which house
+// does the locking.
+export const LADDER: readonly Rung[] = [
+  {
+    kind: "pointing",
+    tier: 2,
+    technique: "locked-candidates",
+    label: "Locked Candidates",
+    scan: pointing,
+  },
+  {
+    kind: "claiming",
+    tier: 2,
+    technique: "locked-candidates",
+    label: "Locked Candidates",
+    scan: claiming,
+  },
+  {
+    kind: "naked-pair",
+    tier: 2,
+    technique: "naked-pair",
+    label: "Naked Pair",
+    scan: (s) => nakedSet(s, 2),
+  },
+  {
+    kind: "hidden-pair",
+    tier: 2,
+    technique: "hidden-pair",
+    label: "Hidden Pair",
+    scan: (s) => hiddenSet(s, 2),
+  },
+  {
+    kind: "naked-triple",
+    tier: 3,
+    technique: "naked-triple",
+    label: "Naked Triple",
+    scan: (s) => nakedSet(s, 3),
+  },
+  {
+    kind: "hidden-triple",
+    tier: 3,
+    technique: "hidden-triple",
+    label: "Hidden Triple",
+    scan: (s) => hiddenSet(s, 3),
+  },
+  {
+    kind: "x-wing",
+    tier: 3,
+    technique: "x-wing",
+    label: "X-Wing",
+    scan: xWing,
+  },
+  {
+    kind: "naked-quad",
+    tier: 4,
+    technique: "naked-quad",
+    label: "Naked Quad",
+    scan: (s) => nakedSet(s, 4),
+  },
+  {
+    kind: "hidden-quad",
+    tier: 4,
+    technique: "hidden-quad",
+    label: "Hidden Quad",
+    scan: (s) => hiddenSet(s, 4),
+  },
+  {
+    kind: "xy-wing",
+    tier: 4,
+    technique: "xy-wing",
+    label: "XY-Wing",
+    scan: xyWing,
+  },
+  {
+    kind: "swordfish",
+    tier: 4,
+    technique: "swordfish",
+    label: "Swordfish",
+    scan: swordfish,
+  },
+];
