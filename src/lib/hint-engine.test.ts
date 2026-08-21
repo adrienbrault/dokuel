@@ -396,6 +396,23 @@ describe("findHint", () => {
       expect(hint!.explanation).toContain("fit only in the highlighted cells");
     });
 
+    it("explains a naked pair by what its cells hold between them", () => {
+      // The naked set prose at pair width: the smallest and by far the
+      // most common of the naked patterns a player meets, and the one
+      // the ladder reaches for first.
+      const NAKED_PAIR_STUCK =
+        ".....63.4.....81........82.7489...3....6..4.85.64837..4.37.....2718.5.43.6.234...";
+      const board = parsePuzzle(NAKED_PAIR_STUCK);
+
+      const hint = findHint(board, solvePuzzle(NAKED_PAIR_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("naked-pair");
+      expect(hint!.position).toEqual({ row: 8, col: 0 });
+      expect(hint!.value).toBe(8);
+      expect(hint!.explanation).toContain("hold only 5 and 9 between them");
+    });
+
     it("labels a naked-quad unlock", () => {
       const QUAD_STUCK =
         "6.4..8..72..59184689...63.....8.267...8.57..972.9..518.82..5...5........1....97.5";
