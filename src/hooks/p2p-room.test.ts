@@ -5,15 +5,14 @@ import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
   createRoomFromDoc,
   getHostId,
-  getOpponentProgress,
-  getPlayers,
-  getRoomState,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
   leaveRoom,
   observeRoomChanges,
   type P2PRoom,
+  readPlayers,
+  readRoom,
   setDifficulty,
   updateProgress,
   writeClaim,
@@ -91,30 +90,6 @@ describe("p2p-room", () => {
       expect(p1.get("color")).not.toBe(p2.get("color"));
     });
 
-    it("does not add a third player to a full room", () => {
-      // Spec: 1v1 rooms hold two players; a third joiner gets the
-      // "Game is full" screen. Without the cap the Start button's
-      // players.length === 2 check could never pass again.
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      joinRoom(room, "player3", "Carol");
-
-      expect(getPlayers(room)).toHaveLength(2);
-      expect(room.doc.getMap("players").has("player3")).toBe(false);
-    });
-
-    it("still recognizes an already-joined player when the room is full", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      // Re-join (e.g. reconnect) must stay a no-op, not be treated as
-      // a third player.
-      joinRoom(room, "player1", "Alice");
-
-      expect(getPlayers(room)).toHaveLength(2);
-    });
-
     it("does not claim host on join", () => {
       // Host is claimed only by initializeRoom (creator-only). joinRoom
       // never writes hostId — see the deterministic race test below
@@ -155,8 +130,8 @@ describe("p2p-room", () => {
       joinRoom(room1, "player1", "Alice");
       joinRoom(room2, "player2", "Bob");
 
-      const players1 = getPlayers(room1);
-      const players2 = getPlayers(room2);
+      const players1 = readPlayers(room1);
+      const players2 = readPlayers(room2);
       expect(players1).toHaveLength(2);
       expect(players2).toHaveLength(2);
     });
@@ -217,67 +192,33 @@ describe("p2p-room", () => {
     });
   });
 
-  describe("getOpponentProgress", () => {
-    it("returns opponent progress", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      updateProgress(room, "player2", 15, 80);
-
-      const progress = getOpponentProgress(room, "player1");
-      expect(progress).toEqual({ cellsRemaining: 15, completionPercent: 80 });
-    });
-
-    it("returns null when no opponent", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-
-      expect(getOpponentProgress(room, "player1")).toBeNull();
-    });
-  });
-
-  describe("getPlayers", () => {
-    it("returns players sorted by join order", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player2", "Bob");
-      joinRoom(room, "player1", "Alice");
-
-      const players = getPlayers(room);
-      expect(players[0]!.id).toBe("player2");
-      expect(players[1]!.id).toBe("player1");
-    });
-  });
-
-  describe("getRoomState", () => {
-    it("returns null before anyone joins (no status yet)", () => {
+  describe("readRoom", () => {
+    it("returns null before anything has been written", () => {
       const room: P2PRoom = { doc: new Y.Doc(), roomId: "empty" };
-      expect(getRoomState(room)).toBeNull();
+      expect(readRoom(room)).toBeNull();
     });
 
     it("returns null after createRoomFromDoc but before initializeRoom", () => {
       const room = createTestRoom();
       // createRoomFromDoc does not write anything to the doc — status
       // is set by initializeRoom (creator) or by Yjs sync (joiner).
-      expect(getRoomState(room)).toBeNull();
+      expect(readRoom(room)).toBeNull();
     });
 
-    it("returns a full snapshot once the creator initializes and joins", () => {
+    it("returns every field the creator seeded", () => {
       const room = createTestRoom();
       initializeRoom(room, "player1", "medium");
-      joinRoom(room, "player1", "Alice");
 
-      const state = getRoomState(room);
-      expect(state).not.toBeNull();
-      expect(state!.status).toBe("lobby");
-      expect(state!.hostId).toBe("player1");
-      expect(state!.difficulty).toBe("medium");
-      expect(state!.assistLevel).toBe("standard");
-      expect(state!.players).toHaveLength(1);
-      expect(state!.puzzle).toBeNull();
-      expect(state!.solution).toBeNull();
-      expect(state!.winnerId).toBeNull();
-      expect(state!.winnerName).toBeNull();
-      expect(state!.gameNumber).toBe(0);
+      const fields = readRoom(room)!;
+      expect(fields.status).toBe("lobby");
+      expect(fields.hostId).toBe("player1");
+      expect(fields.difficulty).toBe("medium");
+      expect(fields.assistLevel).toBe("standard");
+      expect(fields.puzzle).toBeNull();
+      expect(fields.solution).toBeNull();
+      expect(fields.winnerId).toBeNull();
+      expect(fields.winnerName).toBeNull();
+      expect(fields.gameNumber).toBe(0);
     });
 
     it("reflects a recorded game", () => {
@@ -286,7 +227,7 @@ describe("p2p-room", () => {
       joinRoom(room, "player2", "Bob");
       writeTestGame(room, "hard");
 
-      const state = getRoomState(room)!;
+      const state = readRoom(room)!;
       expect(state.status).toBe("playing");
       expect(state.difficulty).toBe("hard");
       expect(state.puzzle).toBe(PUZZLE);
@@ -301,7 +242,7 @@ describe("p2p-room", () => {
       writeTestGame(room);
       writeClaim(room, "player1", "Alice", SOLUTION);
 
-      const state = getRoomState(room)!;
+      const state = readRoom(room)!;
       expect(state.winnerId).toBe("player1");
       expect(state.winnerName).toBe("Alice");
       expect(state.status).toBe("finished");
@@ -393,17 +334,18 @@ describe("p2p-room", () => {
 
       hydrateRoomFromSnapshot(room, snap);
 
-      const state = getRoomState(room);
-      expect(state).not.toBeNull();
-      expect(state?.status).toBe("playing");
-      expect(state?.gameNumber).toBe(2);
-      expect(state?.puzzle).toBe(snap.puzzle);
-      expect(state?.solution).toBe(snap.solution);
-      expect(state?.difficulty).toBe("hard");
-      expect(state?.hostId).toBe("p1");
-      expect(state?.players).toHaveLength(2);
-      expect(state?.players[0]?.cellsRemaining).toBe(40);
-      expect(state?.players[1]?.completionPercent).toBe(63);
+      const fields = readRoom(room);
+      expect(fields).not.toBeNull();
+      expect(fields?.status).toBe("playing");
+      expect(fields?.gameNumber).toBe(2);
+      expect(fields?.puzzle).toBe(snap.puzzle);
+      expect(fields?.solution).toBe(snap.solution);
+      expect(fields?.difficulty).toBe("hard");
+      expect(fields?.hostId).toBe("p1");
+      const players = readPlayers(room);
+      expect(players).toHaveLength(2);
+      expect(players.find((p) => p.id === "p1")?.cellsRemaining).toBe(40);
+      expect(players.find((p) => p.id === "p2")?.completionPercent).toBe(63);
     });
 
     it("does not clobber existing keys", () => {
@@ -438,33 +380,9 @@ describe("p2p-room", () => {
       hydrateRoomFromSnapshot(room, makeSnap());
 
       expect(aliceMap.get("cellsRemaining")).toBe(5);
-      const players = getPlayers(room);
+      const players = readPlayers(room);
       expect(players).toHaveLength(2);
       expect(players.find((p) => p.id === "p2")?.cellsRemaining).toBe(30);
-    });
-  });
-
-  describe("seat ordering", () => {
-    it("breaks joinOrder ties by codepoint, not locale collation", () => {
-      // Every peer must sort players identically to agree on who holds
-      // a seat. localeCompare("a", "B") is locale-dependent (-1 in en,
-      // codepoint order says "B" < "a") — a mismatch would make two
-      // clients evict different overflow players.
-      const room = createTestRoom();
-      const players = room.doc.getMap("players");
-      for (const id of ["a", "B"]) {
-        const pm = new Y.Map<unknown>();
-        pm.set("name", id);
-        pm.set("color", "blue");
-        pm.set("cellsRemaining", 81);
-        pm.set("completionPercent", 0);
-        pm.set("joinOrder", 0);
-        players.set(id, pm);
-      }
-
-      const ordered = getPlayers(room).map((p) => p.id);
-
-      expect(ordered).toEqual(["B", "a"]);
     });
   });
 
@@ -476,8 +394,8 @@ describe("p2p-room", () => {
 
       leaveRoom(room, "p2");
 
-      expect(getPlayers(room)).toHaveLength(1);
-      expect(getPlayers(room)[0]!.id).toBe("p1");
+      expect(readPlayers(room)).toHaveLength(1);
+      expect(readPlayers(room)[0]!.id).toBe("p1");
     });
 
     it("is a no-op for a player not in the room", () => {
@@ -486,7 +404,7 @@ describe("p2p-room", () => {
 
       leaveRoom(room, "ghost");
 
-      expect(getPlayers(room)).toHaveLength(1);
+      expect(readPlayers(room)).toHaveLength(1);
     });
 
     it("resolves a concurrent-join overflow back to a startable room", () => {
@@ -507,15 +425,15 @@ describe("p2p-room", () => {
       const updateB = Y.encodeStateAsUpdate(docB);
       Y.applyUpdate(docB, updateA);
       Y.applyUpdate(docA, updateB);
-      expect(getPlayers(roomA)).toHaveLength(3);
+      expect(readPlayers(roomA)).toHaveLength(3);
 
-      const overflowId = getPlayers(roomA)[2]!.id;
+      const overflowId = readPlayers(roomA)[2]!.id;
       leaveRoom(roomA, overflowId);
       Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
 
-      expect(getPlayers(roomA)).toHaveLength(2);
-      expect(getPlayers(roomB)).toHaveLength(2);
-      expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
+      expect(readPlayers(roomA)).toHaveLength(2);
+      expect(readPlayers(roomB)).toHaveLength(2);
+      expect(readPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
     });
   });
 });

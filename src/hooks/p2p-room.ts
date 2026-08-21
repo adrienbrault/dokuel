@@ -69,9 +69,13 @@ export function initializeRoom(
   });
 }
 
-/** 1v1: a room holds exactly two players. */
-export const MAX_PLAYERS = 2;
-
+/**
+ * Add a player's entry. Idempotent, so a reconnect costs nothing.
+ * Whether this player may take a seat at all is the Room's decision,
+ * made before it asks. `joinOrder` is the entry's own position in this
+ * doc; two peers joining concurrently both write the same one, which is
+ * why seat order needs a tiebreak.
+ */
 export function joinRoom(
   room: P2PRoom,
   playerId: string,
@@ -79,11 +83,6 @@ export function joinRoom(
 ): void {
   const players = room.doc.getMap("players");
   if (players.has(playerId)) return;
-  // Best-effort cap: catches the common sequential case where the
-  // room synced before this join. Two truly concurrent joins can
-  // still overflow via CRDT merge — the hook detects that post-merge
-  // and flags the excess player (roomFull).
-  if (players.size >= MAX_PLAYERS) return;
 
   const joinOrder = players.size;
 
@@ -100,8 +99,8 @@ export function joinRoom(
 
 /**
  * Remove a player's entry. Used by the overflow client after a
- * concurrent-join merge left more than MAX_PLAYERS entries: deleting
- * itself returns the room to a startable two-player lobby.
+ * concurrent-join merge left the room with more entries than it holds
+ * seats: deleting itself returns the room to a startable lobby.
  */
 export function leaveRoom(room: P2PRoom, playerId: string): void {
   const players = room.doc.getMap("players");
@@ -191,23 +190,6 @@ export function updateProgress(
   });
 }
 
-export function getOpponentProgress(
-  room: P2PRoom,
-  playerId: string,
-): { cellsRemaining: number; completionPercent: number } | null {
-  const players = room.doc.getMap("players");
-  for (const [id, playerMap] of players) {
-    if (id !== playerId) {
-      const p = playerMap as Y.Map<unknown>;
-      return {
-        cellsRemaining: p.get("cellsRemaining") as number,
-        completionPercent: p.get("completionPercent") as number,
-      };
-    }
-  }
-  return null;
-}
-
 /**
  * Record a win claim. `board` is the claimant's completed board for a
  * solved win, or null for a forfeit (opponent gone — nothing to
@@ -242,26 +224,23 @@ function projectWinnerBoard(raw: unknown): string | null {
   return typeof raw === "string" ? raw : "";
 }
 
+/** The room's own fields, as the doc holds them. */
+export type RoomFields = Omit<RoomState, "roomId" | "players">;
+
 /**
- * Snapshot the room into a plain RoomState the React tree can render.
- * Returns null when there is no joined player yet — callers treat that
- * as "lobby has not started syncing."
+ * Read the room's fields. Null until something has been written —
+ * neither the creator's seed nor a peer's sync has landed yet.
  */
-export function getRoomState(room: P2PRoom): RoomState | null {
+export function readRoom(room: P2PRoom): RoomFields | null {
   const roomMap = room.doc.getMap("room");
   const status = roomMap.get("status") as string | undefined;
   if (!status) return null;
 
-  const players = getPlayers(room);
-  if (players.length === 0) return null;
-
   return {
-    roomId: room.roomId,
     status: status as RoomState["status"],
     difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
     hostId: (roomMap.get("hostId") as string) || "",
-    players,
     puzzle: (roomMap.get("puzzle") as string) || null,
     solution: (roomMap.get("solution") as string) || null,
     winnerId: (roomMap.get("winnerId") as string) || null,
@@ -295,9 +274,17 @@ export function observeRoomChanges(
   };
 }
 
-export function getPlayers(room: P2PRoom): Player[] {
+/** A player's entry as the doc holds it, before seat order applies. */
+export type PlayerEntry = Player & { joinOrder: number };
+
+/**
+ * Every player entry in the doc, in whatever order the map yields them.
+ * Ordering them into seats — and deciding who is one seat too many — is
+ * the Room's rule, not the storage's.
+ */
+export function readPlayers(room: P2PRoom): PlayerEntry[] {
   const players = room.doc.getMap("players");
-  const result: Player[] = [];
+  const result: PlayerEntry[] = [];
 
   for (const [id, playerMap] of players) {
     const p = playerMap as Y.Map<unknown>;
@@ -307,26 +294,9 @@ export function getPlayers(room: P2PRoom): Player[] {
       color: p.get("color") as string,
       cellsRemaining: p.get("cellsRemaining") as number,
       completionPercent: p.get("completionPercent") as number,
+      joinOrder: p.get("joinOrder") as number,
     });
   }
-
-  // joinOrder first, playerId as tiebreak: concurrent joiners can both
-  // read size 0 and claim the same joinOrder, and every peer must agree
-  // on seat order (it decides who the excess player is in an overflow).
-  // Codepoint comparison, NOT localeCompare — collation varies by
-  // locale and this order has to be identical on every client.
-  result.sort((a, b) => {
-    const orderA = (players.get(a.id) as Y.Map<unknown>).get(
-      "joinOrder",
-    ) as number;
-    const orderB = (players.get(b.id) as Y.Map<unknown>).get(
-      "joinOrder",
-    ) as number;
-    if (orderA !== orderB) return orderA - orderB;
-    if (a.id < b.id) return -1;
-    if (a.id > b.id) return 1;
-    return 0;
-  });
 
   return result;
 }

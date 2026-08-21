@@ -1,6 +1,11 @@
 import type { Doc } from "yjs";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
-import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import type {
+  AssistLevel,
+  Difficulty,
+  Player,
+  RoomState,
+} from "../lib/types.ts";
 import {
   clearSnapshot,
   loadSnapshot,
@@ -9,15 +14,14 @@ import {
 } from "./mp-snapshot.ts";
 import {
   createRoomFromDoc,
-  getOpponentProgress,
-  getPlayers,
-  getRoomState,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
   leaveRoom,
-  MAX_PLAYERS,
   observeRoomChanges,
+  type PlayerEntry,
+  readPlayers,
+  readRoom,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
   updatePlayerName,
@@ -60,6 +64,35 @@ const VALID_SOLUTION_RE = /^[1-9]{81}$/;
  * has to know a grace window exists.
  */
 const HYDRATE_GRACE_MS = 3_000;
+
+/** 1v1: a room holds exactly two seats. */
+export const MAX_PLAYERS = 2;
+
+/**
+ * The room's agreed seat order: join order first, player id as
+ * tiebreak. Concurrent joiners can both read an empty room and claim
+ * the same join order, and every peer must sort them identically —
+ * this order is what decides who the overflow player is. Codepoint
+ * comparison, NOT localeCompare: collation varies by locale and two
+ * clients disagreeing here would evict different players.
+ */
+function seatPlayers(entries: PlayerEntry[]): Player[] {
+  return entries
+    .slice()
+    .sort((a, b) => {
+      if (a.joinOrder !== b.joinOrder) return a.joinOrder - b.joinOrder;
+      if (a.id < b.id) return -1;
+      if (a.id > b.id) return 1;
+      return 0;
+    })
+    .map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      color: entry.color,
+      cellsRemaining: entry.cellsRemaining,
+      completionPercent: entry.completionPercent,
+    }));
+}
 
 export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
 
@@ -311,6 +344,20 @@ export function createRoom({
     dirty = true;
   }
 
+  /**
+   * Snapshot the room into a plain RoomState the UI can render: the
+   * doc's own fields plus its players in seat order. Null while there
+   * is no joined player yet — callers read that as "the lobby has not
+   * started syncing".
+   */
+  function projectRoomState(): RoomState | null {
+    const fields = readRoom(p2p);
+    if (!fields) return null;
+    const players = seatPlayers(readPlayers(p2p));
+    if (players.length === 0) return null;
+    return { roomId, ...fields, players };
+  }
+
   function mirrorSolution(state: RoomState): void {
     if (state.solution === null || VALID_SOLUTION_RE.test(state.solution)) {
       verifiedSolution = state.solution;
@@ -372,18 +419,21 @@ export function createRoom({
     clearSnapshot(roomId);
   }
 
-  function trackOpponentProgress(): void {
-    const progress = getOpponentProgress(p2p, playerId);
-    if (!progress) return;
+  function trackOpponentProgress(state: RoomState): void {
+    const opponent = state.players.find((p) => p.id !== playerId);
+    if (!opponent) return;
     const prev = draft.opponentProgress;
     if (
       prev &&
-      prev.cellsRemaining === progress.cellsRemaining &&
-      prev.completionPercent === progress.completionPercent
+      prev.cellsRemaining === opponent.cellsRemaining &&
+      prev.completionPercent === opponent.completionPercent
     ) {
       return;
     }
-    set("opponentProgress", progress);
+    set("opponentProgress", {
+      cellsRemaining: opponent.cellsRemaining,
+      completionPercent: opponent.completionPercent,
+    });
   }
 
   /**
@@ -419,7 +469,13 @@ export function createRoom({
     if (initialDifficulty) {
       initializeRoom(p2p, playerId, initialDifficulty);
     }
-    joinRoom(p2p, playerId, playerName());
+    // Best-effort cap: catches the common sequential case where the
+    // room synced before we got here. Two truly concurrent joins can
+    // still overflow via CRDT merge, which settleSeat resolves after
+    // the fact.
+    if (readPlayers(p2p).length < MAX_PLAYERS) {
+      joinRoom(p2p, playerId, playerName());
+    }
     // A refused join writes nothing and so fires no observer, yet it
     // still means we are the overflow player.
     project();
@@ -430,7 +486,7 @@ export function createRoom({
     if (!pending) return;
     pendingHydration = null;
     if (applySnapshot) {
-      const current = getRoomState(p2p);
+      const current = projectRoomState();
       if (!current || current.gameNumber === 0) {
         hydrateRoomFromSnapshot(p2p, pending.snap);
       }
@@ -439,7 +495,7 @@ export function createRoom({
   }
 
   function project(): void {
-    const state = getRoomState(p2p);
+    const state = projectRoomState();
     // Live peer state beat the snapshot to it — drop the snapshot.
     if (pendingHydration && state && state.gameNumber > 0) {
       finishHydration(false);
@@ -457,7 +513,7 @@ export function createRoom({
       mirrorSolution(state);
       adoptNewGame(state);
       detectWinner(state, now());
-      trackOpponentProgress();
+      trackOpponentProgress(state);
       settleSeat(state);
     }
     publish();
@@ -474,7 +530,7 @@ export function createRoom({
    * never had anyone to disconnect.
    */
   function hasReachableOpponent(hasOtherPeer: boolean): boolean {
-    return hasOtherPeer && getPlayers(p2p).length > 1;
+    return hasOtherPeer && readPlayers(p2p).length > 1;
   }
 
   /**
@@ -484,7 +540,7 @@ export function createRoom({
    * the same claim.
    */
   function claimWin(board: string | null): void {
-    const state = getRoomState(p2p);
+    const state = projectRoomState();
     if (state?.winnerId) {
       const standing = judgeClaim(state.winnerBoard, state.solution);
       if (!mayOverwriteClaim(standing, judgeClaim(board, state.solution))) {
@@ -503,7 +559,7 @@ export function createRoom({
    * by counter.
    */
   function dealGame(): void {
-    const state = getRoomState(p2p);
+    const state = projectRoomState();
     const difficulty = state?.difficulty ?? "medium";
     const { puzzle, solution } = generatePuzzleWithSolution(difficulty);
     const clues = puzzle.split("").filter((c) => c !== ".").length;
@@ -533,7 +589,7 @@ export function createRoom({
     apply(event) {
       switch (event.type) {
         case "local-sync-complete": {
-          const current = getRoomState(p2p);
+          const current = projectRoomState();
           const snap =
             !current || current.gameNumber === 0 ? loadSnapshot(roomId) : null;
           if (!snap) {
@@ -553,7 +609,7 @@ export function createRoom({
             "opponentDisconnected",
             !event.tabHidden &&
               !hasReachableOpponent(event.hasOtherPeer) &&
-              getPlayers(p2p).length > 1,
+              readPlayers(p2p).length > 1,
           );
           publish();
           break;
@@ -592,7 +648,7 @@ export function createRoom({
       claimWin(null);
     },
     start() {
-      if (getPlayers(p2p).length < 2) {
+      if (readPlayers(p2p).length < 2) {
         set("error", { message: "Need 2 players to start" });
         publish();
         return;
@@ -615,7 +671,7 @@ export function createRoom({
       setRoomDifficulty(p2p, level);
     },
     persistSnapshot() {
-      const state = getRoomState(p2p);
+      const state = projectRoomState();
       if (state) saveSnapshot(roomId, state);
     },
     close() {
