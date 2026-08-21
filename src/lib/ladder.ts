@@ -176,8 +176,20 @@ export function rungOf(kind: EliminationKind): Rung {
   return RUNG_BY_KIND.get(kind)!;
 }
 
+/**
+ * Techniques a hint reports that are not rungs: singles place a digit
+ * rather than eliminating candidates, and the mistake redirect and
+ * reveal fallback are not deductions at all.
+ */
+const OFF_LADDER_LABELS: Partial<Record<HintTechnique, string>> = {
+  "naked-single": "Naked Single",
+  "hidden-single": "Hidden Single",
+  mistake: "Mistake",
+  reveal: "Reveal",
+};
+
 /** The player-facing name of a technique, for the hint banner. */
 export function techniqueLabel(technique: HintTechnique): string {
   const rung = LADDER.find((candidate) => candidate.technique === technique);
-  return rung?.label ?? technique;
+  return rung?.label ?? OFF_LADDER_LABELS[technique] ?? technique;
 }
