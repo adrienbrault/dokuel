@@ -327,6 +327,39 @@ describe("findHint", () => {
       expect(hint!.explanation).toContain("if it's 5, the 5/2 cell must be 2");
     });
 
+    it("explains a claiming elimination in its own words", () => {
+      // Claiming reads the other way round from pointing — a digit
+      // confined to one box of a line — and had no test, so its prose
+      // could have swapped in pointing's sentence unnoticed.
+      const CLAIMING_STUCK =
+        "52.36.17867.8..53231857264973124...6.5613...78.26.73....37.6.85.659837...874...63";
+      const board = parsePuzzle(CLAIMING_STUCK);
+
+      const hint = findHint(board, solvePuzzle(CLAIMING_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("locked-candidates");
+      expect(hint!.position).toEqual({ row: 3, col: 6 });
+      expect(hint!.value).toBe(8);
+      expect(hint!.explanation).toContain("fits only inside box 6");
+    });
+
+    it("explains a hidden set by the digits confined to its cells", () => {
+      // The hidden-pair/triple/quad prose branch: the highlighted cells
+      // are named by what only fits there, not by what they hold.
+      const HIDDEN_PAIR_STUCK =
+        "..7..85..58.9.27...23.1....4...5.9.88.51......6.84..5..........1.8...4.5.5..8..3.";
+      const board = parsePuzzle(HIDDEN_PAIR_STUCK);
+
+      const hint = findHint(board, solvePuzzle(HIDDEN_PAIR_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("hidden-pair");
+      expect(hint!.position).toEqual({ row: 0, col: 3 });
+      expect(hint!.value).toBe(4);
+      expect(hint!.explanation).toContain("fit only in the highlighted cells");
+    });
+
     it("labels a naked-quad unlock", () => {
       const QUAD_STUCK =
         "6.4..8..72..59184689...63.....8.267...8.57..972.9..518.82..5...5........1....97.5";
