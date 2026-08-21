@@ -197,71 +197,25 @@ export function getOpponentProgress(
   return null;
 }
 
-export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
-
 /**
- * The one guard over win claims. Every peer can write any winnerId it
- * likes into the CRDT, so a claim is worth only what its board proves:
- *
- * - `solved` — the board equals the room's solution. Always credible.
- * - `forfeit` — no board at all, asserting the opponent vanished.
- *   Nothing here can verify that; only the receiver's own absence
- *   record can back it.
- * - `forged` — a board that does not solve the puzzle. `""` and values
- *   that are not boards at all (a peer can write anything into the
- *   CRDT) land here, which is why getRoomState must not coerce them to
- *   null.
- * - `unverifiable` — a board arrived but the room has no solution to
- *   check it against. Not provably forged, so callers that punish
- *   forgery must leave it alone.
- *
- * Deliberately typed on `unknown`: the write path reads raw Yjs values
- * while the read path holds a projected RoomState, and both must reach
- * the same verdict.
+ * Record a win claim. `board` is the claimant's completed board for a
+ * solved win, or null for a forfeit (opponent gone — nothing to
+ * verify). Unconditional: whether this claim outranks one already
+ * standing is the Room's judgement, made before it asks for the write.
  */
-export function judgeClaim(board: unknown, solution: unknown): ClaimVerdict {
-  if (board === null || board === undefined) return "forfeit";
-  // Only a missing SOLUTION leaves a claim unjudgeable. A board that
-  // is not a string is judgeable and false — the room knows what a
-  // solved board looks like and this is not one.
-  if (typeof solution !== "string") return "unverifiable";
-  if (typeof board !== "string") return "forged";
-  return board === solution ? "solved" : "forged";
-}
-
-/**
- * Write a win claim into the room. `board` is the claimant's completed
- * board for a solved win, or null for a forfeit (opponent gone —
- * nothing to verify). The first claim normally wins, with two
- * exceptions that keep a cheater from locking the real winner out: a
- * forged claim may be overwritten by anyone, and a forfeit claim yields
- * to a verified solved board — a forfeit only means anything while the
- * supposedly absent player never finishes.
- */
-export function claimWinner(
+export function writeClaim(
   room: P2PRoom,
   playerId: string,
   playerName: string,
   board: string | null,
-): boolean {
+): void {
   const roomMap = room.doc.getMap("room");
-  const existingWinner = roomMap.get("winnerId");
-  if (existingWinner !== null && existingWinner !== undefined) {
-    const solution = roomMap.get("solution");
-    const existing = judgeClaim(roomMap.get("winnerBoard"), solution);
-    const mayOverwrite =
-      existing === "forged" ||
-      (existing === "forfeit" && judgeClaim(board, solution) === "solved");
-    if (!mayOverwrite) return false;
-  }
-
   room.doc.transact(() => {
     roomMap.set("winnerId", playerId);
     roomMap.set("winnerName", playerName);
     roomMap.set("winnerBoard", board);
     roomMap.set("status", "finished");
   });
-  return true;
 }
 
 export function requestRematch(room: P2PRoom, difficulty?: Difficulty): void {

@@ -7,7 +7,6 @@ import {
   saveSnapshot,
 } from "./mp-snapshot.ts";
 import {
-  claimWinner,
   createRoomFromDoc,
   getOpponentProgress,
   getPlayers,
@@ -15,7 +14,6 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
-  judgeClaim,
   leaveRoom,
   MAX_PLAYERS,
   observeRoomChanges,
@@ -25,6 +23,7 @@ import {
   startGame,
   updatePlayerName,
   updateProgress,
+  writeClaim,
 } from "./p2p-room.ts";
 
 /**
@@ -61,6 +60,60 @@ const VALID_SOLUTION_RE = /^[1-9]{81}$/;
  * has to know a grace window exists.
  */
 const HYDRATE_GRACE_MS = 3_000;
+
+export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
+
+/**
+ * The one guard over win claims. Every peer can write any winnerId it
+ * likes into the CRDT, so a claim is worth only what its board proves:
+ *
+ * - `solved` — the board equals the room's solution. Always credible.
+ * - `forfeit` — no board at all, asserting the opponent vanished.
+ *   Nothing here can verify that; only the receiver's own absence
+ *   record can back it.
+ * - `forged` — a board that does not solve the puzzle. `""` lands here,
+ *   and so does anything a peer wrote that is not a board at all: the
+ *   projection maps those to `""` rather than to null precisely so they
+ *   arrive as a claim carrying something worthless instead of as the
+ *   absence of a claim.
+ * - `unverifiable` — a board arrived but the room has no solution to
+ *   check it against. Not provably forged, so callers that punish
+ *   forgery must leave it alone.
+ *
+ * One claim, one verdict: both the Room's write path and its read path
+ * judge from the projected room state, so a claim can never be
+ * undisplaceable to the writer while being worthless to the reader —
+ * which would leave the room with a winner neither side can settle on.
+ */
+export function judgeClaim(
+  board: string | null,
+  solution: string | null,
+): ClaimVerdict {
+  if (board === null) return "forfeit";
+  // Only a missing solution leaves a claim unjudgeable. Still a typeof
+  // check rather than a null check: the projection casts whatever a
+  // peer wrote into `string | null`, and a value that is not a string
+  // proves nothing either way.
+  if (typeof solution !== "string") return "unverifiable";
+  return board === solution ? "solved" : "forged";
+}
+
+/**
+ * Whether a claim already standing in the room may be written over. The
+ * first claim normally wins, with two exceptions that keep a cheater
+ * from locking the real winner out: a forged claim may be overwritten
+ * by anyone, and a forfeit claim yields to a verified solved board — a
+ * forfeit only means anything while the supposedly absent player never
+ * finishes.
+ */
+function mayOverwriteClaim(
+  standing: ClaimVerdict,
+  incoming: ClaimVerdict,
+): boolean {
+  return (
+    standing === "forged" || (standing === "forfeit" && incoming === "solved")
+  );
+}
 
 export type OpponentProgress = {
   cellsRemaining: number;
@@ -424,6 +477,23 @@ export function createRoom({
     return hasOtherPeer && getPlayers(p2p).length > 1;
   }
 
+  /**
+   * Write our claim unless one already standing outranks it. Both
+   * verdicts come from the same projected state the receiving side
+   * judges, so the two can no longer reach different conclusions about
+   * the same claim.
+   */
+  function claimWin(board: string | null): void {
+    const state = getRoomState(p2p);
+    if (state?.winnerId) {
+      const standing = judgeClaim(state.winnerBoard, state.solution);
+      if (!mayOverwriteClaim(standing, judgeClaim(board, state.solution))) {
+        return;
+      }
+    }
+    writeClaim(p2p, playerId, playerName(), board);
+  }
+
   function markAbsent(): void {
     absence.ongoing = true;
     absence.endedAt = Number.NEGATIVE_INFINITY;
@@ -493,11 +563,11 @@ export function createRoom({
     },
     complete(board) {
       if (judgeClaim(board, verifiedSolution) !== "solved") return;
-      claimWinner(p2p, playerId, playerName(), board);
+      claimWin(board);
     },
     claimForfeit({ hasOtherPeer }) {
       if (hasReachableOpponent(hasOtherPeer)) return;
-      claimWinner(p2p, playerId, playerName(), null);
+      claimWin(null);
     },
     start() {
       if (getPlayers(p2p).length < 2) {

@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
-  claimWinner,
   createRoomFromDoc,
   getHostId,
   getOpponentProgress,
@@ -12,7 +11,6 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
-  judgeClaim,
   leaveRoom,
   observeRoomChanges,
   type P2PRoom,
@@ -20,6 +18,7 @@ import {
   setDifficulty,
   startGame,
   updateProgress,
+  writeClaim,
 } from "./p2p-room.ts";
 
 function createLinkedDocs(): [Y.Doc, Y.Doc] {
@@ -286,131 +285,6 @@ describe("p2p-room", () => {
     });
   });
 
-  describe("judgeClaim", () => {
-    const SOLUTION = "1".repeat(81);
-
-    it("credits a board that equals the room's solution", () => {
-      expect(judgeClaim(SOLUTION, SOLUTION)).toBe("solved");
-    });
-
-    it("reads a missing board as a forfeit claim", () => {
-      // Nothing in the doc can verify "the opponent vanished" — only
-      // the receiver's own absence record can back it.
-      expect(judgeClaim(null, SOLUTION)).toBe("forfeit");
-      expect(judgeClaim(undefined, SOLUTION)).toBe("forfeit");
-    });
-
-    it("treats an empty-string board as forged, not forfeit", () => {
-      // The original one-liner cheat: a solved-claim with no board. If
-      // "" collapsed to a forfeit it would be judged by absence instead
-      // of by the solution.
-      expect(judgeClaim("", SOLUTION)).toBe("forged");
-    });
-
-    it("rejects a board that does not solve the puzzle", () => {
-      expect(judgeClaim("2".repeat(81), SOLUTION)).toBe("forged");
-    });
-
-    it("treats a board that is not even a string as forged", () => {
-      // The projection hands this function a string or null while the
-      // write path hands it the raw Yjs value, so a peer writing a
-      // number must reach ONE verdict — otherwise the same claim can
-      // be honoured on the read side and undisplaceable on the write
-      // side.
-      expect(judgeClaim(42, SOLUTION)).toBe("forged");
-    });
-
-    it("cannot prove anything without a solution in the room", () => {
-      // Not provably forged — callers that punish forgery must leave a
-      // claim in this state alone rather than assume the worst.
-      expect(judgeClaim(SOLUTION, null)).toBe("unverifiable");
-    });
-  });
-
-  describe("claimWinner", () => {
-    it("sets winnerId when no current winner", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      const solution = room.doc.getMap("room").get("solution") as string;
-      const claimed = claimWinner(room, "player1", "Alice", solution);
-
-      expect(claimed).toBe(true);
-      const roomMap = room.doc.getMap("room");
-      expect(roomMap.get("winnerId")).toBe("player1");
-      expect(roomMap.get("winnerName")).toBe("Alice");
-      expect(roomMap.get("status")).toBe("finished");
-    });
-
-    it("rejects when winner already claimed", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      const solution = room.doc.getMap("room").get("solution") as string;
-      claimWinner(room, "player1", "Alice", solution);
-      const claimed = claimWinner(room, "player2", "Bob", solution);
-
-      expect(claimed).toBe(false);
-      expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
-    });
-
-    it("lets a real solve displace a claim carrying a nonsense board", () => {
-      // Nothing stops a peer from writing a number into winnerBoard.
-      // It proves nothing, so it must not lock the room's real winner
-      // out any more than an empty-string board does.
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-      const solution = room.doc.getMap("room").get("solution") as string;
-      const roomMap = room.doc.getMap("room");
-      room.doc.transact(() => {
-        roomMap.set("winnerId", "player2");
-        roomMap.set("winnerName", "Bob");
-        roomMap.set("winnerBoard", 42);
-      });
-
-      const claimed = claimWinner(room, "player1", "Alice", solution);
-
-      expect(claimed).toBe(true);
-      expect(roomMap.get("winnerId")).toBe("player1");
-    });
-
-    it("lets a verified solved claim displace a forfeit claim", () => {
-      // A forfeit only means anything while the "absent" player never
-      // finishes. If they complete the real board, the forfeit was
-      // premature or fabricated — the solve wins.
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      const solution = room.doc.getMap("room").get("solution") as string;
-      claimWinner(room, "player2", "Bob", null);
-      const claimed = claimWinner(room, "player1", "Alice", solution);
-
-      expect(claimed).toBe(true);
-      expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
-    });
-
-    it("does not let a wrong board displace a forfeit claim", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      claimWinner(room, "player2", "Bob", null);
-      const claimed = claimWinner(room, "player1", "Alice", "1".repeat(81));
-
-      expect(claimed).toBe(false);
-      expect(room.doc.getMap("room").get("winnerId")).toBe("player2");
-    });
-  });
-
   describe("requestRematch", () => {
     it("generates new puzzle and increments gameNumber", () => {
       const room = createTestRoom();
@@ -505,13 +379,13 @@ describe("p2p-room", () => {
       expect(state.gameNumber).toBe(1);
     });
 
-    it("reflects claimWinner with both id and name", () => {
+    it("reflects a recorded win claim with both id and name", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
       startGame(room, "medium");
       const solution = room.doc.getMap("room").get("solution") as string;
-      claimWinner(room, "player1", "Alice", solution);
+      writeClaim(room, "player1", "Alice", solution);
 
       const state = getRoomState(room)!;
       expect(state.winnerId).toBe("player1");

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type { Difficulty } from "../lib/types.ts";
-import { createRoom, type Room } from "./mp-room.ts";
+import { createRoom, judgeClaim, type Room } from "./mp-room.ts";
 
 const ROOM_ID = "test-room";
 
@@ -474,6 +474,40 @@ describe("win claims", () => {
 
     expect(room.snapshot().gameOver).not.toBeNull();
     expect(localStorage.getItem(`dokuel_mp_snap_${ROOM_ID}`)).toBeNull();
+  });
+});
+
+describe("judgeClaim", () => {
+  // The verdict table, pinned directly: it is a pure function, and the
+  // Room's write path and read path both lean on every row of it.
+  const SOLUTION = "1".repeat(81);
+
+  it("credits a board that equals the room's solution", () => {
+    expect(judgeClaim(SOLUTION, SOLUTION)).toBe("solved");
+  });
+
+  it("reads a missing board as a forfeit claim", () => {
+    // Nothing in the doc can verify "the opponent vanished" — only the
+    // receiver's own absence record can back it.
+    expect(judgeClaim(null, SOLUTION)).toBe("forfeit");
+  });
+
+  it("treats an empty-string board as forged, not forfeit", () => {
+    // The original one-liner cheat: a solved-claim with no board. If ""
+    // collapsed to a forfeit it would be judged by absence instead of by
+    // the solution. It is also what the projection turns a peer's
+    // non-board value into, so this row covers those too.
+    expect(judgeClaim("", SOLUTION)).toBe("forged");
+  });
+
+  it("rejects a board that does not solve the puzzle", () => {
+    expect(judgeClaim("2".repeat(81), SOLUTION)).toBe("forged");
+  });
+
+  it("cannot prove anything without a solution in the room", () => {
+    // Not provably forged — callers that punish forgery must leave a
+    // claim in this state alone rather than assume the worst.
+    expect(judgeClaim(SOLUTION, null)).toBe("unverifiable");
   });
 });
 
