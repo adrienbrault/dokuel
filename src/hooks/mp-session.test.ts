@@ -201,6 +201,30 @@ describe("opening", () => {
     expect(session.snapshot().connected).toBe(true);
   });
 
+  it("records a transport drop as an absence the Room can trust", async () => {
+    // Losing signaling is the other way we go away, alongside releasing
+    // the transport for a hidden tab. A forfeit claim landing afterwards
+    // is about a real absence and must be honoured.
+    const { session, peer } = await openStartedGame();
+
+    transport().emitStatus(false);
+    peer.claimForfeit({ hasOtherPeer: false });
+
+    expect(session.snapshot().gameOver).toEqual({
+      winnerId: "p2",
+      winnerName: "Bob",
+    });
+  });
+
+  it("recomputes presence when the transport's peer set changes", async () => {
+    const { session } = await openStartedGame();
+    expect(session.snapshot().opponentDisconnected).toBe(false);
+
+    transport().emitPresence();
+
+    expect(session.snapshot().opponentDisconnected).toBe(true);
+  });
+
   it("tears the transport down on close", async () => {
     const session = open();
     await flush();
@@ -489,18 +513,32 @@ describe("hydration", () => {
   });
 
   it("leaves the stored snapshot alone when persistence already had a game", async () => {
+    // Local persistence loads into the doc after the doc already exists.
+    // Writing before it settles races the restore, and under flaky IDB
+    // flushes the room resolves back to an empty lobby over several
+    // reloads — wiping the game in progress.
     seedSnapshot();
     const restored = new Doc();
     const host = seatOpponent(restored, "p1", "Alice");
     seatOpponent(restored, "p2", "Bob");
     host.start();
+    const restoredRoom = restored.getMap("room");
+    const puzzle = restoredRoom.get("puzzle") as string;
+    const solution = restoredRoom.get("solution") as string;
+    const gameNumber = restoredRoom.get("gameNumber") as number;
     connections.persistedUpdate = encodeStateAsUpdate(restored);
 
     const session = open({ difficulty: null });
     await flush();
 
     expect(clock.pendingCount()).toBe(0);
-    expect(session.snapshot().roomState?.difficulty).not.toBe("hard");
     expect(session.snapshot().hasStartedGame).toBe(true);
+    expect(session.snapshot().puzzle).toBe(puzzle);
+    expect(session.snapshot().solution).toBe(solution);
+    expect(session.snapshot().roomState?.gameNumber).toBe(gameNumber);
+    expect(session.snapshot().roomState?.status).toBe("playing");
+    expect(session.snapshot().roomState?.players).toHaveLength(2);
+    // The stored snapshot never got a look in.
+    expect(session.snapshot().roomState?.difficulty).not.toBe("hard");
   });
 });

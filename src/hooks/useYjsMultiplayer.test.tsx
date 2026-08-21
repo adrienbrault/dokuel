@@ -1,28 +1,31 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Doc, encodeStateAsUpdate } from "yjs";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Doc } from "yjs";
 import type { Difficulty } from "../lib/types.ts";
 import { createFakeConnections } from "./mp-connection.fake.ts";
 import { createRoom, type Room } from "./mp-room.ts";
 import { useYjsMultiplayer } from "./useYjsMultiplayer.ts";
 
-// The transport is injected, not module-mocked: the in-memory adapter
-// is the second implementation of the same Connection seam the WebRTC
-// one satisfies, so these tests exercise the hook's real wiring.
+/**
+ * What is left for the binding to answer: does it build one room
+ * session per mount, hand it the DOM events it cannot see, route the
+ * commands to it, and close it on the way out. Every rule behind those
+ * commands is tested against the Room, and every lifecycle policy
+ * against the room session — neither needs React to be exercised.
+ *
+ * The transport is injected, not module-mocked: the in-memory adapter
+ * is the second implementation of the same Connection seam the WebRTC
+ * one satisfies, so these tests exercise the hook's real wiring.
+ */
 let connections: ReturnType<typeof createFakeConnections>;
 
-/**
- * Play the opponent with a real Room over the same doc. The peer obeys
- * the rules the hook's own Room obeys, so nothing about starting a game
- * or claiming a win is restated here — this suite is about the binding.
- */
-function seatOpponent(
-  doc: Doc,
-  roomId: string,
-  playerId: string,
-  playerName: string,
-  initialDifficulty: Difficulty | null = null,
-): Room {
+beforeEach(() => {
+  localStorage.clear();
+  connections = createFakeConnections();
+});
+
+/** Play the opponent with a real Room over the same doc. */
+function seatOpponent(doc: Doc, roomId: string, playerId: string): Room {
   const peer = createRoom({
     doc,
     // Every client keeps its own local snapshot, and jsdom hands them
@@ -30,17 +33,13 @@ function seatOpponent(
     // peer's bookkeeping clear the snapshot under test.
     roomId: `peer-of-${roomId}`,
     playerId,
-    playerName: () => playerName,
-    initialDifficulty,
+    playerName: () => "Bob",
+    initialDifficulty: null,
     now: () => 0,
   });
   peer.apply({ type: "local-sync-complete", now: 0 });
   return peer;
 }
-
-beforeEach(() => {
-  connections = createFakeConnections();
-});
 
 function renderRoom({
   roomId,
@@ -78,25 +77,12 @@ function setTabHidden(hidden: boolean) {
 }
 
 describe("useYjsMultiplayer", () => {
-  it("closes a connection that finishes opening after unmount", async () => {
-    // Belt and braces behind the abort: an adapter that ignored the
-    // signal and resolved anyway must still not leave a live transport
-    // behind for a room the player already left.
-    const { unmount } = renderHook(() =>
-      useYjsMultiplayer({
-        roomId: "room-late-open",
-        playerId: "p1",
-        playerName: "Alice",
-        difficulty: "easy",
-        // Drops the signal on the floor — the pre-abort adapter.
-        openConnection: (roomId) => connections.open(roomId),
-      }),
-    );
-    unmount();
-
-    await flushSync();
-
-    expect(connections.last!.closed).toBe(true);
+  afterEach(() => {
+    // The hook may still be mounted here (RTL auto-cleanup runs after
+    // this), and un-hiding dispatches visibilitychange into it.
+    act(() => {
+      setTabHidden(false);
+    });
   });
 
   it("builds one transport when the room remounts while opening", async () => {
@@ -117,16 +103,16 @@ describe("useYjsMultiplayer", () => {
     second.unmount();
   });
 
-  it("closes the connection on unmount", async () => {
+  it("closes the session's connection on unmount", async () => {
     const { unmount } = renderRoom({
       roomId: "room-idb-destroy",
       difficulty: "easy",
     });
 
     await flushSync();
-    expect(connections.last!.closed).toBe(false);
+    expect(connections.last?.closed).toBe(false);
     unmount();
-    expect(connections.last!.closed).toBe(true);
+    expect(connections.last?.closed).toBe(true);
   });
 
   it("keeps the same Y.Doc when playerName changes", async () => {
@@ -144,7 +130,7 @@ describe("useYjsMultiplayer", () => {
 
     await flushSync();
     const docBefore = connections.last?.doc;
-    expect(docBefore).not.toBeNull();
+    expect(docBefore).not.toBeUndefined();
 
     rerender({ playerName: "Alice Renamed" });
     await flushSync();
@@ -152,66 +138,7 @@ describe("useYjsMultiplayer", () => {
     expect(connections.last?.doc).toBe(docBefore);
   });
 
-  it("reports the transport's connection status", async () => {
-    const { result } = renderRoom({
-      roomId: "room-status",
-      difficulty: "easy",
-    });
-    await flushSync();
-    expect(result.current.connected).toBe(false);
-
-    act(() => {
-      connections.last!.emitStatus(true);
-    });
-
-    expect(result.current.connected).toBe(true);
-  });
-
-  it("records a transport drop as an absence the Room can trust", async () => {
-    // Losing signaling is the other way we go away (the hidden-tab path
-    // is covered below). A forfeit claim landing afterwards is real.
-    const { result } = renderRoom({
-      roomId: "room-status-absence",
-      difficulty: "easy",
-    });
-    await flushSync();
-    const doc = connections.last!.doc;
-    let peer!: Room;
-    act(() => {
-      peer = seatOpponent(doc, "room-status-absence", "p2", "Bob");
-      peer.start();
-    });
-
-    act(() => {
-      connections.last!.emitStatus(false);
-    });
-    act(() => {
-      peer.claimForfeit({ hasOtherPeer: false });
-    });
-
-    expect(result.current.gameOver).toEqual({
-      winnerId: "p2",
-      winnerName: "Bob",
-    });
-  });
-
-  it("recomputes presence when the peer set changes", async () => {
-    const { result } = renderRoom({ roomId: "room-peers", difficulty: "easy" });
-    await flushSync();
-    const doc = connections.last!.doc;
-    act(() => {
-      seatOpponent(doc, "room-peers", "p2", "Bob");
-    });
-    expect(result.current.opponentDisconnected).toBe(false);
-
-    act(() => {
-      connections.last!.emitPresence();
-    });
-
-    expect(result.current.opponentDisconnected).toBe(true);
-  });
-
-  it("routes each command through to the room", async () => {
+  it("routes each command through to the session", async () => {
     // The binding's job for these is delegation and nothing else; the
     // rules behind them are tested against the Room.
     const { result } = renderRoom({
@@ -219,9 +146,9 @@ describe("useYjsMultiplayer", () => {
       difficulty: "easy",
     });
     await flushSync();
-    const doc = connections.last!.doc;
+    const doc = connections.last?.doc as Doc;
     act(() => {
-      seatOpponent(doc, "room-commands", "p2", "Bob");
+      seatOpponent(doc, "room-commands", "p2");
     });
 
     act(() => {
@@ -230,384 +157,71 @@ describe("useYjsMultiplayer", () => {
       result.current.updateName("Alicia");
       result.current.sendStartGame();
     });
-    const solution = doc.getMap("room").get("solution") as string;
+    const solution = result.current.solution as string;
     act(() => {
       result.current.sendComplete(solution);
     });
-    expect(doc.getMap("room").get("winnerId")).toBe("p1");
+    expect(result.current.gameOver?.winnerId).toBe("p1");
 
     act(() => {
       result.current.sendProgress(7, 91);
       result.current.sendRematch();
     });
 
-    const roomMap = doc.getMap("room");
-    expect(roomMap.get("difficulty")).toBe("hard");
-    expect(roomMap.get("assistLevel")).toBe("paper");
-    expect(roomMap.get("gameNumber")).toBe(2);
+    expect(result.current.roomState?.difficulty).toBe("hard");
+    expect(result.current.roomState?.assistLevel).toBe("paper");
+    expect(result.current.roomState?.gameNumber).toBe(2);
     expect(result.current.roomState?.players[0]?.name).toBe("Alicia");
-    // The rematch resets progress, so assert the write landed before it.
-    expect(connections.last!.awareness.getLocalState()?.user).toEqual({
+    // updateName also republishes presence, which lives on the
+    // Connection — the binding must not be doing that itself.
+    expect(connections.last?.awareness.getLocalState()?.user).toEqual({
       id: "p1",
       name: "Alicia",
     });
   });
 
-  it("preserves persisted gameNumber, puzzle, and solution across a fresh mount", async () => {
-    // Build a seed update representing a previously-saved doc: a
-    // started game with two players. Without the whenSynced gate, the
-    // hook's synchronous joinRoom + initializeRoom would race the IDB
-    // restore and the persisted state would be lost over multiple iOS
-    // reloads. This test guards the fix.
-    const seedDoc = new Doc();
-    const seedHost = seatOpponent(
-      seedDoc,
-      "room-preserves",
-      "p1",
-      "Alice",
-      "medium",
-    );
-    seatOpponent(seedDoc, "room-preserves", "p2", "Bob");
-    seedHost.start();
-    const seedGameNumber = seedDoc.getMap("room").get("gameNumber") as number;
-    const seedPuzzle = seedDoc.getMap("room").get("puzzle") as string;
-    const seedSolution = seedDoc.getMap("room").get("solution") as string;
-    expect(seedGameNumber).toBeGreaterThan(0);
-    expect(seedPuzzle).toBeTruthy();
-    expect(seedSolution).toBeTruthy();
-
-    connections.persistedUpdate = encodeStateAsUpdate(seedDoc);
-
+  it("reports the connected flag the session projects", async () => {
     const { result } = renderRoom({
-      roomId: "room-preserves",
-      difficulty: null,
+      roomId: "room-status",
+      difficulty: "easy",
     });
-
     await flushSync();
+    expect(result.current.connected).toBe(false);
 
-    expect(result.current.hasStartedGame).toBe(true);
-    expect(result.current.puzzle).toBe(seedPuzzle);
-    expect(result.current.solution).toBe(seedSolution);
-    expect(result.current.roomState?.gameNumber).toBe(seedGameNumber);
-    expect(result.current.roomState?.status).toBe("playing");
-    expect(result.current.roomState?.players).toHaveLength(2);
+    act(() => {
+      connections.last?.emitStatus(true);
+    });
+
+    expect(result.current.connected).toBe(true);
   });
 
-  describe("win claims", () => {
-    async function setupStartedGame(roomId: string) {
-      const { result } = renderRoom({ roomId, difficulty: "easy" });
-      await flushSync();
-      const doc = connections.last!.doc;
-      let peer!: Room;
-      act(() => {
-        peer = seatOpponent(doc, roomId, "p2", "Bob");
-        peer.start();
-      });
-      await flushSync();
-      const solution = doc.getMap("room").get("solution") as string;
-      return { result, doc, peer, solution };
-    }
-
-    it("claimForfeitWin no-ops when the opponent's presence is back", async () => {
-      // The 60s countdown races the opponent's reconnect: if their
-      // awareness reappeared by the time the claim fires, taking the
-      // forfeit would steamroll a player who just came back.
-      const { result, doc } = await setupStartedGame("room-claim-returned");
-      const { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } =
-        await import("y-protocols/awareness");
-      const otherDoc = new Doc();
-      const otherAwareness = new Awareness(otherDoc);
-      otherAwareness.setLocalStateField("user", { id: "p2", name: "Bob" });
-      act(() => {
-        applyAwarenessUpdate(
-          connections.last!.awareness,
-          encodeAwarenessUpdate(otherAwareness, [otherDoc.clientID]),
-          "test",
-        );
-      });
-
-      act(() => {
-        result.current.claimForfeitWin();
-      });
-
-      expect(doc.getMap("room").get("winnerId")).toBeNull();
-      otherAwareness.destroy();
+  it("forwards the tab's visibility and pagehide to the session", async () => {
+    // The two events the session cannot see for itself. Both make it
+    // mirror the room to local storage, which is the observable proof
+    // they arrived.
+    const { result } = renderRoom({
+      roomId: "room-dom-events",
+      difficulty: "easy",
     });
-  });
+    await flushSync();
+    const doc = connections.last?.doc as Doc;
+    act(() => {
+      seatOpponent(doc, "room-dom-events", "p2");
+      result.current.sendStartGame();
+    });
+    const key = "dokuel_mp_snap_room-dom-events";
+    expect(localStorage.getItem(key)).toBeNull();
 
-  describe("visibility-driven WebRTC lifecycle", () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-      setTabHidden(false);
+    act(() => {
+      setTabHidden(true);
+    });
+    expect(localStorage.getItem(key)).not.toBeNull();
+
+    localStorage.removeItem(key);
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
     });
 
-    afterEach(() => {
-      // The hook is still mounted here (RTL auto-cleanup runs after
-      // this), and un-hiding dispatches visibilitychange into it.
-      act(() => {
-        setTabHidden(false);
-      });
-      vi.useRealTimers();
-    });
-
-    it("disconnects the WebRTC provider after the hide debounce", async () => {
-      renderRoom({ roomId: "room-hide", difficulty: "easy" });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      const provider = connections.last!;
-      provider.connected = true;
-      provider.disconnectCount = 0;
-
-      act(() => {
-        setTabHidden(true);
-      });
-      expect(provider.disconnectCount).toBe(0);
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(15_000);
-      });
-      expect(provider.disconnectCount).toBe(1);
-      expect(provider.connected).toBe(false);
-    });
-
-    it("does not disconnect if the tab returns before the debounce", async () => {
-      renderRoom({ roomId: "room-hide-cancel", difficulty: "easy" });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      const provider = connections.last!;
-      provider.connected = true;
-      provider.disconnectCount = 0;
-
-      act(() => {
-        setTabHidden(true);
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(5_000);
-      });
-      act(() => {
-        setTabHidden(false);
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(20_000);
-      });
-
-      expect(provider.disconnectCount).toBe(0);
-    });
-
-    it("reconnects when the tab returns after disconnecting", async () => {
-      renderRoom({ roomId: "room-rejoin", difficulty: "easy" });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      const provider = connections.last!;
-      provider.connected = true;
-      provider.connectCount = 0;
-
-      act(() => {
-        setTabHidden(true);
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(15_000);
-      });
-      expect(provider.connected).toBe(false);
-
-      act(() => {
-        setTabHidden(false);
-      });
-      expect(provider.connectCount).toBe(1);
-      expect(provider.connected).toBe(true);
-    });
-
-    it("re-announces presence after the reconnect", async () => {
-      renderRoom({ roomId: "room-reannounce", difficulty: "easy" });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      const provider = connections.last!;
-      provider.connected = true;
-
-      act(() => {
-        setTabHidden(true);
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(15_000);
-      });
-      // The disconnect wiped our awareness entry — from the opponent's
-      // point of view we vanished.
-      expect(provider.awareness.getLocalState()).toBeNull();
-
-      act(() => {
-        setTabHidden(false);
-      });
-      // Without a working re-announce the opponent keeps seeing us as
-      // disconnected forever and is offered a forfeit win while we are
-      // actively playing.
-      expect(provider.awareness.getLocalState()?.user).toEqual({
-        id: "p1",
-        name: "Alice",
-      });
-    });
-
-    it("accepts a forfeit claim after we really were away", async () => {
-      const { result } = renderRoom({
-        roomId: "room-forfeit-away",
-        difficulty: "easy",
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      const doc = connections.last!.doc;
-      let peer!: Room;
-      act(() => {
-        peer = seatOpponent(doc, "room-forfeit-away", "p2", "Bob");
-        peer.start();
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-
-      // We disappear long enough for the WebRTC drop, then return; the
-      // opponent's forfeit claim lands right after. That absence was
-      // real, so the claim must be honored.
-      act(() => {
-        setTabHidden(true);
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(15_000);
-      });
-      act(() => {
-        setTabHidden(false);
-      });
-      act(() => {
-        peer.claimForfeit({ hasOtherPeer: false });
-      });
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      expect(result.current.gameOver).toEqual({
-        winnerId: "p2",
-        winnerName: "Bob",
-      });
-    });
-  });
-
-  describe("localStorage snapshot fallback", () => {
-    beforeEach(() => {
-      localStorage.clear();
-    });
-
-    function seedSnapshot(roomId: string) {
-      localStorage.setItem(
-        `dokuel_mp_snap_${roomId}`,
-        JSON.stringify({
-          gameNumber: 4,
-          puzzle: ".".repeat(81),
-          status: "playing",
-          difficulty: "hard",
-          assistLevel: "standard",
-          hostId: "p1",
-          players: [
-            {
-              id: "p1",
-              name: "Alice",
-              color: "#3B82F6",
-              cellsRemaining: 30,
-              completionPercent: 63,
-            },
-            {
-              id: "p2",
-              name: "Bob",
-              color: "#EF4444",
-              cellsRemaining: 25,
-              completionPercent: 69,
-            },
-          ],
-          winnerId: null,
-          winnerName: null,
-          savedAt: Date.now(),
-        }),
-      );
-    }
-
-    it("hydrates from snapshot when IndexedDB returns no started game", async () => {
-      vi.useFakeTimers();
-      try {
-        seedSnapshot("room-hydrate");
-
-        const { result } = renderRoom({
-          roomId: "room-hydrate",
-          difficulty: null,
-        });
-
-        // The snapshot is applied only after a grace window in which no
-        // live peer state arrived.
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(3_000);
-        });
-
-        expect(result.current.hasStartedGame).toBe(true);
-        expect(result.current.puzzle).toBe(".".repeat(81));
-        expect(result.current.roomState?.gameNumber).toBe(4);
-        expect(result.current.roomState?.difficulty).toBe("hard");
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it("hydrates even if the wall clock steps back mid-window", async () => {
-      // NTP corrections and VM restores move the wall clock backwards.
-      // A tick timed against a clock that went back reads as early, and
-      // an early tick the binding never re-armed used to strand the
-      // pending snapshot for good: setup never ran, so the player never
-      // took a seat in their own room.
-      vi.useFakeTimers();
-      try {
-        seedSnapshot("room-clock-step");
-
-        const { result } = renderRoom({
-          roomId: "room-clock-step",
-          difficulty: null,
-        });
-        // Let local sync land so the grace window is armed.
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(1_000);
-        });
-
-        vi.setSystemTime(Date.now() - 5_000);
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(2_000);
-        });
-
-        expect(result.current.hasStartedGame).toBe(true);
-        expect(result.current.roomState?.gameNumber).toBe(4);
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it("writes a snapshot to localStorage on pagehide", async () => {
-      const { result } = renderRoom({
-        roomId: "room-pagehide",
-        difficulty: "easy",
-      });
-      await flushSync();
-      const doc = connections.last!.doc;
-      act(() => {
-        seatOpponent(doc, "room-pagehide", "p2", "Bob");
-        result.current.sendStartGame();
-      });
-
-      expect(localStorage.getItem("dokuel_mp_snap_room-pagehide")).toBeNull();
-      act(() => {
-        window.dispatchEvent(new Event("pagehide"));
-      });
-      const raw = localStorage.getItem("dokuel_mp_snap_room-pagehide");
-      expect(raw).not.toBeNull();
-      const snap = JSON.parse(raw!);
-      expect(snap.gameNumber).toBeGreaterThan(0);
-      expect(snap.players).toHaveLength(2);
-    });
+    expect(localStorage.getItem(key)).not.toBeNull();
   });
 });
