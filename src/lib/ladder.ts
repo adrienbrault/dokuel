@@ -19,7 +19,6 @@ import {
   type Elimination,
   type EliminationKind,
   findSingle,
-  initCandidates,
   type SingleFind,
 } from "./candidates.ts";
 import { claiming, hiddenSet, nakedSet, pointing } from "./techniques.ts";
@@ -135,14 +134,16 @@ export type UnlockingPlacement = {
  * board alone. When no technique unlocks anything directly, cheaper
  * eliminations are applied silently and the search repeats; priorSteps
  * counts them so a hint can be honest about the depth. Null when only
- * chains or guessing can progress, or when a single is still available
- * (the caller explains those itself).
+ * chains or guessing can progress.
+ *
+ * The caller must have scanned for singles already — it explains those
+ * itself, in richer words — and keeps its own state: the search walks
+ * a copy, so the eliminations it applies never reach the caller's.
  */
 export function findUnlockingPlacement(
-  puzzle: string,
+  state: CandidateState,
 ): UnlockingPlacement | null {
-  const s = initCandidates(puzzle);
-  if (!s || findSingle(s)) return null;
+  const s = cloneCandidates(state);
   // Eliminations strictly shrink the candidate pool, so the walk
   // terminates; the cap is a backstop, not a tuning knob.
   for (let priorSteps = 0; priorSteps < 128; priorSteps++) {

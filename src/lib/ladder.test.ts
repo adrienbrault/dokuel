@@ -103,7 +103,7 @@ describe("findUnlockingPlacement", () => {
     "..982..454....5982582.9..372.8...519154982376.9.5.14289.7...8513657182948.1.59763";
 
   it("finds the elimination that unlocks the next placement", () => {
-    const unlock = findUnlockingPlacement(PAIRS_STUCK);
+    const unlock = findUnlockingPlacement(initCandidates(PAIRS_STUCK)!);
     expect(unlock).not.toBeNull();
     const { elimination, single } = unlock!;
     expect(elimination.patternCells.length).toBeGreaterThan(0);
@@ -114,13 +114,6 @@ describe("findUnlockingPlacement", () => {
   });
 
   it("returns null when only chains can progress", () => {
-    expect(findUnlockingPlacement(CHAINS_STUCK)).toBeNull();
-  });
-
-  it("returns null when a single is already available", () => {
-    // Precondition guard: the hint engine explains singles itself with
-    // richer wording; this path must not shadow them.
-    const nearlyDone = `.${solvePuzzle(PAIRS_STUCK)!.slice(1)}`;
-    expect(findUnlockingPlacement(nearlyDone)).toBeNull();
+    expect(findUnlockingPlacement(initCandidates(CHAINS_STUCK)!)).toBeNull();
   });
 });

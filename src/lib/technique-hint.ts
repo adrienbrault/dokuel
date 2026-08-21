@@ -5,7 +5,7 @@
  */
 
 import { boxIndex } from "./board-geometry.ts";
-import type { Elimination } from "./candidates.ts";
+import { type Elimination, initCandidates } from "./candidates.ts";
 import type { HintExplanation } from "./hint-engine.ts";
 import {
   findUnlockingPlacement,
@@ -13,10 +13,6 @@ import {
   type UnlockingPlacement,
 } from "./ladder.ts";
 import type { Board, Position } from "./types.ts";
-
-function toPosition(cell: number): Position {
-  return { row: Math.floor(cell / 9), col: cell % 9 };
-}
 
 function boardValues(board: Board): string {
   let out = "";
@@ -26,6 +22,10 @@ function boardValues(board: Board): string {
     }
   }
   return out;
+}
+
+function toPosition(cell: number): Position {
+  return { row: Math.floor(cell / 9), col: cell % 9 };
 }
 
 /** Name the row, column, or box that contains every given cell. */
@@ -132,7 +132,9 @@ function describeConsequence(unlock: UnlockingPlacement): string {
 /** The technique hint for a board whose singles have run dry — null
  * when only chains or guessing can progress. */
 export function findTechniqueHint(board: Board): HintExplanation | null {
-  const unlock = findUnlockingPlacement(boardValues(board));
+  const s = initCandidates(boardValues(board));
+  if (!s) return null;
+  const unlock = findUnlockingPlacement(s);
   return unlock ? buildTechniqueHint(unlock) : null;
 }
 
