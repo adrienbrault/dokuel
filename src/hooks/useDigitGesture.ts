@@ -463,8 +463,6 @@ export function useDigitGesture(options: Options) {
         dy: e.clientY - press.originY,
         position: cbRef.current.position,
         skimEnabled: cbRef.current.onSkim !== undefined,
-        // The recognizer owns the drop, so a drag is always available.
-        dragEnabled: true,
       });
       if (mode === null) return;
 

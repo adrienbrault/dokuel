@@ -26,34 +26,30 @@ const DRAG_CONE_SLOPE = Math.tan((DRAG_CONE_HALF_ANGLE_DEG * Math.PI) / 180);
 
 /**
  * What a pan of (dx, dy) from the press point means, or null to keep
- * waiting: the pan is still inside the slop, or neither gesture is
- * wired up.
+ * waiting while the pan is still inside the slop.
  *
  * A pan aimed within the drag cone — close to perpendicular to the pad,
  * toward the board — is a drag-to-place; a wider pan is an along-axis
- * skim. Whichever gesture the cone picks falls back to the other one
- * when only that other one is available.
+ * skim, which falls back to a drag where no skim is recognized. A drag
+ * always is: the recognizer that asks this owns the drop.
  */
 export function classifyPan({
   dx,
   dy,
   position,
   skimEnabled,
-  dragEnabled,
 }: {
   dx: number;
   dy: number;
   position: NumPadPosition;
   skimEnabled: boolean;
-  dragEnabled: boolean;
 }): "skim" | "drag" | null {
   if (dx * dx + dy * dy < SLOP_PX * SLOP_PX) return null;
   const isVertical = position === "left" || position === "right";
   const along = isVertical ? Math.abs(dy) : Math.abs(dx);
   const perp = isVertical ? Math.abs(dx) : Math.abs(dy);
-  const skim = skimEnabled ? "skim" : null;
-  const drag = dragEnabled ? "drag" : null;
-  return along < perp * DRAG_CONE_SLOPE ? (drag ?? skim) : (skim ?? drag);
+  if (along < perp * DRAG_CONE_SLOPE) return "drag";
+  return skimEnabled ? "skim" : "drag";
 }
 
 /**
