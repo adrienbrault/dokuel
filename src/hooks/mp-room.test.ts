@@ -850,6 +850,53 @@ describe("commands", () => {
   });
 });
 
+describe("dealing a game", () => {
+  it("puts the room into play on a fresh board", () => {
+    const { room } = setupStartedGame();
+
+    const state = room.snapshot().roomState;
+    expect(state?.status).toBe("playing");
+    expect(state?.gameNumber).toBe(1);
+    expect(room.snapshot().puzzle).toHaveLength(81);
+    expect(room.snapshot().solution).toHaveLength(81);
+    expect(room.snapshot().solution).not.toContain(".");
+  });
+
+  it("puts every seated player back at the start of the new board", () => {
+    // Both players race the same board from the same starting point;
+    // carrying either one's progress over would show the opponent a
+    // head start they never had.
+    const { peer, room } = setupStartedGame();
+    peer.progress(5, 95);
+    room.progress(7, 91);
+
+    room.rematch();
+
+    const puzzle = room.snapshot().puzzle as string;
+    const holes = puzzle.split("").filter((c) => c === ".").length;
+    const players = room.snapshot().roomState?.players ?? [];
+    expect(players).toHaveLength(2);
+    for (const player of players) {
+      expect(player.cellsRemaining).toBe(holes);
+      expect(player.completionPercent).toBe(0);
+    }
+  });
+
+  it("bumps the game number and clears the previous winner on a rematch", () => {
+    const { room, solution } = setupStartedGame();
+    room.complete(solution);
+    expect(room.snapshot().gameOver).not.toBeNull();
+
+    room.rematch();
+
+    const state = room.snapshot().roomState;
+    expect(state?.gameNumber).toBe(2);
+    expect(state?.winnerId).toBeNull();
+    expect(state?.status).toBe("playing");
+    expect(room.snapshot().gameOver).toBeNull();
+  });
+});
+
 describe("close", () => {
   it("stops projecting doc changes", () => {
     const { peer, room } = setupStartedGame();
