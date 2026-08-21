@@ -119,10 +119,18 @@ selected cell.
 
 **Room**:
 One multiplayer match space, identified by a room code, holding the players,
-the current game, and the rules for starting, finishing, and rematching. The
-room's rules do not depend on how peers are connected.
+the current game, and the rules for starting, finishing, and rematching. Every
+judgement about the room is the room's: what a win claim is worth and which
+claim outranks which, which board to deal and under which game number, how
+many seats there are and what order they are in. The room's rules do not
+depend on how peers are connected.
 _Avoid_: session, lobby (the lobby is the screen shown before a game starts),
 channel
+
+**Room doc**:
+The room's storage — the shared document the room reads and writes, and the
+transactions over it. It records decisions; it does not make them.
+_Avoid_: schema (that is only its shape), Yjs doc (in prose)
 
 **Room code**:
 The `word-word-xxxx` invite text that identifies a room. It is also the room's
