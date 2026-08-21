@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { type EliminationKind, initCandidates } from "./candidates.ts";
-import { findUnlockingPlacement, LADDER } from "./ladder.ts";
+import { findUnlockingPlacement, LADDER, techniqueLabel } from "./ladder.ts";
 import { solvePuzzle } from "./sudoku.ts";
+import type { HintTechnique } from "./types.ts";
 
 // Two boards captured mid-solve, singles played to exhaustion — the
 // state a stuck player faces. Between them every rung's pattern is on
@@ -64,6 +65,35 @@ describe("LADDER", () => {
     expect([...found].sort((a, b) => a.localeCompare(b))).toEqual(
       Object.keys(EVERY_KIND).sort((a, b) => a.localeCompare(b)),
     );
+  });
+});
+
+describe("techniqueLabel", () => {
+  // Total record again: a new hint technique cannot be added without
+  // this test demanding a name for it.
+  const EVERY_TECHNIQUE: Record<HintTechnique, true> = {
+    "naked-single": true,
+    "hidden-single": true,
+    "locked-candidates": true,
+    "naked-pair": true,
+    "hidden-pair": true,
+    "naked-triple": true,
+    "hidden-triple": true,
+    "naked-quad": true,
+    "hidden-quad": true,
+    "x-wing": true,
+    "xy-wing": true,
+    swordfish: true,
+    mistake: true,
+    reveal: true,
+  };
+
+  it("names every technique a hint can report", () => {
+    // The banner shows this string; a technique the ladder cannot name
+    // would show the raw kebab-case key to the player.
+    for (const technique of Object.keys(EVERY_TECHNIQUE) as HintTechnique[]) {
+      expect(techniqueLabel(technique)).toMatch(/^[A-Z]/);
+    }
   });
 });
 

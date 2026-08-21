@@ -162,3 +162,22 @@ export function findUnlockingPlacement(
   }
   return null;
 }
+
+const RUNG_BY_KIND = new Map<EliminationKind, Rung>(
+  LADDER.map((rung) => [rung.kind, rung]),
+);
+
+/**
+ * The rung an elimination kind sits on — how a hint learns which
+ * technique to name it by. Total by construction: ladder.test.ts pins
+ * that every kind appears on exactly one rung.
+ */
+export function rungOf(kind: EliminationKind): Rung {
+  return RUNG_BY_KIND.get(kind)!;
+}
+
+/** The player-facing name of a technique, for the hint banner. */
+export function techniqueLabel(technique: HintTechnique): string {
+  const rung = LADDER.find((candidate) => candidate.technique === technique);
+  return rung?.label ?? technique;
+}
