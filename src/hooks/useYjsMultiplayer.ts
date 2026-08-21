@@ -1,19 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
-import type { Connection, OpenConnection } from "./mp-connection.ts";
+import type { OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
-import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
+import { INITIAL_PROJECTION } from "./mp-room.ts";
+import {
+  createRoomSession,
+  type RoomSession,
+  type RoomSessionSnapshot,
+} from "./mp-session.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 
 /**
- * The clock every instant the Room is told about is measured on. It is
- * monotonic where `Date.now` is not: the Room only ever compares and
- * spans instants, and a wall clock that steps backwards (NTP
- * correction, VM restore) would make a deadline unreachable and a
- * countdown negative. Nothing here is persisted or shown to a player,
- * so epoch time buys nothing.
+ * React binding for a {@link ./mp-session.ts room session}: it renders
+ * the session's snapshot, forwards the two DOM events the session
+ * cannot see for itself, and closes the session on unmount. Every
+ * decision — what to do about a hidden tab, when to reconnect, what a
+ * command means — belongs to the session.
  */
-const now = () => performance.now();
+
+const INITIAL_SNAPSHOT: RoomSessionSnapshot = {
+  ...INITIAL_PROJECTION,
+  connected: false,
+};
 
 type UseYjsMultiplayerOptions = {
   roomId: string;
@@ -34,18 +42,16 @@ export function useYjsMultiplayer({
   difficulty,
   openConnection = openWebrtcConnection,
 }: UseYjsMultiplayerOptions) {
-  const [connected, setConnected] = useState(false);
-  // Everything the Room projects, in one value: the Room keeps its
+  // One value for everything the session projects: it keeps its
   // identity stable across no-op doc fires, so React bails out of the
   // re-render without the hook comparing anything.
-  const [projection, setProjection] = useState(INITIAL_PROJECTION);
+  const [snapshot, setSnapshot] = useState(INITIAL_SNAPSHOT);
 
-  const roomRef = useRef<Room | null>(null);
-  const connectionRef = useRef<Connection | null>(null);
+  const sessionRef = useRef<RoomSession | null>(null);
   const playerNameRef = useRef(playerName);
   playerNameRef.current = playerName;
   // Captured at mount so the joiner does not stomp on the host's
-  // Yjs difficulty when re-renders happen with a different prop value.
+  // difficulty when re-renders happen with a different prop value.
   const initialDifficultyRef = useRef(difficulty);
   // Read through a ref for the same reason as playerName: swapping the
   // adapter mid-room is not a thing, and a caller passing an inline
@@ -64,177 +70,34 @@ export function useYjsMultiplayer({
       );
     }
 
-    let cancelled = false;
-    let teardown: (() => void) | null = null;
-    // Abandons an open this effect no longer wants. React double-invokes
-    // effects under StrictMode, and any remount inside the open window
-    // does the same thing in production: without this, the abandoned
-    // open still builds a transport, and y-webrtc's globally named room
-    // registry hands it the slot the live one needs.
-    const opening = new AbortController();
+    const session = createRoomSession({
+      roomId,
+      playerId,
+      playerName: () => playerNameRef.current,
+      initialDifficulty: initialDifficultyRef.current,
+      openConnection: openConnectionRef.current,
+    });
+    sessionRef.current = session;
 
-    // Everything below runs once the Connection is open: opening is
-    // async because the relay credentials must be resolved before the
-    // peer connection exists.
-    const start = (connection: Connection): (() => void) => {
-      const doc = connection.doc;
-      const room = createRoom({
-        doc,
-        roomId,
-        playerId,
-        playerName: () => playerNameRef.current,
-        initialDifficulty: initialDifficultyRef.current,
-        now,
-      });
-      roomRef.current = room;
-      connectionRef.current = connection;
+    const unsubscribe = session.subscribe(() => {
+      setSnapshot(session.snapshot());
+    });
 
-      const unsubscribeRoom = room.subscribe(() => {
-        setProjection(room.snapshot());
-      });
-
-      const updatePresence = () => {
-        room.apply({
-          type: "presence-changed",
-          hasOtherPeer: connection.hasOtherPeer(playerId),
-          tabHidden: document.hidden,
-        });
-      };
-
-      // Track connection status via the transport
-      const unsubscribeStatus = connection.onStatus((isConnected) => {
-        setConnected(isConnected);
-        room.apply({
-          type: "connectivity-changed",
-          connected: isConnected,
-          now: now(),
-        });
-      });
-
-      const unsubscribePresence = connection.onPresenceChange(updatePresence);
-
-      setConnected(connection.connected);
-
-      const persistSnapshot = () => {
-        room.persistSnapshot();
-      };
-
-      // Release WebRTC peer connections + signaling sockets while the
-      // tab is backgrounded: iOS Safari kills tabs under memory pressure
-      // and RTCPeerConnections are the dominant cost here. Y.Doc and
-      // persistence stay alive across the cycle.
-      const HIDE_DEBOUNCE_MS = 15_000;
-      let hideTimer: ReturnType<typeof setTimeout> | null = null;
-      const handleVisibility = () => {
-        if (document.hidden) {
-          persistSnapshot();
-          if (hideTimer === null) {
-            hideTimer = setTimeout(() => {
-              connection.disconnect();
-              room.apply({
-                type: "connectivity-changed",
-                connected: false,
-                now: now(),
-              });
-              hideTimer = null;
-            }, HIDE_DEBOUNCE_MS);
-          }
-        } else {
-          if (hideTimer !== null) {
-            clearTimeout(hideTimer);
-            hideTimer = null;
-          }
-          if (!connection.connected) {
-            connection.connect();
-            connection.announce({ id: playerId, name: playerNameRef.current });
-          }
-        }
-        room.apply({
-          type: "visibility-changed",
-          hidden: document.hidden,
-          now: now(),
-        });
-        updatePresence();
-      };
-      document.addEventListener("visibilitychange", handleVisibility);
-      window.addEventListener("pagehide", persistSnapshot);
-
-      // Nothing may be written before local persistence has loaded:
-      // the Room's setup writes would seed clock-0 ops that race the
-      // restore, and under iOS Safari's flaky IDB flushes the doc can
-      // resolve back to an empty lobby over several reloads, wiping the
-      // game in progress.
-      let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
-      // The Room says when it wants a tick; owning the timer is all we
-      // do about it. Re-armed after every tick rather than scheduled
-      // once: a timer that fires early leaves the deadline standing,
-      // and a deadline nothing wakes up for is a room the player never
-      // takes a seat in.
-      const armWake = () => {
-        const wakeAt = room.nextWakeAt();
-        if (wakeAt === null) return;
-        hydrateTimer = setTimeout(
-          () => {
-            hydrateTimer = null;
-            room.apply({ type: "tick", now: now() });
-            armWake();
-          },
-          Math.max(0, wakeAt - now()),
-        );
-      };
-      void connection.whenSynced.then(() => {
-        if (cancelled) return;
-        connection.announce({ id: playerId, name: playerNameRef.current });
-        room.apply({ type: "local-sync-complete", now: now() });
-        armWake();
-      });
-
-      return () => {
-        document.removeEventListener("visibilitychange", handleVisibility);
-        window.removeEventListener("pagehide", persistSnapshot);
-        if (hideTimer !== null) {
-          clearTimeout(hideTimer);
-          hideTimer = null;
-        }
-        if (hydrateTimer !== null) {
-          clearTimeout(hydrateTimer);
-          hydrateTimer = null;
-        }
-        unsubscribeStatus();
-        unsubscribePresence();
-        unsubscribeRoom();
-        // The Room observes the doc the Connection owns — it has to let
-        // go before close() destroys it.
-        room.close();
-        connection.close();
-        roomRef.current = null;
-        connectionRef.current = null;
-      };
+    const handleVisibility = () => {
+      session.visibilityChanged(document.hidden);
     };
-
-    void openConnectionRef
-      .current(roomId, { signal: opening.signal })
-      .then((connection) => {
-        // Belt and braces: an adapter that resolved anyway still has to
-        // leave nothing running behind us.
-        if (cancelled) {
-          connection.close();
-          return;
-        }
-        teardown = start(connection);
-      })
-      .catch((error: unknown) => {
-        // Our own abort is the expected way an open ends when the room
-        // is left; anything else is a real transport failure and stays
-        // as loud as it was before.
-        if (!cancelled) throw error;
-      });
+    const handlePageHide = () => {
+      session.pageHidden();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", handlePageHide);
 
     return () => {
-      cancelled = true;
-      opening.abort();
-      teardown?.();
-      teardown = null;
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", handlePageHide);
+      unsubscribe();
+      session.close();
+      sessionRef.current = null;
     };
     // playerName is intentionally excluded: it's read via playerNameRef
     // inside the effect, and a rename should not tear down the Y.Doc and
@@ -243,61 +106,45 @@ export function useYjsMultiplayer({
   }, [roomId, playerId]);
 
   const sendStartGame = useCallback(() => {
-    roomRef.current?.start();
+    sessionRef.current?.start();
   }, []);
 
   const sendProgress = useCallback(
     (cellsRemaining: number, completionPercent: number) => {
-      roomRef.current?.progress(cellsRemaining, completionPercent);
+      sessionRef.current?.progress(cellsRemaining, completionPercent);
     },
     [],
   );
 
   const sendComplete = useCallback((board: string) => {
-    roomRef.current?.complete(board);
+    sessionRef.current?.complete(board);
   }, []);
 
   // Forfeit path: the opponent's presence dropped and the grace period
   // ran out. Distinct from sendComplete so an unfinished board is never
   // disguised as a solve.
   const claimForfeitWin = useCallback(() => {
-    const room = roomRef.current;
-    if (!room) return;
-    // Presence is re-read here, not taken from the Room's last event:
-    // the countdown was armed from stale state and the opponent may
-    // have reconnected in the meantime.
-    const connection = connectionRef.current;
-    room.claimForfeit({
-      hasOtherPeer: connection?.hasOtherPeer(playerId) ?? false,
-    });
-  }, [playerId]);
-
-  const sendRematch = useCallback(() => {
-    roomRef.current?.rematch();
+    sessionRef.current?.claimForfeit();
   }, []);
 
-  const updateName = useCallback(
-    (newName: string) => {
-      const room = roomRef.current;
-      if (!room) return;
-      room.updateName(newName);
-      // Presence carries the name too, and that lives on the Connection.
-      connectionRef.current?.announce({ id: playerId, name: newName });
-    },
-    [playerId],
-  );
+  const sendRematch = useCallback(() => {
+    sessionRef.current?.rematch();
+  }, []);
+
+  const updateName = useCallback((newName: string) => {
+    sessionRef.current?.updateName(newName);
+  }, []);
 
   const setAssistLevel = useCallback((level: AssistLevel) => {
-    roomRef.current?.setAssistLevel(level);
+    sessionRef.current?.setAssistLevel(level);
   }, []);
 
   const setDifficulty = useCallback((level: Difficulty) => {
-    roomRef.current?.setDifficulty(level);
+    sessionRef.current?.setDifficulty(level);
   }, []);
 
   return {
-    connected,
-    ...projection,
+    ...snapshot,
     sendStartGame,
     sendProgress,
     sendComplete,
