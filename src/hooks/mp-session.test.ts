@@ -410,6 +410,20 @@ describe("backgrounded tab", () => {
     });
   });
 
+  it("remembers a tab that hid before the connection was open", async () => {
+    // Opening is async, and the tab can go away inside that window.
+    // The session tracks `hidden` itself rather than reading it back
+    // off a DOM it cannot see, so the debounce it armed against no
+    // transport still releases the one that arrives.
+    const session = open();
+    session.visibilityChanged(true);
+
+    await flush();
+    clock.advance(HIDE_DEBOUNCE_MS);
+
+    expect(transport().disconnectCount).toBe(1);
+  });
+
   it("drops a pending release when the session closes", async () => {
     // The debounce outlives nothing: a timer left armed past close
     // would fire against a torn-down Connection and a Room that has
