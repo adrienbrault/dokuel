@@ -410,6 +410,22 @@ describe("backgrounded tab", () => {
     });
   });
 
+  it("drops a pending release when the session closes", async () => {
+    // The debounce outlives nothing: a timer left armed past close
+    // would fire against a torn-down Connection and a Room that has
+    // stopped observing its doc.
+    const session = open();
+    await flush();
+    session.visibilityChanged(true);
+    expect(clock.pendingCount()).toBe(1);
+
+    session.close();
+    clock.advance(HIDE_DEBOUNCE_MS * 2);
+
+    expect(clock.pendingCount()).toBe(0);
+    expect(transport().disconnectCount).toBe(0);
+  });
+
   it("does not blame the opponent while we are the one who went away", async () => {
     const { session } = await openStartedGame();
 
