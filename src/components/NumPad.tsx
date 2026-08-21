@@ -1,7 +1,6 @@
-import { type Ref, useImperativeHandle } from "react";
-import { useNumPadGesture } from "../hooks/useNumPadGesture.ts";
+import type { NumPadGesture } from "../hooks/useDigitGesture.ts";
 import { DIGITS } from "../lib/constants.ts";
-import type { NumPadGesturePoint, NumPadPosition } from "../lib/types.ts";
+import type { NumPadPosition } from "../lib/types.ts";
 import { NumPadKeyFace, numPadKeyLabel } from "./NumPadKeyFace.tsx";
 import { NumPadLegend } from "./NumPadLegend.tsx";
 
@@ -11,75 +10,34 @@ type NumPadProps = {
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
   disableCompleted?: boolean | undefined;
-  /** Fires on a quick tap — pointerup before the hold threshold (commits the value / toggles highlight). */
-  onTapNumber: (n: number) => void;
-  /** Fires after the hold threshold while still pressed (adds a pencil note). */
-  onHoldNumber?: ((n: number) => void) | undefined;
-  /** Fires when the press ends (pointerup/cancel/leave or post-drag/skim). */
-  onPressEnd?: (() => void) | undefined;
-  /**
-   * Fires once the finger has slid PERPENDICULAR to the numpad axis,
-   * handing control to the parent's drag-and-drop layer.
-   */
-  onStartDrag?: ((args: NumPadGesturePoint) => void) | undefined;
-  /** Fires when an ALONG-axis skim crosses into another digit's button. */
-  onSkimDigit?: ((n: number) => void) | undefined;
   /** What a tap currently does; drives the legend and the key faces. */
   tapAction?: "enter" | "note" | undefined;
-  /** Imperative handle — see NumPadHandle. */
-  ref?: Ref<NumPadHandle> | undefined;
+  /**
+   * The live press, from the game's gesture recognizer. The pad renders
+   * it; it does not recognize anything itself.
+   */
+  gesture: NumPadGesture;
 };
 
 /**
- * Imperative surface a parent uses to fold a returning digit drag back
- * into a numpad skim — the reverse of the skim-to-drag handoff.
+ * The digit row. A pure view: every pointer handler it spreads, and the
+ * pressed digit it paints, come from the recognizer that owns the whole
+ * gesture (see useDigitGesture) — including the parts of it that happen
+ * out over the board, which is why the recognizer lives at the game
+ * level and the pad only reports its geometry through `groupRef` and
+ * the `data-numpad-digit` attributes the hit-tests read.
  */
-export type NumPadHandle = {
-  /**
-   * Resumes a skim for a gesture that began as a drag and has been
-   * brought back over the digits. Highlights `digit`, restores the
-   * press visual, and re-arms document-level skim tracking under the
-   * same pointer.
-   */
-  resumeSkimFromDrag: (info: {
-    digit: number;
-    pointerId: number;
-    pointerType: string;
-  }) => void;
-};
-
 export function NumPad({
   position,
   remainingCounts,
   selectedValue,
   showRemainingCounts = true,
   disableCompleted = false,
-  onTapNumber,
-  onHoldNumber,
-  onPressEnd,
-  onStartDrag,
-  onSkimDigit,
   tapAction,
-  ref,
+  gesture,
 }: NumPadProps) {
   const isVertical = position === "left" || position === "right";
-
-  // One press → tap | hold | skim | drag, plus the pressed-digit visual
-  // that follows the finger across skim transitions.
-  const { keyProps, groupRef, pressedDigit, resumeFromDrag } = useNumPadGesture(
-    {
-      position,
-      onTap: onTapNumber,
-      onHold: onHoldNumber,
-      onSkim: onSkimDigit,
-      onDrag: onStartDrag,
-      onEnd: onPressEnd,
-    },
-  );
-
-  useImperativeHandle(ref, () => ({ resumeSkimFromDrag: resumeFromDrag }), [
-    resumeFromDrag,
-  ]);
+  const { keyProps, groupRef, pressedDigit } = gesture;
 
   return (
     <div

@@ -185,6 +185,87 @@ test("tapping a digit notes a drag-selected range, then hands off to highlights"
   }
 });
 
+test("dragging a digit off the numpad lands a value or a note by drop zone", async ({
+  page,
+}) => {
+  // The drag is one continuous gesture that crosses the whole input
+  // stack — numpad press, promotion off the pad, cell hit-test, drop —
+  // and which HALF of the cell the finger releases over is the only
+  // thing that decides between a value and a note. Both zones, in one
+  // real browser, against the real board.
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Solo" }).click();
+  await page.getByRole("button", { name: "Easy" }).click();
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+  const pad = page.locator('[role="group"][aria-label="Number pad"]:visible');
+  const board = await readBoard(page);
+  const empties = [...board].flatMap((c, i) => (c === "." ? [i] : []));
+  const [valueCell, noteCell] = empties;
+  if (valueCell === undefined || noteCell === undefined) {
+    throw new Error("board has fewer than 2 empty cells");
+  }
+  const cellAt = (idx: number) =>
+    page.locator(
+      `button[aria-label^="Cell row ${Math.floor(idx / 9) + 1} column ${(idx % 9) + 1},"]`,
+    );
+
+  // `zone` is the fraction down the cell to release at: the drop zone is
+  // split at the midline, so 0.25 is squarely a value and 0.75 a note.
+  const dragDigitTo = async (digit: string, idx: number, zone: number) => {
+    const key = pad.getByRole("button", { name: new RegExp(`^${digit}(,|$)`) });
+    const keyBox = await key.boundingBox();
+    const cellBox = await cellAt(idx).boundingBox();
+    if (!keyBox || !cellBox) throw new Error("digit or cell not visible");
+    await page.mouse.move(
+      keyBox.x + keyBox.width / 2,
+      keyBox.y + keyBox.height / 2,
+    );
+    await page.mouse.down();
+    // Straight up — perpendicular to the bottom numpad — so the press
+    // classifies as a drag rather than an along-axis skim.
+    await page.mouse.move(
+      keyBox.x + keyBox.width / 2,
+      keyBox.y + keyBox.height / 2 - 24,
+      { steps: 3 },
+    );
+    await page.mouse.move(
+      cellBox.x + cellBox.width / 2,
+      cellBox.y + cellBox.height * zone,
+      { steps: 8 },
+    );
+    await page.mouse.up();
+  };
+
+  // A digit whose every placement is already on the board is disabled
+  // and invisible, so each drag has to start from a live key.
+  const liveDigit = async () => {
+    const d = await pad
+      .locator("button:not([disabled])")
+      .first()
+      .evaluate((el) => el.getAttribute("data-numpad-digit") ?? "");
+    if (!d) throw new Error("no enabled numpad digit");
+    return d;
+  };
+
+  // Top half → the digit is entered as the cell's value. The board is
+  // random, so allow the label's trailing ", conflict".
+  const valueDigit = await liveDigit();
+  await dragDigitTo(valueDigit, valueCell, 0.25);
+  await expect(cellAt(valueCell)).toHaveAttribute(
+    "aria-label",
+    new RegExp(`, value ${valueDigit}(,|$)`),
+  );
+
+  // Bottom half → the same gesture pencils a note and leaves the cell empty.
+  const noteDigit = await liveDigit();
+  await dragDigitTo(noteDigit, noteCell, 0.75);
+  await expect(cellAt(noteCell)).toHaveAttribute(
+    "aria-label",
+    new RegExp(`, empty,.*notes ${noteDigit}$`),
+  );
+});
+
 test("holding a numpad digit writes a pencil note", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Start Solo" }).click();

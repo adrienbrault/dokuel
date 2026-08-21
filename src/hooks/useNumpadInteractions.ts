@@ -1,14 +1,13 @@
-import { useRef, useState } from "react";
-import type { NumPadHandle } from "../components/NumPad.tsx";
+import { useCallback, useState } from "react";
 import {
   applyDigitIntent,
   type DigitGesture,
   type DigitIntentOps,
   digitIntent,
 } from "../lib/digit-intent.ts";
-import type { AssistLevel } from "../lib/types.ts";
+import type { AssistLevel, NumPadPosition } from "../lib/types.ts";
+import { useDigitGesture } from "./useDigitGesture.ts";
 import { useDigitHighlight } from "./useDigitHighlight.ts";
-import { useGameDigitDrag } from "./useGameDigitDrag.ts";
 import type { useSudoku } from "./useSudoku.ts";
 
 type SudokuGame = ReturnType<typeof useSudoku>;
@@ -24,10 +23,13 @@ type SudokuGame = ReturnType<typeof useSudoku>;
  */
 export function useNumpadInteractions({
   game,
+  position,
   disabled,
   assistLevel,
 }: {
   game: SudokuGame;
+  /** Which edge the pad sits on — the recognizer reads it as its axis. */
+  position: NumPadPosition;
   disabled: boolean;
   assistLevel: AssistLevel;
 }) {
@@ -74,18 +76,34 @@ export function useNumpadInteractions({
     setChargingDigit(null);
   };
 
-  // Digit drag: top-half drop commits a value, bottom-half adds a note.
-  // A drag brought back over the numpad demotes to a skim (see NumPad).
-  const numPadRef = useRef<NumPadHandle>(null);
-  const { dragState, startNumpadDrag, startCellDrag } = useGameDigitDrag({
-    board: game.board,
+  // A digit may only land in an empty, non-given cell. The recognizer
+  // asks; the board answers.
+  const isDroppable = useCallback(
+    (row: number, col: number) => {
+      const cell = game.board[row]?.[col];
+      if (!cell) return false;
+      return !cell.isGiven && cell.value === null;
+    },
+    [game.board],
+  );
+
+  // One recognizer owns the whole gesture — press, skim, promotion to a
+  // drag, demotion back to a skim, and the drop. It lives here rather
+  // than inside NumPad because the gesture does not end at the pad's
+  // edge: what a landed digit DOES is still digitIntent's answer.
+  const gesture = useDigitGesture({
+    position,
     disabled,
+    onTap: (n: number) => runIntent({ kind: "tap" }, n),
+    onHold: handleHoldNote,
+    onSkim: highlight.skimToDigit,
+    onEnd: handlePressEnd,
+    isDroppable,
     onDrop: ({ digit, mode, target, from }) =>
       runIntent({ kind: "drop", mode, target, from }, digit),
-    onReturnToNumpad: (info) => numPadRef.current?.resumeSkimFromDrag(info),
   });
 
-  // Prop bag for <NumPad {...numPadProps} ref={numPadRef} position=.../>.
+  // Prop bag for <NumPad {...numPadProps} position=.../>.
   const numPadProps = {
     // The legend reads the same intent the tap will run.
     tapAction: intentFor({ kind: "tap" }).label,
@@ -95,20 +113,19 @@ export function useNumpadInteractions({
       : highlight.highlightedDigit,
     showRemainingCounts: assistLevel === "full",
     disableCompleted: assistLevel !== "paper",
-    onTapNumber: (n: number) => runIntent({ kind: "tap" }, n),
-    onHoldNumber: handleHoldNote,
-    onPressEnd: handlePressEnd,
-    onStartDrag: startNumpadDrag,
-    onSkimDigit: highlight.skimToDigit,
+    gesture: {
+      keyProps: gesture.keyProps,
+      groupRef: gesture.groupRef,
+      pressedDigit: gesture.pressedDigit,
+    },
   };
 
   return {
     highlight,
     chargingDigit,
     keyDigit,
-    numPadRef,
     numPadProps,
-    dragState,
-    startCellDrag,
+    dragState: gesture.dragState,
+    startCellDrag: gesture.startCellDrag,
   };
 }

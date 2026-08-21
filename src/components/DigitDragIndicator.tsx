@@ -1,4 +1,4 @@
-import type { DigitDragState } from "../hooks/useDigitDrag.ts";
+import type { DigitDragState } from "../hooks/useDigitGesture.ts";
 
 const CHIP_SIZE_PX = 17;
 

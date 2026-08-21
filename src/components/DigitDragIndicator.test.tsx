@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { DigitDragState } from "../hooks/useDigitDrag.ts";
+import type { DigitDragState } from "../hooks/useDigitGesture.ts";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 
 function makeState(overrides: Partial<DigitDragState> = {}): DigitDragState {

@@ -86,8 +86,11 @@ for it. Behaviour and label come from the same answer.
 _Avoid_: tap action, numpad mode
 
 **Gesture recognizer**:
-The module behind the numpad that resolves one press into a tap, hold, skim,
-or drag, including promotion and demotion between skim and drag.
+The module that owns the whole life of a pressed digit: it resolves one press
+into a tap, hold, skim, or drag, promotes and demotes between skim and drag,
+and reports the drop that ends it. It lives at the game level rather than
+inside the numpad, because the gesture does not end at the pad's edge — the
+numpad is a view over it, supplying only the digit row it hit-tests.
 _Avoid_: press handler, skim hook, pointer logic
 
 **Skim**:

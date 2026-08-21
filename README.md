@@ -139,7 +139,7 @@ src/
 ├── hooks/          # React state hooks + multiplayer logic
 │   ├── useSudoku, useResumableSudoku, useKeyboard, useAssistLevel
 │   ├── useNumPadPosition, useDarkMode, useLocalStorage, useDelayedFlag
-│   ├── useDigitHighlight, useDigitDrag, useGameDigitDrag, useDragSelect, useNumPadGesture
+│   ├── useDigitHighlight, useDigitGesture (the gesture recognizer), useDragSelect
 │   ├── useYjsMultiplayer, useOpponentProgressVisible, useRecordMultiplayerMatch
 │   └── p2p-room (Yjs CRDT room), mp-snapshot, mp-telemetry
 ├── lib/            # Pure logic — no React dependency

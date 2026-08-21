@@ -173,7 +173,7 @@
         "src/lib/board-engine.ts",
         "src/hooks/mp-room.ts",
         "src/hooks/p2p-room.ts",
-        "src/hooks/useNumPadGesture.ts"
+        "src/hooks/useDigitGesture.ts"
       ],
       "linter": {
         "rules": {
