@@ -1,5 +1,4 @@
 import * as Y from "yjs";
-import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -124,27 +123,39 @@ export function setDifficulty(room: P2PRoom, level: Difficulty): void {
   });
 }
 
-export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
+/** One dealt game, as the Room decided it. */
+export type GameDeal = {
+  puzzle: string;
+  solution: string;
+  difficulty: Difficulty;
+  gameNumber: number;
+  /** Where every seated player starts on this board. */
+  cellsRemaining: number;
+};
+
+/**
+ * Record a dealt game and put every seated player at the start of it.
+ * What to deal, which number it carries and how much of it is left to
+ * fill are the Room's decisions; this only lands them, in one
+ * transaction so no peer ever observes a half-started game.
+ */
+export function writeGame(room: P2PRoom, deal: GameDeal): void {
   const roomMap = room.doc.getMap("room");
-  const actualDifficulty =
-    difficulty ?? ((roomMap.get("difficulty") as Difficulty) || "medium");
-  const { puzzle, solution } = generatePuzzleWithSolution(actualDifficulty);
-  const clueCount = puzzle.split("").filter((c) => c !== ".").length;
 
   room.doc.transact(() => {
-    roomMap.set("puzzle", puzzle);
-    roomMap.set("solution", solution);
-    roomMap.set("difficulty", actualDifficulty);
+    roomMap.set("puzzle", deal.puzzle);
+    roomMap.set("solution", deal.solution);
+    roomMap.set("difficulty", deal.difficulty);
     roomMap.set("status", "playing");
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
     roomMap.set("winnerBoard", null);
-    roomMap.set("gameNumber", ((roomMap.get("gameNumber") as number) || 0) + 1);
+    roomMap.set("gameNumber", deal.gameNumber);
 
     const players = room.doc.getMap("players");
     for (const [, playerMap] of players) {
       const p = playerMap as Y.Map<unknown>;
-      p.set("cellsRemaining", 81 - clueCount);
+      p.set("cellsRemaining", deal.cellsRemaining);
       p.set("completionPercent", 0);
     }
   });
@@ -216,10 +227,6 @@ export function writeClaim(
     roomMap.set("winnerBoard", board);
     roomMap.set("status", "finished");
   });
-}
-
-export function requestRematch(room: P2PRoom, difficulty?: Difficulty): void {
-  startGame(room, difficulty);
 }
 
 export function getRoomStatus(room: P2PRoom): string {

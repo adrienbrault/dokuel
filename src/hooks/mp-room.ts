@@ -1,4 +1,5 @@
 import type { Doc } from "yjs";
+import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import {
   clearSnapshot,
@@ -17,13 +18,12 @@ import {
   leaveRoom,
   MAX_PLAYERS,
   observeRoomChanges,
-  requestRematch,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
-  startGame,
   updatePlayerName,
   updateProgress,
   writeClaim,
+  writeGame,
 } from "./p2p-room.ts";
 
 /**
@@ -494,6 +494,28 @@ export function createRoom({
     writeClaim(p2p, playerId, playerName(), board);
   }
 
+  /**
+   * Deal a board on the room's own difficulty and put both players at
+   * the start of it. The game number is bumped here, with the deal it
+   * belongs to, so one place decides what "a new game" is; two peers
+   * dealing at once write the SAME number with different boards, which
+   * is why the projection resolves a collision by content rather than
+   * by counter.
+   */
+  function dealGame(): void {
+    const state = getRoomState(p2p);
+    const difficulty = state?.difficulty ?? "medium";
+    const { puzzle, solution } = generatePuzzleWithSolution(difficulty);
+    const clues = puzzle.split("").filter((c) => c !== ".").length;
+    writeGame(p2p, {
+      puzzle,
+      solution,
+      difficulty,
+      gameNumber: (state?.gameNumber ?? 0) + 1,
+      cellsRemaining: 81 - clues,
+    });
+  }
+
   function markAbsent(): void {
     absence.ongoing = true;
     absence.endedAt = Number.NEGATIVE_INFINITY;
@@ -575,10 +597,10 @@ export function createRoom({
         publish();
         return;
       }
-      startGame(p2p);
+      dealGame();
     },
     rematch() {
-      requestRematch(p2p);
+      dealGame();
     },
     progress(cellsRemaining, completionPercent) {
       updateProgress(p2p, playerId, cellsRemaining, completionPercent);
