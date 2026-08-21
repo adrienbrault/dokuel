@@ -1,25 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import type { Difficulty } from "../lib/types.ts";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
-  claimWinner,
   createRoomFromDoc,
-  getHostId,
-  getOpponentProgress,
-  getPlayers,
-  getRoomState,
-  getRoomStatus,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
-  judgeClaim,
   leaveRoom,
   observeRoomChanges,
   type P2PRoom,
-  requestRematch,
+  readPlayers,
+  readRoom,
   setDifficulty,
-  startGame,
   updateProgress,
+  writeClaim,
+  writeGame,
 } from "./p2p-room.ts";
 
 function createLinkedDocs(): [Y.Doc, Y.Doc] {
@@ -32,6 +28,24 @@ function createLinkedDocs(): [Y.Doc, Y.Doc] {
 
 function createTestRoom(doc?: Y.Doc): P2PRoom {
   return createRoomFromDoc(doc ?? new Y.Doc(), "test-room");
+}
+
+const PUZZLE = "1".padEnd(81, ".");
+const SOLUTION = "1".repeat(81);
+
+/**
+ * Land a game in the doc. Which board and which number is the Room's
+ * decision, not this module's, so the fixture names them outright
+ * rather than generating one.
+ */
+function writeTestGame(room: P2PRoom, difficulty: Difficulty = "medium"): void {
+  writeGame(room, {
+    puzzle: PUZZLE,
+    solution: SOLUTION,
+    difficulty,
+    gameNumber: 1,
+    cellsRemaining: 80,
+  });
 }
 
 describe("p2p-room", () => {
@@ -75,30 +89,6 @@ describe("p2p-room", () => {
       expect(p1.get("color")).not.toBe(p2.get("color"));
     });
 
-    it("does not add a third player to a full room", () => {
-      // Spec: 1v1 rooms hold two players; a third joiner gets the
-      // "Game is full" screen. Without the cap the Start button's
-      // players.length === 2 check could never pass again.
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      joinRoom(room, "player3", "Carol");
-
-      expect(getPlayers(room)).toHaveLength(2);
-      expect(room.doc.getMap("players").has("player3")).toBe(false);
-    });
-
-    it("still recognizes an already-joined player when the room is full", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      // Re-join (e.g. reconnect) must stay a no-op, not be treated as
-      // a third player.
-      joinRoom(room, "player1", "Alice");
-
-      expect(getPlayers(room)).toHaveLength(2);
-    });
-
     it("does not claim host on join", () => {
       // Host is claimed only by initializeRoom (creator-only). joinRoom
       // never writes hostId — see the deterministic race test below
@@ -139,8 +129,8 @@ describe("p2p-room", () => {
       joinRoom(room1, "player1", "Alice");
       joinRoom(room2, "player2", "Bob");
 
-      const players1 = getPlayers(room1);
-      const players2 = getPlayers(room2);
+      const players1 = readPlayers(room1);
+      const players2 = readPlayers(room2);
       expect(players1).toHaveLength(2);
       expect(players2).toHaveLength(2);
     });
@@ -176,72 +166,6 @@ describe("p2p-room", () => {
     });
   });
 
-  describe("startGame", () => {
-    it("generates puzzle and solution", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-
-      startGame(room, "medium");
-
-      const roomMap = room.doc.getMap("room");
-      const puzzle = roomMap.get("puzzle") as string;
-      const solution = roomMap.get("solution") as string;
-      expect(puzzle).toHaveLength(81);
-      expect(solution).toHaveLength(81);
-      expect(puzzle).toContain(".");
-      expect(solution).not.toContain(".");
-    });
-
-    it("sets status to playing", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-
-      startGame(room, "medium");
-
-      expect(getRoomStatus(room)).toBe("playing");
-    });
-
-    it("sets difficulty", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-
-      startGame(room, "hard");
-
-      expect(room.doc.getMap("room").get("difficulty")).toBe("hard");
-    });
-
-    it("resets player progress based on clue count", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-
-      startGame(room, "medium");
-
-      const puzzle = room.doc.getMap("room").get("puzzle") as string;
-      const clueCount = puzzle.split("").filter((c) => c !== ".").length;
-
-      const players = room.doc.getMap("players");
-      const p1 = players.get("player1") as Y.Map<unknown>;
-      expect(p1.get("cellsRemaining")).toBe(81 - clueCount);
-      expect(p1.get("completionPercent")).toBe(0);
-    });
-
-    it("increments gameNumber", () => {
-      const room = createTestRoom();
-      initializeRoom(room, "player1", "medium");
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-
-      expect(room.doc.getMap("room").get("gameNumber")).toBe(0);
-
-      startGame(room, "medium");
-      expect(room.doc.getMap("room").get("gameNumber")).toBe(1);
-    });
-  });
-
   describe("setDifficulty", () => {
     it("updates the room difficulty in the Yjs map", () => {
       const room = createTestRoom();
@@ -267,271 +191,60 @@ describe("p2p-room", () => {
     });
   });
 
-  describe("getOpponentProgress", () => {
-    it("returns opponent progress", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      updateProgress(room, "player2", 15, 80);
-
-      const progress = getOpponentProgress(room, "player1");
-      expect(progress).toEqual({ cellsRemaining: 15, completionPercent: 80 });
-    });
-
-    it("returns null when no opponent", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-
-      expect(getOpponentProgress(room, "player1")).toBeNull();
-    });
-  });
-
-  describe("judgeClaim", () => {
-    const SOLUTION = "1".repeat(81);
-
-    it("credits a board that equals the room's solution", () => {
-      expect(judgeClaim(SOLUTION, SOLUTION)).toBe("solved");
-    });
-
-    it("reads a missing board as a forfeit claim", () => {
-      // Nothing in the doc can verify "the opponent vanished" — only
-      // the receiver's own absence record can back it.
-      expect(judgeClaim(null, SOLUTION)).toBe("forfeit");
-      expect(judgeClaim(undefined, SOLUTION)).toBe("forfeit");
-    });
-
-    it("treats an empty-string board as forged, not forfeit", () => {
-      // The original one-liner cheat: a solved-claim with no board. If
-      // "" collapsed to a forfeit it would be judged by absence instead
-      // of by the solution.
-      expect(judgeClaim("", SOLUTION)).toBe("forged");
-    });
-
-    it("rejects a board that does not solve the puzzle", () => {
-      expect(judgeClaim("2".repeat(81), SOLUTION)).toBe("forged");
-    });
-
-    it("treats a board that is not even a string as forged", () => {
-      // The projection hands this function a string or null while the
-      // write path hands it the raw Yjs value, so a peer writing a
-      // number must reach ONE verdict — otherwise the same claim can
-      // be honoured on the read side and undisplaceable on the write
-      // side.
-      expect(judgeClaim(42, SOLUTION)).toBe("forged");
-    });
-
-    it("cannot prove anything without a solution in the room", () => {
-      // Not provably forged — callers that punish forgery must leave a
-      // claim in this state alone rather than assume the worst.
-      expect(judgeClaim(SOLUTION, null)).toBe("unverifiable");
-    });
-  });
-
-  describe("claimWinner", () => {
-    it("sets winnerId when no current winner", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      const solution = room.doc.getMap("room").get("solution") as string;
-      const claimed = claimWinner(room, "player1", "Alice", solution);
-
-      expect(claimed).toBe(true);
-      const roomMap = room.doc.getMap("room");
-      expect(roomMap.get("winnerId")).toBe("player1");
-      expect(roomMap.get("winnerName")).toBe("Alice");
-      expect(roomMap.get("status")).toBe("finished");
-    });
-
-    it("rejects when winner already claimed", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      const solution = room.doc.getMap("room").get("solution") as string;
-      claimWinner(room, "player1", "Alice", solution);
-      const claimed = claimWinner(room, "player2", "Bob", solution);
-
-      expect(claimed).toBe(false);
-      expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
-    });
-
-    it("lets a real solve displace a claim carrying a nonsense board", () => {
-      // Nothing stops a peer from writing a number into winnerBoard.
-      // It proves nothing, so it must not lock the room's real winner
-      // out any more than an empty-string board does.
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-      const solution = room.doc.getMap("room").get("solution") as string;
-      const roomMap = room.doc.getMap("room");
-      room.doc.transact(() => {
-        roomMap.set("winnerId", "player2");
-        roomMap.set("winnerName", "Bob");
-        roomMap.set("winnerBoard", 42);
-      });
-
-      const claimed = claimWinner(room, "player1", "Alice", solution);
-
-      expect(claimed).toBe(true);
-      expect(roomMap.get("winnerId")).toBe("player1");
-    });
-
-    it("lets a verified solved claim displace a forfeit claim", () => {
-      // A forfeit only means anything while the "absent" player never
-      // finishes. If they complete the real board, the forfeit was
-      // premature or fabricated — the solve wins.
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      const solution = room.doc.getMap("room").get("solution") as string;
-      claimWinner(room, "player2", "Bob", null);
-      const claimed = claimWinner(room, "player1", "Alice", solution);
-
-      expect(claimed).toBe(true);
-      expect(room.doc.getMap("room").get("winnerId")).toBe("player1");
-    });
-
-    it("does not let a wrong board displace a forfeit claim", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      claimWinner(room, "player2", "Bob", null);
-      const claimed = claimWinner(room, "player1", "Alice", "1".repeat(81));
-
-      expect(claimed).toBe(false);
-      expect(room.doc.getMap("room").get("winnerId")).toBe("player2");
-    });
-  });
-
-  describe("requestRematch", () => {
-    it("generates new puzzle and increments gameNumber", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      const oldGameNumber = room.doc.getMap("room").get("gameNumber");
-
-      requestRematch(room, "medium");
-
-      const roomMap = room.doc.getMap("room");
-      // gameNumber incremented
-      expect(roomMap.get("gameNumber")).toBe((oldGameNumber as number) + 1);
-      // new puzzle generated (could theoretically be same, but extremely unlikely)
-      expect(roomMap.get("puzzle")).toHaveLength(81);
-      expect(roomMap.get("status")).toBe("playing");
-      expect(roomMap.get("winnerId")).toBeNull();
-    });
-
-    it("resets player progress", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      updateProgress(room, "player1", 5, 95);
-      requestRematch(room, "medium");
-
-      const players = room.doc.getMap("players");
-      const p1 = players.get("player1") as Y.Map<unknown>;
-      expect(p1.get("completionPercent")).toBe(0);
-    });
-  });
-
-  describe("getPlayers", () => {
-    it("returns players sorted by join order", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player2", "Bob");
-      joinRoom(room, "player1", "Alice");
-
-      const players = getPlayers(room);
-      expect(players[0]!.id).toBe("player2");
-      expect(players[1]!.id).toBe("player1");
-    });
-  });
-
-  describe("getRoomState", () => {
-    it("returns null before anyone joins (no status yet)", () => {
+  describe("readRoom", () => {
+    it("returns null before anything has been written", () => {
       const room: P2PRoom = { doc: new Y.Doc(), roomId: "empty" };
-      expect(getRoomState(room)).toBeNull();
+      expect(readRoom(room)).toBeNull();
     });
 
     it("returns null after createRoomFromDoc but before initializeRoom", () => {
       const room = createTestRoom();
       // createRoomFromDoc does not write anything to the doc — status
       // is set by initializeRoom (creator) or by Yjs sync (joiner).
-      expect(getRoomState(room)).toBeNull();
+      expect(readRoom(room)).toBeNull();
     });
 
-    it("returns a full snapshot once the creator initializes and joins", () => {
+    it("returns every field the creator seeded", () => {
       const room = createTestRoom();
       initializeRoom(room, "player1", "medium");
-      joinRoom(room, "player1", "Alice");
 
-      const state = getRoomState(room);
-      expect(state).not.toBeNull();
-      expect(state!.status).toBe("lobby");
-      expect(state!.hostId).toBe("player1");
-      expect(state!.difficulty).toBe("medium");
-      expect(state!.assistLevel).toBe("standard");
-      expect(state!.players).toHaveLength(1);
-      expect(state!.puzzle).toBeNull();
-      expect(state!.solution).toBeNull();
-      expect(state!.winnerId).toBeNull();
-      expect(state!.winnerName).toBeNull();
-      expect(state!.gameNumber).toBe(0);
+      const fields = readRoom(room)!;
+      expect(fields.status).toBe("lobby");
+      expect(fields.hostId).toBe("player1");
+      expect(fields.difficulty).toBe("medium");
+      expect(fields.assistLevel).toBe("standard");
+      expect(fields.puzzle).toBeNull();
+      expect(fields.solution).toBeNull();
+      expect(fields.winnerId).toBeNull();
+      expect(fields.winnerName).toBeNull();
+      expect(fields.gameNumber).toBe(0);
     });
 
-    it("reflects startGame", () => {
+    it("reflects a recorded game", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
-      startGame(room, "hard");
+      writeTestGame(room, "hard");
 
-      const state = getRoomState(room)!;
+      const state = readRoom(room)!;
       expect(state.status).toBe("playing");
       expect(state.difficulty).toBe("hard");
-      expect(state.puzzle).toHaveLength(81);
-      expect(state.solution).toHaveLength(81);
-      expect(state.solution).not.toContain(".");
+      expect(state.puzzle).toBe(PUZZLE);
+      expect(state.solution).toBe(SOLUTION);
       expect(state.gameNumber).toBe(1);
     });
 
-    it("reflects claimWinner with both id and name", () => {
+    it("reflects a recorded win claim with both id and name", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-      const solution = room.doc.getMap("room").get("solution") as string;
-      claimWinner(room, "player1", "Alice", solution);
+      writeTestGame(room);
+      writeClaim(room, "player1", "Alice", SOLUTION);
 
-      const state = getRoomState(room)!;
+      const state = readRoom(room)!;
       expect(state.winnerId).toBe("player1");
       expect(state.winnerName).toBe("Alice");
       expect(state.status).toBe("finished");
-    });
-  });
-
-  describe("getHostId", () => {
-    it("returns the empty string before joinRoom", () => {
-      const room = createTestRoom();
-      expect(getHostId(room)).toBe("");
-    });
-
-    it("returns the host claimed by initializeRoom", () => {
-      const room = createTestRoom();
-      initializeRoom(room, "player1", "medium");
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      expect(getHostId(room)).toBe("player1");
     });
   });
 
@@ -563,33 +276,6 @@ describe("p2p-room", () => {
       setDifficulty(room, "hard");
       joinRoom(room, "player1", "Alice");
       expect(callback).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("startGame with default difficulty", () => {
-    it("uses the room's current difficulty when none is passed", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      setDifficulty(room, "expert");
-
-      startGame(room);
-
-      expect(getRoomState(room)!.difficulty).toBe("expert");
-    });
-  });
-
-  describe("requestRematch with default difficulty", () => {
-    it("uses the room's current difficulty when none is passed", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      setDifficulty(room, "hard");
-      startGame(room);
-
-      requestRematch(room);
-
-      expect(getRoomState(room)!.difficulty).toBe("hard");
     });
   });
 
@@ -632,17 +318,18 @@ describe("p2p-room", () => {
 
       hydrateRoomFromSnapshot(room, snap);
 
-      const state = getRoomState(room);
-      expect(state).not.toBeNull();
-      expect(state?.status).toBe("playing");
-      expect(state?.gameNumber).toBe(2);
-      expect(state?.puzzle).toBe(snap.puzzle);
-      expect(state?.solution).toBe(snap.solution);
-      expect(state?.difficulty).toBe("hard");
-      expect(state?.hostId).toBe("p1");
-      expect(state?.players).toHaveLength(2);
-      expect(state?.players[0]?.cellsRemaining).toBe(40);
-      expect(state?.players[1]?.completionPercent).toBe(63);
+      const fields = readRoom(room);
+      expect(fields).not.toBeNull();
+      expect(fields?.status).toBe("playing");
+      expect(fields?.gameNumber).toBe(2);
+      expect(fields?.puzzle).toBe(snap.puzzle);
+      expect(fields?.solution).toBe(snap.solution);
+      expect(fields?.difficulty).toBe("hard");
+      expect(fields?.hostId).toBe("p1");
+      const players = readPlayers(room);
+      expect(players).toHaveLength(2);
+      expect(players.find((p) => p.id === "p1")?.cellsRemaining).toBe(40);
+      expect(players.find((p) => p.id === "p2")?.completionPercent).toBe(63);
     });
 
     it("does not clobber existing keys", () => {
@@ -650,7 +337,7 @@ describe("p2p-room", () => {
       initializeRoom(room, "p1", "easy");
       joinRoom(room, "p1", "Alice");
       joinRoom(room, "p2", "Bob");
-      startGame(room);
+      writeTestGame(room, "easy");
       const beforePuzzle = room.doc.getMap("room").get("puzzle");
       const beforeGameNumber = room.doc.getMap("room").get("gameNumber");
 
@@ -677,33 +364,9 @@ describe("p2p-room", () => {
       hydrateRoomFromSnapshot(room, makeSnap());
 
       expect(aliceMap.get("cellsRemaining")).toBe(5);
-      const players = getPlayers(room);
+      const players = readPlayers(room);
       expect(players).toHaveLength(2);
       expect(players.find((p) => p.id === "p2")?.cellsRemaining).toBe(30);
-    });
-  });
-
-  describe("seat ordering", () => {
-    it("breaks joinOrder ties by codepoint, not locale collation", () => {
-      // Every peer must sort players identically to agree on who holds
-      // a seat. localeCompare("a", "B") is locale-dependent (-1 in en,
-      // codepoint order says "B" < "a") — a mismatch would make two
-      // clients evict different overflow players.
-      const room = createTestRoom();
-      const players = room.doc.getMap("players");
-      for (const id of ["a", "B"]) {
-        const pm = new Y.Map<unknown>();
-        pm.set("name", id);
-        pm.set("color", "blue");
-        pm.set("cellsRemaining", 81);
-        pm.set("completionPercent", 0);
-        pm.set("joinOrder", 0);
-        players.set(id, pm);
-      }
-
-      const ordered = getPlayers(room).map((p) => p.id);
-
-      expect(ordered).toEqual(["B", "a"]);
     });
   });
 
@@ -715,8 +378,8 @@ describe("p2p-room", () => {
 
       leaveRoom(room, "p2");
 
-      expect(getPlayers(room)).toHaveLength(1);
-      expect(getPlayers(room)[0]!.id).toBe("p1");
+      expect(readPlayers(room)).toHaveLength(1);
+      expect(readPlayers(room)[0]!.id).toBe("p1");
     });
 
     it("is a no-op for a player not in the room", () => {
@@ -725,7 +388,7 @@ describe("p2p-room", () => {
 
       leaveRoom(room, "ghost");
 
-      expect(getPlayers(room)).toHaveLength(1);
+      expect(readPlayers(room)).toHaveLength(1);
     });
 
     it("resolves a concurrent-join overflow back to a startable room", () => {
@@ -746,15 +409,15 @@ describe("p2p-room", () => {
       const updateB = Y.encodeStateAsUpdate(docB);
       Y.applyUpdate(docB, updateA);
       Y.applyUpdate(docA, updateB);
-      expect(getPlayers(roomA)).toHaveLength(3);
+      expect(readPlayers(roomA)).toHaveLength(3);
 
-      const overflowId = getPlayers(roomA)[2]!.id;
+      const overflowId = readPlayers(roomA)[2]!.id;
       leaveRoom(roomA, overflowId);
       Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
 
-      expect(getPlayers(roomA)).toHaveLength(2);
-      expect(getPlayers(roomB)).toHaveLength(2);
-      expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
+      expect(readPlayers(roomA)).toHaveLength(2);
+      expect(readPlayers(roomB)).toHaveLength(2);
+      expect(readPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
     });
   });
 });

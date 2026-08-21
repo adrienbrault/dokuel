@@ -1,5 +1,4 @@
 import * as Y from "yjs";
-import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -9,11 +8,19 @@ import type {
 import type { MpSnapshot } from "./mp-snapshot.ts";
 
 /**
- * Internal to the multiplayer module. The Yjs schema and its
- * transactions live here; {@link ./mp-room.ts} builds the room's rules
- * on top of them and is the only importer. Co-located in `src/hooks/`
- * so a schema migration touches one directory. Do not import from
- * outside this directory.
+ * The room doc: the Yjs schema for one room, and the typed reads and
+ * transactional writes over it. Storage, not rules — what a win claim
+ * is worth, which board to deal and under which number, how many seats
+ * a room has and what order they are in are all decided by
+ * {@link ./mp-room.ts}, which asks for the write it wants and is the
+ * only importer.
+ *
+ * The one judgement that stays here is representational:
+ * `projectWinnerBoard` decides how a value a peer wrote reaches a
+ * reader, which is a question about what this storage can hold.
+ *
+ * Co-located in `src/hooks/` so a schema migration touches one
+ * directory. Do not import from outside this directory.
  */
 
 const PLAYER_COLORS = [
@@ -70,9 +77,13 @@ export function initializeRoom(
   });
 }
 
-/** 1v1: a room holds exactly two players. */
-export const MAX_PLAYERS = 2;
-
+/**
+ * Add a player's entry. Idempotent, so a reconnect costs nothing.
+ * Whether this player may take a seat at all is the Room's decision,
+ * made before it asks. `joinOrder` is the entry's own position in this
+ * doc; two peers joining concurrently both write the same one, which is
+ * why seat order needs a tiebreak.
+ */
 export function joinRoom(
   room: P2PRoom,
   playerId: string,
@@ -80,11 +91,6 @@ export function joinRoom(
 ): void {
   const players = room.doc.getMap("players");
   if (players.has(playerId)) return;
-  // Best-effort cap: catches the common sequential case where the
-  // room synced before this join. Two truly concurrent joins can
-  // still overflow via CRDT merge — the hook detects that post-merge
-  // and flags the excess player (roomFull).
-  if (players.size >= MAX_PLAYERS) return;
 
   const joinOrder = players.size;
 
@@ -101,8 +107,8 @@ export function joinRoom(
 
 /**
  * Remove a player's entry. Used by the overflow client after a
- * concurrent-join merge left more than MAX_PLAYERS entries: deleting
- * itself returns the room to a startable two-player lobby.
+ * concurrent-join merge left the room with more entries than it holds
+ * seats: deleting itself returns the room to a startable lobby.
  */
 export function leaveRoom(room: P2PRoom, playerId: string): void {
   const players = room.doc.getMap("players");
@@ -124,27 +130,39 @@ export function setDifficulty(room: P2PRoom, level: Difficulty): void {
   });
 }
 
-export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
+/** One dealt game, as the Room decided it. */
+export type GameDeal = {
+  puzzle: string;
+  solution: string;
+  difficulty: Difficulty;
+  gameNumber: number;
+  /** Where every seated player starts on this board. */
+  cellsRemaining: number;
+};
+
+/**
+ * Record a dealt game and put every seated player at the start of it.
+ * What to deal, which number it carries and how much of it is left to
+ * fill are the Room's decisions; this only lands them, in one
+ * transaction so no peer ever observes a half-started game.
+ */
+export function writeGame(room: P2PRoom, deal: GameDeal): void {
   const roomMap = room.doc.getMap("room");
-  const actualDifficulty =
-    difficulty ?? ((roomMap.get("difficulty") as Difficulty) || "medium");
-  const { puzzle, solution } = generatePuzzleWithSolution(actualDifficulty);
-  const clueCount = puzzle.split("").filter((c) => c !== ".").length;
 
   room.doc.transact(() => {
-    roomMap.set("puzzle", puzzle);
-    roomMap.set("solution", solution);
-    roomMap.set("difficulty", actualDifficulty);
+    roomMap.set("puzzle", deal.puzzle);
+    roomMap.set("solution", deal.solution);
+    roomMap.set("difficulty", deal.difficulty);
     roomMap.set("status", "playing");
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
     roomMap.set("winnerBoard", null);
-    roomMap.set("gameNumber", ((roomMap.get("gameNumber") as number) || 0) + 1);
+    roomMap.set("gameNumber", deal.gameNumber);
 
     const players = room.doc.getMap("players");
     for (const [, playerMap] of players) {
       const p = playerMap as Y.Map<unknown>;
-      p.set("cellsRemaining", 81 - clueCount);
+      p.set("cellsRemaining", deal.cellsRemaining);
       p.set("completionPercent", 0);
     }
   });
@@ -180,100 +198,25 @@ export function updateProgress(
   });
 }
 
-export function getOpponentProgress(
-  room: P2PRoom,
-  playerId: string,
-): { cellsRemaining: number; completionPercent: number } | null {
-  const players = room.doc.getMap("players");
-  for (const [id, playerMap] of players) {
-    if (id !== playerId) {
-      const p = playerMap as Y.Map<unknown>;
-      return {
-        cellsRemaining: p.get("cellsRemaining") as number,
-        completionPercent: p.get("completionPercent") as number,
-      };
-    }
-  }
-  return null;
-}
-
-export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
-
 /**
- * The one guard over win claims. Every peer can write any winnerId it
- * likes into the CRDT, so a claim is worth only what its board proves:
- *
- * - `solved` — the board equals the room's solution. Always credible.
- * - `forfeit` — no board at all, asserting the opponent vanished.
- *   Nothing here can verify that; only the receiver's own absence
- *   record can back it.
- * - `forged` — a board that does not solve the puzzle. `""` and values
- *   that are not boards at all (a peer can write anything into the
- *   CRDT) land here, which is why getRoomState must not coerce them to
- *   null.
- * - `unverifiable` — a board arrived but the room has no solution to
- *   check it against. Not provably forged, so callers that punish
- *   forgery must leave it alone.
- *
- * Deliberately typed on `unknown`: the write path reads raw Yjs values
- * while the read path holds a projected RoomState, and both must reach
- * the same verdict.
+ * Record a win claim. `board` is the claimant's completed board for a
+ * solved win, or null for a forfeit (opponent gone — nothing to
+ * verify). Unconditional: whether this claim outranks one already
+ * standing is the Room's judgement, made before it asks for the write.
  */
-export function judgeClaim(board: unknown, solution: unknown): ClaimVerdict {
-  if (board === null || board === undefined) return "forfeit";
-  // Only a missing SOLUTION leaves a claim unjudgeable. A board that
-  // is not a string is judgeable and false — the room knows what a
-  // solved board looks like and this is not one.
-  if (typeof solution !== "string") return "unverifiable";
-  if (typeof board !== "string") return "forged";
-  return board === solution ? "solved" : "forged";
-}
-
-/**
- * Write a win claim into the room. `board` is the claimant's completed
- * board for a solved win, or null for a forfeit (opponent gone —
- * nothing to verify). The first claim normally wins, with two
- * exceptions that keep a cheater from locking the real winner out: a
- * forged claim may be overwritten by anyone, and a forfeit claim yields
- * to a verified solved board — a forfeit only means anything while the
- * supposedly absent player never finishes.
- */
-export function claimWinner(
+export function writeClaim(
   room: P2PRoom,
   playerId: string,
   playerName: string,
   board: string | null,
-): boolean {
+): void {
   const roomMap = room.doc.getMap("room");
-  const existingWinner = roomMap.get("winnerId");
-  if (existingWinner !== null && existingWinner !== undefined) {
-    const solution = roomMap.get("solution");
-    const existing = judgeClaim(roomMap.get("winnerBoard"), solution);
-    const mayOverwrite =
-      existing === "forged" ||
-      (existing === "forfeit" && judgeClaim(board, solution) === "solved");
-    if (!mayOverwrite) return false;
-  }
-
   room.doc.transact(() => {
     roomMap.set("winnerId", playerId);
     roomMap.set("winnerName", playerName);
     roomMap.set("winnerBoard", board);
     roomMap.set("status", "finished");
   });
-  return true;
-}
-
-export function requestRematch(room: P2PRoom, difficulty?: Difficulty): void {
-  startGame(room, difficulty);
-}
-
-export function getRoomStatus(room: P2PRoom): string {
-  return room.doc.getMap("room").get("status") as string;
-}
-
-export function getHostId(room: P2PRoom): string {
-  return (room.doc.getMap("room").get("hostId") as string) || "";
 }
 
 function projectWinnerBoard(raw: unknown): string | null {
@@ -281,26 +224,23 @@ function projectWinnerBoard(raw: unknown): string | null {
   return typeof raw === "string" ? raw : "";
 }
 
+/** The room's own fields, as the doc holds them. */
+export type RoomFields = Omit<RoomState, "roomId" | "players">;
+
 /**
- * Snapshot the room into a plain RoomState the React tree can render.
- * Returns null when there is no joined player yet — callers treat that
- * as "lobby has not started syncing."
+ * Read the room's fields. Null until something has been written —
+ * neither the creator's seed nor a peer's sync has landed yet.
  */
-export function getRoomState(room: P2PRoom): RoomState | null {
+export function readRoom(room: P2PRoom): RoomFields | null {
   const roomMap = room.doc.getMap("room");
   const status = roomMap.get("status") as string | undefined;
   if (!status) return null;
 
-  const players = getPlayers(room);
-  if (players.length === 0) return null;
-
   return {
-    roomId: room.roomId,
     status: status as RoomState["status"],
     difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
     hostId: (roomMap.get("hostId") as string) || "",
-    players,
     puzzle: (roomMap.get("puzzle") as string) || null,
     solution: (roomMap.get("solution") as string) || null,
     winnerId: (roomMap.get("winnerId") as string) || null,
@@ -334,9 +274,17 @@ export function observeRoomChanges(
   };
 }
 
-export function getPlayers(room: P2PRoom): Player[] {
+/** A player's entry as the doc holds it, before seat order applies. */
+export type PlayerEntry = Player & { joinOrder: number };
+
+/**
+ * Every player entry in the doc, in whatever order the map yields them.
+ * Ordering them into seats — and deciding who is one seat too many — is
+ * the Room's rule, not the storage's.
+ */
+export function readPlayers(room: P2PRoom): PlayerEntry[] {
   const players = room.doc.getMap("players");
-  const result: Player[] = [];
+  const result: PlayerEntry[] = [];
 
   for (const [id, playerMap] of players) {
     const p = playerMap as Y.Map<unknown>;
@@ -346,26 +294,9 @@ export function getPlayers(room: P2PRoom): Player[] {
       color: p.get("color") as string,
       cellsRemaining: p.get("cellsRemaining") as number,
       completionPercent: p.get("completionPercent") as number,
+      joinOrder: p.get("joinOrder") as number,
     });
   }
-
-  // joinOrder first, playerId as tiebreak: concurrent joiners can both
-  // read size 0 and claim the same joinOrder, and every peer must agree
-  // on seat order (it decides who the excess player is in an overflow).
-  // Codepoint comparison, NOT localeCompare — collation varies by
-  // locale and this order has to be identical on every client.
-  result.sort((a, b) => {
-    const orderA = (players.get(a.id) as Y.Map<unknown>).get(
-      "joinOrder",
-    ) as number;
-    const orderB = (players.get(b.id) as Y.Map<unknown>).get(
-      "joinOrder",
-    ) as number;
-    if (orderA !== orderB) return orderA - orderB;
-    if (a.id < b.id) return -1;
-    if (a.id > b.id) return 1;
-    return 0;
-  });
 
   return result;
 }

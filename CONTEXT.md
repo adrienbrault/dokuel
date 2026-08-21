@@ -125,15 +125,30 @@ selected cell.
 
 **Room**:
 One multiplayer match space, identified by a room code, holding the players,
-the current game, and the rules for starting, finishing, and rematching. The
-room's rules do not depend on how peers are connected.
-_Avoid_: session, lobby (the lobby is the screen shown before a game starts),
-channel
+the current game, and the rules for starting, finishing, and rematching. Every
+judgement about the room is the room's: what a win claim is worth and which
+claim outranks which, which board to deal and under which game number, how
+many seats there are and what order they are in. The room's rules do not
+depend on how peers are connected.
+_Avoid_: session on its own (a *room session* is one client's participation in
+a room, not the room), lobby (the lobby is the screen shown before a game
+starts), channel
+
+**Room doc**:
+The room's storage — the shared document the room reads and writes, and the
+transactions over it. It records decisions; it does not make them.
+_Avoid_: schema (that is only its shape), Yjs doc (in prose)
 
 **Room code**:
 The `word-word-xxxx` invite text that identifies a room. It is also the room's
 only credential.
 _Avoid_: room id (in prose), invite code, join code
+
+**Room session**:
+One client's participation in a room — a Room composed with its Connection,
+plus the lifecycle policy between them (backgrounded tabs, reconnects, local
+persistence, wake-ups). The React binding only forwards DOM events to it.
+_Avoid_: hook, binding (for the session itself)
 
 **Connection**:
 How a room's state reaches its peers and survives reloads: signaling, the

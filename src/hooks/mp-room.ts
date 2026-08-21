@@ -1,5 +1,11 @@
 import type { Doc } from "yjs";
-import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
+import type {
+  AssistLevel,
+  Difficulty,
+  Player,
+  RoomState,
+} from "../lib/types.ts";
 import {
   clearSnapshot,
   loadSnapshot,
@@ -7,24 +13,21 @@ import {
   saveSnapshot,
 } from "./mp-snapshot.ts";
 import {
-  claimWinner,
   createRoomFromDoc,
-  getOpponentProgress,
-  getPlayers,
-  getRoomState,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
-  judgeClaim,
   leaveRoom,
-  MAX_PLAYERS,
   observeRoomChanges,
-  requestRematch,
+  type PlayerEntry,
+  readPlayers,
+  readRoom,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
-  startGame,
   updatePlayerName,
   updateProgress,
+  writeClaim,
+  writeGame,
 } from "./p2p-room.ts";
 
 /**
@@ -61,6 +64,89 @@ const VALID_SOLUTION_RE = /^[1-9]{81}$/;
  * has to know a grace window exists.
  */
 const HYDRATE_GRACE_MS = 3_000;
+
+/** 1v1: a room holds exactly two seats. */
+export const MAX_PLAYERS = 2;
+
+/**
+ * The room's agreed seat order: join order first, player id as
+ * tiebreak. Concurrent joiners can both read an empty room and claim
+ * the same join order, and every peer must sort them identically —
+ * this order is what decides who the overflow player is. Codepoint
+ * comparison, NOT localeCompare: collation varies by locale and two
+ * clients disagreeing here would evict different players.
+ */
+function seatPlayers(entries: PlayerEntry[]): Player[] {
+  return entries
+    .slice()
+    .sort((a, b) => {
+      if (a.joinOrder !== b.joinOrder) return a.joinOrder - b.joinOrder;
+      if (a.id < b.id) return -1;
+      if (a.id > b.id) return 1;
+      return 0;
+    })
+    .map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      color: entry.color,
+      cellsRemaining: entry.cellsRemaining,
+      completionPercent: entry.completionPercent,
+    }));
+}
+
+export type ClaimVerdict = "solved" | "forfeit" | "forged" | "unverifiable";
+
+/**
+ * The one guard over win claims. Every peer can write any winnerId it
+ * likes into the CRDT, so a claim is worth only what its board proves:
+ *
+ * - `solved` — the board equals the room's solution. Always credible.
+ * - `forfeit` — no board at all, asserting the opponent vanished.
+ *   Nothing here can verify that; only the receiver's own absence
+ *   record can back it.
+ * - `forged` — a board that does not solve the puzzle. `""` lands here,
+ *   and so does anything a peer wrote that is not a board at all: the
+ *   projection maps those to `""` rather than to null precisely so they
+ *   arrive as a claim carrying something worthless instead of as the
+ *   absence of a claim.
+ * - `unverifiable` — a board arrived but the room has no solution to
+ *   check it against. Not provably forged, so callers that punish
+ *   forgery must leave it alone.
+ *
+ * One claim, one verdict: both the Room's write path and its read path
+ * judge from the projected room state, so a claim can never be
+ * undisplaceable to the writer while being worthless to the reader —
+ * which would leave the room with a winner neither side can settle on.
+ */
+export function judgeClaim(
+  board: string | null,
+  solution: string | null,
+): ClaimVerdict {
+  if (board === null) return "forfeit";
+  // Only a missing solution leaves a claim unjudgeable. Still a typeof
+  // check rather than a null check: the projection casts whatever a
+  // peer wrote into `string | null`, and a value that is not a string
+  // proves nothing either way.
+  if (typeof solution !== "string") return "unverifiable";
+  return board === solution ? "solved" : "forged";
+}
+
+/**
+ * Whether a claim already standing in the room may be written over. The
+ * first claim normally wins, with two exceptions that keep a cheater
+ * from locking the real winner out: a forged claim may be overwritten
+ * by anyone, and a forfeit claim yields to a verified solved board — a
+ * forfeit only means anything while the supposedly absent player never
+ * finishes.
+ */
+function mayOverwriteClaim(
+  standing: ClaimVerdict,
+  incoming: ClaimVerdict,
+): boolean {
+  return (
+    standing === "forged" || (standing === "forfeit" && incoming === "solved")
+  );
+}
 
 export type OpponentProgress = {
   cellsRemaining: number;
@@ -258,6 +344,20 @@ export function createRoom({
     dirty = true;
   }
 
+  /**
+   * Snapshot the room into a plain RoomState the UI can render: the
+   * doc's own fields plus its players in seat order. Null while there
+   * is no joined player yet — callers read that as "the lobby has not
+   * started syncing".
+   */
+  function projectRoomState(): RoomState | null {
+    const fields = readRoom(p2p);
+    if (!fields) return null;
+    const players = seatPlayers(readPlayers(p2p));
+    if (players.length === 0) return null;
+    return { roomId, ...fields, players };
+  }
+
   function mirrorSolution(state: RoomState): void {
     if (state.solution === null || VALID_SOLUTION_RE.test(state.solution)) {
       verifiedSolution = state.solution;
@@ -319,18 +419,21 @@ export function createRoom({
     clearSnapshot(roomId);
   }
 
-  function trackOpponentProgress(): void {
-    const progress = getOpponentProgress(p2p, playerId);
-    if (!progress) return;
+  function trackOpponentProgress(state: RoomState): void {
+    const opponent = state.players.find((p) => p.id !== playerId);
+    if (!opponent) return;
     const prev = draft.opponentProgress;
     if (
       prev &&
-      prev.cellsRemaining === progress.cellsRemaining &&
-      prev.completionPercent === progress.completionPercent
+      prev.cellsRemaining === opponent.cellsRemaining &&
+      prev.completionPercent === opponent.completionPercent
     ) {
       return;
     }
-    set("opponentProgress", progress);
+    set("opponentProgress", {
+      cellsRemaining: opponent.cellsRemaining,
+      completionPercent: opponent.completionPercent,
+    });
   }
 
   /**
@@ -366,7 +469,13 @@ export function createRoom({
     if (initialDifficulty) {
       initializeRoom(p2p, playerId, initialDifficulty);
     }
-    joinRoom(p2p, playerId, playerName());
+    // Best-effort cap: catches the common sequential case where the
+    // room synced before we got here. Two truly concurrent joins can
+    // still overflow via CRDT merge, which settleSeat resolves after
+    // the fact.
+    if (readPlayers(p2p).length < MAX_PLAYERS) {
+      joinRoom(p2p, playerId, playerName());
+    }
     // A refused join writes nothing and so fires no observer, yet it
     // still means we are the overflow player.
     project();
@@ -377,7 +486,7 @@ export function createRoom({
     if (!pending) return;
     pendingHydration = null;
     if (applySnapshot) {
-      const current = getRoomState(p2p);
+      const current = projectRoomState();
       if (!current || current.gameNumber === 0) {
         hydrateRoomFromSnapshot(p2p, pending.snap);
       }
@@ -386,7 +495,7 @@ export function createRoom({
   }
 
   function project(): void {
-    const state = getRoomState(p2p);
+    const state = projectRoomState();
     // Live peer state beat the snapshot to it — drop the snapshot.
     if (pendingHydration && state && state.gameNumber > 0) {
       finishHydration(false);
@@ -404,7 +513,7 @@ export function createRoom({
       mirrorSolution(state);
       adoptNewGame(state);
       detectWinner(state, now());
-      trackOpponentProgress();
+      trackOpponentProgress(state);
       settleSeat(state);
     }
     publish();
@@ -421,7 +530,46 @@ export function createRoom({
    * never had anyone to disconnect.
    */
   function hasReachableOpponent(hasOtherPeer: boolean): boolean {
-    return hasOtherPeer && getPlayers(p2p).length > 1;
+    return hasOtherPeer && readPlayers(p2p).length > 1;
+  }
+
+  /**
+   * Write our claim unless one already standing outranks it. Both
+   * verdicts come from the same projected state the receiving side
+   * judges, so the two can no longer reach different conclusions about
+   * the same claim.
+   */
+  function claimWin(board: string | null): void {
+    const state = projectRoomState();
+    if (state?.winnerId) {
+      const standing = judgeClaim(state.winnerBoard, state.solution);
+      if (!mayOverwriteClaim(standing, judgeClaim(board, state.solution))) {
+        return;
+      }
+    }
+    writeClaim(p2p, playerId, playerName(), board);
+  }
+
+  /**
+   * Deal a board on the room's own difficulty and put both players at
+   * the start of it. The game number is bumped here, with the deal it
+   * belongs to, so one place decides what "a new game" is; two peers
+   * dealing at once write the SAME number with different boards, which
+   * is why the projection resolves a collision by content rather than
+   * by counter.
+   */
+  function dealGame(): void {
+    const state = projectRoomState();
+    const difficulty = state?.difficulty ?? "medium";
+    const { puzzle, solution } = generatePuzzleWithSolution(difficulty);
+    const clues = puzzle.split("").filter((c) => c !== ".").length;
+    writeGame(p2p, {
+      puzzle,
+      solution,
+      difficulty,
+      gameNumber: (state?.gameNumber ?? 0) + 1,
+      cellsRemaining: 81 - clues,
+    });
   }
 
   function markAbsent(): void {
@@ -441,7 +589,7 @@ export function createRoom({
     apply(event) {
       switch (event.type) {
         case "local-sync-complete": {
-          const current = getRoomState(p2p);
+          const current = projectRoomState();
           const snap =
             !current || current.gameNumber === 0 ? loadSnapshot(roomId) : null;
           if (!snap) {
@@ -461,7 +609,7 @@ export function createRoom({
             "opponentDisconnected",
             !event.tabHidden &&
               !hasReachableOpponent(event.hasOtherPeer) &&
-              getPlayers(p2p).length > 1,
+              readPlayers(p2p).length > 1,
           );
           publish();
           break;
@@ -493,22 +641,22 @@ export function createRoom({
     },
     complete(board) {
       if (judgeClaim(board, verifiedSolution) !== "solved") return;
-      claimWinner(p2p, playerId, playerName(), board);
+      claimWin(board);
     },
     claimForfeit({ hasOtherPeer }) {
       if (hasReachableOpponent(hasOtherPeer)) return;
-      claimWinner(p2p, playerId, playerName(), null);
+      claimWin(null);
     },
     start() {
-      if (getPlayers(p2p).length < 2) {
+      if (readPlayers(p2p).length < 2) {
         set("error", { message: "Need 2 players to start" });
         publish();
         return;
       }
-      startGame(p2p);
+      dealGame();
     },
     rematch() {
-      requestRematch(p2p);
+      dealGame();
     },
     progress(cellsRemaining, completionPercent) {
       updateProgress(p2p, playerId, cellsRemaining, completionPercent);
@@ -523,7 +671,7 @@ export function createRoom({
       setRoomDifficulty(p2p, level);
     },
     persistSnapshot() {
-      const state = getRoomState(p2p);
+      const state = projectRoomState();
       if (state) saveSnapshot(roomId, state);
     },
     close() {
