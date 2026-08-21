@@ -162,6 +162,13 @@ describe("projection", () => {
     expect(room.snapshot().solution).toBe(other.solution);
   });
 
+  it("has no opponent progress while nobody else is seated", () => {
+    const { room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(room.snapshot().opponentProgress).toBeNull();
+  });
+
   it("projects the opponent's progress and keeps its identity when it stalls", () => {
     const { peer, room } = setupStartedGame();
 
@@ -176,6 +183,55 @@ describe("projection", () => {
 });
 
 describe("seats", () => {
+  it("orders seats by join order rather than by id", () => {
+    // Seat order is the room's agreed ordering, and every peer has to
+    // compute the same one: it decides who the overflow player is.
+    const { room, seat } = setup();
+    seat("p9", "Nine", "medium");
+    seat("p2", "Two");
+
+    const seated = room.snapshot().roomState?.players.map((p) => p.id);
+    expect(seated).toEqual(["p9", "p2"]);
+  });
+
+  it("breaks a join-order tie by codepoint, not locale collation", () => {
+    // Concurrent joiners both read an empty room and claim the same
+    // join order. localeCompare("a", "B") is locale-dependent (-1 in
+    // en, codepoint order says "B" < "a") — a mismatch would make two
+    // clients evict different overflow players.
+    const { doc, room } = setup(null);
+
+    doc.transact(() => {
+      doc.getMap("room").set("status", "lobby");
+      const players = doc.getMap("players");
+      for (const id of ["a", "B"]) {
+        const pm = new YMap<unknown>();
+        pm.set("name", id);
+        pm.set("color", "blue");
+        pm.set("cellsRemaining", 81);
+        pm.set("completionPercent", 0);
+        pm.set("joinOrder", 0);
+        players.set(id, pm);
+      }
+    });
+
+    const seated = room.snapshot().roomState?.players.map((p) => p.id);
+    expect(seated).toEqual(["B", "a"]);
+  });
+
+  it("keeps our seat when setup runs again in a full room", () => {
+    // A re-run of setup (a reconnect, a second local-sync) must not read
+    // our own seat as a third player and lock us out of our own room.
+    const { room, seat } = setup("medium");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    seat("p2", "Bob");
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(room.snapshot().roomFull).toBe(false);
+    expect(room.snapshot().roomState?.players).toHaveLength(2);
+  });
+
   it("flags roomFull for a player with no seat in a full room", () => {
     const { room, seat } = setup();
     seat("p2", "Bob", "medium");
@@ -634,6 +690,9 @@ describe("setup", () => {
 
     expect(room.snapshot().roomFull).toBe(true);
     expect(room.snapshot().roomState?.players).toHaveLength(2);
+    expect(room.snapshot().roomState?.players.some((p) => p.id === "p1")).toBe(
+      false,
+    );
   });
 });
 
