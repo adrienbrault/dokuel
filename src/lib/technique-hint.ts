@@ -6,13 +6,12 @@
 
 import { boxIndex } from "./board-geometry.ts";
 import type { CandidateState, Elimination } from "./candidates.ts";
-import type { HintExplanation } from "./hint-engine.ts";
 import {
   findUnlockingPlacement,
   rungOf,
   type UnlockingPlacement,
 } from "./ladder.ts";
-import type { Position } from "./types.ts";
+import type { ActiveHint, Position } from "./types.ts";
 
 function toPosition(cell: number): Position {
   return { row: Math.floor(cell / 9), col: cell % 9 };
@@ -121,12 +120,12 @@ function describeConsequence(unlock: UnlockingPlacement): string {
 
 /** The technique hint for a board whose singles have run dry — null
  * when only chains or guessing can progress. */
-export function findTechniqueHint(s: CandidateState): HintExplanation | null {
+export function findTechniqueHint(s: CandidateState): ActiveHint | null {
   const unlock = findUnlockingPlacement(s);
   return unlock ? buildTechniqueHint(unlock) : null;
 }
 
-function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
+function buildTechniqueHint(unlock: UnlockingPlacement): ActiveHint {
   const { elimination, single, priorSteps } = unlock;
   const preamble =
     priorSteps > 0

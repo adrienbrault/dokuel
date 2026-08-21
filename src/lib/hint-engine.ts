@@ -10,11 +10,6 @@ import { getErrors } from "./sudoku.ts";
 import { findTechniqueHint } from "./technique-hint.ts";
 import type { ActiveHint, Board, Position } from "./types.ts";
 
-// Alias, not a parallel definition: board-engine stores findHint's
-// result in an ActiveHint field, and two structurally-identical types
-// only stay identical by luck.
-export type HintExplanation = ActiveHint;
-
 function toPosition(cell: number): Position {
   return { row: Math.floor(cell / 9), col: cell % 9 };
 }
@@ -35,7 +30,7 @@ function eliminatingCells(s: CandidateState, cell: number): Position[] {
   return PEERS[cell]!.filter((peer) => s.grid[peer] !== 0).map(toPosition);
 }
 
-function nakedSingleHint(s: CandidateState, cell: number): HintExplanation {
+function nakedSingleHint(s: CandidateState, cell: number): ActiveHint {
   const value = maskDigits(s.cand[cell]!)[0]!;
   return {
     position: toPosition(cell),
@@ -68,7 +63,7 @@ function unitWord(unitIndex: number): string {
 function hiddenSingleHint(
   s: CandidateState,
   single: Extract<SingleFind, { kind: "hidden" }>,
-): HintExplanation {
+): ActiveHint {
   const { cell, digit, unitIndex } = single;
   const related = new Set<number>();
   for (const other of UNITS[unitIndex]!) {
@@ -94,7 +89,7 @@ function mistakeHint(
   board: Board,
   solution: string,
   errors: Set<number>,
-): HintExplanation {
+): ActiveHint {
   const cell = Math.min(...errors);
   const { row, col } = toPosition(cell);
   const wrongValue = board[row]![col]!.value;
@@ -127,7 +122,7 @@ function revealHint(
   s: CandidateState,
   solution: string,
   cell: number,
-): HintExplanation {
+): ActiveHint {
   const value = Number(solution[cell]);
   const candidates = maskDigits(s.cand[cell]!);
   // Named from the ladder's last rung: a hand-written list of
@@ -161,7 +156,7 @@ export function findHint(
   board: Board,
   solution: string,
   selectedCell?: Position | null,
-): HintExplanation | null {
+): ActiveHint | null {
   // A wrong entry poisons every deduction below it: singles derived
   // from a false premise recommend provably wrong digits with full
   // confidence. Surface the mistake first — on a mistake-free board,
