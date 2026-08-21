@@ -192,7 +192,7 @@ export function findHint(
   // No single anywhere — the state graded boards put players in. Look
   // for the elimination (locked candidates, pairs, triples, X-wing)
   // whose removals make the next placement visible, and teach that.
-  const techniqueHint = findTechniqueHint(board);
+  const techniqueHint = findTechniqueHint(s);
   if (techniqueHint) return techniqueHint;
 
   const target = revealTarget(s, selectedCell);

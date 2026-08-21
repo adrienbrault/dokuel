@@ -5,24 +5,14 @@
  */
 
 import { boxIndex } from "./board-geometry.ts";
-import { type Elimination, initCandidates } from "./candidates.ts";
+import type { CandidateState, Elimination } from "./candidates.ts";
 import type { HintExplanation } from "./hint-engine.ts";
 import {
   findUnlockingPlacement,
   rungOf,
   type UnlockingPlacement,
 } from "./ladder.ts";
-import type { Board, Position } from "./types.ts";
-
-function boardValues(board: Board): string {
-  let out = "";
-  for (const row of board) {
-    for (const cell of row) {
-      out += cell.value === null ? "." : String(cell.value);
-    }
-  }
-  return out;
-}
+import type { Position } from "./types.ts";
 
 function toPosition(cell: number): Position {
   return { row: Math.floor(cell / 9), col: cell % 9 };
@@ -131,9 +121,7 @@ function describeConsequence(unlock: UnlockingPlacement): string {
 
 /** The technique hint for a board whose singles have run dry — null
  * when only chains or guessing can progress. */
-export function findTechniqueHint(board: Board): HintExplanation | null {
-  const s = initCandidates(boardValues(board));
-  if (!s) return null;
+export function findTechniqueHint(s: CandidateState): HintExplanation | null {
   const unlock = findUnlockingPlacement(s);
   return unlock ? buildTechniqueHint(unlock) : null;
 }
