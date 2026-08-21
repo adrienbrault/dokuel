@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { DigitDragState } from "../hooks/useDigitDrag.ts";
+import type { DigitDragState } from "../hooks/useDigitGesture.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
