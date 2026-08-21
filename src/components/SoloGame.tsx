@@ -89,12 +89,12 @@ export function SoloGame({
     highlight,
     chargingDigit,
     keyDigit,
-    numPadRef,
     numPadProps,
     dragState,
     startCellDrag,
   } = useNumpadInteractions({
     game,
+    position,
     disabled: paused || game.status !== "playing",
     assistLevel,
   });
@@ -177,7 +177,7 @@ export function SoloGame({
           }
         />
       }
-      numPad={<NumPad ref={numPadRef} position={position} {...numPadProps} />}
+      numPad={<NumPad position={position} {...numPadProps} />}
       board={
         <div className="relative w-full">
           <Board

@@ -201,18 +201,13 @@ export function MultiplayerBoard({
 
   // Keyed off local status only — the loser keeps interacting until they
   // finish their own board.
-  const {
-    highlight,
-    chargingDigit,
-    numPadRef,
-    numPadProps,
-    dragState,
-    startCellDrag,
-  } = useNumpadInteractions({
-    game,
-    disabled: game.status !== "playing",
-    assistLevel,
-  });
+  const { highlight, chargingDigit, numPadProps, dragState, startCellDrag } =
+    useNumpadInteractions({
+      game,
+      position,
+      disabled: game.status !== "playing",
+      assistLevel,
+    });
 
   return (
     <GameLayout
@@ -239,7 +234,7 @@ export function MultiplayerBoard({
           }
         />
       }
-      numPad={<NumPad ref={numPadRef} position={position} {...numPadProps} />}
+      numPad={<NumPad position={position} {...numPadProps} />}
       board={
         <>
           <Board

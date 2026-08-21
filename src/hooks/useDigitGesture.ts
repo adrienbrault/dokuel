@@ -1,5 +1,6 @@
 import {
   type PointerEvent as ReactPointerEvent,
+  type RefObject,
   useCallback,
   useEffect,
   useRef,
@@ -57,6 +58,17 @@ export type NumPadKeyProps = {
   onPointerLeave: () => void;
   onPointerCancel: () => void;
   onClick: () => void;
+};
+
+/**
+ * What a numpad VIEW needs from the recognizer to render a live press.
+ * The view owns no gesture state of its own: it spreads the handlers,
+ * hands over its digit row, and paints whichever digit is pressed.
+ */
+export type NumPadGesture = {
+  keyProps: (n: number) => NumPadKeyProps;
+  groupRef: RefObject<HTMLDivElement | null>;
+  pressedDigit: number | null;
 };
 
 type Options = {
