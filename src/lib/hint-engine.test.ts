@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
+import { LADDER } from "./ladder.ts";
 import { parsePuzzle, solvePuzzle } from "./sudoku.ts";
 
 describe("findHint", () => {
@@ -75,6 +76,27 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("reveal");
       expect(hint!.value).toBe(5);
+    });
+
+    it("names the ladder's deepest technique, not a hand-written list", () => {
+      // The prose enumerated "single, pair, triple, or X-wing" by hand
+      // and went stale the day quads, XY-wings and swordfish joined the
+      // ladder: it promised chain logic on boards a swordfish solves.
+      const solved =
+        "534678912" +
+        "672195348" +
+        "198342567" +
+        "859761423" +
+        "426853791" +
+        "713924856" +
+        "961537284" +
+        "287419635" +
+        "345286179";
+      const board = parsePuzzle(".".repeat(81));
+
+      const hint = findHint(board, solved);
+
+      expect(hint!.explanation).toContain(LADDER.at(-1)!.label.toLowerCase());
     });
   });
 
