@@ -5,26 +5,16 @@
  */
 
 import { boxIndex } from "./board-geometry.ts";
-import type { Elimination } from "./candidates.ts";
-import type { HintExplanation } from "./hint-engine.ts";
+import type { CandidateState, Elimination } from "./candidates.ts";
 import {
   findUnlockingPlacement,
+  rungOf,
   type UnlockingPlacement,
-} from "./techniques.ts";
-import type { Board, HintTechnique, Position } from "./types.ts";
+} from "./ladder.ts";
+import type { ActiveHint, Position } from "./types.ts";
 
 function toPosition(cell: number): Position {
   return { row: Math.floor(cell / 9), col: cell % 9 };
-}
-
-function boardValues(board: Board): string {
-  let out = "";
-  for (const row of board) {
-    for (const cell of row) {
-      out += cell.value === null ? "." : String(cell.value);
-    }
-  }
-  return out;
 }
 
 /** Name the row, column, or box that contains every given cell. */
@@ -128,28 +118,14 @@ function describeConsequence(unlock: UnlockingPlacement): string {
   return ` That makes this cell the only place for ${single.digit} in ${unit}.`;
 }
 
-const TECHNIQUE_OF_KIND: Record<Elimination["kind"], HintTechnique> = {
-  pointing: "locked-candidates",
-  claiming: "locked-candidates",
-  "naked-pair": "naked-pair",
-  "hidden-pair": "hidden-pair",
-  "naked-triple": "naked-triple",
-  "hidden-triple": "hidden-triple",
-  "naked-quad": "naked-quad",
-  "hidden-quad": "hidden-quad",
-  "x-wing": "x-wing",
-  "xy-wing": "xy-wing",
-  swordfish: "swordfish",
-};
-
 /** The technique hint for a board whose singles have run dry — null
  * when only chains or guessing can progress. */
-export function findTechniqueHint(board: Board): HintExplanation | null {
-  const unlock = findUnlockingPlacement(boardValues(board));
+export function findTechniqueHint(s: CandidateState): ActiveHint | null {
+  const unlock = findUnlockingPlacement(s);
   return unlock ? buildTechniqueHint(unlock) : null;
 }
 
-function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
+function buildTechniqueHint(unlock: UnlockingPlacement): ActiveHint {
   const { elimination, single, priorSteps } = unlock;
   const preamble =
     priorSteps > 0
@@ -162,7 +138,7 @@ function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
   return {
     position: toPosition(single.cell),
     value: single.digit,
-    technique: TECHNIQUE_OF_KIND[elimination.kind],
+    technique: rungOf(elimination.kind).technique,
     explanation:
       preamble + describeElimination(elimination) + describeConsequence(unlock),
     relatedCells: [...new Set(related)].map(toPosition),

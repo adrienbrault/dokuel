@@ -1,21 +1,12 @@
 /**
  * Human-technique sudoku grader. Solves with the deductions a player can
  * actually execute and reports the hardest tier the puzzle demanded.
- * Pure functions, no dependencies; same 81-char board format as solver.
- *
- * Tiers:
- *   1 — naked/hidden singles
- *   2 — locked candidates, naked/hidden pairs
- *   3 — naked/hidden triples, X-wing
- *   4 — naked/hidden quads, XY-wing, swordfish
- *   5 — none of the above suffice: chains or trial-and-error required
+ * Same 81-char board format as the solver; the techniques it may use,
+ * their order and their tiers all come from the ladder.
  */
 
 import { findSingle, initCandidates, place } from "./candidates.ts";
-import { claiming, hiddenSet, nakedSet, pointing } from "./techniques.ts";
-import { swordfish, xWing, xyWing } from "./wings.ts";
-
-export type TechniqueTier = 1 | 2 | 3 | 4 | 5;
+import { LADDER, type TechniqueTier } from "./ladder.ts";
 
 export type PuzzleGrade = {
   tier: TechniqueTier;
@@ -42,19 +33,19 @@ export function gradePuzzle(puzzle: string): PuzzleGrade {
       place(s, single.cell, single.digit);
       continue;
     }
-    if (pointing(s) || claiming(s) || nakedSet(s, 2) || hiddenSet(s, 2)) {
-      tier = tier < 2 ? 2 : tier;
-      continue;
+    // Cheapest rung that applies wins — a scan that fires has already
+    // applied its eliminations, so the walk stops at the first one. The
+    // tier a puzzle earns is the hardest step it ever forced, never a
+    // harder one it merely allows.
+    let applied: TechniqueTier | null = null;
+    for (const rung of LADDER) {
+      if (rung.scan(s)) {
+        applied = rung.tier;
+        break;
+      }
     }
-    if (nakedSet(s, 3) || hiddenSet(s, 3) || xWing(s)) {
-      tier = tier < 3 ? 3 : tier;
-      continue;
-    }
-    if (nakedSet(s, 4) || hiddenSet(s, 4) || xyWing(s) || swordfish(s)) {
-      tier = tier < 4 ? 4 : tier;
-      continue;
-    }
-    return { tier: 5, stuckCells: s.empty };
+    if (applied === null) return { tier: 5, stuckCells: s.empty };
+    tier = tier < applied ? applied : tier;
   }
   return { tier, stuckCells: 0 };
 }

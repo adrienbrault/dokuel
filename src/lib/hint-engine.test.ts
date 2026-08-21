@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
+import { LADDER } from "./ladder.ts";
 import { parsePuzzle, solvePuzzle } from "./sudoku.ts";
 
 describe("findHint", () => {
@@ -75,6 +76,27 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("reveal");
       expect(hint!.value).toBe(5);
+    });
+
+    it("names the ladder's deepest technique, not a hand-written list", () => {
+      // The prose enumerated "single, pair, triple, or X-wing" by hand
+      // and went stale the day quads, XY-wings and swordfish joined the
+      // ladder: it promised chain logic on boards a swordfish solves.
+      const solved =
+        "534678912" +
+        "672195348" +
+        "198342567" +
+        "859761423" +
+        "426853791" +
+        "713924856" +
+        "961537284" +
+        "287419635" +
+        "345286179";
+      const board = parsePuzzle(".".repeat(81));
+
+      const hint = findHint(board, solved);
+
+      expect(hint!.explanation).toContain(LADDER.at(-1)!.label.toLowerCase());
     });
   });
 
@@ -196,6 +218,42 @@ describe("findHint", () => {
     });
   });
 
+  describe("hidden single naming", () => {
+    // Mid-solve states of a generated puzzle where the first single is
+    // hidden in a column, then in a box — the two houses the naming
+    // used to reach through a separate code path per group type.
+    it("names the column a hidden single is trapped in", () => {
+      const COLUMN_HIDDEN =
+        "...6..4.13.18.4.62..4.2........78..9.52..........6.....4.9.6.789..4871....7.....4";
+      const board = parsePuzzle(COLUMN_HIDDEN);
+
+      const hint = findHint(board, solvePuzzle(COLUMN_HIDDEN)!);
+
+      expect(hint!.technique).toBe("hidden-single");
+      expect(hint!.position).toEqual({ row: 2, col: 3 });
+      expect(hint!.value).toBe(7);
+      expect(hint!.explanation).toContain("In column 4, 7 can only go here");
+      // "col" is the wording as shipped, kept deliberately: this test
+      // pins today's sentence, not an improvement to it.
+      expect(hint!.explanation).toContain("in this col can't contain 7");
+      expect(hint!.relatedCells.length).toBeGreaterThan(0);
+    });
+
+    it("names the box a hidden single is trapped in", () => {
+      const BOX_HIDDEN =
+        "...6..4.13.18.4.62..4721.......78..9.52.49.......6.....4.9.6.789..4871....7.....4";
+      const board = parsePuzzle(BOX_HIDDEN);
+
+      const hint = findHint(board, solvePuzzle(BOX_HIDDEN)!);
+
+      expect(hint!.technique).toBe("hidden-single");
+      expect(hint!.position).toEqual({ row: 1, col: 6 });
+      expect(hint!.value).toBe(7);
+      expect(hint!.explanation).toContain("In box 3, 7 can only go here");
+      expect(hint!.explanation).toContain("in this box can't contain 7");
+    });
+  });
+
   describe("selected cell priority", () => {
     it("prioritizes the selected cell when it has a deduction", () => {
       const solved =
@@ -305,6 +363,56 @@ describe("findHint", () => {
       expect(hint!.explanation).toContain("if it's 5, the 5/2 cell must be 2");
     });
 
+    it("explains a claiming elimination in its own words", () => {
+      // Claiming reads the other way round from pointing — a digit
+      // confined to one box of a line — and had no test, so its prose
+      // could have swapped in pointing's sentence unnoticed.
+      const CLAIMING_STUCK =
+        "52.36.17867.8..53231857264973124...6.5613...78.26.73....37.6.85.659837...874...63";
+      const board = parsePuzzle(CLAIMING_STUCK);
+
+      const hint = findHint(board, solvePuzzle(CLAIMING_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("locked-candidates");
+      expect(hint!.position).toEqual({ row: 3, col: 6 });
+      expect(hint!.value).toBe(8);
+      expect(hint!.explanation).toContain("fits only inside box 6");
+    });
+
+    it("explains a hidden set by the digits confined to its cells", () => {
+      // The hidden-pair/triple/quad prose branch: the highlighted cells
+      // are named by what only fits there, not by what they hold.
+      const HIDDEN_PAIR_STUCK =
+        "..7..85..58.9.27...23.1....4...5.9.88.51......6.84..5..........1.8...4.5.5..8..3.";
+      const board = parsePuzzle(HIDDEN_PAIR_STUCK);
+
+      const hint = findHint(board, solvePuzzle(HIDDEN_PAIR_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("hidden-pair");
+      expect(hint!.position).toEqual({ row: 0, col: 3 });
+      expect(hint!.value).toBe(4);
+      expect(hint!.explanation).toContain("fit only in the highlighted cells");
+    });
+
+    it("explains a naked pair by what its cells hold between them", () => {
+      // The naked set prose at pair width: the smallest and by far the
+      // most common of the naked patterns a player meets, and the one
+      // the ladder reaches for first.
+      const NAKED_PAIR_STUCK =
+        ".....63.4.....81........82.7489...3....6..4.85.64837..4.37.....2718.5.43.6.234...";
+      const board = parsePuzzle(NAKED_PAIR_STUCK);
+
+      const hint = findHint(board, solvePuzzle(NAKED_PAIR_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("naked-pair");
+      expect(hint!.position).toEqual({ row: 8, col: 0 });
+      expect(hint!.value).toBe(8);
+      expect(hint!.explanation).toContain("hold only 5 and 9 between them");
+    });
+
     it("labels a naked-quad unlock", () => {
       const QUAD_STUCK =
         "6.4..8..72..59184689...63.....8.267...8.57..972.9..518.82..5...5........1....97.5";
@@ -349,6 +457,43 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.value).toBeGreaterThanOrEqual(1);
       expect(hint!.value).toBeLessThanOrEqual(9);
+    });
+  });
+
+  describe("reveal targeting", () => {
+    it("reveals the selected cell rather than the first empty one", () => {
+      const solved =
+        "534678912" +
+        "672195348" +
+        "198342567" +
+        "859761423" +
+        "426853791" +
+        "713924856" +
+        "961537284" +
+        "287419635" +
+        "345286179";
+      const board = parsePuzzle(".".repeat(81));
+
+      const hint = findHint(board, solved, { row: 4, col: 4 });
+
+      expect(hint!.technique).toBe("reveal");
+      expect(hint!.position).toEqual({ row: 4, col: 4 });
+      expect(hint!.value).toBe(5);
+    });
+
+    it("lists the candidates when the cell is down to a few", () => {
+      // A board only chains can crack: the reveal names what the cell
+      // could still be instead of counting them, which is the whole
+      // difference between a useful reveal and "9 candidates".
+      const CHAINS_STUCK =
+        "..982..454....5982582.9..372.8...519154982376.9.5.14289.7...8513657182948.1.59763";
+      const board = parsePuzzle(CHAINS_STUCK);
+
+      const hint = findHint(board, solvePuzzle(CHAINS_STUCK)!);
+
+      expect(hint!.technique).toBe("reveal");
+      expect(hint!.position).toEqual({ row: 0, col: 0 });
+      expect(hint!.explanation).toContain("This cell can be 6, 7");
     });
   });
 
