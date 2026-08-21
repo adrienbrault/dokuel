@@ -44,6 +44,12 @@ How many of a digit 1–9 are still unplaced. A digit at zero is complete.
 **Hint**:
 Selecting a deducible cell and explaining why. A hint never writes a value.
 
+**Ladder**:
+The ordered list of solving techniques a human can execute, cheapest first,
+each carrying the tier it marks. The grader, the hint and the difficulty bands
+all read this one list.
+_Avoid_: technique list, tiers (for the list itself)
+
 **Daily**:
 The deterministic puzzle for a calendar date — the same board on any device.
 _Avoid_: daily challenge, puzzle of the day
