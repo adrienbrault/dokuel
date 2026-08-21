@@ -218,6 +218,42 @@ describe("findHint", () => {
     });
   });
 
+  describe("hidden single naming", () => {
+    // Mid-solve states of a generated puzzle where the first single is
+    // hidden in a column, then in a box — the two houses the naming
+    // used to reach through a separate code path per group type.
+    it("names the column a hidden single is trapped in", () => {
+      const COLUMN_HIDDEN =
+        "...6..4.13.18.4.62..4.2........78..9.52..........6.....4.9.6.789..4871....7.....4";
+      const board = parsePuzzle(COLUMN_HIDDEN);
+
+      const hint = findHint(board, solvePuzzle(COLUMN_HIDDEN)!);
+
+      expect(hint!.technique).toBe("hidden-single");
+      expect(hint!.position).toEqual({ row: 2, col: 3 });
+      expect(hint!.value).toBe(7);
+      expect(hint!.explanation).toContain("In column 4, 7 can only go here");
+      // "col" is the wording as shipped, kept deliberately: this test
+      // pins today's sentence, not an improvement to it.
+      expect(hint!.explanation).toContain("in this col can't contain 7");
+      expect(hint!.relatedCells.length).toBeGreaterThan(0);
+    });
+
+    it("names the box a hidden single is trapped in", () => {
+      const BOX_HIDDEN =
+        "...6..4.13.18.4.62..4721.......78..9.52.49.......6.....4.9.6.789..4871....7.....4";
+      const board = parsePuzzle(BOX_HIDDEN);
+
+      const hint = findHint(board, solvePuzzle(BOX_HIDDEN)!);
+
+      expect(hint!.technique).toBe("hidden-single");
+      expect(hint!.position).toEqual({ row: 1, col: 6 });
+      expect(hint!.value).toBe(7);
+      expect(hint!.explanation).toContain("In box 3, 7 can only go here");
+      expect(hint!.explanation).toContain("in this box can't contain 7");
+    });
+  });
+
   describe("selected cell priority", () => {
     it("prioritizes the selected cell when it has a deduction", () => {
       const solved =
