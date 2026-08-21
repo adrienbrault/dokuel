@@ -443,6 +443,43 @@ describe("findHint", () => {
     });
   });
 
+  describe("reveal targeting", () => {
+    it("reveals the selected cell rather than the first empty one", () => {
+      const solved =
+        "534678912" +
+        "672195348" +
+        "198342567" +
+        "859761423" +
+        "426853791" +
+        "713924856" +
+        "961537284" +
+        "287419635" +
+        "345286179";
+      const board = parsePuzzle(".".repeat(81));
+
+      const hint = findHint(board, solved, { row: 4, col: 4 });
+
+      expect(hint!.technique).toBe("reveal");
+      expect(hint!.position).toEqual({ row: 4, col: 4 });
+      expect(hint!.value).toBe(5);
+    });
+
+    it("lists the candidates when the cell is down to a few", () => {
+      // A board only chains can crack: the reveal names what the cell
+      // could still be instead of counting them, which is the whole
+      // difference between a useful reveal and "9 candidates".
+      const CHAINS_STUCK =
+        "..982..454....5982582.9..372.8...519154982376.9.5.14289.7...8513657182948.1.59763";
+      const board = parsePuzzle(CHAINS_STUCK);
+
+      const hint = findHint(board, solvePuzzle(CHAINS_STUCK)!);
+
+      expect(hint!.technique).toBe("reveal");
+      expect(hint!.position).toEqual({ row: 0, col: 0 });
+      expect(hint!.explanation).toContain("This cell can be 6, 7");
+    });
+  });
+
   describe("no hint available", () => {
     it("returns null when board is fully solved", () => {
       const solved =
