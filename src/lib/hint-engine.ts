@@ -1,3 +1,4 @@
+import { LADDER } from "./ladder.ts";
 import { getErrors } from "./sudoku.ts";
 import { findTechniqueHint } from "./technique-hint.ts";
 import type { ActiveHint, Board, Position } from "./types.ts";
@@ -290,14 +291,17 @@ export function findHint(
   const value = Number(solution[targetRow * 9 + targetCol]);
   const candidates = candidatesAt(board, targetRow, targetCol);
 
+  // Named from the ladder's last rung: a hand-written list of
+  // techniques goes stale the moment a harder one joins.
+  const exhausted = `No single, and no technique up to the ${LADDER.at(-1)!.label.toLowerCase()}, decides a cell right now — this board needs chain logic.`;
   return {
     position: { row: targetRow, col: targetCol },
     value,
     technique: "reveal",
     explanation:
       candidates.size <= 3
-        ? `No single, pair, triple, or X-wing decides a cell right now — this board needs chain logic. This cell can be ${[...candidates].sort().join(", ")}; the answer is ${value}, and placing it will open the board back up.`
-        : `No single, pair, triple, or X-wing decides a cell right now — this board needs chain logic. This cell still has ${candidates.size} candidates; the answer is ${value}, and placing it will open the board back up.`,
+        ? `${exhausted} This cell can be ${[...candidates].sort().join(", ")}; the answer is ${value}, and placing it will open the board back up.`
+        : `${exhausted} This cell still has ${candidates.size} candidates; the answer is ${value}, and placing it will open the board back up.`,
     relatedCells: eliminatingCells(board, targetRow, targetCol),
   };
 }
