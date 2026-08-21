@@ -4,7 +4,6 @@ import type { Difficulty } from "../lib/types.ts";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
   createRoomFromDoc,
-  getHostId,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
@@ -246,21 +245,6 @@ describe("p2p-room", () => {
       expect(state.winnerId).toBe("player1");
       expect(state.winnerName).toBe("Alice");
       expect(state.status).toBe("finished");
-    });
-  });
-
-  describe("getHostId", () => {
-    it("returns the empty string before joinRoom", () => {
-      const room = createTestRoom();
-      expect(getHostId(room)).toBe("");
-    });
-
-    it("returns the host claimed by initializeRoom", () => {
-      const room = createTestRoom();
-      initializeRoom(room, "player1", "medium");
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      expect(getHostId(room)).toBe("player1");
     });
   });
 

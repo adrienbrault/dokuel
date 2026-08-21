@@ -8,11 +8,19 @@ import type {
 import type { MpSnapshot } from "./mp-snapshot.ts";
 
 /**
- * Internal to the multiplayer module. The Yjs schema and its
- * transactions live here; {@link ./mp-room.ts} builds the room's rules
- * on top of them and is the only importer. Co-located in `src/hooks/`
- * so a schema migration touches one directory. Do not import from
- * outside this directory.
+ * The room doc: the Yjs schema for one room, and the typed reads and
+ * transactional writes over it. Storage, not rules — what a win claim
+ * is worth, which board to deal and under which number, how many seats
+ * a room has and what order they are in are all decided by
+ * {@link ./mp-room.ts}, which asks for the write it wants and is the
+ * only importer.
+ *
+ * The one judgement that stays here is representational:
+ * `projectWinnerBoard` decides how a value a peer wrote reaches a
+ * reader, which is a question about what this storage can hold.
+ *
+ * Co-located in `src/hooks/` so a schema migration touches one
+ * directory. Do not import from outside this directory.
  */
 
 const PLAYER_COLORS = [
@@ -209,14 +217,6 @@ export function writeClaim(
     roomMap.set("winnerBoard", board);
     roomMap.set("status", "finished");
   });
-}
-
-export function getRoomStatus(room: P2PRoom): string {
-  return room.doc.getMap("room").get("status") as string;
-}
-
-export function getHostId(room: P2PRoom): string {
-  return (room.doc.getMap("room").get("hostId") as string) || "";
 }
 
 function projectWinnerBoard(raw: unknown): string | null {
