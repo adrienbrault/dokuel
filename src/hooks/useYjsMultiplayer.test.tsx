@@ -166,8 +166,13 @@ describe("useYjsMultiplayer", () => {
     act(() => {
       result.current.sendProgress(7, 91);
       result.current.sendRematch();
+      // Distinct from sendComplete so an unfinished board is never
+      // disguised as a solve; the opponent is unreachable here, so the
+      // session lets the claim through.
+      result.current.claimForfeitWin();
     });
 
+    expect(result.current.roomState?.winnerId).toBe("p1");
     expect(result.current.roomState?.difficulty).toBe("hard");
     expect(result.current.roomState?.assistLevel).toBe("paper");
     expect(result.current.roomState?.gameNumber).toBe(2);
