@@ -32,8 +32,9 @@ export function createElapsedClock({
 
   const checkpoint = () => {
     if (runningSince !== null) {
-      accumulatedMs = elapsedMs();
-      runningSince = readNow();
+      const at = readNow();
+      accumulatedMs += Math.max(0, at - runningSince);
+      runningSince = at;
     }
     return accumulatedMs / 1_000;
   };
