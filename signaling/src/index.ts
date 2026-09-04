@@ -15,6 +15,7 @@
  */
 
 import { DurableObject } from "cloudflare:workers";
+import { collectProductEvent, type ProductEnvironment } from "./product-events";
 import {
   generateTurnCredentials,
   type TurnEnvironment,
@@ -56,12 +57,13 @@ function isAllowedOrigin(origin: string | null): boolean {
   return url.hostname === "localhost" || url.hostname === "127.0.0.1";
 }
 
-type Env = TurnEnvironment & {
-  SIGNALING_ROOM: DurableObjectNamespace;
-  // Cloudflare Realtime TURN key — set via `wrangler secret put`. Both
-  // optional: without them /turn-credentials 404s and clients fall
-  // back to STUN-only.
-};
+type Env = TurnEnvironment &
+  ProductEnvironment & {
+    SIGNALING_ROOM: DurableObjectNamespace;
+    // Cloudflare Realtime TURN key — set via `wrangler secret put`. Both
+    // optional: without them /turn-credentials 404s and clients fall
+    // back to STUN-only.
+  };
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -87,6 +89,12 @@ export default {
 
     const url = new URL(request.url);
 
+    if (url.pathname === "/events") {
+      if (!isAllowedOrigin(request.headers.get("Origin")))
+        return new Response("Forbidden", { status: 403 });
+      return collectProductEvent(request, env);
+    }
+
     // Ephemeral TURN credentials for WebRTC NAT traversal. Same
     // origin gate as the WebSocket upgrade: abuse mitigation, not
     // authentication — the credentials themselves expire.
@@ -109,7 +117,7 @@ export default {
 function corsHeaders(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "*",
   };
 }
