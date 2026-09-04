@@ -3,11 +3,49 @@ import type { GameOrigin } from "./result-store-types.ts";
 
 const STORAGE_PREFIX = "sudoku_save_";
 const BOARD_STRING = /^[1-9.]{81}$/;
+const SAVED_GAME_KEYS = [
+  "challenge",
+  "puzzle",
+  "values",
+  "notes",
+  "timer",
+  "difficulty",
+  "assistLevel",
+  "maxAssistLevel",
+  "hintsUsed",
+  "origin",
+  "attemptId",
+  "puzzleId",
+] as const;
 
 export type SavedGameBackupEntry = {
   key: string;
   data: SavedGame;
 };
+
+export function validateSavedGameEntries(
+  value: unknown,
+): SavedGameBackupEntry[] | null {
+  if (!Array.isArray(value)) return null;
+  const entries: SavedGameBackupEntry[] = [];
+  const keys = new Set<string>();
+  for (const item of value) {
+    if (!isRecord(item)) return null;
+    const key = item.key;
+    const data = item.data;
+    if (
+      typeof key !== "string" ||
+      keys.has(key) ||
+      !isPortableSaveKey(key) ||
+      !isPortableSavedGame(data)
+    ) {
+      return null;
+    }
+    keys.add(key);
+    entries.push({ key, data });
+  }
+  return entries;
+}
 
 /** Return resumable solo saves without exporting room or player identity. */
 export function exportSavedGames(): SavedGameBackupEntry[] {
@@ -20,7 +58,7 @@ export function exportSavedGames(): SavedGameBackupEntry[] {
       if (key.startsWith("mp_")) continue;
       const game = loadGame(key);
       if (!game || game.multiplayer) continue;
-      entries.push({ key, data: game });
+      entries.push({ key, data: portableCopy(game) });
     }
   } catch {
     return [];
@@ -52,15 +90,10 @@ export function replaceSavedGames(entries: SavedGameBackupEntry[]): boolean {
 function prepareEntries(
   entries: SavedGameBackupEntry[],
 ): Map<string, string> | null {
+  const validated = validateSavedGameEntries(entries);
+  if (!validated) return null;
   const prepared = new Map<string, string>();
-  for (const entry of entries) {
-    if (
-      !isPortableSaveKey(entry.key) ||
-      prepared.has(entry.key) ||
-      !isPortableSavedGame(entry.data)
-    ) {
-      return null;
-    }
+  for (const entry of validated) {
     try {
       prepared.set(entry.key, JSON.stringify(entry.data));
     } catch {
@@ -89,6 +122,18 @@ function readPortableRaw(): Map<string, string> | null {
 
 function restoreRaw(previous: Map<string, string>): void {
   try {
+    const currentPortable = new Set<string>();
+    for (let index = 0; index < localStorage.length; index++) {
+      const storageKey = localStorage.key(index);
+      if (!storageKey?.startsWith(STORAGE_PREFIX)) continue;
+      const raw = localStorage.getItem(storageKey);
+      if (raw !== null && isPortableStorageKey(storageKey, raw)) {
+        currentPortable.add(storageKey);
+      }
+    }
+    for (const storageKey of currentPortable) {
+      if (!previous.has(storageKey)) localStorage.removeItem(storageKey);
+    }
     for (const [storageKey, raw] of previous) {
       localStorage.setItem(storageKey, raw);
     }
@@ -123,6 +168,9 @@ function isPortableSavedGame(value: unknown): value is SavedGame {
   }
   const data = value as Partial<SavedGame>;
   return (
+    Object.keys(data).every((key) =>
+      SAVED_GAME_KEYS.some((allowed) => allowed === key),
+    ) &&
     !data.multiplayer &&
     typeof data.puzzle === "string" &&
     BOARD_STRING.test(data.puzzle) &&
@@ -131,8 +179,11 @@ function isPortableSavedGame(value: unknown): value is SavedGame {
     isValidNotes(data.notes) &&
     typeof data.timer === "number" &&
     Number.isFinite(data.timer) &&
+    (data.challenge === undefined || isValidChallenge(data.challenge)) &&
     ["easy", "medium", "hard", "expert"].includes(data.difficulty ?? "") &&
     ["paper", "standard", "full"].includes(data.assistLevel ?? "") &&
+    (data.maxAssistLevel === undefined ||
+      ["paper", "standard", "full"].includes(data.maxAssistLevel)) &&
     typeof data.hintsUsed === "number" &&
     Number.isInteger(data.hintsUsed) &&
     data.hintsUsed >= 0 &&
@@ -140,6 +191,51 @@ function isPortableSavedGame(value: unknown): value is SavedGame {
     isOptionalId(data.attemptId) &&
     isOptionalId(data.puzzleId)
   );
+}
+
+function isValidChallenge(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const challengeKeys = [
+    "version",
+    "puzzle",
+    "difficulty",
+    "assistLevel",
+    "timeSeconds",
+    "hintsUsed",
+  ];
+  return (
+    Object.keys(value).every((key) => challengeKeys.includes(key)) &&
+    value.version === 1 &&
+    typeof value.puzzle === "string" &&
+    BOARD_STRING.test(value.puzzle) &&
+    ["easy", "medium", "hard", "expert"].includes(String(value.difficulty)) &&
+    ["paper", "standard", "full"].includes(String(value.assistLevel)) &&
+    typeof value.timeSeconds === "number" &&
+    Number.isSafeInteger(value.timeSeconds) &&
+    value.timeSeconds >= 0 &&
+    typeof value.hintsUsed === "number" &&
+    Number.isSafeInteger(value.hintsUsed) &&
+    value.hintsUsed >= 0
+  );
+}
+
+function portableCopy(game: SavedGame): SavedGame {
+  return {
+    ...(game.challenge === undefined ? {} : { challenge: game.challenge }),
+    puzzle: game.puzzle,
+    values: game.values,
+    notes: game.notes.map((entry) => [...entry]),
+    timer: game.timer,
+    difficulty: game.difficulty,
+    assistLevel: game.assistLevel,
+    ...(game.maxAssistLevel === undefined
+      ? {}
+      : { maxAssistLevel: game.maxAssistLevel }),
+    hintsUsed: game.hintsUsed,
+    ...(game.origin === undefined ? {} : { origin: game.origin }),
+    ...(game.attemptId === undefined ? {} : { attemptId: game.attemptId }),
+    ...(game.puzzleId === undefined ? {} : { puzzleId: game.puzzleId }),
+  };
 }
 
 function isValidNotes(notes: unknown): notes is number[][] {
@@ -168,4 +264,8 @@ function isOptionalId(value: unknown): value is string | undefined {
   return (
     value === undefined || (typeof value === "string" && value.length <= 256)
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

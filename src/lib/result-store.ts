@@ -187,11 +187,11 @@ function cloneStore(store: ResultStore): ResultStore {
     GameStats
   >;
   for (const [key, record] of Object.entries(store.attempts)) {
-    attempts[key] = { ...record };
+    attempts[key] = cloneRecord(record);
   }
   return {
     version: 1,
-    recent: store.recent.map((record) => ({ ...record })),
+    recent: store.recent.map(cloneRecord),
     lifetime: {
       version: 1,
       buckets: Object.fromEntries(
@@ -202,6 +202,20 @@ function cloneStore(store: ResultStore): ResultStore {
       ),
     },
     attempts,
+  };
+}
+
+function cloneRecord(record: GameStats): GameStats {
+  return {
+    difficulty: record.difficulty,
+    assistLevel: record.assistLevel,
+    time: record.time,
+    date: record.date,
+    won: record.won,
+    ...(record.hintsUsed === undefined ? {} : { hintsUsed: record.hintsUsed }),
+    ...(record.origin === undefined ? {} : { origin: record.origin }),
+    ...(record.attemptId === undefined ? {} : { attemptId: record.attemptId }),
+    ...(record.puzzleId === undefined ? {} : { puzzleId: record.puzzleId }),
   };
 }
 
