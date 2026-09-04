@@ -269,6 +269,8 @@ export function MultiplayerBoard({
       }
       controls={
         <GameControls
+          notesMode={game.notesMode}
+          onToggleNotes={game.toggleNotesMode}
           disabled={game.status !== "playing" || changingGame}
           onErase={game.erase}
           onUndo={game.undo}

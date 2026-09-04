@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
@@ -95,7 +94,6 @@ export function SoloGame({
   const {
     highlight,
     chargingDigit,
-    keyDigit,
     numPadRef,
     numPadProps,
     dragState,
@@ -128,17 +126,6 @@ export function SoloGame({
     return () =>
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [game.status]);
-
-  useKeyboard({
-    selectedCell: game.selectedCell,
-    onSelectCell: game.selectCell,
-    onDeselectCell: game.deselectCell,
-    onPlaceNumber: keyDigit,
-    onErase: game.erase,
-    onUndo: game.undo,
-    onToggleNotes: game.toggleNotesMode,
-    enabled: game.status === "playing" && !paused,
-  });
 
   const hintCells = useMemo(() => {
     if (!game.activeHint) return undefined;
@@ -229,6 +216,8 @@ export function SoloGame({
             <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
           )}
           <GameControls
+            notesMode={game.notesMode}
+            onToggleNotes={game.toggleNotesMode}
             disabled={paused || game.status !== "playing"}
             onErase={game.erase}
             onUndo={game.undo}

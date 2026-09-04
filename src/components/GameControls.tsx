@@ -1,4 +1,4 @@
-import { Eraser, Lightbulb, Undo2 } from "lucide-react";
+import { Eraser, Lightbulb, Pencil, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 type GameControlsProps = {
@@ -6,6 +6,8 @@ type GameControlsProps = {
   onUndo: () => void;
   disabled?: boolean | undefined;
   historyLength?: number | undefined;
+  notesMode?: boolean | undefined;
+  onToggleNotes?: (() => void) | undefined;
   onHint?: (() => void) | undefined;
 };
 
@@ -15,9 +17,21 @@ export function GameControls({
   historyLength,
   disabled = false,
   onHint,
+  notesMode = false,
+  onToggleNotes,
 }: GameControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+      {onToggleNotes && (
+        <ControlButton
+          label="Notes"
+          onClick={onToggleNotes}
+          disabled={disabled}
+          pressed={notesMode}
+        >
+          <Pencil size={17} strokeWidth={2.25} aria-hidden="true" />
+        </ControlButton>
+      )}
       <ControlButton
         label="Undo"
         onClick={onUndo}
@@ -42,20 +56,25 @@ function ControlButton({
   onClick,
   disabled,
   children,
+  pressed,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean | undefined;
   children: ReactNode;
+  pressed?: boolean | undefined;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
+      aria-pressed={pressed}
+      className={`flex items-center justify-center gap-1.5 px-2.5 py-2 min-h-11 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
         disabled
           ? "text-text-disabled opacity-50 cursor-default"
-          : "text-text-secondary hover:bg-surface-hover press-spring-soft"
+          : pressed
+            ? "text-accent bg-accent-light ring-1 ring-accent"
+            : "text-text-secondary hover:bg-surface-hover press-spring-soft"
       }`}
       onClick={onClick}
       aria-label={label}

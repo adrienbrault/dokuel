@@ -67,14 +67,18 @@ describe("SoloGame numpad selection", () => {
   });
 
   it("shows one notes mode for keyboard and numpad input", () => {
-    render(<SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />);
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
     fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
     const notes = screen.getByRole("button", { name: "Notes" });
     fireEvent.keyDown(window, { key: "n" });
     expect(notes).toHaveAttribute("aria-pressed", "true");
     fireEvent.keyDown(window, { key: "3" });
     fireEvent.click(screen.getByRole("button", { name: /^5,/ }));
-    expect(screen.getByLabelText(/^Cell row 1 column 1, empty, notes 3 5/)).toBeTruthy();
+    expect(
+      screen.getByLabelText(/^Cell row 1 column 1, empty, notes 3 5/),
+    ).toBeTruthy();
     fireEvent.click(notes);
     expect(notes).toHaveAttribute("aria-pressed", "false");
     fireEvent.keyDown(window, { key: "5" });

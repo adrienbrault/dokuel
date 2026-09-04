@@ -9,6 +9,7 @@ import {
 import type { AssistLevel } from "../lib/types.ts";
 import { useDigitHighlight } from "./useDigitHighlight.ts";
 import { useGameDigitDrag } from "./useGameDigitDrag.ts";
+import { useKeyboard } from "./useKeyboard.ts";
 import type { useSudoku } from "./useSudoku.ts";
 
 type SudokuGame = ReturnType<typeof useSudoku>;
@@ -67,10 +68,20 @@ export function useNumpadInteractions({
     if (intent.effect.kind !== "none") setChargingDigit(n);
   };
 
-  // The keyboard's digit keys, which follow the N-toggled notes flag
-  // rather than the selection shape. Multiplayer has no keyboard path.
+  // Keyboard and touch share the visible Notes toggle.
   const keyDigit = (n: number) =>
     runIntent({ kind: "key", notesMode: game.notesMode }, n);
+
+  useKeyboard({
+    selectedCell: game.selectedCell,
+    onSelectCell: game.selectCell,
+    onDeselectCell: game.deselectCell,
+    onPlaceNumber: keyDigit,
+    onErase: game.erase,
+    onUndo: game.undo,
+    onToggleNotes: game.toggleNotesMode,
+    enabled: !disabled,
+  });
 
   const handlePressEnd = () => {
     setChargingDigit(null);
@@ -91,14 +102,15 @@ export function useNumpadInteractions({
   const numPadProps = {
     disabled,
     // The legend reads the same intent the tap will run.
-    tapAction: intentFor({ kind: "tap" }).label,
+    tapAction: intentFor({ kind: "tap", notesMode: game.notesMode }).label,
     remainingCounts: game.remainingCounts,
     selectedValue: game.selectedCell
       ? game.board[game.selectedCell.row]![game.selectedCell.col]!.value
       : highlight.highlightedDigit,
     showRemainingCounts: assistLevel === "full",
     disableCompleted: assistLevel !== "paper",
-    onTapNumber: (n: number) => runIntent({ kind: "tap" }, n),
+    onTapNumber: (n: number) =>
+      runIntent({ kind: "tap", notesMode: game.notesMode }, n),
     onHoldNumber: handleHoldNote,
     onPressEnd: handlePressEnd,
     onStartDrag: startNumpadDrag,

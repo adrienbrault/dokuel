@@ -2,7 +2,7 @@ import type { Board, Position } from "./types.ts";
 
 /** What the player did to a digit. Widened as gestures are routed. */
 export type DigitGesture =
-  | { kind: "tap" }
+  | { kind: "tap"; notesMode?: boolean }
   | { kind: "hold" }
   | {
       kind: "drop";
@@ -75,7 +75,9 @@ export function digitIntent(
 ): DigitIntent {
   switch (gesture.kind) {
     case "tap":
-      return tapIntent(ctx);
+      return gesture.notesMode && hasSelection(ctx)
+        ? intent({ kind: "note", at: null })
+        : tapIntent(ctx);
     case "hold":
       // Hold is the gesture that KEEPS the selection, for stacking
       // pairs/triples into the same cell or range.
@@ -86,10 +88,9 @@ export function digitIntent(
       return dropIntent(gesture);
     case "key":
       if (!hasSelection(ctx)) return intent({ kind: "none" });
-      // A pencilled key releases the selection — but, unlike a range
-      // tap, without spotlighting the digit.
+      // Explicit notes mode keeps the selection for stacking candidates.
       return gesture.notesMode
-        ? intent({ kind: "note", at: null }, "release")
+        ? intent({ kind: "note", at: null })
         : intent({ kind: "value", at: null });
   }
 }
