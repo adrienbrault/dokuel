@@ -181,19 +181,12 @@ export function useResumableSudoku({
     null,
   );
   const completedRef = useRef(false);
-  useEffect(() => {
-    if (game.status !== "completed") {
-      completedRef.current = false;
-      return;
-    }
-    if (completedRef.current) return;
-    completedRef.current = true;
-    const seconds = getTimerSeconds();
+  const complete = useCallback(() => {
     const result = completeGame({
       gameKey,
       difficulty,
       assistLevel: maxAssistLevel,
-      timeSeconds: seconds,
+      timeSeconds: getTimerSecondsRef.current(),
       hintsUsed: game.hintsUsed,
       dailyDate,
       origin: resultOrigin,
@@ -202,19 +195,36 @@ export function useResumableSudoku({
     });
     setCompletion(result);
     onComplete?.(result.timeSeconds, result);
+    return result;
   }, [
-    game.status,
+    game.hintsUsed,
+    gameKey,
     difficulty,
     maxAssistLevel,
-    gameKey,
-    game.hintsUsed,
     dailyDate,
     resultOrigin,
     resultAttemptId,
     resultPuzzleId,
-    getTimerSeconds,
     onComplete,
   ]);
+
+  useEffect(() => {
+    if (game.status !== "completed") {
+      completedRef.current = false;
+      return;
+    }
+    if (completedRef.current) return;
+    completedRef.current = true;
+    complete();
+  }, [game.status, complete]);
+
+  const retrySave = useCallback(() => {
+    persist();
+  }, [persist]);
+  const retryCompletion = useCallback(() => {
+    if (game.status !== "completed" || completion?.persisted !== false) return;
+    complete();
+  }, [game.status, completion?.persisted, complete]);
 
   return {
     game,
@@ -225,6 +235,8 @@ export function useResumableSudoku({
     setAssistLevel,
     maxAssistLevel,
     saveStatus,
+    retrySave,
+    retryCompletion,
   };
 }
 

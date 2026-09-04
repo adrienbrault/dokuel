@@ -1,5 +1,6 @@
 import { type DailyStreak, recordDailyCompletion } from "./daily-streak.ts";
 import { deleteGame } from "./game-storage.ts";
+import { trackProductEvent } from "./product-events.ts";
 import { recordResult } from "./result-store.ts";
 import type { GameOrigin } from "./result-store-types.ts";
 import { getStatsForDifficulty } from "./stats.ts";
@@ -62,6 +63,7 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
     },
   });
   const recordedOrigin = recorded.record.origin ?? origin;
+  trackCompletionEvent(recorded, recordedOrigin);
   if (ctx.gameKey && recorded.persisted) {
     deleteGame(ctx.gameKey);
   }
@@ -78,4 +80,18 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
   if (!recorded.persisted) result.persisted = false;
   if (ctx.dailyDate) result.streak = recordDailyCompletion(ctx.dailyDate);
   return result;
+}
+
+function trackCompletionEvent(
+  recorded: ReturnType<typeof recordResult>,
+  origin: GameOrigin,
+): void {
+  if (recorded.duplicate || !recorded.persisted) return;
+  trackProductEvent("game_complete", productMode(origin), recorded.record.time);
+}
+
+function productMode(origin: GameOrigin): "solo" | "daily" | "friend" {
+  if (origin === "daily") return "daily";
+  if (origin === "friend") return "friend";
+  return "solo";
 }
