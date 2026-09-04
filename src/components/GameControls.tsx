@@ -69,7 +69,7 @@ function ControlButton({
       type="button"
       disabled={disabled}
       aria-pressed={pressed}
-      className={`flex items-center justify-center gap-1.5 px-2.5 py-2 min-h-11 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
+      className={`flex items-center justify-center gap-1 px-1.5 sm:gap-1.5 sm:px-2.5 py-2 min-h-11 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
         disabled
           ? "text-text-disabled opacity-50 cursor-default"
           : pressed
