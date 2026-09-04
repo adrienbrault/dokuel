@@ -66,6 +66,21 @@ describe("SoloGame numpad selection", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
   });
 
+  it("shows one notes mode for keyboard and numpad input", () => {
+    render(<SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+    const notes = screen.getByRole("button", { name: "Notes" });
+    fireEvent.keyDown(window, { key: "n" });
+    expect(notes).toHaveAttribute("aria-pressed", "true");
+    fireEvent.keyDown(window, { key: "3" });
+    fireEvent.click(screen.getByRole("button", { name: /^5,/ }));
+    expect(screen.getByLabelText(/^Cell row 1 column 1, empty, notes 3 5/)).toBeTruthy();
+    fireEvent.click(notes);
+    expect(notes).toHaveAttribute("aria-pressed", "false");
+    fireEvent.keyDown(window, { key: "5" });
+    expect(screen.getByLabelText(/^Cell row 1 column 1, value 5/)).toBeTruthy();
+  });
+
   it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
