@@ -8,6 +8,7 @@ import {
   createRoomFromDoc,
   initializeRoom,
   joinRoom,
+  markPlayerReady,
   startGame,
   updateProgress,
 } from "./p2p-room.ts";
@@ -436,6 +437,32 @@ describe("win claims", () => {
     expect(room.snapshot().gameOver).not.toBeNull();
     expect(localStorage.getItem(`dokuel_mp_snap_${ROOM_ID}`)).toBeNull();
   });
+
+  it("keeps both verified completion results after the winner is declared", () => {
+    const first = setupStartedGame();
+    first.room.complete(first.solution);
+
+    const second = createRoom({
+      doc: first.doc,
+      roomId: ROOM_ID,
+      playerId: "p2",
+      playerName: () => "Bob",
+      initialDifficulty: null,
+      now: () => T0 + 5_000,
+    });
+    second.complete(first.solution);
+
+    expect(first.room.snapshot().roomState).toMatchObject({
+      winnerId: "p1",
+      results: {
+        p1: { completedAt: T0, board: first.solution },
+        p2: { completedAt: T0 + 5_000, board: first.solution },
+      },
+    });
+
+    second.close();
+    first.room.close();
+  });
 });
 
 describe("setup", () => {
@@ -808,6 +835,7 @@ describe("commands", () => {
     room.setDifficulty("expert");
 
     room.start();
+    markPlayerReady(p2p, "p2");
 
     // Expert digs to a minimal puzzle (~22-28 clues) — well below the
     // easy band (36-45).
@@ -821,6 +849,7 @@ describe("commands", () => {
     joinRoom(p2p, "p2", "Bob");
     room.setDifficulty("expert");
     room.start();
+    markPlayerReady(p2p, "p2");
 
     const opponent = createRoom({
       doc,
