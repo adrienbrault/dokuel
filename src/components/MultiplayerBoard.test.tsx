@@ -185,6 +185,22 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("saves idle time on page exit and internal navigation", () => {
+    vi.useFakeTimers();
+    try {
+      const props = baseProps();
+      const { unmount } = render(<MultiplayerBoard {...props} />);
+      act(() => vi.advanceTimersByTime(7000));
+      act(() => window.dispatchEvent(new Event("pagehide")));
+      expect(loadGame(multiplayerGameKey(props))?.timer).toBe(7);
+      act(() => vi.advanceTimersByTime(3000));
+      unmount();
+      expect(loadGame(multiplayerGameKey(props))?.timer).toBe(10);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores the elapsed timer on remount", () => {
     vi.useFakeTimers();
     try {
