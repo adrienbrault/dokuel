@@ -72,6 +72,132 @@ function hasValidPlayers(value: unknown): value is Player[] {
   });
 }
 
+function isOneOf<T extends string>(
+  value: unknown,
+  values: readonly T[],
+): value is T {
+  return typeof value === "string" && values.includes(value as T);
+}
+
+function isPuzzle(value: unknown): value is string {
+  return typeof value === "string" && /^[1-9.]{81}$/.test(value);
+}
+
+function isSolution(value: unknown): value is string {
+  return typeof value === "string" && /^[1-9]{81}$/.test(value);
+}
+
+function givensMatchSolution(puzzle: string, solution: string): boolean {
+  for (let index = 0; index < puzzle.length; index++) {
+    if (puzzle[index] !== "." && puzzle[index] !== solution[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isNullableName(value: unknown): value is string | null {
+  return value === null || (typeof value === "string" && value.length > 0);
+}
+
+function hasValidBoardFields(value: Record<string, unknown>): boolean {
+  const puzzle = value.puzzle;
+  const solution = value.solution;
+  return (
+    isPuzzle(puzzle) &&
+    (solution === null || isSolution(solution)) &&
+    (solution === null || givensMatchSolution(puzzle, solution))
+  );
+}
+
+function hasValidWinnerFields(
+  value: Record<string, unknown>,
+  solution: unknown,
+  playerIds: Set<string>,
+): boolean {
+  const winnerId = value.winnerId;
+  const winnerName = value.winnerName;
+  const winnerBoard = value.winnerBoard;
+  return (
+    isNullableName(winnerId) &&
+    isNullableName(winnerName) &&
+    (winnerId === null) === (winnerName === null) &&
+    (winnerId === null || playerIds.has(winnerId)) &&
+    (winnerBoard === null ||
+      (isSolution(winnerBoard) &&
+        solution !== null &&
+        winnerBoard === solution))
+  );
+}
+
+function hasValidRematchFields(
+  value: Record<string, unknown>,
+  playerIds: Set<string>,
+): boolean {
+  const rematchReady = value.rematchReady;
+  if (
+    !Array.isArray(rematchReady) ||
+    !rematchReady.every(
+      (id): id is string => typeof id === "string" && playerIds.has(id),
+    ) ||
+    new Set(rematchReady).size !== rematchReady.length
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function hasValidRoomFields(
+  value: Record<string, unknown>,
+  playerIds: Set<string>,
+): boolean {
+  const gameNumber = value.gameNumber;
+  const savedAt = value.savedAt;
+  return (
+    value.version === MP_SNAPSHOT_VERSION &&
+    isOneOf(value.status, ["playing", "finished"] as const) &&
+    isOneOf(value.difficulty, ["easy", "medium", "hard", "expert"] as const) &&
+    isOneOf(value.assistLevel, ["paper", "standard", "full"] as const) &&
+    typeof value.hostId === "string" &&
+    value.hostId.length > 0 &&
+    playerIds.has(value.hostId) &&
+    typeof gameNumber === "number" &&
+    Number.isSafeInteger(gameNumber) &&
+    gameNumber > 0 &&
+    typeof savedAt === "number" &&
+    Number.isSafeInteger(savedAt) &&
+    savedAt >= 0
+  );
+}
+
+function hasValidStatusFields(value: Record<string, unknown>): boolean {
+  const winnerId = value.winnerId;
+  const winnerName = value.winnerName;
+  const winnerBoard = value.winnerBoard;
+  const rematchReady = value.rematchReady;
+  return value.status === "finished"
+    ? winnerId !== null && winnerName !== null
+    : winnerId === null &&
+        winnerName === null &&
+        winnerBoard === null &&
+        Array.isArray(rematchReady) &&
+        rematchReady.length === 0;
+}
+
+function isValidSnapshot(value: Record<string, unknown>): boolean {
+  const players = value.players;
+  if (!hasValidPlayers(players)) return false;
+  const playerIds = new Set(players.map((player) => player.id));
+
+  return (
+    hasValidBoardFields(value) &&
+    hasValidWinnerFields(value, value.solution, playerIds) &&
+    hasValidRematchFields(value, playerIds) &&
+    hasValidRoomFields(value, playerIds) &&
+    hasValidStatusFields(value)
+  );
+}
+
 export function decodeSnapshot(raw: string): MpSnapshot | null {
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -82,14 +208,14 @@ export function decodeSnapshot(raw: string): MpSnapshot | null {
     const normalized: Record<string, unknown> = {
       ...record,
       version: MP_SNAPSHOT_VERSION,
+      solution: record.solution ?? null,
+      winnerId: record.winnerId ?? null,
+      winnerName: record.winnerName ?? null,
       winnerBoard: record.winnerBoard ?? null,
-      rematchReady: Array.isArray(record.rematchReady)
-        ? record.rematchReady
-        : [],
+      rematchReady:
+        record.rematchReady === undefined ? [] : record.rematchReady,
     };
-    return hasValidPlayers(normalized.players)
-      ? (normalized as MpSnapshot)
-      : null;
+    return isValidSnapshot(normalized) ? (normalized as MpSnapshot) : null;
   } catch {
     return null;
   }
