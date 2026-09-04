@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Cell } from "../lib/types.ts";
@@ -19,6 +19,19 @@ function makeBoard(overrides: [number, number, number][] = []): BoardType {
 }
 
 describe("Board same-number row/col highlighting (full assist)", () => {
+  it("presents nine logical rows with cells in reading order", () => {
+    render(<Board board={makeBoard()} selectedCell={null} conflicts={new Set()} onSelectCell={vi.fn()} />);
+    const rows = within(screen.getByRole("grid")).getAllByRole("row");
+    expect(rows).toHaveLength(9);
+    for (const [row, element] of rows.entries()) {
+      const cells = within(element).getAllByRole("gridcell");
+      expect(cells).toHaveLength(9);
+      for (const [col, cell] of cells.entries()) {
+        expect(within(cell).getByRole("button")).toHaveAccessibleName(`Cell row ${row + 1} column ${col + 1}, empty`);
+      }
+    }
+  });
+
   it("offers one tab stop and moves actual focus with the selected cell", () => {
     const props = {
       board: makeBoard(),
