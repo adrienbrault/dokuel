@@ -13,9 +13,15 @@ it("sends nothing before consent or after withdrawal and only coarse allowed fie
   trackProductEvent("game_complete", "daily", 131);
   expect(send).toHaveBeenCalledTimes(1);
   expect(JSON.parse(send.mock.calls[0]?.[1].body)).toEqual({
-    version: 1, event: "game_complete", mode: "daily", minutes: 2,
+    version: 1,
+    event: "game_complete",
+    mode: "daily",
+    minutes: 2,
   });
-  expect(send.mock.calls[0]?.[1]).toMatchObject({ credentials: "omit", referrerPolicy: "no-referrer" });
+  expect(send.mock.calls[0]?.[1]).toMatchObject({
+    credentials: "omit",
+    referrerPolicy: "no-referrer",
+  });
   setMeasurementConsent(false);
   trackProductEvent("visit");
   expect(send).toHaveBeenCalledTimes(1);
