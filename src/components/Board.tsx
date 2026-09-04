@@ -146,6 +146,16 @@ export function Board({
   // only block that works across iOS versions. React's onTouchStart is
   // passive (preventDefault is a no-op), so we attach it natively.
   const gridRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || !selectedCell || !grid.contains(document.activeElement))
+      return;
+    grid
+      .querySelector<HTMLButtonElement>(
+        `button[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`,
+      )
+      ?.focus({ preventScroll: true });
+  }, [selectedCell]);
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;
@@ -267,6 +277,12 @@ export function Board({
                     isSameNumberRowCol={isSameNumberRowCol}
                     assistLevel={assistLevel}
                     onSelect={onSelectCell}
+                    tabIndex={
+                      isSelected ||
+                      (!selectedCell && rowIdx === 0 && colIdx === 0)
+                        ? 0
+                        : -1
+                    }
                     revealDelay={
                       animateReveal && cell.isGiven
                         ? (rowIdx * 9 + colIdx) * 6

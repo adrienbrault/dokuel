@@ -26,7 +26,9 @@ describe("Board same-number row/col highlighting (full assist)", () => {
       onSelectCell: vi.fn(),
     };
     const { rerender } = render(<Board {...props} selectedCell={null} />);
-    expect(screen.getAllByRole("button").filter((cell) => cell.tabIndex === 0)).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button").filter((cell) => cell.tabIndex === 0),
+    ).toHaveLength(1);
     const first = screen.getByLabelText("Cell row 1 column 1, empty");
     first.focus();
     rerender(<Board {...props} selectedCell={{ row: 0, col: 1 }} />);
