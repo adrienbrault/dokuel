@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import {
-  ASSIST_LEVEL_LABELS,
   DIFFICULTIES,
   DIFFICULTY_LABELS,
   DIFFICULTY_TEXT_COLORS,
@@ -13,12 +12,9 @@ import {
   getMultiplayerSummary,
   type MultiplayerGameRecord,
 } from "../lib/multiplayer-stats.ts";
-import {
-  type AssistLevelStats,
-  getStats,
-  getStatsByAssistLevel,
-} from "../lib/stats.ts";
+import { getStats } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { SoloStats } from "./SoloStats.tsx";
 
 type StatsProps = {
   onBack: () => void;
@@ -66,16 +62,7 @@ export function Stats({ onBack }: StatsProps) {
           </div>
         </div>
 
-        <section aria-label="Solo" className="flex flex-col gap-3 w-full">
-          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-            Solo
-          </h3>
-          <div className="flex flex-col gap-4 w-full">
-            {DIFFICULTIES.map((diff) => (
-              <DifficultyStats key={diff} difficulty={diff} />
-            ))}
-          </div>
-        </section>
+        <SoloStats />
 
         <section
           aria-label="Multiplayer"
@@ -129,75 +116,6 @@ export function Stats({ onBack }: StatsProps) {
         >
           ← Back
         </button>
-      </div>
-    </div>
-  );
-}
-
-function DifficultyStats({ difficulty }: { difficulty: Difficulty }) {
-  const byLevel = useMemo(
-    () => getStatsByAssistLevel(difficulty),
-    [difficulty],
-  );
-  const totalWins = byLevel.reduce((sum, s) => sum + s.gamesPlayed, 0);
-
-  return (
-    <div className="card p-4 w-full">
-      <div className="flex items-center justify-between mb-3">
-        <span
-          className={`text-sm font-semibold ${DIFFICULTY_TEXT_COLORS[difficulty]}`}
-        >
-          {DIFFICULTY_LABELS[difficulty]}
-        </span>
-        {totalWins > 0 && (
-          <span className="text-xs text-text-muted">
-            {totalWins} {totalWins === 1 ? "win" : "wins"}
-          </span>
-        )}
-      </div>
-      {byLevel.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-border-default">
-          {byLevel.map((modeStats) => (
-            <AssistModeRow key={modeStats.assistLevel} stats={modeStats} />
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-text-muted text-center">No games yet</p>
-      )}
-    </div>
-  );
-}
-
-function AssistModeRow({ stats }: { stats: AssistLevelStats }) {
-  return (
-    <li className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-      <div className="flex flex-col">
-        <span className="text-sm font-medium text-text-primary">
-          {ASSIST_LEVEL_LABELS[stats.assistLevel]}
-        </span>
-        <span className="text-[11px] text-text-muted">
-          {stats.gamesPlayed} {stats.gamesPlayed === 1 ? "win" : "wins"}
-        </span>
-      </div>
-      <div className="flex gap-6 text-center">
-        <ModeStat
-          label="Best"
-          value={stats.bestTime === null ? "—" : formatTime(stats.bestTime)}
-        />
-        <ModeStat label="Avg" value={formatTime(stats.averageTime)} />
-      </div>
-    </li>
-  );
-}
-
-function ModeStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-base font-bold text-text-primary font-mono tabular-nums">
-        {value}
-      </div>
-      <div className="text-[10px] text-text-muted uppercase tracking-wide">
-        {label}
       </div>
     </div>
   );
