@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { setMeasurementConsent, trackProductEvent } from "./product-events.ts";
+import {
+  getMeasurementConsent,
+  setMeasurementConsent,
+  trackProductEvent,
+} from "./product-events.ts";
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.unstubAllGlobals());
@@ -25,4 +29,18 @@ it("sends nothing before consent or after withdrawal and only coarse allowed fie
   setMeasurementConsent(false);
   trackProductEvent("visit");
   expect(send).toHaveBeenCalledTimes(1);
+});
+
+it("fails closed for corrupt consent and tolerates failed event delivery", async () => {
+  localStorage.setItem("dokuel_measurement_consent", '"yes"');
+  expect(getMeasurementConsent()).toBe(false);
+  const send = vi.fn().mockRejectedValue(new Error("offline"));
+  vi.stubGlobal("fetch", send);
+  setMeasurementConsent(true);
+  trackProductEvent("game_complete", "solo", Number.NaN);
+  await Promise.resolve();
+  expect(JSON.parse(send.mock.calls[0]?.[1].body).minutes).toBe(0);
+  trackProductEvent("game_complete", "solo", 1e9);
+  await Promise.resolve();
+  expect(JSON.parse(send.mock.calls[1]?.[1].body).minutes).toBe(240);
 });
