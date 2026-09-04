@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { serializeBoard } from "../lib/board-engine.ts";
+import type { FriendChallenge } from "../lib/challenge.ts";
 import { hashCode, seededRandom } from "../lib/daily.ts";
 import {
   completeGame,
@@ -11,6 +12,7 @@ import type { AssistLevel, Cell, Difficulty } from "../lib/types.ts";
 import { useSudoku } from "./useSudoku.ts";
 
 type UseResumableSudokuOptions = {
+  challenge?: FriendChallenge | undefined;
   /** localStorage key for autosave. When omitted, no save/resume happens. */
   gameKey?: string | undefined;
   /** Pre-built puzzle to use when no saved game is present. */
@@ -40,6 +42,7 @@ type UseResumableSudokuOptions = {
  */
 export function useResumableSudoku({
   gameKey,
+  challenge,
   initialPuzzle,
   difficulty,
   initialAssistLevel,
@@ -118,6 +121,7 @@ export function useResumableSudoku({
       difficulty,
       assistLevel,
       maxAssistLevel,
+      challenge,
       hintsUsed: game.hintsUsed,
     };
     saveGame(gameKey, data);
@@ -130,6 +134,7 @@ export function useResumableSudoku({
     difficulty,
     assistLevel,
     maxAssistLevel,
+    challenge,
   ]);
 
   // Flush on pagehide/tab-hide: the effect above only fires on state
@@ -148,6 +153,7 @@ export function useResumableSudoku({
         difficulty,
         assistLevel,
         maxAssistLevel,
+        challenge,
         hintsUsed: game.hintsUsed,
       });
     };
@@ -169,6 +175,7 @@ export function useResumableSudoku({
     difficulty,
     assistLevel,
     maxAssistLevel,
+    challenge,
   ]);
 
   // On completion: orchestrate side effects via completeGame, notify caller.

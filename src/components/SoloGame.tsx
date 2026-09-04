@@ -3,6 +3,7 @@ import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
+import { compareChallenge, type FriendChallenge } from "../lib/challenge.ts";
 import { ASSIST_LEVEL_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
@@ -22,6 +23,7 @@ import { TimerPill } from "./TimerPill.tsx";
 const EMPTY_CONFLICTS = new Set<number>();
 
 type SoloGameProps = {
+  challenge?: FriendChallenge | undefined;
   difficulty: Difficulty;
   gameKey?: string | undefined;
   assistLevel?: AssistLevel | undefined;
@@ -41,6 +43,7 @@ type SoloGameProps = {
 
 export function SoloGame({
   difficulty,
+  challenge,
   gameKey,
   assistLevel: initialAssistLevel = "standard",
   initialPuzzle,
@@ -60,12 +63,14 @@ export function SoloGame({
     setAssistLevel,
     maxAssistLevel,
     completion,
+    puzzle,
     initialTimerSeconds,
   } = useResumableSudoku({
     gameKey,
     initialPuzzle,
     difficulty,
     initialAssistLevel,
+    challenge,
     getTimerSeconds: () => timerSecondsRef.current,
     dailyDate,
     onComplete,
@@ -146,7 +151,9 @@ export function SoloGame({
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
         <>
-          <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+          {!challenge && (
+            <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+          )}
           <p className="caption mt-2">
             Results use {ASSIST_LEVEL_LABELS[maxAssistLevel]} assistance, the
             highest used this game.
@@ -235,6 +242,26 @@ export function SoloGame({
             difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}
+            shareChallenge={
+              completion
+                ? {
+                    version: 1,
+                    puzzle,
+                    difficulty,
+                    assistLevel: completion.assistLevel,
+                    timeSeconds: completion.timeSeconds,
+                    hintsUsed: game.hintsUsed,
+                  }
+                : undefined
+            }
+            comparison={
+              challenge && completion
+                ? compareChallenge(challenge, {
+                    ...completion,
+                    hintsUsed: game.hintsUsed,
+                  })
+                : undefined
+            }
             stats={completion?.stats ?? null}
             isNewPB={completion?.isNewPB}
             hintsUsed={game.hintsUsed}

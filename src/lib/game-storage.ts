@@ -1,3 +1,4 @@
+import type { FriendChallenge } from "./challenge.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type MultiplayerGameIdentity = {
@@ -32,6 +33,7 @@ export function saveMultiplayerGame(
 }
 
 export type SavedGame = {
+  challenge?: FriendChallenge | undefined;
   multiplayer?: MultiplayerGameIdentity;
   puzzle: string;
   values: string;
@@ -115,6 +117,7 @@ export function loadGame(key: string): SavedGame | null {
 }
 
 export type SavedGameSummary = {
+  challenge?: FriendChallenge | undefined;
   key: string;
   roomId?: string | undefined;
   difficulty: Difficulty;
@@ -138,6 +141,7 @@ export function listSavedGames(): SavedGameSummary[] {
       const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
         key,
+        challenge: game.challenge,
         roomId:
           game.multiplayer?.roomId ??
           (key.startsWith("mp_") ? key.split("_")[1] : undefined),

@@ -76,7 +76,7 @@ test("difficulty picker", async ({ page }, testInfo) => {
 
 test("multiplayer lobby", async ({ page }, testInfo) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Create Game" }).click();
+  await page.getByRole("button", { name: "Challenge a friend" }).click();
   await page.getByRole("button", { name: "Easy" }).click();
   await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
   await page.screenshot({
@@ -456,7 +456,7 @@ test.describe("multiplayer session", () => {
 
     // Host creates a room and lands in the lobby.
     await page.goto("/");
-    await page.getByRole("button", { name: "Create Game" }).click();
+    await page.getByRole("button", { name: "Challenge a friend" }).click();
     await page.getByRole("button", { name: "Easy" }).click();
     await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
     const roomId = new URL(page.url()).pathname.slice(1);

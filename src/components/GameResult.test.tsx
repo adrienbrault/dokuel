@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { buildShareText, GameResult } from "./GameResult.tsx";
+import { GameResult } from "./GameResult.tsx";
+import { buildShareText } from "./ResultShare.tsx";
 
 describe("GameResult", () => {
   it("renders win state with time and emoji", () => {
@@ -51,7 +52,7 @@ describe("GameResult", () => {
       />,
     );
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: /another puzzle/i }),
+      screen.getByRole("button", { name: /share result/i }),
     );
   });
 
@@ -201,4 +202,37 @@ describe("GameResult", () => {
     await userEvent.click(screen.getByText("Back to home"));
     expect(onNewGame).toHaveBeenCalledOnce();
   });
+});
+
+it("shares an exact friend challenge instead of the homepage", async () => {
+  const { challengePath } = await import("../lib/challenge.ts");
+  const challenge = {
+    version: 1 as const,
+    puzzle:
+      ".34678912672195348198342567859761423426853791713924856961537284287419635345286179",
+    difficulty: "easy" as const,
+    assistLevel: "paper" as const,
+    timeSeconds: 222,
+    hintsUsed: 1,
+  };
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.assign(navigator, { clipboard: { writeText } });
+  render(
+    <GameResult
+      isWinner
+      time="03:42"
+      onNewGame={vi.fn()}
+      shareChallenge={challenge}
+    />,
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Challenge a friend" }),
+  );
+  expect(writeText).toHaveBeenCalledWith(
+    expect.stringContaining(challengePath(challenge)),
+  );
+  expect(writeText).toHaveBeenCalledWith(
+    expect.stringContaining("Paper assistance"),
+  );
+  expect(writeText).toHaveBeenCalledWith(expect.stringContaining("1 hint"));
 });

@@ -116,6 +116,12 @@ export function Landing({
 
         <ActionRow
           variant="primary"
+          icon={<Swords size={20} aria-hidden="true" />}
+          label="Challenge a friend"
+          sublabel="Play together in a live duel"
+          onClick={onCreate}
+        />
+        <ActionRow
           icon={<Play size={20} aria-hidden="true" />}
           label="Start Solo"
           sublabel="Pick a difficulty and play"
@@ -142,12 +148,7 @@ export function Landing({
             ) : undefined
           }
         />
-        <ActionRow
-          icon={<Swords size={20} aria-hidden="true" />}
-          label="Create Game"
-          sublabel="Host a 1v1 room"
-          onClick={onCreate}
-        />
+
         <ActionRow
           icon={<LogIn size={20} aria-hidden="true" />}
           label="Join Game"
@@ -287,7 +288,11 @@ function ContinueRow({
         </span>
         <span className="flex-1 min-w-0">
           <span className="block text-[0.95rem] font-bold leading-tight text-text-primary">
-            {game.roomId ? "Return to duel" : "Continue"}
+            {game.roomId
+              ? "Return to duel"
+              : game.challenge
+                ? "Continue challenge"
+                : "Continue"}
           </span>
           <span className="block text-xs leading-tight mt-0.5 text-text-muted truncate">
             {DIFFICULTY_LABELS[game.difficulty]} · {formatTime(game.timer)}
