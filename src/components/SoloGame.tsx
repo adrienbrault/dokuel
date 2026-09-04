@@ -4,6 +4,7 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
+import { ASSIST_LEVEL_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
@@ -54,16 +55,21 @@ export function SoloGame({
 }: SoloGameProps) {
   const timerSecondsRef = useRef(0);
 
-  const { game, assistLevel, setAssistLevel, initialTimerSeconds } =
-    useResumableSudoku({
-      gameKey,
-      initialPuzzle,
-      difficulty,
-      initialAssistLevel,
-      getTimerSeconds: () => timerSecondsRef.current,
-      dailyDate,
-      onComplete,
-    });
+  const {
+    game,
+    assistLevel,
+    setAssistLevel,
+    maxAssistLevel,
+    initialTimerSeconds,
+  } = useResumableSudoku({
+    gameKey,
+    initialPuzzle,
+    difficulty,
+    initialAssistLevel,
+    getTimerSeconds: () => timerSecondsRef.current,
+    dailyDate,
+    onComplete,
+  });
 
   // Seed the ref so saves before the first onTick capture the resumed timer.
   if (timerSecondsRef.current === 0 && initialTimerSeconds > 0) {
@@ -80,8 +86,8 @@ export function SoloGame({
 
   // Capture PB for this difficulty + assist mode, before this result saves.
   const priorStats = useMemo(
-    () => getStatsForDifficulty(difficulty, assistLevel),
-    [difficulty, assistLevel],
+    () => getStatsForDifficulty(difficulty, maxAssistLevel),
+    [difficulty, maxAssistLevel],
   );
   const personalBest = priorStats?.bestTime ?? null;
 
@@ -151,7 +157,13 @@ export function SoloGame({
       onDeselectCell={highlight.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
       settingsExtra={
-        <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+        <>
+          <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
+          <p className="caption mt-2">
+            Results use {ASSIST_LEVEL_LABELS[maxAssistLevel]} assistance, the
+            highest used this game.
+          </p>
+        </>
       }
       timer={
         <TimerPill

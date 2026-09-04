@@ -39,6 +39,7 @@ export type SavedGame = {
   timer: number;
   difficulty: Difficulty;
   assistLevel: AssistLevel;
+  maxAssistLevel?: AssistLevel;
   // Hints taken so far. Persisted so a save/resume cycle can't launder
   // a hint-assisted game into PB eligibility.
   hintsUsed: number;

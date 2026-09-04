@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { hashCode, seededRandom } from "../lib/daily.ts";
 import {
@@ -85,9 +85,19 @@ export function useResumableSudoku({
 
   const game = useSudoku(puzzle, solution, savedBoard);
 
-  const [assistLevel, setAssistLevel] = useState<AssistLevel>(
-    saved?.assistLevel ?? initialAssistLevel,
-  );
+  const [assistance, setAssistance] = useState(() => ({
+    current: saved?.assistLevel ?? initialAssistLevel,
+    max: saved?.maxAssistLevel ?? saved?.assistLevel ?? initialAssistLevel,
+  }));
+  const assistLevel = assistance.current;
+  const maxAssistLevel = assistance.max;
+  const setAssistLevel = useCallback((level: AssistLevel) => {
+    const rank = { paper: 0, standard: 1, full: 2 };
+    setAssistance((previous) => ({
+      current: level,
+      max: rank[level] > rank[previous.max] ? level : previous.max,
+    }));
+  }, []);
 
   // Callers pass inline closures (new identity per render); read via a
   // ref so the save effect keys on game state, not render churn — with
@@ -107,6 +117,7 @@ export function useResumableSudoku({
       timer: getTimerSecondsRef.current(),
       difficulty,
       assistLevel,
+      maxAssistLevel,
       hintsUsed: game.hintsUsed,
     };
     saveGame(gameKey, data);
@@ -118,6 +129,7 @@ export function useResumableSudoku({
     puzzle,
     difficulty,
     assistLevel,
+    maxAssistLevel,
   ]);
 
   // Flush on pagehide/tab-hide: the effect above only fires on state
@@ -135,6 +147,7 @@ export function useResumableSudoku({
         timer: getTimerSecondsRef.current(),
         difficulty,
         assistLevel,
+        maxAssistLevel,
         hintsUsed: game.hintsUsed,
       });
     };
@@ -155,6 +168,7 @@ export function useResumableSudoku({
     puzzle,
     difficulty,
     assistLevel,
+    maxAssistLevel,
   ]);
 
   // On completion: orchestrate side effects via completeGame, notify caller.
@@ -172,7 +186,7 @@ export function useResumableSudoku({
     const result = completeGame({
       gameKey,
       difficulty,
-      assistLevel,
+      assistLevel: maxAssistLevel,
       timeSeconds: seconds,
       hintsUsed: game.hintsUsed,
       dailyDate,
@@ -181,7 +195,7 @@ export function useResumableSudoku({
   }, [
     game.status,
     difficulty,
-    assistLevel,
+    maxAssistLevel,
     gameKey,
     game.hintsUsed,
     dailyDate,
@@ -195,5 +209,6 @@ export function useResumableSudoku({
     initialTimerSeconds: saved?.timer ?? 0,
     assistLevel,
     setAssistLevel,
+    maxAssistLevel,
   };
 }
