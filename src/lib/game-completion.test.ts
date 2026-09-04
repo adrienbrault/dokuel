@@ -24,6 +24,32 @@ describe("completeGame", () => {
     });
   });
 
+  it("keeps friend provenance out of the normal personal-best table", async () => {
+    const { getStats } = await import("./stats.ts");
+    const result = completeGame({
+      gameKey: "friend-attempt",
+      attemptId: "friend-attempt",
+      puzzleId: "friend-puzzle",
+      origin: "friend",
+      difficulty: "expert",
+      assistLevel: "standard",
+      timeSeconds: 1,
+      hintsUsed: 0,
+    });
+
+    expect(result.isNewPB).toBe(false);
+    expect(getStats()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          attemptId: "friend-attempt",
+          puzzleId: "friend-puzzle",
+          origin: "friend",
+        }),
+      ]),
+    );
+    expect(getStatsForDifficulty("expert", "standard")).toBeNull();
+  });
+
   it("survives a throwing localStorage at the moment of winning", async () => {
     // Quota exhaustion / blocked storage throws on setItem. This runs
     // inside the completion effect — an unhandled throw here crashes
