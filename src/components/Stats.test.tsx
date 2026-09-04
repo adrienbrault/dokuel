@@ -51,7 +51,7 @@ describe("Stats page — solo section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: /solo/i });
+    const section = screen.getByRole("region", { name: "Solo", exact: true });
     expect(within(section).getByText("Paper")).toBeTruthy();
     expect(within(section).getByText("Full")).toBeTruthy();
     expect(within(section).getAllByText("05:00").length).toBeGreaterThan(0);
@@ -65,7 +65,7 @@ describe("Stats page — solo section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: /solo/i });
+    const section = screen.getByRole("region", { name: "Solo", exact: true });
     expect(within(section).getByText("3 wins")).toBeTruthy();
   });
 });
