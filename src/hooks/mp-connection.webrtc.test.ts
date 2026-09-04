@@ -118,10 +118,12 @@ describe("openWebrtcConnection", () => {
     stubMint(MINTED);
     const connection = await openRoom("diagnostic-room");
     await connection.whenSynced;
-    const { getConnectionDiagnostics } = await import("../lib/connection-diagnostics.ts");
-    expect(getConnectionDiagnostics("diagnostic-room").map((entry) => entry.stage)).toEqual([
-      "opening", "relay-ready", "transport-started", "restored",
-    ]);
+    const { getConnectionDiagnostics } = await import(
+      "../lib/connection-diagnostics.ts"
+    );
+    expect(
+      getConnectionDiagnostics("diagnostic-room").map((entry) => entry.stage),
+    ).toEqual(["opening", "relay-ready", "transport-started", "restored"]);
     connection.close();
   });
   it("points the provider at the room's own signaling shard", async () => {

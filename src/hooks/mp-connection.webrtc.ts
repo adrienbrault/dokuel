@@ -1,6 +1,7 @@
 import { IndexeddbPersistence } from "y-indexeddb";
 import { WebrtcProvider } from "y-webrtc";
 import { Doc } from "yjs";
+import { beginConnectionDiagnostics } from "../lib/connection-diagnostics.ts";
 import { awarenessPresence } from "./mp-connection.presence.ts";
 import {
   type Connection,
@@ -54,6 +55,7 @@ export function createWebrtcConnectionOpener({
 }: WebrtcInternals): OpenConnection {
   return async (roomId: string, options?: OpenOptions): Promise<Connection> => {
     options?.signal?.throwIfAborted();
+    const diagnostic = beginConnectionDiagnostics(roomId);
     // Started here, awaited below: only the peer connection needs the
     // relay credentials. The local restore — the thing the player is
     // actually waiting for — must not queue behind a round trip to a
@@ -66,6 +68,13 @@ export function createWebrtcConnectionOpener({
     // The one thing that genuinely has to wait: iceServers cannot be
     // added to a live peer connection.
     const iceServers = await minting;
+    diagnostic(
+      iceServers?.some((server) =>
+        [server.urls].flat().some((url) => /^turns?:/.test(url)),
+      )
+        ? "relay-ready"
+        : "stun-only",
+    );
     if (options?.signal?.aborted) {
       // Abandoned while the credentials were in flight. Nothing else
       // holds the doc or the database handle, so this is their only
@@ -78,6 +87,7 @@ export function createWebrtcConnectionOpener({
     options?.signal?.throwIfAborted();
 
     const provider = openProvider(roomId, doc, iceServers);
+    diagnostic("transport-started");
 
     const statusListeners = new Set<
       (payload: { connected: boolean }) => void
@@ -87,12 +97,18 @@ export function createWebrtcConnectionOpener({
 
     return {
       doc,
-      whenSynced: persistence.whenSynced.then(() => undefined),
+      whenSynced: persistence.whenSynced.then(() => {
+        diagnostic("restored");
+      }),
       get connected() {
         return provider.connected;
       },
       announce: presence.announce,
-      hasOtherPeer: presence.hasOtherPeer,
+      hasOtherPeer(playerId) {
+        const reachable = presence.hasOtherPeer(playerId);
+        diagnostic(reachable ? "peer-reachable" : "peer-missing");
+        return reachable;
+      },
       onStatus(listener) {
         const wrapped = ({ connected }: { connected: boolean }) =>
           listener(connected);
@@ -116,12 +132,15 @@ export function createWebrtcConnectionOpener({
         };
       },
       connect() {
+        diagnostic("transport-started");
         provider.connect();
       },
       disconnect() {
+        diagnostic("suspended");
         provider.disconnect();
       },
       close() {
+        diagnostic("closed");
         for (const listener of statusListeners)
           provider.off("status", listener);
         for (const listener of peerListeners) provider.off("peers", listener);
