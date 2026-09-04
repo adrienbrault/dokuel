@@ -2,11 +2,24 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isDailyCompleted } from "./daily-streak.ts";
 import { completeGame } from "./game-completion.ts";
 import { loadGame, saveGame } from "./game-storage.ts";
-import { getStatsForDifficulty } from "./stats.ts";
+import { getStatsForDifficulty, saveGameResult } from "./stats.ts";
 
 describe("completeGame", () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
+
+  it("returns updated statistics and the personal-best decision for the completed game", () => {
+    saveGameResult("easy", "standard", 60, true, 0);
+    const result = completeGame({
+      difficulty: "easy", assistLevel: "standard", timeSeconds: 30, hintsUsed: 0,
+    });
+    expect(result).toMatchObject({
+      stats: { gamesPlayed: 2, bestTime: 30, averageTime: 45 },
+      isNewPB: true,
+      assistLevel: "standard",
+      timeSeconds: 30,
+    });
+  });
 
   it("survives a throwing localStorage at the moment of winning", async () => {
     // Quota exhaustion / blocked storage throws on setItem. This runs
