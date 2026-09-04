@@ -18,6 +18,7 @@ import {
   judgeClaim,
   leaveRoom,
   MAX_PLAYERS,
+  markPlayerReady,
   observeRoomChanges,
   requestRematch,
   setAssistLevel as setRoomAssistLevel,
@@ -173,6 +174,8 @@ export type Room = {
   start(): void;
   /** Same, for a room that already finished a game. */
   rematch(): void;
+  /** Accept the current lobby rules and wait for the other player. */
+  ready(): void;
   progress(cellsRemaining: number, completionPercent: number): void;
   updateName(name: string): void;
   setAssistLevel(level: AssistLevel): void;
@@ -406,6 +409,15 @@ export function createRoom({
       detectWinner(state, now());
       trackOpponentProgress();
       settleSeat(state);
+      if (
+        state.status === "lobby" &&
+        state.players.length === MAX_PLAYERS &&
+        state.readyPlayers?.length === MAX_PLAYERS &&
+        state.players[0]?.id === playerId
+      ) {
+        startGame(p2p, state.difficulty, now() + 3_000);
+        return;
+      }
       // Seat order is agreed across peers. One writer deals the next board,
       // including when both requests arrive concurrently after reconnecting.
       if (
@@ -424,6 +436,15 @@ export function createRoom({
 
   function publish(): void {
     for (const listener of listeners) listener();
+  }
+
+  function ready(): void {
+    if (getPlayers(p2p).length < 2) {
+      set("error", { message: "Need 2 players to start" });
+      publish();
+      return;
+    }
+    markPlayerReady(p2p, playerId);
   }
 
   /**
@@ -511,14 +532,8 @@ export function createRoom({
       if (hasReachableOpponent(hasOtherPeer)) return;
       claimWinner(p2p, playerId, playerName(), null);
     },
-    start() {
-      if (getPlayers(p2p).length < 2) {
-        set("error", { message: "Need 2 players to start" });
-        publish();
-        return;
-      }
-      startGame(p2p);
-    },
+    start: ready,
+    ready,
     rematch() {
       if (draft.gameOver) requestRematch(p2p, playerId);
     },
