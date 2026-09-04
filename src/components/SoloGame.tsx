@@ -8,9 +8,10 @@ import { compareChallenge, type FriendChallenge } from "../lib/challenge.ts";
 import { ASSIST_LEVEL_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
+import { recordTechniquePractice } from "../lib/learning-progress.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
-import type { AssistLevel, Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Difficulty, HintTechnique } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
@@ -18,10 +19,17 @@ import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { HintBanner } from "./HintBanner.tsx";
+import { LearningExercise } from "./LearningExercise.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { TimerPill } from "./TimerPill.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
+
+type LearningExerciseState = {
+  technique: HintTechnique;
+  prompt: string;
+  answer: number;
+};
 
 type SoloGameProps = {
   challenge?: FriendChallenge | undefined;
@@ -96,6 +104,8 @@ export function SoloGame({
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
   );
+  const [learningExercise, setLearningExercise] =
+    useState<LearningExerciseState | null>(null);
 
   // Capture PB for this difficulty + assist mode, before this result saves.
   const priorStats = useMemo(
@@ -149,6 +159,16 @@ export function SoloGame({
     }
     return set;
   }, [game.activeHint]);
+
+  const handlePractice = () => {
+    const hint = game.activeHint;
+    if (!hint) return;
+    setLearningExercise({
+      technique: hint.technique,
+      prompt: `Which digit belongs in row ${hint.position.row + 1}, column ${hint.position.col + 1}?`,
+      answer: hint.value,
+    });
+  };
 
   return (
     <GameLayout
@@ -229,6 +249,17 @@ export function SoloGame({
               hint={game.activeHint}
               onDismiss={game.dismissHint}
               onAdvance={game.hint}
+              onPractice={handlePractice}
+            />
+          )}
+          {learningExercise && (
+            <LearningExercise
+              technique={learningExercise.technique}
+              prompt={learningExercise.prompt}
+              answer={learningExercise.answer}
+              onSolved={() => {}}
+              onAttempt={recordTechniquePractice}
+              onClose={() => setLearningExercise(null)}
             />
           )}
           <GameControls
