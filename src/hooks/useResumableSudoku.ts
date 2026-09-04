@@ -6,9 +6,10 @@ import {
   completeGame,
   type GameCompletionResult,
 } from "../lib/game-completion.ts";
-import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
+import { loadGame, saveGame } from "../lib/game-storage.ts";
 import { generatePuzzleWithSolution, solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell, Difficulty } from "../lib/types.ts";
+import { useFlushOnExit } from "./useFlushOnExit.ts";
 import { useSudoku } from "./useSudoku.ts";
 
 type UseResumableSudokuOptions = {
@@ -110,10 +111,10 @@ export function useResumableSudoku({
   getTimerSecondsRef.current = getTimerSeconds;
 
   // Auto-save on every board / hint / assist-level change while playing
-  useEffect(() => {
+  const persist = useCallback(() => {
     if (!gameKey || game.status === "completed") return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
-    const data: SavedGame = {
+    saveGame(gameKey, {
       puzzle,
       values,
       notes,
@@ -123,8 +124,7 @@ export function useResumableSudoku({
       maxAssistLevel,
       challenge,
       hintsUsed: game.hintsUsed,
-    };
-    saveGame(gameKey, data);
+    });
   }, [
     game.board,
     game.status,
@@ -137,46 +137,8 @@ export function useResumableSudoku({
     challenge,
   ]);
 
-  // Flush on pagehide/tab-hide: the effect above only fires on state
-  // changes, so idle thinking time between moves would otherwise be
-  // lost on refresh and the resumed timer would rewind.
-  useEffect(() => {
-    if (!gameKey) return;
-    const flush = () => {
-      if (game.status === "completed") return;
-      const { values, notes } = serializeBoard(game.board as Cell[][]);
-      saveGame(gameKey, {
-        puzzle,
-        values,
-        notes,
-        timer: getTimerSecondsRef.current(),
-        difficulty,
-        assistLevel,
-        maxAssistLevel,
-        challenge,
-        hintsUsed: game.hintsUsed,
-      });
-    };
-    const onVisibility = () => {
-      if (document.hidden) flush();
-    };
-    window.addEventListener("pagehide", flush);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("pagehide", flush);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [
-    game.board,
-    game.status,
-    game.hintsUsed,
-    gameKey,
-    puzzle,
-    difficulty,
-    assistLevel,
-    maxAssistLevel,
-    challenge,
-  ]);
+  useEffect(persist, [persist]);
+  useFlushOnExit(persist);
 
   // On completion: orchestrate side effects via completeGame, notify caller.
   // Guarded so dep churn (getTimerSeconds is recreated every render) can't
