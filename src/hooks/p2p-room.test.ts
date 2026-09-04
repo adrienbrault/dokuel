@@ -229,6 +229,27 @@ describe("p2p-room", () => {
       expect(p1.get("completionPercent")).toBe(0);
     });
 
+    it("clears completion proofs when a new game starts", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+
+      startGame(room, "medium");
+      const solution = room.doc.getMap("room").get("solution") as string;
+      claimWinner(room, "player1", "Alice", solution, 1_000);
+      expect(getRoomState(room)?.results).toEqual({
+        player1: { completedAt: 1_000, board: solution },
+      });
+
+      startGame(room, "medium");
+
+      expect(getRoomState(room)?.results).toEqual({});
+      for (const playerMap of room.doc.getMap("players").values()) {
+        expect((playerMap as Y.Map<unknown>).has("completedAt")).toBe(false);
+        expect((playerMap as Y.Map<unknown>).has("completedBoard")).toBe(false);
+      }
+    });
+
     it("increments gameNumber", () => {
       const room = createTestRoom();
       initializeRoom(room, "player1", "medium");
@@ -610,6 +631,9 @@ describe("p2p-room", () => {
         winnerName: null,
         winnerBoard: null,
         rematchReady: [],
+        readyPlayers: [],
+        startedAt: null,
+        results: {},
         savedAt: Date.now(),
         ...overrides,
       };
