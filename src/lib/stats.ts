@@ -12,6 +12,7 @@ export type GameStats = {
 };
 
 const STORAGE_KEY = "sudoku_stats";
+const LIFETIME_STORAGE_KEY = "sudoku_stats_lifetime";
 
 // History cap per (difficulty, assistLevel) bucket. Eviction must be
 // scoped to the bucket the stats read over: a global ring let 100
@@ -19,6 +20,23 @@ const STORAGE_KEY = "sudoku_stats";
 // displayed best. 12 buckets × 100 small records stays well under any
 // localStorage quota.
 const MAX_GAMES_PER_BUCKET = 100;
+
+export type StatsSummary = {
+  gamesPlayed: number;
+  bestTime: number | null;
+  averageTime: number;
+};
+
+type LifetimeBucket = {
+  gamesPlayed: number;
+  totalTime: number;
+  bestTime: number | null;
+};
+
+type LifetimeStore = {
+  version: 1;
+  buckets: Record<string, LifetimeBucket>;
+};
 
 export function getStats(): GameStats[] {
   return readJson<GameStats[]>(STORAGE_KEY, [], (parsed) => {
@@ -40,17 +58,21 @@ export function saveGameResult(
   hintsUsed?: number,
 ) {
   const stats = getStats();
-  stats.push({
+  const result: GameStats = {
     difficulty,
     assistLevel,
     time,
     date: todayLocalISO(),
     won,
     hintsUsed: hintsUsed ?? 0,
-  });
+  };
+  const lifetime = readLifetimeStore(stats);
+  stats.push(result);
   const retained = evictPerBucket(stats, (s) => s.difficulty + s.assistLevel);
   writeJson(STORAGE_KEY, retained);
-  return summarizeStats(retained, difficulty, assistLevel);
+  addToLifetime(lifetime, result);
+  writeJson(LIFETIME_STORAGE_KEY, lifetime);
+  return summarizeLifetime(lifetime, difficulty, assistLevel);
 }
 
 /** Drop the oldest entries of any bucket that exceeds the cap,
@@ -81,31 +103,122 @@ export function getStatsForDifficulty(
   difficulty: Difficulty,
   assistLevel?: AssistLevel,
 ) {
-  return summarizeStats(getStats(), difficulty, assistLevel);
+  return summarizeLifetime(
+    readLifetimeStore(getStats()),
+    difficulty,
+    assistLevel,
+  );
 }
 
-function summarizeStats(
-  history: GameStats[],
+function summarizeLifetime(
+  lifetime: LifetimeStore,
   difficulty: Difficulty,
   assistLevel?: AssistLevel,
-) {
-  const stats = history.filter(
-    (s) =>
-      s.difficulty === difficulty &&
-      s.won &&
-      (assistLevel === undefined || s.assistLevel === assistLevel),
+): StatsSummary | null {
+  const buckets = Object.entries(lifetime.buckets).filter(([key]) => {
+    const [bucketDifficulty, bucketAssistLevel] = key.split("\u0000");
+    return (
+      bucketDifficulty === difficulty &&
+      (assistLevel === undefined || bucketAssistLevel === assistLevel)
+    );
+  });
+  if (buckets.length === 0) return null;
+  const gamesPlayed = buckets.reduce(
+    (total, [, bucket]) => total + bucket.gamesPlayed,
+    0,
   );
-  if (stats.length === 0) return null;
-  const times = stats.map((s) => s.time);
-  // Best time only counts games without hints
-  const unhinted = stats
-    .filter((s) => !s.hintsUsed || s.hintsUsed === 0)
-    .map((s) => s.time);
+  if (gamesPlayed === 0) return null;
+  const totalTime = buckets.reduce(
+    (total, [, bucket]) => total + bucket.totalTime,
+    0,
+  );
+  const bestTime = buckets.reduce<number | null>(
+    (best, [, bucket]) =>
+      bucket.bestTime === null
+        ? best
+        : best === null
+          ? bucket.bestTime
+          : Math.min(best, bucket.bestTime),
+    null,
+  );
   return {
-    gamesPlayed: stats.length,
-    bestTime: unhinted.length > 0 ? Math.min(...unhinted) : null,
-    averageTime: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
+    gamesPlayed,
+    bestTime,
+    averageTime: Math.round(totalTime / gamesPlayed),
   };
+}
+
+function bucketKey(difficulty: Difficulty, assistLevel: AssistLevel): string {
+  return `${difficulty}\u0000${assistLevel}`;
+}
+
+function emptyLifetimeStore(): LifetimeStore {
+  return { version: 1, buckets: {} };
+}
+
+function isLifetimeBucket(value: unknown): value is LifetimeBucket {
+  if (typeof value !== "object" || value === null) return false;
+  const bucket = value as Partial<LifetimeBucket>;
+  const gamesPlayed = bucket.gamesPlayed;
+  return (
+    typeof gamesPlayed === "number" &&
+    Number.isSafeInteger(gamesPlayed) &&
+    gamesPlayed >= 0 &&
+    typeof bucket.totalTime === "number" &&
+    Number.isFinite(bucket.totalTime) &&
+    (bucket.bestTime === null ||
+      (typeof bucket.bestTime === "number" && Number.isFinite(bucket.bestTime)))
+  );
+}
+
+function validateLifetimeStore(value: unknown): LifetimeStore | null {
+  if (typeof value !== "object" || value === null) return null;
+  const store = value as Partial<LifetimeStore>;
+  if (
+    store.version !== 1 ||
+    typeof store.buckets !== "object" ||
+    store.buckets === null
+  ) {
+    return null;
+  }
+  const buckets: Record<string, LifetimeBucket> = {};
+  for (const [key, bucket] of Object.entries(store.buckets)) {
+    if (!isLifetimeBucket(bucket)) return null;
+    buckets[key] = bucket;
+  }
+  return { version: 1, buckets };
+}
+
+function readLifetimeStore(history: GameStats[]): LifetimeStore {
+  const raw = readJson<unknown>(
+    LIFETIME_STORAGE_KEY,
+    undefined,
+    (value) => value,
+  );
+  const stored = validateLifetimeStore(raw);
+  if (stored !== null) return stored;
+  const migrated = emptyLifetimeStore();
+  for (const result of history) addToLifetime(migrated, result);
+  writeJson(LIFETIME_STORAGE_KEY, migrated);
+  return migrated;
+}
+
+function addToLifetime(lifetime: LifetimeStore, result: GameStats): void {
+  if (!result.won || !Number.isFinite(result.time)) return;
+  const key = bucketKey(result.difficulty, result.assistLevel);
+  let bucket = lifetime.buckets[key];
+  if (!bucket) {
+    bucket = { gamesPlayed: 0, totalTime: 0, bestTime: null };
+    lifetime.buckets[key] = bucket;
+  }
+  bucket.gamesPlayed += 1;
+  bucket.totalTime += result.time;
+  if (!result.hintsUsed || result.hintsUsed === 0) {
+    bucket.bestTime =
+      bucket.bestTime === null
+        ? result.time
+        : Math.min(bucket.bestTime, result.time);
+  }
 }
 
 const ASSIST_LEVELS: readonly AssistLevel[] = ["paper", "standard", "full"];
