@@ -42,7 +42,7 @@ export function useKeyboard({
       if (
         target instanceof HTMLElement &&
         target.closest(
-          "input, textarea, select, [contenteditable=true], [role=dialog], [data-game-input-ignore]",
+          "input, textarea, select, [contenteditable=true], [role=dialog], [role=radio], [role=switch], [data-game-input-ignore]",
         )
       )
         return;
