@@ -8,7 +8,11 @@ export default defineConfig({
   workers: 1,
   projects: [
     { name: "WebRTC Chromium", use: { browserName: "chromium" } },
-    { name: "WebRTC WebKit", use: { browserName: "webkit" } },
+    // WebKit's local mDNS/direct route is not available on every runner.
+    // Its separate-context transport is verified through forced TURN.
+    ...(process.env.DOKUEL_FORCE_RELAY === "1"
+      ? [{ name: "WebRTC WebKit", use: { browserName: "webkit" as const } }]
+      : []),
   ],
   webServer: [
     {

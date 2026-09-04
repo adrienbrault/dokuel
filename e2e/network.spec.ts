@@ -103,10 +103,16 @@ test(`isolated players use ${forceRelay ? "forced TURN relay" : "direct WebRTC"}
     await host.getByRole("button", { name: "Easy" }).click();
     await host.getByRole("heading", { name: "Game Lobby" }).waitFor();
     await guest.goto(host.url());
-    await host.getByText("network-guest", { exact: true }).waitFor();
+    await host
+      .getByText("network-guest", { exact: true })
+      .waitFor({ timeout: 20_000 });
     await expect.poll(() => connectedPeerCount(host)).toBeGreaterThan(0);
     if (forceRelay)
       await expect.poll(() => selectedCandidateTypes(host)).toContain("relay");
+    else
+      await expect
+        .poll(() => selectedCandidateTypes(host))
+        .not.toContain("relay");
     await host.getByRole("button", { name: "Ready to start" }).click();
     await guest.getByRole("button", { name: "Ready to start" }).click();
     await expect(host.getByRole("grid").getByRole("button")).toHaveCount(81);
@@ -138,6 +144,41 @@ test(`isolated players use ${forceRelay ? "forced TURN relay" : "direct WebRTC"}
       contentType: "application/json",
     });
   } finally {
+    for (const [label, context] of [
+      ["host", hostContext],
+      ["guest", guestContext],
+    ] as const) {
+      const page = context.pages()[0];
+      if (page && !page.isClosed()) {
+        const states = await page.evaluate(async () => {
+          const peers =
+            (window as unknown as { dokuelTestPeers?: RTCPeerConnection[] })
+              .dokuelTestPeers ?? [];
+          return Promise.all(
+            peers.map(async (peer) => {
+              const candidates: string[] = [];
+              (await peer.getStats()).forEach((entry) => {
+                if (
+                  entry.type === "local-candidate" ||
+                  entry.type === "remote-candidate"
+                )
+                  candidates.push(`${entry.type}:${entry.candidateType}`);
+              });
+              return {
+                connection: peer.connectionState,
+                gathering: peer.iceGatheringState,
+                signaling: peer.signalingState,
+                candidates,
+              };
+            }),
+          );
+        });
+        await testInfo.attach(`${label}-connection-stages`, {
+          body: JSON.stringify(states),
+          contentType: "application/json",
+        });
+      }
+    }
     await hostContext.close();
     await guestContext.close();
   }
