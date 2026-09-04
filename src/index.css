@@ -685,3 +685,11 @@ body {
     display: none;
   }
 }
+/* Row-major accessible grid retains the original thin lines and box dividers. */
+.sudoku-grid-row:not(:nth-child(3n)) {
+  box-shadow: 0 1px var(--color-border-default);
+}
+.sudoku-grid-cell:nth-child(3),
+.sudoku-grid-cell:nth-child(6) {
+  box-shadow: 2px 0 var(--color-board-border);
+}
