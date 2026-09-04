@@ -473,6 +473,33 @@ describe("useResumableSudoku", () => {
     expect(loadGame("quota-hook")).not.toBeNull();
   });
 
+  it("reports an autosave failure while the game is still in progress", () => {
+    const puzzle = `.${SOLVED.slice(1, 80)}.`;
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "quota-save",
+        initialPuzzle: puzzle,
+        origin: "generated",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 30,
+      }),
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      act(() => result.current.game.selectCell(0, 0));
+      act(() => result.current.game.placeNumber(5));
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.current.saveStatus).toBe("failed");
+  });
+
   it("records the win only once across re-renders after completion", () => {
     const { result, rerender } = renderHook(() =>
       useResumableSudoku({

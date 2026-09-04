@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   deleteGame,
+  exportSavedGames,
   listSavedGames,
   loadGame,
+  replaceSavedGames,
   type SavedGame,
   saveGame,
 } from "./game-storage.ts";
@@ -26,6 +28,61 @@ describe("game-storage", () => {
   it("round-trips a saved game", () => {
     saveGame("k", VALID_GAME);
     expect(loadGame("k")).toEqual(VALID_GAME);
+  });
+
+  it("reports whether a save was accepted by localStorage", () => {
+    expect(saveGame("accepted", VALID_GAME)).toBe(true);
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      throw new Error("quota");
+    };
+    try {
+      expect(saveGame("rejected", VALID_GAME)).toBe(false);
+    } finally {
+      Storage.prototype.setItem = originalSetItem;
+    }
+  });
+
+  it("exports portable solo saves while keeping multiplayer identity private", () => {
+    saveGame("solo", VALID_GAME);
+    saveGame("mp_room_2_player_puzzle", {
+      ...VALID_GAME,
+      multiplayer: {
+        roomId: "room",
+        playerId: "secret-player",
+        gameNumber: 2,
+        puzzle: VALID_GAME.puzzle,
+      },
+    });
+
+    expect(exportSavedGames()).toEqual([{ key: "solo", data: VALID_GAME }]);
+  });
+
+  it("replaces portable saves and preserves multiplayer saves", () => {
+    saveGame("old", VALID_GAME);
+    const multiplayer = {
+      ...VALID_GAME,
+      multiplayer: {
+        roomId: "room",
+        playerId: "secret-player",
+        gameNumber: 2,
+        puzzle: VALID_GAME.puzzle,
+      },
+    };
+    saveGame("mp_room_2_player_puzzle", multiplayer);
+
+    expect(replaceSavedGames([{ key: "new", data: VALID_GAME }])).toBe(true);
+    expect(loadGame("old")).toBeNull();
+    expect(loadGame("new")).toEqual(VALID_GAME);
+    expect(loadGame("mp_room_2_player_puzzle")).toEqual(multiplayer);
+  });
+
+  it("rejects an invalid replacement before changing existing saves", () => {
+    saveGame("old", VALID_GAME);
+    expect(
+      replaceSavedGames([{ key: "bad", data: { ...VALID_GAME, puzzle: "x" } }]),
+    ).toBe(false);
+    expect(loadGame("old")).toEqual(VALID_GAME);
   });
 
   it("identifies the room when listing a legacy multiplayer save", () => {
