@@ -39,6 +39,8 @@ type UseResumableSudokuOptions = {
     | undefined;
 };
 
+export type SaveStatus = "idle" | "saved" | "failed";
+
 /**
  * A Sudoku game that persists its in-progress state to localStorage,
  * resumes from a previous session when a gameKey matches, deletes its
@@ -133,12 +135,13 @@ export function useResumableSudoku({
   // pointermove and wrote localStorage up to ~60 times a second.
   const getTimerSecondsRef = useRef(getTimerSeconds);
   getTimerSecondsRef.current = getTimerSeconds;
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
   // Auto-save on every board / hint / assist-level change while playing
   const persist = useCallback(() => {
     if (!gameKey || game.status === "completed") return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
-    saveGame(gameKey, {
+    const persisted = saveGame(gameKey, {
       puzzle,
       values,
       notes,
@@ -152,6 +155,7 @@ export function useResumableSudoku({
       ...(resultAttemptId === undefined ? {} : { attemptId: resultAttemptId }),
       ...(resultPuzzleId === undefined ? {} : { puzzleId: resultPuzzleId }),
     });
+    setSaveStatus(persisted ? "saved" : "failed");
   }, [
     game.board,
     game.status,
@@ -220,6 +224,7 @@ export function useResumableSudoku({
     assistLevel,
     setAssistLevel,
     maxAssistLevel,
+    saveStatus,
   };
 }
 

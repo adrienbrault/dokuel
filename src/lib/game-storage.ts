@@ -1,5 +1,10 @@
 import type { FriendChallenge } from "./challenge.ts";
 import { isCalendarDate, todayLocalISO } from "./date.ts";
+import {
+  exportSavedGames as exportPortableSavedGames,
+  replaceSavedGames as replacePortableSavedGames,
+  type SavedGameBackupEntry,
+} from "./portable-game-storage.ts";
 import type { GameOrigin } from "./result-store-types.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
@@ -57,11 +62,13 @@ export type SavedGame = {
 
 const STORAGE_PREFIX = "sudoku_save_";
 
-export function saveGame(key: string, data: SavedGame): void {
+export function saveGame(key: string, data: SavedGame): boolean {
   try {
     localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+    return true;
   } catch {
     // localStorage full or unavailable — silently ignore
+    return false;
   }
 }
 
@@ -79,6 +86,19 @@ function isValidNotes(notes: unknown): notes is number[][] {
             typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 9,
         ),
     )
+  );
+}
+
+function isGameOrigin(value: unknown): value is GameOrigin {
+  return (
+    typeof value === "string" &&
+    ["generated", "daily", "friend", "imported", "replay"].includes(value)
+  );
+}
+
+function isOptionalId(value: unknown): value is string | undefined {
+  return (
+    value === undefined || (typeof value === "string" && value.length <= 256)
   );
 }
 
@@ -127,19 +147,6 @@ export function loadGame(key: string): SavedGame | null {
   } catch {
     return null;
   }
-}
-
-function isGameOrigin(value: unknown): value is GameOrigin {
-  return (
-    typeof value === "string" &&
-    ["generated", "daily", "friend", "imported", "replay"].includes(value)
-  );
-}
-
-function isOptionalId(value: unknown): value is string | undefined {
-  return (
-    value === undefined || (typeof value === "string" && value.length <= 256)
-  );
 }
 
 export type SavedGameSummary = {
@@ -219,3 +226,7 @@ export function clearAllSavedGames(): void {
     // localStorage unavailable
   }
 }
+
+export const exportSavedGames = exportPortableSavedGames;
+export const replaceSavedGames = replacePortableSavedGames;
+export type { SavedGameBackupEntry };

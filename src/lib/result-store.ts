@@ -1,5 +1,10 @@
 import { todayLocalISO } from "./date.ts";
 import {
+  bucketKey,
+  evictRecent,
+  summarize,
+} from "./result-store-aggregates.ts";
+import {
   migrateLegacyLifetime,
   normalizeLegacyRecords,
   normalizeOrigin,
@@ -78,7 +83,7 @@ export function recordResult(input: ResultInput): RecordedResult {
     ...(attemptId ? { attemptId } : {}),
     ...(puzzleId ? { puzzleId } : {}),
   };
-  store.recent = evictRecent([...store.recent, record]);
+  store.recent = evictRecent([...store.recent, record], MAX_RECENT_PER_BUCKET);
   addToLifetime(store.lifetime, record);
   if (attemptId) store.attempts[attemptId] = record;
   // Recent history, lifetime aggregates, and the attempt index share one
@@ -118,6 +123,32 @@ export function getRecentResultsForOrigin(origin: GameOrigin): GameStats[] {
   );
 }
 
+/**
+ * Return a detached, versioned snapshot suitable for a local backup.
+ * Keeping the envelope shape here means callers do not need to know about
+ * the legacy keys or the bounded recent-history implementation.
+ */
+export function exportResultStore(): ResultStore {
+  return cloneStore(loadStore());
+}
+
+/** Validate a result-store backup without touching localStorage. */
+export function validateResultStore(value: unknown): ResultStore | null {
+  const candidate = typeof value === "string" ? parseJson(value) : value;
+  const store = validateStore(candidate);
+  return store ? cloneStore(store) : null;
+}
+
+/**
+ * Replace the result envelope after validation. A failed setItem leaves the
+ * old envelope untouched because localStorage writes replace one key at a
+ * time.
+ */
+export function importResultStore(value: unknown): boolean {
+  const store = validateResultStore(value);
+  return store ? writeJson(RESULT_STORE_KEY, store) : false;
+}
+
 function loadStore(): ResultStore {
   const stored = readEnvelope();
   if (stored) return stored;
@@ -140,6 +171,38 @@ function readEnvelope(): ResultStore | null {
 
 function readLegacyRaw(): unknown {
   return readJson<unknown>(LEGACY_STATS_KEY, [], (value) => value);
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function cloneStore(store: ResultStore): ResultStore {
+  const attempts: Record<string, GameStats> = Object.create(null) as Record<
+    string,
+    GameStats
+  >;
+  for (const [key, record] of Object.entries(store.attempts)) {
+    attempts[key] = { ...record };
+  }
+  return {
+    version: 1,
+    recent: store.recent.map((record) => ({ ...record })),
+    lifetime: {
+      version: 1,
+      buckets: Object.fromEntries(
+        Object.entries(store.lifetime.buckets).map(([key, bucket]) => [
+          key,
+          { ...bucket },
+        ]),
+      ),
+    },
+    attempts,
+  };
 }
 
 function migrateLifetime(recent: GameStats[]): LifetimeStore {
@@ -209,82 +272,4 @@ function subtractFromLifetime(
     // provenance record's time as the generated PB.
     bucket.bestTime = null;
   }
-}
-
-function summarize(
-  lifetime: LifetimeStore,
-  difficulty: Difficulty,
-  assistLevel: AssistLevel | undefined,
-  origin: GameOrigin,
-): StatsSummary | null {
-  const buckets = Object.entries(lifetime.buckets).filter(([key]) => {
-    const [bucketOrigin, bucketDifficulty, bucketAssistLevel] =
-      key.split("\u0000");
-    return (
-      bucketOrigin === origin &&
-      bucketDifficulty === difficulty &&
-      (assistLevel === undefined || bucketAssistLevel === assistLevel)
-    );
-  });
-  const gamesPlayed = buckets.reduce(
-    (total, [, bucket]) => total + bucket.gamesPlayed,
-    0,
-  );
-  if (gamesPlayed === 0) return null;
-  const totalTime = buckets.reduce(
-    (total, [, bucket]) => total + bucket.totalTime,
-    0,
-  );
-  const bestTime = buckets.reduce<number | null>(
-    (best, [, bucket]) =>
-      bucket.bestTime === null
-        ? best
-        : best === null
-          ? bucket.bestTime
-          : Math.min(best, bucket.bestTime),
-    null,
-  );
-  return {
-    gamesPlayed,
-    bestTime,
-    averageTime: Math.round(totalTime / gamesPlayed),
-  };
-}
-
-function bucketKey(
-  origin: GameOrigin,
-  difficulty: Difficulty,
-  assistLevel: AssistLevel,
-): string {
-  return `${origin}\u0000${difficulty}\u0000${assistLevel}`;
-}
-
-function evictRecent(entries: GameStats[]): GameStats[] {
-  const counts = new Map<string, number>();
-  for (const entry of entries) {
-    const key = bucketKey(
-      normalizeOrigin(entry),
-      entry.difficulty,
-      entry.assistLevel,
-    );
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  const excess = new Map<string, number>();
-  for (const [key, count] of counts) {
-    if (count > MAX_RECENT_PER_BUCKET) {
-      excess.set(key, count - MAX_RECENT_PER_BUCKET);
-    }
-  }
-  if (excess.size === 0) return entries;
-  return entries.filter((entry) => {
-    const key = bucketKey(
-      normalizeOrigin(entry),
-      entry.difficulty,
-      entry.assistLevel,
-    );
-    const over = excess.get(key) ?? 0;
-    if (over === 0) return true;
-    excess.set(key, over - 1);
-    return false;
-  });
 }
