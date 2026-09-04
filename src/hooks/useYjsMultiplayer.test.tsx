@@ -7,6 +7,7 @@ import {
   claimWinner,
   initializeRoom,
   joinRoom,
+  markPlayerReady,
   startGame,
 } from "./p2p-room.ts";
 import { useYjsMultiplayer } from "./useYjsMultiplayer.ts";
@@ -198,6 +199,7 @@ describe("useYjsMultiplayer", () => {
     });
     await flushSync();
     const doc = connections.last!.doc;
+    const beforeReady = Date.now();
     act(() => {
       joinRoom({ doc, roomId: "room-commands" }, "p2", "Bob");
     });
@@ -207,7 +209,9 @@ describe("useYjsMultiplayer", () => {
       result.current.setAssistLevel("paper");
       result.current.updateName("Alicia");
       result.current.sendStartGame();
+      markPlayerReady({ doc, roomId: "room-commands" }, "p2");
     });
+    expect(result.current.roomState?.startedAt).toBeGreaterThanOrEqual(beforeReady + 3000);
     const solution = doc.getMap("room").get("solution") as string;
     act(() => {
       result.current.sendComplete(solution);
@@ -573,6 +577,7 @@ describe("useYjsMultiplayer", () => {
       act(() => {
         joinRoom(fakeRoom, "p2", "Bob");
         result.current.sendStartGame();
+        markPlayerReady(fakeRoom, "p2");
       });
 
       expect(localStorage.getItem("dokuel_mp_snap_room-pagehide")).toBeNull();
