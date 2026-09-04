@@ -9,11 +9,8 @@ import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
-import {
-  deleteGame,
-  loadMultiplayerGame,
-  saveMultiplayerGame,
-} from "../lib/game-storage.ts";
+import { deleteGame, loadMultiplayerGame } from "../lib/game-storage.ts";
+import { saveMultiplayerBoard } from "../lib/multiplayer-board-save.ts";
 import type { AssistLevel, Cell, MultiplayerResult } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
@@ -154,24 +151,7 @@ export function MultiplayerBoard({
   // the puzzle + opponent progress; the filled cells live here.
   const persist = useCallback(() => {
     if (changingGame || game.status === "completed") return;
-    // On rematch this effect and the RESET dispatch share a commit: the
-    // reducer still holds the OLD game's board while gameKey already
-    // points at the new one. Writing that mix would resume game 2
-    // wearing game 1's cells if the tab dies before the next render.
-    const boardMatchesPuzzle = game.board.every((boardRow, r) =>
-      boardRow.every((boardCell, c) => {
-        const ch = puzzle[r * 9 + c];
-        return ch === "."
-          ? !boardCell.isGiven
-          : boardCell.isGiven && boardCell.value === Number(ch);
-      }),
-    );
-    if (!boardMatchesPuzzle) return;
-    const { values, notes } = serializeBoard(game.board as Cell[][]);
-    saveMultiplayerGame(identity, {
-      puzzle,
-      values,
-      notes,
+    saveMultiplayerBoard(identity, game.board, {
       timer: elapsedClock.getElapsedSeconds(),
       difficulty,
       assistLevel,
@@ -183,7 +163,6 @@ export function MultiplayerBoard({
     game.hintsUsed,
     identity,
     changingGame,
-    puzzle,
     difficulty,
     assistLevel,
     elapsedClock.getElapsedSeconds,
