@@ -12,11 +12,13 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
+  markPlayerReady,
   judgeClaim,
   leaveRoom,
   observeRoomChanges,
   type P2PRoom,
   requestRematch,
+  setAssistLevel,
   setDifficulty,
   startGame,
   updateProgress,
@@ -271,6 +273,28 @@ describe("p2p-room", () => {
       setDifficulty(room, "expert");
 
       expect(room.doc.getMap("room").get("difficulty")).toBe("expert");
+    });
+
+    it("invalidates both players' readiness when shared rules change", () => {
+      const room = createTestRoom();
+      initializeRoom(room, "player1", "medium");
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+
+      markPlayerReady(room, "player1");
+      markPlayerReady(room, "player2");
+      expect(getRoomState(room)?.readyPlayers).toEqual([
+        "player1",
+        "player2",
+      ]);
+
+      setDifficulty(room, "hard");
+      expect(getRoomState(room)?.readyPlayers).toEqual([]);
+
+      markPlayerReady(room, "player1");
+      markPlayerReady(room, "player2");
+      setAssistLevel(room, "paper");
+      expect(getRoomState(room)?.readyPlayers).toEqual([]);
     });
   });
 
