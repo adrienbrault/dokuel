@@ -63,4 +63,5 @@ export type RecordedResult = {
   record: GameStats;
   summary: StatsSummary | null;
   duplicate: boolean;
+  persisted: boolean;
 };

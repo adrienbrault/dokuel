@@ -17,11 +17,13 @@ export function readJson<T>(
   }
 }
 
-export function writeJson(key: string, value: unknown): void {
+export function writeJson(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
     // storage full or unavailable
+    return false;
   }
 }
 

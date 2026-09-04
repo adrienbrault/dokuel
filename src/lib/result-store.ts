@@ -60,6 +60,7 @@ export function recordResult(input: ResultInput): RecordedResult {
         normalizeOrigin(previous),
       ),
       duplicate: true,
+      persisted: true,
     };
   }
 
@@ -80,7 +81,7 @@ export function recordResult(input: ResultInput): RecordedResult {
   if (attemptId) store.attempts[attemptId] = record;
   // Recent history, lifetime aggregates, and the attempt index share one
   // versioned envelope so a quota failure cannot persist only part of a win.
-  writeJson(RESULT_STORE_KEY, store);
+  const persisted = writeJson(RESULT_STORE_KEY, store);
   return {
     record,
     summary: summarize(
@@ -90,6 +91,7 @@ export function recordResult(input: ResultInput): RecordedResult {
       normalizeOrigin(record),
     ),
     duplicate: false,
+    persisted,
   };
 }
 

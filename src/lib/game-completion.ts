@@ -41,9 +41,6 @@ export type GameCompletionResult = {
  * (achievements, share artifacts, sound, telemetry).
  */
 export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
-  if (ctx.gameKey) {
-    deleteGame(ctx.gameKey);
-  }
   const origin = ctx.origin ?? (ctx.dailyDate ? "daily" : "generated");
   const attemptId = ctx.attemptId ?? ctx.gameKey;
   const priorBest =
@@ -62,6 +59,9 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
       ...(ctx.dailyDate === undefined ? {} : { date: ctx.dailyDate }),
     },
   });
+  if (ctx.gameKey && recorded.persisted) {
+    deleteGame(ctx.gameKey);
+  }
   const result: GameCompletionResult = {
     stats: recorded.summary,
     isNewPB:
