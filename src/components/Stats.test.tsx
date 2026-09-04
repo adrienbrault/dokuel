@@ -5,6 +5,18 @@ import { saveGameResult } from "../lib/stats.ts";
 import { Stats } from "./Stats.tsx";
 
 describe("Stats page — solo section", () => {
+  it("offers portable progress backup controls", () => {
+    localStorage.clear();
+    render(<Stats onBack={vi.fn()} />);
+    const backup = screen.getByRole("region", { name: "Progress backup" });
+    expect(
+      within(backup).getByRole("button", { name: /export progress/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(backup).getByLabelText(/import progress/i),
+    ).toBeInTheDocument();
+  });
+
   it("shows lifetime totals after recent records are evicted", () => {
     localStorage.clear();
     for (let index = 0; index < 101; index++)
@@ -51,7 +63,7 @@ describe("Stats page — solo section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: "Solo", exact: true });
+    const section = screen.getByRole("region", { name: "Solo" });
     expect(within(section).getByText("Paper")).toBeTruthy();
     expect(within(section).getByText("Full")).toBeTruthy();
     expect(within(section).getAllByText("05:00").length).toBeGreaterThan(0);
@@ -65,7 +77,7 @@ describe("Stats page — solo section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: "Solo", exact: true });
+    const section = screen.getByRole("region", { name: "Solo" });
     expect(within(section).getByText("3 wins")).toBeTruthy();
   });
 });

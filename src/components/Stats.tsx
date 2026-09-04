@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   DIFFICULTIES,
   DIFFICULTY_LABELS,
@@ -14,6 +14,7 @@ import {
 } from "../lib/multiplayer-stats.ts";
 import { getLifetimeGamesPlayed } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { BackupControls } from "./BackupControls.tsx";
 import { SoloStats } from "./SoloStats.tsx";
 
 type StatsProps = {
@@ -23,8 +24,9 @@ type StatsProps = {
 const RECENT_MATCHES_LIMIT = 10;
 
 export function Stats({ onBack }: StatsProps) {
-  const streak = useMemo(() => getDailyStreak(), []);
-  const totalSoloWins = useMemo(() => getLifetimeGamesPlayed(), []);
+  const [backupRevision, setBackupRevision] = useState(0);
+  const streak = getDailyStreak();
+  const totalSoloWins = getLifetimeGamesPlayed();
   const mpSummary = useMemo(() => getMultiplayerSummary(), []);
   const mpRecent = useMemo(() => {
     const all = getMultiplayerStats();
@@ -61,7 +63,11 @@ export function Stats({ onBack }: StatsProps) {
           </div>
         </div>
 
-        <SoloStats />
+        <SoloStats key={backupRevision} />
+
+        <BackupControls
+          onRestored={() => setBackupRevision((revision) => revision + 1)}
+        />
 
         <section
           aria-label="Multiplayer"
@@ -110,7 +116,7 @@ export function Stats({ onBack }: StatsProps) {
 
         <button
           type="button"
-          className="btn-ghost touch-manipulation"
+          className="btn-ghost touch-manipulation min-h-11"
           onClick={onBack}
         >
           ← Back
