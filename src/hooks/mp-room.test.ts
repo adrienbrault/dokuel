@@ -602,6 +602,38 @@ describe("hydration", () => {
     expect(room.snapshot().roomState?.gameNumber).toBe(7);
     expect(room.snapshot().roomState?.difficulty).not.toBe("hard");
   });
+
+  it("restores a finished solved claim and rematch consent into an empty room", () => {
+    const source = setupStartedGame();
+    claimWinner(source.p2p, "p2", "Bob", source.solution);
+    source.room.rematch();
+    source.room.persistSnapshot();
+    source.room.close();
+
+    const restored = createRoom({
+      doc: new Doc(),
+      roomId: ROOM_ID,
+      playerId: "p1",
+      playerName: () => "Alice",
+      initialDifficulty: null,
+      now: () => T0,
+    });
+    restored.apply({ type: "local-sync-complete", now: T0 });
+    restored.apply({ type: "tick", now: restored.nextWakeAt() ?? T0 });
+
+    expect(restored.snapshot().roomState).toMatchObject({
+      status: "finished",
+      winnerId: "p2",
+      winnerName: "Bob",
+      winnerBoard: source.solution,
+      rematchReady: ["p1"],
+    });
+    expect(restored.snapshot().gameOver).toEqual({
+      winnerId: "p2",
+      winnerName: "Bob",
+    });
+    restored.close();
+  });
 });
 
 describe("commands", () => {
