@@ -3,6 +3,7 @@ import {
   migrateLegacyLifetime,
   normalizeLegacyRecords,
   normalizeOrigin,
+  resolveOrigin,
   validateStore,
 } from "./result-store-schema.ts";
 import type {
@@ -65,6 +66,7 @@ export function recordResult(input: ResultInput): RecordedResult {
   }
 
   const puzzleId = cleanId(input.metadata?.puzzleId);
+  const origin = resolveOrigin(store, input.metadata?.origin, puzzleId);
   const record: GameStats = {
     difficulty: input.difficulty,
     assistLevel: input.assistLevel,
@@ -72,7 +74,7 @@ export function recordResult(input: ResultInput): RecordedResult {
     date: input.metadata?.date ?? todayLocalISO(),
     won: input.won,
     hintsUsed: input.hintsUsed ?? 0,
-    origin: input.metadata?.origin ?? "generated",
+    origin,
     ...(attemptId ? { attemptId } : {}),
     ...(puzzleId ? { puzzleId } : {}),
   };

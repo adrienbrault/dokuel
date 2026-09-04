@@ -84,11 +84,19 @@ export function useResumableSudoku({
     return { saved: null, ...generatePuzzleWithSolution(difficulty, rng) };
   }, [gameKey, initialPuzzle, difficulty]);
   const { saved, puzzle, solution } = resolved;
-  const resultOrigin =
-    saved?.origin ??
-    origin ??
-    (dailyDate ? "daily" : challenge ? "friend" : "generated");
-  const resultAttemptId = saved?.attemptId ?? attemptId ?? gameKey;
+  const freshAttemptId = useMemo(
+    () => createAttemptId(`${gameKey ?? ""}:${puzzle}`),
+    [gameKey, puzzle],
+  );
+  const inferredOrigin: GameOrigin = dailyDate
+    ? "daily"
+    : challenge
+      ? "friend"
+      : initialPuzzle
+        ? "imported"
+        : "generated";
+  const resultOrigin = saved?.origin ?? origin ?? inferredOrigin;
+  const resultAttemptId = saved?.attemptId ?? attemptId ?? freshAttemptId;
   const resultPuzzleId = saved?.puzzleId ?? puzzleId ?? puzzle;
 
   const savedBoard = useMemo(
@@ -189,7 +197,7 @@ export function useResumableSudoku({
       puzzleId: resultPuzzleId,
     });
     setCompletion(result);
-    onComplete?.(seconds, result);
+    onComplete?.(result.timeSeconds, result);
   }, [
     game.status,
     difficulty,
@@ -213,4 +221,14 @@ export function useResumableSudoku({
     setAssistLevel,
     maxAssistLevel,
   };
+}
+
+function createAttemptId(seed: string): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return `attempt-${seed.length}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }

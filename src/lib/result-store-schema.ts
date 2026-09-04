@@ -44,6 +44,30 @@ export function normalizeOrigin(record: GameStats): GameOrigin {
   return isOrigin(record.origin) ? record.origin : "generated";
 }
 
+export function resolveOrigin(
+  store: ResultStore,
+  requestedOrigin: GameOrigin | undefined,
+  puzzleId: string | undefined,
+): GameOrigin {
+  const origin = requestedOrigin ?? "generated";
+  if (
+    !puzzleId ||
+    origin === "friend" ||
+    origin === "replay" ||
+    !hasPuzzleResult(store, puzzleId)
+  ) {
+    return origin;
+  }
+  return "replay";
+}
+
+function hasPuzzleResult(store: ResultStore, puzzleId: string): boolean {
+  return (
+    store.recent.some((record) => record.puzzleId === puzzleId) ||
+    Object.values(store.attempts).some((record) => record.puzzleId === puzzleId)
+  );
+}
+
 export function validateStore(value: unknown): ResultStore | null {
   if (!isRecord(value)) return null;
   const candidate = value as Partial<ResultStore>;

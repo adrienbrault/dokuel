@@ -29,6 +29,8 @@ export type GameCompletionResult = {
   isNewPB: boolean;
   assistLevel: AssistLevel;
   timeSeconds: number;
+  /** False when the durable result write failed; omitted on success for API compatibility. */
+  persisted?: boolean;
   /** Streak after this completion. Present iff dailyDate was supplied. */
   streak?: DailyStreak;
 };
@@ -59,6 +61,7 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
       ...(ctx.dailyDate === undefined ? {} : { date: ctx.dailyDate }),
     },
   });
+  const recordedOrigin = recorded.record.origin ?? origin;
   if (ctx.gameKey && recorded.persisted) {
     deleteGame(ctx.gameKey);
   }
@@ -66,12 +69,13 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
     stats: recorded.summary,
     isNewPB:
       !recorded.duplicate &&
-      origin === "generated" &&
+      recordedOrigin === "generated" &&
       ctx.hintsUsed === 0 &&
       (priorBest === null || ctx.timeSeconds < priorBest),
     assistLevel: ctx.assistLevel,
-    timeSeconds: ctx.timeSeconds,
+    timeSeconds: Math.floor(recorded.record.time),
   };
+  if (!recorded.persisted) result.persisted = false;
   if (ctx.dailyDate) result.streak = recordDailyCompletion(ctx.dailyDate);
   return result;
 }
