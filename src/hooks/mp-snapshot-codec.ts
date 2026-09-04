@@ -39,6 +39,36 @@ export function encodeSnapshot(state: RoomState, savedAt: number): MpSnapshot {
   };
 }
 
+function isPlayer(value: unknown): value is Player {
+  if (typeof value !== "object" || value === null) return false;
+  const player = value as Record<string, unknown>;
+  return (
+    typeof player.id === "string" &&
+    player.id.length > 0 &&
+    typeof player.name === "string" &&
+    typeof player.color === "string" &&
+    Number.isInteger(player.cellsRemaining) &&
+    player.cellsRemaining >= 0 &&
+    player.cellsRemaining <= 81 &&
+    typeof player.completionPercent === "number" &&
+    Number.isFinite(player.completionPercent) &&
+    player.completionPercent >= 0 &&
+    player.completionPercent <= 100
+  );
+}
+
+function hasValidPlayers(value: unknown): value is Player[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 2) {
+    return false;
+  }
+  const ids = new Set<string>();
+  return value.every((player) => {
+    if (!isPlayer(player) || ids.has(player.id)) return false;
+    ids.add(player.id);
+    return true;
+  });
+}
+
 export function decodeSnapshot(raw: string): MpSnapshot | null {
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -46,14 +76,17 @@ export function decodeSnapshot(raw: string): MpSnapshot | null {
     const record = parsed as Record<string, unknown>;
     const version = record.version;
     if (version !== undefined && version !== 1 && version !== 2) return null;
-    return {
+    const normalized = {
       ...record,
       version: MP_SNAPSHOT_VERSION,
       winnerBoard: record.winnerBoard ?? null,
       rematchReady: Array.isArray(record.rematchReady)
         ? record.rematchReady
         : [],
-    } as MpSnapshot;
+    };
+    return hasValidPlayers(normalized.players)
+      ? (normalized as MpSnapshot)
+      : null;
   } catch {
     return null;
   }
