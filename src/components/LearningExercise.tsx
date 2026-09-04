@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { HintTechnique } from "../lib/types.ts";
+import { getTechniqueProgress } from "../lib/learning-progress.ts";
+import type { HintTechnique, Position } from "../lib/types.ts";
 
 const TECHNIQUE_LABELS: Record<HintTechnique, string> = {
   "naked-single": "Naked Single",
@@ -20,6 +21,8 @@ const TECHNIQUE_LABELS: Record<HintTechnique, string> = {
 
 type LearningExerciseProps = {
   technique: HintTechnique;
+  puzzle?: string | undefined;
+  position?: Position | undefined;
   prompt: string;
   answer: number;
   onSolved: (technique: HintTechnique) => void;
@@ -29,6 +32,8 @@ type LearningExerciseProps = {
 
 export function LearningExercise({
   technique,
+  puzzle,
+  position,
   prompt,
   answer,
   onSolved,
@@ -37,11 +42,18 @@ export function LearningExercise({
 }: LearningExerciseProps) {
   const [solved, setSolved] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [progress, setProgress] = useState(
+    () => getTechniqueProgress()[technique] ?? { attempts: 0, solved: 0 },
+  );
 
   const choose = (digit: number) => {
     if (solved) return;
     const correct = digit === answer;
     onAttempt?.(technique, correct);
+    setProgress((current) => ({
+      attempts: current.attempts + 1,
+      solved: current.solved + (correct ? 1 : 0),
+    }));
     if (correct) {
       setSolved(true);
       setFeedback("Correct — you found the next step.");
@@ -75,6 +87,17 @@ export function LearningExercise({
         </button>
       </div>
       <p className="text-sm text-text-secondary mt-2">{prompt}</p>
+      {puzzle && position && (
+        <PracticeBoard puzzle={puzzle} position={position} />
+      )}
+      <div
+        role="group"
+        aria-label="Technique progress"
+        className="text-xs text-text-muted mt-2"
+      >
+        Technique progress: {progress.solved} solved · {progress.attempts}{" "}
+        {progress.attempts === 1 ? "attempt" : "attempts"}
+      </div>
       <div
         role="group"
         aria-label="Choose a digit"
@@ -112,5 +135,63 @@ export function LearningExercise({
         </button>
       )}
     </section>
+  );
+}
+
+function PracticeBoard({
+  puzzle,
+  position,
+}: {
+  puzzle: string;
+  position: Position;
+}) {
+  return (
+    <div
+      role="grid"
+      aria-label="Practice board"
+      className="flex flex-col gap-px mt-3 rounded-md overflow-hidden bg-border-default border border-border-default"
+    >
+      {Array.from({ length: 9 }, (_, row) => (
+        <div
+          key={row}
+          role="row"
+          tabIndex={-1}
+          className="grid grid-cols-9 gap-px"
+        >
+          {puzzle
+            .slice(row * 9, (row + 1) * 9)
+            .split("")
+            .map((value, col) => {
+              const isTarget = row === position.row && col === position.col;
+              const filled = value !== ".";
+              return (
+                <span
+                  key={row + "-" + col}
+                  role="gridcell"
+                  tabIndex={-1}
+                  aria-current={isTarget ? "true" : undefined}
+                  aria-label={
+                    "Practice cell row " +
+                    (row + 1) +
+                    " column " +
+                    (col + 1) +
+                    ", " +
+                    (filled ? "value " + value : "empty")
+                  }
+                  className={`flex aspect-square items-center justify-center text-xs sm:text-sm ${
+                    isTarget
+                      ? "bg-accent-light text-accent font-bold ring-2 ring-inset ring-accent"
+                      : filled
+                        ? "bg-bg-raised text-text-primary"
+                        : "bg-bg-inset text-text-muted"
+                  }`}
+                >
+                  {filled ? value : "·"}
+                </span>
+              );
+            })}
+        </div>
+      ))}
+    </div>
   );
 }

@@ -69,14 +69,24 @@ function eliminationText(hint: ActiveHint): string {
     return `Cross out the digits used by the peers of ${cell}; one candidate remains.`;
   }
   if (hint.technique === "hidden-single") {
-    return `Cross out the highlighted house's candidates from ${cell}; one digit can still go there.`;
+    return `In the highlighted house, this digit has no other legal cell besides ${cell}; the other empty cells rule it out in their rows, columns, or boxes.`;
   }
-  return `Apply the highlighted ${TECHNIQUE_LABELS[hint.technique]} elimination. ${hint.explanation}`;
+  const earlier =
+    hint.intermediateSteps && hint.intermediateSteps.length > 0
+      ? `Earlier deductions: ${hint.intermediateSteps.join(" ")} `
+      : "";
+  if (hint.eliminationOnly) {
+    return `${earlier}${hint.explanation} Apply that elimination to continue.`;
+  }
+  return `${earlier}Apply the highlighted ${TECHNIQUE_LABELS[hint.technique]} elimination. Cross out only the candidates that pattern rules out.`;
 }
 
 function revealText(hint: ActiveHint): string {
   const cell = cellName(hint.position);
   if (hint.technique === "mistake") return hint.explanation;
+  if (hint.eliminationOnly) {
+    return `${hint.explanation} Apply that elimination to continue.`;
+  }
   return `${hint.explanation} Enter ${hint.value} in ${cell}.`;
 }
 

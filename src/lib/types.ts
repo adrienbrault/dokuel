@@ -77,6 +77,10 @@ export type ActiveHint = {
   relatedCells: Position[];
   /** Progressive teaching stage; omitted for legacy callers. */
   step?: HintStep | undefined;
+  /** Explanations for eliminations needed before a decisive technique. */
+  intermediateSteps?: string[] | undefined;
+  /** True when the hint teaches an elimination without a resulting placement. */
+  eliminationOnly?: boolean | undefined;
 };
 
 export type GameStatus = "idle" | "playing" | "completed";
