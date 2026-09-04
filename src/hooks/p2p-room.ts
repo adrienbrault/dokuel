@@ -418,6 +418,8 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
       roomMap.set("winnerId", snap.winnerId);
     if (staleLobby || !roomMap.has("winnerName"))
       roomMap.set("winnerName", snap.winnerName);
+    if (staleLobby || !roomMap.has("winnerBoard"))
+      roomMap.set("winnerBoard", snap.winnerBoard ?? null);
     snap.players.forEach((p, joinOrder) => {
       if (playersMap.has(p.id) && !staleLobby) return;
       const pm = new Y.Map<unknown>();
@@ -426,6 +428,10 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
       pm.set("cellsRemaining", p.cellsRemaining);
       pm.set("completionPercent", p.completionPercent);
       pm.set("joinOrder", joinOrder);
+      if (snap.rematchReady.includes(p.id)) {
+        pm.set("rematchGameNumber", snap.gameNumber);
+        pm.set("rematchPuzzle", snap.puzzle);
+      }
       playersMap.set(p.id, pm);
     });
   });

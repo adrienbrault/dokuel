@@ -42,18 +42,21 @@ export function encodeSnapshot(state: RoomState, savedAt: number): MpSnapshot {
 function isPlayer(value: unknown): value is Player {
   if (typeof value !== "object" || value === null) return false;
   const player = value as Record<string, unknown>;
+  const cellsRemaining = player.cellsRemaining;
+  const completionPercent = player.completionPercent;
   return (
     typeof player.id === "string" &&
     player.id.length > 0 &&
     typeof player.name === "string" &&
     typeof player.color === "string" &&
-    Number.isInteger(player.cellsRemaining) &&
-    player.cellsRemaining >= 0 &&
-    player.cellsRemaining <= 81 &&
-    typeof player.completionPercent === "number" &&
-    Number.isFinite(player.completionPercent) &&
-    player.completionPercent >= 0 &&
-    player.completionPercent <= 100
+    typeof cellsRemaining === "number" &&
+    Number.isInteger(cellsRemaining) &&
+    cellsRemaining >= 0 &&
+    cellsRemaining <= 81 &&
+    typeof completionPercent === "number" &&
+    Number.isFinite(completionPercent) &&
+    completionPercent >= 0 &&
+    completionPercent <= 100
   );
 }
 
@@ -76,7 +79,7 @@ export function decodeSnapshot(raw: string): MpSnapshot | null {
     const record = parsed as Record<string, unknown>;
     const version = record.version;
     if (version !== undefined && version !== 1 && version !== 2) return null;
-    const normalized = {
+    const normalized: Record<string, unknown> = {
       ...record,
       version: MP_SNAPSHOT_VERSION,
       winnerBoard: record.winnerBoard ?? null,
