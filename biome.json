@@ -90,6 +90,7 @@
     "includes": [
       "src/**",
       "signaling/src/**",
+      "signaling/tests/**",
       "scripts/**",
       "e2e/**",
       "!e2e/results",
