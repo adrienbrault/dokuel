@@ -3,6 +3,7 @@ import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useSharedCountdown } from "../hooks/useSharedCountdown.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { ASSIST_LEVEL_LABELS, DIFFICULTY_LABELS } from "../lib/constants.ts";
+import { ConnectionDiagnostics } from "./ConnectionDiagnostics.tsx";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -144,6 +145,7 @@ export function MultiplayerGame({
         <div className="screen">
           <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
             <h1 className="heading">Still trying to connect…</h1>
+            <ConnectionDiagnostics roomId={roomId} />
             <p className="caption max-w-sm">
               The room may have ended, or the connection can't get through.
               Double-check the code with the host, make sure both of you are
@@ -187,6 +189,7 @@ export function MultiplayerGame({
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
+        <ConnectionDiagnostics roomId={roomId} />
         {toast && <Toast message={toast} />}
       </div>
     );
