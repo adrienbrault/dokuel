@@ -185,6 +185,17 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("saves current multiplayer elapsed time before a display tick runs", () => {
+    let now = 1_000;
+    const props = baseProps();
+    render(<MultiplayerBoard {...props} now={() => now} />);
+
+    now += 2_500.5;
+    act(() => window.dispatchEvent(new Event("pagehide")));
+
+    expect(loadGame(multiplayerGameKey(props))?.timer).toBe(2.5005);
+  });
+
   it("saves idle time on page exit and internal navigation", () => {
     vi.useFakeTimers();
     try {
