@@ -26,7 +26,9 @@ describe("createElapsedClock", () => {
     elapsed.start();
     elapsed.checkpoint();
     const current = elapsed.elapsed();
+    const first = samples[0] ?? 0;
+    const last = samples.at(-1) ?? 0;
 
-    expect(current).toBe((samples.at(-1)! - samples[0]!) / 1_000);
+    expect(current).toBe((last - first) / 1_000);
   });
 });
