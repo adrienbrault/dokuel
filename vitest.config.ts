@@ -5,7 +5,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "signaling/tests/**/*.test.ts"],
     // A spy left installed by a failing test must not cascade into the
     // next test's failure — restore all mocks between tests.
     restoreMocks: true,
