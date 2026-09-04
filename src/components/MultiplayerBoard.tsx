@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useFlushOnExit } from "../hooks/useFlushOnExit.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
@@ -96,24 +97,18 @@ export function MultiplayerBoard({
     gameNumber !== prevGameNumberRef.current ||
     puzzle !== prevPuzzleRef.current;
   useEffect(() => {
-    if (
-      gameNumber === prevGameNumberRef.current &&
-      puzzle === prevPuzzleRef.current
-    ) {
-      return;
-    }
+    if (!changingGame) return;
     prevGameNumberRef.current = gameNumber;
     prevPuzzleRef.current = puzzle;
     game.reset(puzzle, solution ?? undefined, savedBoard);
     // The new game starts from zero; without this the recorded match
     // time for game 2 includes game 1's clock.
     timerSecondsRef.current = 0;
-  }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
+  }, [changingGame, gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
-  const initialTimerSeconds = saved?.timer ?? 0;
-  const timerSecondsRef = useRef(initialTimerSeconds);
+  const timerSecondsRef = useRef(saved?.timer ?? 0);
   const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
   // The loser keeps playing after the opponent wins; only show the result
@@ -148,7 +143,7 @@ export function MultiplayerBoard({
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
   // the puzzle + opponent progress; the filled cells live here.
-  useEffect(() => {
+  const persist = useCallback(() => {
     if (changingGame || game.status === "completed") return;
     // On rematch this effect and the RESET dispatch share a commit: the
     // reducer still holds the OLD game's board while gameKey already
@@ -183,6 +178,8 @@ export function MultiplayerBoard({
     difficulty,
     assistLevel,
   ]);
+  useEffect(persist, [persist]);
+  useFlushOnExit(persist);
 
   // Clear the save once this player finishes — keyed off local status so
   // the loser's in-progress save survives the opponent's win.
@@ -227,7 +224,7 @@ export function MultiplayerBoard({
         <TimerPill
           timerKey={gameNumber}
           running={game.status === "playing"}
-          initialSeconds={initialTimerSeconds}
+          initialSeconds={saved?.timer ?? 0}
           onTick={(s) => {
             timerSecondsRef.current = s;
           }}
