@@ -46,7 +46,10 @@ export function readRecentResults(): GameStats[] {
 export function recordResult(input: ResultInput): RecordedResult {
   const store = loadStore();
   const attemptId = cleanId(input.metadata?.attemptId);
-  const previous = attemptId ? store.attempts[attemptId] : undefined;
+  const previous =
+    attemptId && Object.hasOwn(store.attempts, attemptId)
+      ? store.attempts[attemptId]
+      : undefined;
   if (previous) {
     return {
       record: previous,
@@ -98,6 +101,13 @@ export function getSummary(
   return summarize(loadStore().lifetime, difficulty, assistLevel, origin);
 }
 
+export function getLifetimeGamesPlayed(): number {
+  return Object.values(loadStore().lifetime.buckets).reduce(
+    (total, bucket) => total + bucket.gamesPlayed,
+    0,
+  );
+}
+
 export function getRecentResultsForOrigin(origin: GameOrigin): GameStats[] {
   return readRecentResults().filter(
     (record) => normalizeOrigin(record) === origin,
@@ -109,7 +119,10 @@ function loadStore(): ResultStore {
   if (stored) return stored;
   const recent = normalizeLegacyRecords(readLegacyRaw());
   const lifetime = migrateLifetime(recent);
-  const attempts: Record<string, GameStats> = {};
+  const attempts: Record<string, GameStats> = Object.create(null) as Record<
+    string,
+    GameStats
+  >;
   for (const record of recent) {
     if (record.attemptId) attempts[record.attemptId] = record;
   }

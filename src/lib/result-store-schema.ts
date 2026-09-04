@@ -56,7 +56,10 @@ export function validateStore(value: unknown): ResultStore | null {
     return null;
   }
   if (!candidate.recent.every(isGameStats)) return null;
-  const attempts: Record<string, GameStats> = {};
+  const attempts: Record<string, GameStats> = Object.create(null) as Record<
+    string,
+    GameStats
+  >;
   for (const [key, valueForKey] of Object.entries(candidate.attempts)) {
     if (!isGameStats(valueForKey)) return null;
     const [record] = normalizeRecords([valueForKey]);
