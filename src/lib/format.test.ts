@@ -22,6 +22,10 @@ describe("formatTime", () => {
   it("handles exact minutes", () => {
     expect(formatTime(120)).toBe("02:00");
   });
+
+  it("floors fractional seconds for the timer display", () => {
+    expect(formatTime(2.5005)).toBe("00:02");
+  });
 });
 
 describe("formatShortDate", () => {
