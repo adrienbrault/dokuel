@@ -79,6 +79,22 @@ function renderGame() {
   );
 }
 
+it("hides the puzzle until the shared countdown deadline", () => {
+  vi.useFakeTimers();
+  try {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = { ...roomState, startedAt: Date.now() + 3000 };
+    renderGame();
+    expect(screen.queryByRole("grid")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Starting in 3");
+    act(() => vi.advanceTimersByTime(3000));
+    expect(screen.getByRole("grid")).toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 describe("MultiplayerGame full room", () => {
   beforeEach(() => {
     localStorage.clear();
