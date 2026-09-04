@@ -30,32 +30,40 @@ export async function generateTurnCredentials(
       status: 503,
       headers,
     });
-  const { success } = await env.TURN_RATE_LIMITER.limit({
-    key: `turn:${request.headers.get("CF-Connecting-IP") ?? "unknown"}`,
-  });
-  if (!success)
-    return new Response("Too many credential requests", {
-      status: 429,
-      headers: { ...headers, "Retry-After": "60" },
+  try {
+    const { success } = await env.TURN_RATE_LIMITER.limit({
+      key: `turn:${request.headers.get("CF-Connecting-IP") ?? "unknown"}`,
     });
-  const response = await fetch(
-    `https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.TURN_KEY_API_TOKEN}`,
-        "Content-Type": "application/json",
+    if (!success)
+      return new Response("Too many credential requests", {
+        status: 429,
+        headers: { ...headers, "Retry-After": "60" },
+      });
+    const response = await fetch(
+      `https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`,
+      {
+        method: "POST",
+        signal: AbortSignal.timeout(5_000),
+        headers: {
+          Authorization: `Bearer ${env.TURN_KEY_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        // Credentials must outlive a full session, including relay refreshes.
+        body: JSON.stringify({ ttl: 86_400 }),
       },
-      // Credentials must outlive a full session, including relay refreshes.
-      body: JSON.stringify({ ttl: 86_400 }),
-    },
-  );
-  if (!response.ok)
-    return new Response("TURN credential generation failed", {
+    );
+    if (!response.ok)
+      return new Response("TURN credential generation failed", {
+        status: 502,
+        headers,
+      });
+    return new Response(response.body, {
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
+  } catch {
+    return new Response("TURN credential service unavailable", {
       status: 502,
       headers,
     });
-  return new Response(response.body, {
-    headers: { ...headers, "Content-Type": "application/json" },
-  });
+  }
 }
