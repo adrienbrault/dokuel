@@ -93,6 +93,38 @@ describe("completeGame", () => {
     }
   });
 
+  it("keeps the autosave when the result envelope cannot be persisted", async () => {
+    const { vi } = await import("vitest");
+    saveGame("failed-result", {
+      puzzle: ".".repeat(81),
+      values: ".".repeat(81),
+      notes: Array.from({ length: 81 }, () => []),
+      timer: 12,
+      difficulty: "easy",
+      assistLevel: "standard",
+      hintsUsed: 0,
+    });
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      completeGame({
+        gameKey: "failed-result",
+        attemptId: "failed-result",
+        difficulty: "easy",
+        assistLevel: "standard",
+        timeSeconds: 30,
+        hintsUsed: 0,
+      });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(loadGame("failed-result")).not.toBeNull();
+  });
+
   it("deletes the autosave when a gameKey is given", () => {
     saveGame("active-easy", {
       puzzle: ".".repeat(81),
