@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { GameResult } from "./GameResult.tsx";
@@ -147,6 +147,36 @@ describe("GameResult", () => {
     );
 
     expect(screen.getByText("Rematch")).toBeInTheDocument();
+  });
+
+  it("shows both multiplayer finish records in the result modal", () => {
+    const solution = "1".repeat(81);
+    render(
+      <GameResult
+        isWinner={true}
+        time="00:02"
+        isMultiplayer
+        onNewGame={vi.fn()}
+        multiplayerResults={{
+          playerId: "p1",
+          opponentName: "Brave Otter",
+          startedAt: 1_000,
+          winnerId: "p1",
+          results: {
+            p1: { completedAt: 3_000, board: solution },
+            p2: { completedAt: 8_000, board: solution },
+          },
+        }}
+      />,
+    );
+
+    const results = screen.getByRole("region", { name: /race results/i });
+    expect(results).toBeInTheDocument();
+    expect(within(results).getByText("00:02")).toBeInTheDocument();
+    expect(within(results).getByText("00:07")).toBeInTheDocument();
+    expect(
+      within(results).getByText(/You finished 00:05 ahead of Brave Otter/),
+    ).toBeInTheDocument();
   });
 
   it("share text includes difficulty, time, and URL", () => {
