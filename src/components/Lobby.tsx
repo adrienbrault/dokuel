@@ -29,6 +29,8 @@ export function Lobby({
   // until the overflow client evicts itself — the seated pair must
   // still be able to start.
   const canStart = roomState.players.length >= 2;
+  const ready =
+    playerId !== undefined && roomState.readyPlayers?.includes(playerId);
   const waiting = roomState.players.length < 2;
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -165,6 +167,9 @@ export function Lobby({
                   Host
                 </span>
               )}
+              {roomState.readyPlayers?.includes(player.id) && (
+                <span className="text-xs text-accent font-semibold">Ready</span>
+              )}
             </div>
           );
         })}
@@ -219,17 +224,21 @@ export function Lobby({
       )}
 
       <div className="flex flex-col gap-3 w-full">
+        <p role="status" className="caption text-center">
+          Both players agree to the rules, then the same three-second countdown
+          begins.
+        </p>
         <button
           type="button"
-          disabled={!canStart}
+          disabled={!canStart || ready}
           className={`btn btn-lg w-full transition-all duration-100 ${
-            canStart
+            canStart && !ready
               ? "btn-primary"
               : "bg-bg-disabled text-text-disabled cursor-not-allowed"
           }`}
           onClick={onStart}
         >
-          Start Game
+          {ready ? "Ready — waiting for friend" : "Ready to start"}
         </button>
         <button
           type="button"

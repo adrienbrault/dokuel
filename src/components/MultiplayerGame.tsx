@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useSharedCountdown } from "../hooks/useSharedCountdown.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import { ASSIST_LEVEL_LABELS, DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -23,6 +25,7 @@ export function MultiplayerGame({
   onBack,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
+  const countdown = useSharedCountdown(mp.roomState?.startedAt);
   const [toast, setToast] = useState<string | null>(null);
   // Arms after the disconnect has persisted for a beat; combined with
   // the live value below so the banner hides instantly on return.
@@ -74,6 +77,30 @@ export function MultiplayerGame({
   // the local board state (cells, notes, progress) lives in
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
+    if (countdown > 0) {
+      return (
+        <div className="screen">
+          <div className="screen-content items-center justify-center min-h-dvh gap-4 text-center">
+            <h1 className="heading">Both players ready</h1>
+            <p
+              role="status"
+              aria-atomic="true"
+              className="text-3xl font-bold text-accent"
+            >
+              Starting in {countdown}
+            </p>
+            <p className="caption">
+              {DIFFICULTY_LABELS[mp.roomState?.difficulty ?? "medium"]} ·{" "}
+              {ASSIST_LEVEL_LABELS[mp.roomState?.assistLevel ?? "standard"]}{" "}
+              assistance
+            </p>
+            <p className="caption">
+              Your puzzle appears when the countdown ends.
+            </p>
+          </div>
+        </div>
+      );
+    }
     const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
     return (
       <>
@@ -89,6 +116,7 @@ export function MultiplayerGame({
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
+          startedAt={mp.roomState?.startedAt}
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}

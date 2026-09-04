@@ -496,7 +496,16 @@ test.describe("multiplayer session", () => {
     await page.getByText("Brave Otter").waitFor();
     await guest.getByText("Clever Fox").waitFor();
 
-    await page.getByRole("button", { name: "Start Game" }).click();
+    await page.getByRole("button", { name: "Ready to start" }).click();
+    await expect(
+      page.getByRole("button", { name: "Ready — waiting for friend" }),
+    ).toBeDisabled();
+    await expect(page.getByRole("grid")).toHaveCount(0);
+    await guest.getByRole("button", { name: "Ready to start" }).click();
+    await expect(page.getByRole("status")).toContainText("Starting in");
+    await page.screenshot({
+      path: screenshotPath("shared-countdown", project),
+    });
     await page.waitForSelector(
       '[role="group"][aria-label="Number pad"]:visible',
     );
@@ -571,6 +580,8 @@ test.describe("multiplayer session", () => {
     });
     await page.getByRole("button", { name: "Accept rematch" }).click();
     await expect(guest.getByRole("dialog")).toBeHidden();
+    await expect(page.getByRole("grid").getByRole("button")).toHaveCount(81);
+    await expect(guest.getByRole("grid").getByRole("button")).toHaveCount(81);
     await expect.poll(() => readBoard(page)).not.toBe(beforeRequest);
     expect(await readBoard(page)).toBe(await readBoard(guest));
     await guest.close();
