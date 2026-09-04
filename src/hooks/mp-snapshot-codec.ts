@@ -1,4 +1,4 @@
-import type { Player, RoomState } from "../lib/types.ts";
+import type { MultiplayerResult, Player, RoomState } from "../lib/types.ts";
 
 /** The first explicit schema version for durable multiplayer recovery. */
 export const MP_SNAPSHOT_VERSION = 2 as const;
@@ -17,8 +17,22 @@ export type MpSnapshot = {
   winnerName: string | null;
   winnerBoard: string | null;
   rematchReady: string[];
+  readyPlayers: string[];
+  startedAt: number | null;
+  results: Record<string, MultiplayerResult>;
   savedAt: number;
 };
+
+function cloneResults(
+  results: Record<string, MultiplayerResult> | undefined,
+): Record<string, MultiplayerResult> {
+  return Object.fromEntries(
+    Object.entries(results ?? {}).map(([playerId, result]) => [
+      playerId,
+      { ...result },
+    ]),
+  );
+}
 
 export function encodeSnapshot(state: RoomState, savedAt: number): MpSnapshot {
   return {
@@ -35,6 +49,9 @@ export function encodeSnapshot(state: RoomState, savedAt: number): MpSnapshot {
     winnerName: state.winnerName,
     winnerBoard: state.winnerBoard,
     rematchReady: [...(state.rematchReady ?? [])],
+    readyPlayers: [...(state.readyPlayers ?? [])],
+    startedAt: state.startedAt ?? null,
+    results: cloneResults(state.results),
     savedAt,
   };
 }
@@ -147,12 +164,62 @@ function hasValidRematchFields(
   return true;
 }
 
+function hasValidReadyFields(
+  value: Record<string, unknown>,
+  playerIds: Set<string>,
+): boolean {
+  const readyPlayers = value.readyPlayers;
+  return (
+    Array.isArray(readyPlayers) &&
+    readyPlayers.every(
+      (id): id is string => typeof id === "string" && playerIds.has(id),
+    ) &&
+    new Set(readyPlayers).size === readyPlayers.length
+  );
+}
+
+function isResult(
+  value: unknown,
+  solution: unknown,
+): value is MultiplayerResult {
+  if (typeof value !== "object" || value === null) return false;
+  const result = value as Record<string, unknown>;
+  return (
+    typeof result.completedAt === "number" &&
+    Number.isSafeInteger(result.completedAt) &&
+    result.completedAt >= 0 &&
+    isSolution(result.board) &&
+    solution !== null &&
+    result.board === solution
+  );
+}
+
+function hasValidResultFields(
+  value: Record<string, unknown>,
+  solution: unknown,
+  playerIds: Set<string>,
+): boolean {
+  const results = value.results;
+  if (
+    typeof results !== "object" ||
+    results === null ||
+    Array.isArray(results)
+  ) {
+    return false;
+  }
+  return Object.entries(results).every(
+    ([playerId, result]) =>
+      playerIds.has(playerId) && isResult(result, solution),
+  );
+}
+
 function hasValidRoomFields(
   value: Record<string, unknown>,
   playerIds: Set<string>,
 ): boolean {
   const gameNumber = value.gameNumber;
   const savedAt = value.savedAt;
+  const startedAt = value.startedAt;
   return (
     value.version === MP_SNAPSHOT_VERSION &&
     isOneOf(value.status, ["playing", "finished"] as const) &&
@@ -166,7 +233,11 @@ function hasValidRoomFields(
     gameNumber > 0 &&
     typeof savedAt === "number" &&
     Number.isSafeInteger(savedAt) &&
-    savedAt >= 0
+    savedAt >= 0 &&
+    (startedAt === null ||
+      (typeof startedAt === "number" &&
+        Number.isSafeInteger(startedAt) &&
+        startedAt >= 0))
   );
 }
 
@@ -193,6 +264,8 @@ function isValidSnapshot(value: Record<string, unknown>): boolean {
     hasValidBoardFields(value) &&
     hasValidWinnerFields(value, value.solution, playerIds) &&
     hasValidRematchFields(value, playerIds) &&
+    hasValidReadyFields(value, playerIds) &&
+    hasValidResultFields(value, value.solution, playerIds) &&
     hasValidRoomFields(value, playerIds) &&
     hasValidStatusFields(value)
   );
@@ -214,6 +287,10 @@ export function decodeSnapshot(raw: string): MpSnapshot | null {
       winnerBoard: record.winnerBoard ?? null,
       rematchReady:
         record.rematchReady === undefined ? [] : record.rematchReady,
+      readyPlayers:
+        record.readyPlayers === undefined ? [] : record.readyPlayers,
+      startedAt: record.startedAt ?? null,
+      results: record.results === undefined ? {} : record.results,
     };
     return isValidSnapshot(normalized) ? (normalized as MpSnapshot) : null;
   } catch {
