@@ -91,6 +91,31 @@ describe("mp-snapshot", () => {
     });
   });
 
+  it("migrates an unversioned snapshot with defaults for new recovery fields", () => {
+    localStorage.setItem(
+      "dokuel_mp_snap_legacy",
+      JSON.stringify({
+        gameNumber: 3,
+        puzzle: ".".repeat(81),
+        solution: "1".repeat(81),
+        status: "playing",
+        difficulty: "medium",
+        assistLevel: "standard",
+        hostId: "p1",
+        players: makeState().players,
+        winnerId: null,
+        winnerName: null,
+        savedAt: Date.now(),
+      }),
+    );
+
+    expect(loadSnapshot("legacy")).toMatchObject({
+      version: 2,
+      winnerBoard: null,
+      rematchReady: [],
+    });
+  });
+
   it("skips saving when no game has started", () => {
     saveSnapshot("room-1", makeState({ gameNumber: 0 }));
     expect(loadSnapshot("room-1")).toBeNull();
