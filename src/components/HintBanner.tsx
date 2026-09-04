@@ -25,7 +25,11 @@ export function HintBanner({ hint, onDismiss }: HintBannerProps) {
   const techniqueLabel = TECHNIQUE_LABELS[hint.technique];
 
   return (
-    <div className="w-full max-w-lg rounded-lg bg-hint-bg border border-hint-border px-3 py-2 animate-modal-content">
+    <div
+      role="status"
+      aria-atomic="true"
+      className="w-full max-w-lg rounded-lg bg-hint-bg border border-hint-border px-3 py-2 animate-modal-content"
+    >
       <div className="flex items-start gap-2">
         <span className="text-lg leading-none mt-0.5" aria-hidden="true">
           💡
