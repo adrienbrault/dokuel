@@ -7,7 +7,12 @@ import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
-import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
+import {
+  deleteGame,
+  loadMultiplayerGame,
+  multiplayerGameKey,
+  saveMultiplayerGame,
+} from "../lib/game-storage.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
@@ -74,13 +79,12 @@ export function MultiplayerBoard({
   onRematch,
   onBack,
 }: MultiplayerBoardProps) {
-  // Scope the autosave key by room + puzzle so a rematch in the same room
-  // gets a fresh slate, and a different room never restores stale data.
-  const gameKey = useMemo(
-    () => `mp_${roomId}_${puzzle.slice(0, 12)}`,
-    [roomId, puzzle],
+  const identity = useMemo(
+    () => ({ roomId, playerId, gameNumber, puzzle }),
+    [roomId, playerId, gameNumber, puzzle],
   );
-  const saved = useMemo(() => loadGame(gameKey), [gameKey]);
+  const gameKey = multiplayerGameKey(identity);
+  const saved = useMemo(() => loadMultiplayerGame(identity), [identity]);
   const savedBoard = useMemo(
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
     [saved],
@@ -93,6 +97,9 @@ export function MultiplayerBoard({
   // the number can stay put while the puzzle changes under us.
   const prevGameNumberRef = useRef(gameNumber);
   const prevPuzzleRef = useRef(puzzle);
+  const changingGame =
+    gameNumber !== prevGameNumberRef.current ||
+    puzzle !== prevPuzzleRef.current;
   useEffect(() => {
     if (
       gameNumber === prevGameNumberRef.current &&
@@ -140,15 +147,15 @@ export function MultiplayerBoard({
   // Check completion — the claim ships the actual filled board so the
   // opponent's client can verify it against the room's solution.
   useEffect(() => {
-    if (game.status !== "completed") return;
+    if (changingGame || game.status !== "completed") return;
     onComplete(serializeBoard(game.board as Cell[][]).values);
-  }, [game.status, game.board, onComplete]);
+  }, [changingGame, game.status, game.board, onComplete]);
 
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
   // the puzzle + opponent progress; the filled cells live here.
   useEffect(() => {
-    if (game.status === "completed") return;
+    if (changingGame || game.status === "completed") return;
     // On rematch this effect and the RESET dispatch share a commit: the
     // reducer still holds the OLD game's board while gameKey already
     // points at the new one. Writing that mix would resume game 2
@@ -163,7 +170,7 @@ export function MultiplayerBoard({
     );
     if (!boardMatchesPuzzle) return;
     const { values, notes } = serializeBoard(game.board as Cell[][]);
-    saveGame(gameKey, {
+    saveMultiplayerGame(identity, {
       puzzle,
       values,
       notes,
@@ -176,7 +183,8 @@ export function MultiplayerBoard({
     game.board,
     game.status,
     game.hintsUsed,
-    gameKey,
+    identity,
+    changingGame,
     puzzle,
     difficulty,
     assistLevel,
@@ -185,8 +193,8 @@ export function MultiplayerBoard({
   // Clear the save once this player finishes — keyed off local status so
   // the loser's in-progress save survives the opponent's win.
   useEffect(() => {
-    if (game.status === "completed") deleteGame(gameKey);
-  }, [game.status, gameKey]);
+    if (!changingGame && game.status === "completed") deleteGame(gameKey);
+  }, [changingGame, game.status, gameKey]);
 
   useRecordMultiplayerMatch({
     gameOver,

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadGame } from "../lib/game-storage.ts";
+import { loadGame, multiplayerGameKey } from "../lib/game-storage.ts";
 import { getMultiplayerStats } from "../lib/multiplayer-stats.ts";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 
@@ -124,7 +124,7 @@ describe("MultiplayerBoard local autosave", () => {
       rerender(
         <MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={2} />,
       );
-      const newKey = `sudoku_save_mp_${props.roomId}_${PUZZLE_B.slice(0, 12)}`;
+      const newKey = `sudoku_save_${multiplayerGameKey({ ...props, puzzle: PUZZLE_B, gameNumber: 2 })}`;
       const writesForNewGame = setItem.mock.calls.filter(
         ([key]) => key === newKey,
       );
@@ -180,7 +180,7 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.click(cell);
       fireEvent.click(screen.getAllByLabelText("5")[0]!);
 
-      const saved = loadGame(`mp_${props.roomId}_${props.puzzle.slice(0, 12)}`);
+      const saved = loadGame(multiplayerGameKey(props));
       expect(saved?.timer).toBeGreaterThanOrEqual(7);
 
       unmount();
@@ -637,7 +637,7 @@ describe("MultiplayerBoard after opponent wins", () => {
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
       // Save should exist while the loser is still working on their board.
-      const key = `mp_${props.roomId}_${props.puzzle.slice(0, 12)}`;
+      const key = multiplayerGameKey(props);
       expect(loadGame(key)).not.toBeNull();
 
       unmount();

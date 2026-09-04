@@ -1,6 +1,38 @@
 import type { AssistLevel, Difficulty } from "./types.ts";
 
+export type MultiplayerGameIdentity = {
+  roomId: string;
+  playerId: string;
+  gameNumber: number;
+  puzzle: string;
+};
+
+export function multiplayerGameKey(game: MultiplayerGameIdentity): string {
+  return `mp_${game.roomId}_${game.gameNumber}_${encodeURIComponent(game.playerId)}_${game.puzzle}`;
+}
+
+export function loadMultiplayerGame(
+  game: MultiplayerGameIdentity,
+): SavedGame | null {
+  const saved =
+    loadGame(multiplayerGameKey(game)) ??
+    loadGame(`mp_${game.roomId}_${game.puzzle.slice(0, 12)}`);
+  return saved?.puzzle === game.puzzle ? saved : null;
+}
+
+export function saveMultiplayerGame(
+  game: MultiplayerGameIdentity,
+  data: SavedGame,
+): void {
+  saveGame(multiplayerGameKey(game), { ...data, multiplayer: game });
+  // Consume the legacy identity after migration so another game cannot adopt it.
+  if (loadGame(multiplayerGameKey(game))) {
+    deleteGame(`mp_${game.roomId}_${game.puzzle.slice(0, 12)}`);
+  }
+}
+
 export type SavedGame = {
+  multiplayer?: MultiplayerGameIdentity;
   puzzle: string;
   values: string;
   notes: number[][];
@@ -105,7 +137,9 @@ export function listSavedGames(): SavedGameSummary[] {
       const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
         key,
-        roomId: key.startsWith("mp_") ? key.split("_")[1] : undefined,
+        roomId:
+          game.multiplayer?.roomId ??
+          (key.startsWith("mp_") ? key.split("_")[1] : undefined),
         difficulty: game.difficulty,
         filledCells,
         givenCells,
