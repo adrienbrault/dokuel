@@ -7,6 +7,7 @@ type MultiplayerHeaderExtraProps = {
   opponentProgress: { completionPercent: number } | null;
   opponentDisconnected: boolean;
   myPercent: number;
+  onAcceptRematch?: (() => void) | undefined;
 };
 
 export function MultiplayerHeaderExtra({
@@ -16,6 +17,7 @@ export function MultiplayerHeaderExtra({
   opponentProgress,
   opponentDisconnected,
   myPercent,
+  onAcceptRematch,
 }: MultiplayerHeaderExtraProps) {
   if (gameOver && !iFinished) {
     return (
@@ -26,6 +28,21 @@ export function MultiplayerHeaderExtra({
           </span>{" "}
           finished first — keep going to complete your puzzle.
         </div>
+        {onAcceptRematch && (
+          <div role="status" className="card px-3 py-2 text-center">
+            <p className="text-sm font-semibold">Rematch requested</p>
+            <p className="caption">
+              Keep solving, or accept a new game. Your current puzzle will end.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary min-h-11 px-4 mt-2"
+              onClick={onAcceptRematch}
+            >
+              Accept rematch
+            </button>
+          </div>
+        )}
         {showOpponentProgress && opponentProgress && (
           <div className="flex flex-col gap-1.5">
             <ProgressBar label="You" percent={myPercent} color="bg-accent" />

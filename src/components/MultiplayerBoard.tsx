@@ -29,14 +29,7 @@ const EMPTY_CONFLICTS = new Set<number>();
 export type MultiplayerBoardProps = {
   roomId: string;
   puzzle: string;
-  /**
-   * The puzzle's solution, computed once when the game started and
-   * carried in the Yjs room. Authoritative for error highlighting —
-   * never recomputed locally, because the solver picks a random valid
-   * solution for non-unique puzzles, so a reload would otherwise flip
-   * correct digits to red. Null only for pre-existing games restored
-   * from an older snapshot that predates this field.
-   */
+  /** Room-owned solution; null for legacy snapshots. */
   solution: string | null;
   /**
    * Monotonic counter from the Yjs room; bumps on every new puzzle
@@ -59,6 +52,7 @@ export type MultiplayerBoardProps = {
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
+  rematchReady?: string[] | undefined;
   onBack: () => void;
 };
 
@@ -77,6 +71,7 @@ export function MultiplayerBoard({
   onProgress,
   onComplete,
   onRematch,
+  rematchReady = [],
   onBack,
 }: MultiplayerBoardProps) {
   const identity = useMemo(
@@ -123,6 +118,8 @@ export function MultiplayerBoard({
   const revealed = useDelayedFlag(true, 600);
   // The loser keeps playing after the opponent wins; only show the result
   // modal once they've actually finished their own board (or won themselves).
+  const rematchRequested = rematchReady.includes(playerId);
+  const opponentRequested = rematchReady.some((id) => id !== playerId);
   const iWon = gameOver?.winnerId === playerId;
   const iFinished = iWon || game.status === "completed";
   const showResult = useDelayedFlag(iFinished, 300);
@@ -137,12 +134,9 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (prevCellsRef.current !== game.cellsRemaining) {
       prevCellsRef.current = game.cellsRemaining;
-      const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-      const filled = total - game.cellsRemaining;
-      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-      onProgress(game.cellsRemaining, percent);
+      onProgress(game.cellsRemaining, myPercent);
     }
-  }, [game.cellsRemaining, onProgress, puzzle]);
+  }, [game.cellsRemaining, onProgress, myPercent]);
 
   // Check completion — the claim ships the actual filled board so the
   // opponent's client can verify it against the room's solution.
@@ -292,6 +286,7 @@ export function MultiplayerBoard({
           opponentProgress={opponentProgress}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
+          onAcceptRematch={opponentRequested ? onRematch : undefined}
         />
       }
       footer={
@@ -301,6 +296,13 @@ export function MultiplayerBoard({
             time={formatTime(timerSecondsRef.current)}
             difficulty={difficulty}
             isMultiplayer
+            rematchState={
+              rematchRequested
+                ? "requested"
+                : opponentRequested
+                  ? "offered"
+                  : undefined
+            }
             onNewGame={onBack}
             onRematch={onRematch}
           />

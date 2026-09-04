@@ -500,6 +500,24 @@ describe("MultiplayerBoard after opponent wins", () => {
     localStorage.clear();
   });
 
+  it("offers an optional rematch while the loser can keep solving", () => {
+    const props = baseProps();
+    render(
+      <MultiplayerBoard
+        {...props}
+        gameOver={{ winnerId: "p2", winnerName: "Bob" }}
+        rematchReady={["p2"]}
+      />,
+    );
+    expect(screen.getByText(/Your current puzzle will end/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    fireEvent.keyDown(window, { key: "5" });
+    expect(screen.getByLabelText(/Cell row 1 column 1, value 5/)).toBeTruthy();
+    expect(props.onRematch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Accept rematch" }));
+    expect(props.onRematch).toHaveBeenCalledOnce();
+  });
+
   it("lets the loser keep placing digits after the opponent wins", () => {
     vi.useFakeTimers();
     try {

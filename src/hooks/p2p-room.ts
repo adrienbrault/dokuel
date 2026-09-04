@@ -264,8 +264,17 @@ export function claimWinner(
   return true;
 }
 
-export function requestRematch(room: P2PRoom, difficulty?: Difficulty): void {
-  startGame(room, difficulty);
+export function requestRematch(room: P2PRoom, playerId: string): void {
+  const state = getRoomState(room);
+  if (!state || state.status !== "finished") return;
+  const player = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!player) return;
+  room.doc.transact(() => {
+    player.set("rematchGameNumber", state.gameNumber);
+    player.set("rematchPuzzle", state.puzzle);
+  });
 }
 
 export function getRoomStatus(room: P2PRoom): string {
@@ -296,6 +305,15 @@ export function getRoomState(room: P2PRoom): RoomState | null {
 
   return {
     roomId: room.roomId,
+    rematchReady: players
+      .filter((player) => {
+        const map = room.doc.getMap("players").get(player.id) as Y.Map<unknown>;
+        return (
+          map.get("rematchGameNumber") === roomMap.get("gameNumber") &&
+          map.get("rematchPuzzle") === roomMap.get("puzzle")
+        );
+      })
+      .map((player) => player.id),
     status: status as RoomState["status"],
     difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",

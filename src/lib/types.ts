@@ -113,6 +113,8 @@ export type Player = {
 };
 
 export type RoomState = {
+  /** Players who agreed to replace the current game with a rematch. */
+  rematchReady?: string[];
   roomId: string;
   status: RoomStatus;
   difficulty: Difficulty;

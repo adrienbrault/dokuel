@@ -412,37 +412,23 @@ describe("p2p-room", () => {
   });
 
   describe("requestRematch", () => {
-    it("generates new puzzle and increments gameNumber", () => {
+    it("records agreement without replacing the current board or progress", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
       startGame(room, "medium");
-
-      const oldGameNumber = room.doc.getMap("room").get("gameNumber");
-
-      requestRematch(room, "medium");
-
-      const roomMap = room.doc.getMap("room");
-      // gameNumber incremented
-      expect(roomMap.get("gameNumber")).toBe((oldGameNumber as number) + 1);
-      // new puzzle generated (could theoretically be same, but extremely unlikely)
-      expect(roomMap.get("puzzle")).toHaveLength(81);
-      expect(roomMap.get("status")).toBe("playing");
-      expect(roomMap.get("winnerId")).toBeNull();
-    });
-
-    it("resets player progress", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      updateProgress(room, "player1", 5, 95);
-      requestRematch(room, "medium");
-
-      const players = room.doc.getMap("players");
-      const p1 = players.get("player1") as Y.Map<unknown>;
-      expect(p1.get("completionPercent")).toBe(0);
+      const before = getRoomState(room)!;
+      updateProgress(room, "player2", 5, 95);
+      claimWinner(room, "player1", "Alice", before.solution);
+      requestRematch(room, "player1");
+      expect(getRoomState(room)).toMatchObject({
+        puzzle: before.puzzle,
+        gameNumber: before.gameNumber,
+        rematchReady: ["player1"],
+      });
+      expect(
+        getPlayers(room).find((p) => p.id === "player2")?.completionPercent,
+      ).toBe(95);
     });
   });
 
@@ -587,7 +573,7 @@ describe("p2p-room", () => {
       setDifficulty(room, "hard");
       startGame(room);
 
-      requestRematch(room);
+      startGame(room);
 
       expect(getRoomState(room)!.difficulty).toBe("hard");
     });

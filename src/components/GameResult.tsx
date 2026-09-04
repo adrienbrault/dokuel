@@ -12,6 +12,7 @@ type GameResultProps = {
   timeSeconds?: number | undefined;
   difficulty?: Difficulty | undefined;
   isMultiplayer?: boolean | undefined;
+  rematchState?: "requested" | "offered" | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
   stats?: {
@@ -62,6 +63,7 @@ export function GameResult({
   difficulty,
   isMultiplayer,
   onRematch,
+  rematchState,
   onNewGame,
   stats,
   isNewPB,
@@ -221,9 +223,21 @@ export function GameResult({
               type="button"
               className="btn btn-primary w-full py-3 text-lg"
               onClick={onRematch}
+              disabled={rematchState === "requested"}
             >
-              {isMultiplayer ? "Rematch" : "Play Again"}
+              {isMultiplayer
+                ? rematchState === "requested"
+                  ? "Rematch requested"
+                  : rematchState === "offered"
+                    ? "Accept rematch"
+                    : "Rematch"
+                : "Play Again"}
             </button>
+          )}
+          {rematchState === "requested" && (
+            <p role="status" className="caption text-center">
+              Waiting for your opponent to accept.
+            </p>
           )}
           <button
             type="button"

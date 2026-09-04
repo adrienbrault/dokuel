@@ -92,6 +92,7 @@ export function MultiplayerGame({
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
+          rematchReady={mp.roomState?.rematchReady}
           onBack={onBack}
         />
         {/* opponentDisconnected is awareness-based — the only signal

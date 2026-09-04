@@ -607,7 +607,14 @@ describe("hydration", () => {
 describe("commands", () => {
   it("keeps the finished puzzle until both seated players agree to rematch", () => {
     const { doc, room, solution } = setupStartedGame();
-    const opponent = createRoom({ doc, roomId: ROOM_ID, playerId: "p2", playerName: () => "Bob", initialDifficulty: null, now: () => T0 });
+    const opponent = createRoom({
+      doc,
+      roomId: ROOM_ID,
+      playerId: "p2",
+      playerName: () => "Bob",
+      initialDifficulty: null,
+      now: () => T0,
+    });
     room.complete(solution);
     const puzzle = room.snapshot().puzzle;
     room.rematch();
@@ -619,6 +626,34 @@ describe("commands", () => {
     expect(opponent.snapshot().puzzle).toBe(room.snapshot().puzzle);
     opponent.close();
     room.close();
+  });
+
+  it("starts one agreed rematch when concurrent requests merge", () => {
+    const first = setupStartedGame();
+    first.room.complete(first.solution);
+    const otherDoc = new Doc();
+    applyUpdate(otherDoc, encodeStateAsUpdate(first.doc));
+    const second = createRoom({
+      doc: otherDoc,
+      roomId: ROOM_ID,
+      playerId: "p2",
+      playerName: () => "Bob",
+      initialDifficulty: null,
+      now: () => T0,
+    });
+    second.apply({ type: "local-sync-complete", now: T0 });
+    first.room.rematch();
+    second.rematch();
+    expect(first.room.snapshot().roomState?.gameNumber).toBe(1);
+    expect(second.snapshot().roomState?.gameNumber).toBe(1);
+    applyUpdate(first.doc, encodeStateAsUpdate(otherDoc));
+    applyUpdate(otherDoc, encodeStateAsUpdate(first.doc));
+    expect(first.room.snapshot().roomState?.gameNumber).toBe(2);
+    expect(second.snapshot().roomState?.gameNumber).toBe(2);
+    expect(second.snapshot().puzzle).toBe(first.room.snapshot().puzzle);
+    expect(second.snapshot().roomState?.rematchReady).toEqual([]);
+    first.room.close();
+    second.close();
   });
 
   function countClues(puzzle: string): number {
@@ -673,7 +708,18 @@ describe("commands", () => {
     room.setDifficulty("expert");
     room.start();
 
+    const opponent = createRoom({
+      doc,
+      roomId: ROOM_ID,
+      playerId: "p2",
+      playerName: () => "Bob",
+      initialDifficulty: null,
+      now: () => T0,
+    });
+    room.complete(doc.getMap("room").get("solution") as string);
     room.rematch();
+    opponent.rematch();
+    opponent.close();
 
     const puzzle = doc.getMap("room").get("puzzle") as string;
     expect(countClues(puzzle)).toBeLessThanOrEqual(28);

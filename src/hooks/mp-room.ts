@@ -406,6 +406,18 @@ export function createRoom({
       detectWinner(state, now());
       trackOpponentProgress();
       settleSeat(state);
+      // Seat order is agreed across peers. One writer deals the next board,
+      // including when both requests arrive concurrently after reconnecting.
+      if (
+        draft.gameOver &&
+        state.status === "finished" &&
+        state.players[0]?.id === playerId &&
+        state.players.length === MAX_PLAYERS &&
+        state.players.every((player) => state.rematchReady?.includes(player.id))
+      ) {
+        startGame(p2p);
+        return;
+      }
     }
     publish();
   }
@@ -508,7 +520,7 @@ export function createRoom({
       startGame(p2p);
     },
     rematch() {
-      requestRematch(p2p);
+      if (draft.gameOver) requestRematch(p2p, playerId);
     },
     progress(cellsRemaining, completionPercent) {
       updateProgress(p2p, playerId, cellsRemaining, completionPercent);
