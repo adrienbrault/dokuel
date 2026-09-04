@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { FriendChallenge } from "../lib/challenge.ts";
 import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { useResumableSudoku } from "./useResumableSudoku.ts";
@@ -310,6 +311,38 @@ describe("useResumableSudoku", () => {
     expect(stats).not.toBeNull();
     expect(stats!.gamesPlayed).toBe(1);
     expect(stats!.bestTime).toBe(90);
+  });
+
+  it("keeps friend challenge completions out of generated personal records", () => {
+    const puzzle = puzzleMissingOneCell();
+    const challenge: FriendChallenge = {
+      version: 1,
+      puzzle,
+      difficulty: "easy",
+      assistLevel: "standard",
+      timeSeconds: 120,
+      hintsUsed: 0,
+    };
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "friend-hook-key",
+        initialPuzzle: puzzle,
+        challenge,
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 90,
+      }),
+    );
+
+    act(() => result.current.game.selectCell(0, 0));
+    act(() => result.current.game.placeNumber(5));
+
+    expect(getStatsForDifficulty("easy", "standard", "friend")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: 90,
+    });
+    expect(getStatsForDifficulty("easy", "standard")).toBeNull();
+    expect(loadGame("friend-hook-key")).toBeNull();
   });
 
   it("records the win only once across re-renders after completion", () => {
