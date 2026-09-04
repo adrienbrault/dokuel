@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadGame } from "../lib/game-storage.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
 // A solved grid; the puzzle blanks all of row 0 so every numpad digit
@@ -64,6 +65,25 @@ describe("SoloGame numpad selection", () => {
     expect(screen.getByLabelText(/^Cell row 1 column 1, value 5/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Resume game" }));
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
+  });
+
+  it("saves current elapsed time before a display tick runs", () => {
+    let now = 1_000;
+    render(
+      <SoloGame
+        difficulty="easy"
+        gameKey="elapsed-save"
+        initialPuzzle={PUZZLE}
+        now={() => now}
+        onBack={vi.fn()}
+      />,
+    );
+
+    act(() => vi.advanceTimersByTime(600));
+    now += 2_500.5;
+    act(() => window.dispatchEvent(new Event("pagehide")));
+
+    expect(loadGame("elapsed-save")?.timer).toBe(2.5005);
   });
 
   it("shows one notes mode for keyboard and numpad input", () => {
