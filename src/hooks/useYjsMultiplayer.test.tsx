@@ -211,7 +211,9 @@ describe("useYjsMultiplayer", () => {
       result.current.sendStartGame();
       markPlayerReady({ doc, roomId: "room-commands" }, "p2");
     });
-    expect(result.current.roomState?.startedAt).toBeGreaterThanOrEqual(beforeReady + 3000);
+    expect(result.current.roomState?.startedAt).toBeGreaterThanOrEqual(
+      beforeReady + 3000,
+    );
     const solution = doc.getMap("room").get("solution") as string;
     act(() => {
       result.current.sendComplete(solution);

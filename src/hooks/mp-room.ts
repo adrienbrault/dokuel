@@ -208,6 +208,12 @@ export type RoomConfig = {
   initialDifficulty: Difficulty | null;
   /** Injected clock. Only the forfeit trust window reads it. */
   now?: () => number;
+  /**
+   * Epoch clock for values shared with the UI and other tabs. Keep this
+   * separate from `now`, which may be monotonic and is used for local
+   * liveness deadlines.
+   */
+  wallNow?: () => number;
 };
 
 export function createRoom({
@@ -217,6 +223,7 @@ export function createRoom({
   playerName,
   initialDifficulty,
   now = Date.now,
+  wallNow = now,
 }: RoomConfig): Room {
   const p2p = createRoomFromDoc(doc, roomId);
   const listeners = new Set<() => void>();
@@ -415,7 +422,7 @@ export function createRoom({
         state.readyPlayers?.length === MAX_PLAYERS &&
         state.players[0]?.id === playerId
       ) {
-        startGame(p2p, state.difficulty, now() + 3_000);
+        startGame(p2p, state.difficulty, wallNow() + 3_000);
         return;
       }
       // Seat order is agreed across peers. One writer deals the next board,
@@ -427,7 +434,7 @@ export function createRoom({
         state.players.length === MAX_PLAYERS &&
         state.players.every((player) => state.rematchReady?.includes(player.id))
       ) {
-        startGame(p2p);
+        startGame(p2p, state.difficulty, wallNow() + 3_000);
         return;
       }
     }
@@ -526,7 +533,7 @@ export function createRoom({
     },
     complete(board) {
       if (judgeClaim(board, verifiedSolution) !== "solved") return;
-      claimWinner(p2p, playerId, playerName(), board);
+      claimWinner(p2p, playerId, playerName(), board, wallNow());
     },
     claimForfeit({ hasOtherPeer }) {
       if (hasReachableOpponent(hasOtherPeer)) return;
