@@ -14,6 +14,13 @@ describe("AssistLevelPicker", () => {
     expect(screen.getByRole("radio", { name: /full/i })).toBeInTheDocument();
   });
 
+  it("explains that Paper disables automatic help but permits optional hints", () => {
+    render(<AssistLevelPicker value="paper" onChange={vi.fn()} />);
+    expect(screen.getByText(/No automatic help/)).toBeTruthy();
+    expect(screen.getByText(/Hints remain optional/)).toBeTruthy();
+    expect(screen.queryByText("No hints")).toBeNull();
+  });
+
   it("marks the active option as checked", () => {
     render(<AssistLevelPicker value="paper" onChange={vi.fn()} />);
 
