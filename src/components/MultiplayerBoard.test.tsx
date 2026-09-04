@@ -84,6 +84,29 @@ describe("MultiplayerBoard local autosave", () => {
     expect(screen.getByLabelText(/Cell row 1 column 1, empty/)).toBeTruthy();
   });
 
+  it("supports keyboard notes, values, undo and erase in a duel", () => {
+    render(<MultiplayerBoard {...baseProps()} />);
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    fireEvent.keyDown(window, { key: "n" });
+    expect(screen.getByRole("button", { name: "Notes" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.keyDown(window, { key: "3" });
+    expect(
+      screen.getByLabelText(/Cell row 1 column 1, empty, notes 3/),
+    ).toBeTruthy();
+    fireEvent.keyDown(window, { key: "n" });
+    fireEvent.keyDown(window, { key: "5" });
+    expect(screen.getByLabelText(/Cell row 1 column 1, value 5/)).toBeTruthy();
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    expect(
+      screen.getByLabelText(/Cell row 1 column 1, empty, notes 3/),
+    ).toBeTruthy();
+    fireEvent.keyDown(window, { key: "Backspace" });
+    expect(screen.getByLabelText("Cell row 1 column 1, empty")).toBeTruthy();
+  });
+
   it("swaps to the merged puzzle when a start collision changes it without a gameNumber bump", () => {
     // Concurrent Start/Rematch: both writers used the same gameNumber,
     // LWW picked the other player's puzzle. The board must adopt it —
