@@ -57,7 +57,13 @@ export function ResultShare(props: Parameters<typeof buildShareText>[0]) {
         await navigator.share({ title: "Dokuel friend challenge", text });
         return;
       } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "name" in error &&
+          error.name === "AbortError"
+        )
+          return;
       }
     }
     try {
