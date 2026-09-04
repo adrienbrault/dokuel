@@ -10,5 +10,8 @@ export async function onRequest(context: { request: Request; next(): Promise<Res
   headers.set("X-Robots-Tag", "noindex, nofollow");
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("Cache-Control", "private, no-store");
-  return new Response(renderSharePreview(await response.text(), preview), { status: response.status, headers });
+  const url = new URL(context.request.url);
+  url.search = "";
+  url.hash = "";
+  return new Response(renderSharePreview(await response.text(), preview, url.href), { status: response.status, headers });
 }

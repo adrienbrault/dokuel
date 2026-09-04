@@ -70,8 +70,9 @@ function escapeHtml(value: string): string {
 export function renderSharePreview(
   html: string,
   preview: SharePreview,
+  url?: string,
 ): string {
-  return html
+  const rendered = html
     .replace(
       /<title>[^<]*<\/title>/,
       () => `<title>${escapeHtml(preview.title)}</title>`,
@@ -84,5 +85,15 @@ export function renderSharePreview(
       /(<meta (?:property|name)="(?:description|og:description|twitter:description)" content=")[^"]*("\s*\/?\s*>)/g,
       (_match, start, end) =>
         `${start}${escapeHtml(preview.description)}${end}`,
+    );
+  if (!url) return rendered;
+  return rendered
+    .replace(
+      /(<meta property="og:url" content=")[^"]*(")/,
+      (_match, start, end) => `${start}${escapeHtml(url)}${end}`,
+    )
+    .replace(
+      /(<link rel="canonical" href=")[^"]*(")/,
+      (_match, start, end) => `${start}${escapeHtml(url)}${end}`,
     );
 }
