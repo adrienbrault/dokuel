@@ -217,6 +217,26 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("restores the shared wall-clock elapsed time across a reload gap", () => {
+    let now = 11_000;
+    const props = {
+      ...baseProps(),
+      startedAt: 1_000,
+      now: () => now,
+    };
+    const { unmount } = render(<MultiplayerBoard {...props} />);
+
+    act(() => window.dispatchEvent(new Event("pagehide")));
+    expect(loadGame(multiplayerGameKey(props))?.timer).toBe(10);
+
+    unmount();
+    now = 16_000;
+    render(<MultiplayerBoard {...props} />);
+    act(() => window.dispatchEvent(new Event("pagehide")));
+
+    expect(loadGame(multiplayerGameKey(props))?.timer).toBe(15);
+  });
+
   it("saves idle time on page exit and internal navigation", () => {
     vi.useFakeTimers();
     try {
