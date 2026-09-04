@@ -54,10 +54,12 @@ export function useNumpadInteractions({
       selectedCell: game.selectedCell,
       selectedCells: game.selectedCells,
     });
-  const runIntent = (gesture: DigitGesture, digit: number) =>
-    applyDigitIntent(intentFor(gesture), digit, ops);
+  const runIntent = (gesture: DigitGesture, digit: number) => {
+    if (!disabled) applyDigitIntent(intentFor(gesture), digit, ops);
+  };
 
   const handleHoldNote = (n: number) => {
+    if (disabled) return;
     const intent = intentFor({ kind: "hold" });
     applyDigitIntent(intent, n, ops);
     // The charge animation runs the digit into a note slot, so it only
@@ -87,6 +89,7 @@ export function useNumpadInteractions({
 
   // Prop bag for <NumPad {...numPadProps} ref={numPadRef} position=.../>.
   const numPadProps = {
+    disabled,
     // The legend reads the same intent the tap will run.
     tapAction: intentFor({ kind: "tap" }).label,
     remainingCounts: game.remainingCounts,

@@ -216,6 +216,7 @@ export function SoloGame({
             <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
           )}
           <GameControls
+            disabled={paused || game.status !== "playing"}
             onErase={game.erase}
             onUndo={game.undo}
             historyLength={game.historyLength}

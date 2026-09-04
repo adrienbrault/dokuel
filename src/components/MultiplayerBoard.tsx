@@ -269,6 +269,7 @@ export function MultiplayerBoard({
       }
       controls={
         <GameControls
+          disabled={game.status !== "playing" || changingGame}
           onErase={game.erase}
           onUndo={game.undo}
           historyLength={game.historyLength}

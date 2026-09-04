@@ -44,7 +44,9 @@ describe("SoloGame numpad selection", () => {
   });
 
   it("blocks every board-changing control while paused", () => {
-    render(<SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />);
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
     fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
     fireEvent.keyDown(window, { key: "5" });
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));

@@ -7,6 +7,7 @@ import { NumPadLegend } from "./NumPadLegend.tsx";
 
 type NumPadProps = {
   position: NumPadPosition;
+  disabled?: boolean | undefined;
   remainingCounts: Record<number, number>;
   selectedValue?: number | null | undefined;
   showRemainingCounts?: boolean | undefined;
@@ -50,6 +51,7 @@ export type NumPadHandle = {
 
 export function NumPad({
   position,
+  disabled = false,
   remainingCounts,
   selectedValue,
   showRemainingCounts = true,
@@ -106,8 +108,11 @@ export function NumPad({
               key={n}
               type="button"
               data-numpad-digit={n}
-              disabled={(showRemainingCounts || disableCompleted) && isComplete}
-              className={`relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 short:h-10 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16 lg:w-16 lg:flex-none"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
+              disabled={
+                disabled ||
+                ((showRemainingCounts || disableCompleted) && isComplete)
+              }
+              className={`disabled:opacity-40 relative flex flex-col items-center justify-center rounded-xl select-none touch-none font-semibold ${isVertical ? "h-11 short:h-10 w-12 lg:h-14 lg:w-16" : "h-14 flex-1 lg:h-16 lg:w-16 lg:flex-none"} ${(showRemainingCounts || disableCompleted) && isComplete ? "invisible" : "press-spring"} ${isAccented ? "bg-accent text-text-on-accent shadow-md shadow-accent/25" : "bg-surface text-text-primary border border-border-default shadow-sm"}`}
               {...keyProps(n)}
               aria-label={numPadKeyLabel({
                 digit: n,

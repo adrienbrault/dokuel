@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 type GameControlsProps = {
   onErase: () => void;
   onUndo: () => void;
+  disabled?: boolean | undefined;
   historyLength?: number | undefined;
   onHint?: (() => void) | undefined;
 };
@@ -12,6 +13,7 @@ export function GameControls({
   onErase,
   onUndo,
   historyLength,
+  disabled = false,
   onHint,
 }: GameControlsProps) {
   return (
@@ -19,15 +21,15 @@ export function GameControls({
       <ControlButton
         label="Undo"
         onClick={onUndo}
-        disabled={!historyLength || historyLength === 0}
+        disabled={disabled || !historyLength}
       >
         <Undo2 size={17} strokeWidth={2.25} aria-hidden="true" />
       </ControlButton>
-      <ControlButton label="Erase" onClick={onErase}>
+      <ControlButton label="Erase" onClick={onErase} disabled={disabled}>
         <Eraser size={17} strokeWidth={2.25} aria-hidden="true" />
       </ControlButton>
       {onHint && (
-        <ControlButton label="Hint" onClick={onHint}>
+        <ControlButton label="Hint" onClick={onHint} disabled={disabled}>
           <Lightbulb size={17} strokeWidth={2.25} aria-hidden="true" />
         </ControlButton>
       )}
