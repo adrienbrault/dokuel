@@ -5,7 +5,8 @@ import {
   DIFFICULTY_LABELS,
   DIFFICULTY_TEXT_COLORS,
 } from "../lib/constants.ts";
-import { formatTime } from "../lib/format.ts";
+import { formatShortDate, formatTime } from "../lib/format.ts";
+import { getRecentResultsForOrigin } from "../lib/result-store.ts";
 import {
   type AssistLevelStats,
   type GameOrigin,
@@ -23,6 +24,13 @@ const SOURCES: Record<GameOrigin, string> = {
 
 export function SoloStats() {
   const [origin, setOrigin] = useState<GameOrigin>("generated");
+  const recent = useMemo(
+    () =>
+      [...getRecentResultsForOrigin(origin)]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 10),
+    [origin],
+  );
   return (
     <section aria-label="Solo" className="flex flex-col gap-3 w-full">
       <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
@@ -55,6 +63,37 @@ export function SoloStats() {
           />
         ))}
       </div>
+      {recent.length > 0 && (
+        <section
+          aria-label="Recent solo results"
+          className="flex flex-col gap-2"
+        >
+          <h4 className="label">Recent results</h4>
+          <ul className="card divide-y divide-border-default">
+            {recent.map((result, index) => (
+              <li
+                key={result.attemptId ?? `${result.date}-${index}`}
+                className="flex items-center justify-between gap-3 p-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">
+                    {DIFFICULTY_LABELS[result.difficulty]} ·{" "}
+                    {formatShortDate(result.date)}
+                  </p>
+                  <p className="caption">
+                    {ASSIST_LEVEL_LABELS[result.assistLevel]} ·{" "}
+                    {result.hintsUsed ?? 0}{" "}
+                    {(result.hintsUsed ?? 0) === 1 ? "hint" : "hints"}
+                  </p>
+                </div>
+                <span className="font-mono tabular-nums text-sm">
+                  {formatTime(result.time)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </section>
   );
 }
