@@ -12,4 +12,21 @@ describe("createElapsedClock", () => {
     expect(elapsed.elapsed()).toBe(2.5005);
     expect(elapsed.checkpoint()).toBe(2.5005);
   });
+
+  it("does not lose elapsed time while checkpointing fractional progress", () => {
+    let now = 1_000;
+    const samples: number[] = [];
+    const elapsed = createElapsedClock({
+      now: () => {
+        samples.push(now);
+        return now++;
+      },
+    });
+
+    elapsed.start();
+    elapsed.checkpoint();
+    const current = elapsed.elapsed();
+
+    expect(current).toBe((samples.at(-1)! - samples[0]!) / 1_000);
+  });
 });
