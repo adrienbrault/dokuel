@@ -45,7 +45,7 @@ test.describe("game completion", () => {
     await expect(dialog.getByText("You Won!")).toBeVisible();
     await expect(dialog.getByText("New Personal Best!")).toBeVisible();
     await expect(
-      dialog.getByRole("button", { name: "Share Result" }),
+      dialog.getByRole("button", { name: "Challenge a friend" }),
     ).toBeVisible();
 
     // The win landed in stats and the autosave was consumed.
