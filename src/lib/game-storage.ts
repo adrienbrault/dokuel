@@ -83,6 +83,7 @@ export function loadGame(key: string): SavedGame | null {
 
 export type SavedGameSummary = {
   key: string;
+  roomId?: string | undefined;
   difficulty: Difficulty;
   filledCells: number;
   givenCells: number;
@@ -104,6 +105,7 @@ export function listSavedGames(): SavedGameSummary[] {
       const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
         key,
+        roomId: key.startsWith("mp_") ? key.split("_")[1] : undefined,
         difficulty: game.difficulty,
         filledCells,
         givenCells,

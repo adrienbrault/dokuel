@@ -30,7 +30,7 @@ type LandingProps = {
   onDaily: () => void;
   onCreate: () => void;
   onJoin: () => void;
-  onContinue: (gameKey: string, difficulty: string) => void;
+  onContinue: (game: SavedGameSummary) => void;
   onStats: () => void;
 };
 
@@ -107,7 +107,7 @@ export function Landing({
           <ContinueRow
             key={game.key}
             game={game}
-            onClick={() => onContinue(game.key, game.difficulty)}
+            onClick={() => onContinue(game)}
             onDelete={() => handleDelete(game.key)}
           />
         ))}
@@ -284,7 +284,7 @@ function ContinueRow({
         </span>
         <span className="flex-1 min-w-0">
           <span className="block text-[0.95rem] font-bold leading-tight text-text-primary">
-            Continue
+            {game.roomId ? "Return to duel" : "Continue"}
           </span>
           <span className="block text-xs leading-tight mt-0.5 text-text-muted truncate">
             {DIFFICULTY_LABELS[game.difficulty]} · {formatTime(game.timer)}

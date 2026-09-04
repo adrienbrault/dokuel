@@ -178,11 +178,19 @@ function App() {
             onCreate={() => navigate({ name: "difficulty", mode: "create" })}
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
-            onContinue={(gameKey, difficulty) => {
+            onContinue={(game) => {
+              if (game.roomId) {
+                navigate({
+                  name: "multiplayer",
+                  roomId: game.roomId,
+                  difficulty: null,
+                });
+                return;
+              }
               navigate({
                 name: "solo",
-                difficulty: difficulty as Difficulty,
-                gameKey,
+                difficulty: game.difficulty,
+                gameKey: game.key,
                 assistLevel: "standard",
               });
             }}
