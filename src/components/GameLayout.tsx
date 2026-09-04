@@ -11,6 +11,7 @@ import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
+import { InputGuide } from "./InputGuide.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 import { SoundToggle } from "./SoundToggle.tsx";
 
@@ -235,6 +236,7 @@ function SettingsButton({
               {extra}
             </div>
           )}
+          <InputGuide />
           <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
             <p className="text-xs text-text-muted mb-2 font-medium">
               Keyboard shortcuts

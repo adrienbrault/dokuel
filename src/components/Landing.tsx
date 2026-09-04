@@ -25,6 +25,8 @@ import {
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
 
+import { InputGuide } from "./InputGuide.tsx";
+
 type LandingProps = {
   onSolo: () => void;
   onDaily: () => void;
@@ -154,6 +156,7 @@ export function Landing({
         />
       </div>
 
+      <InputGuide />
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"

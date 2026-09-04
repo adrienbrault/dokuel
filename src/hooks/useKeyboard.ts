@@ -35,6 +35,20 @@ export function useKeyboard({
     if (!enabled) return;
 
     const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest(
+          "input, textarea, select, [contenteditable=true], [role=dialog], [data-game-input-ignore]",
+        )
+      )
+        return;
+      if (
+        (e.ctrlKey || e.metaKey || e.altKey) &&
+        !(e.key === "z" && (e.ctrlKey || e.metaKey))
+      )
+        return;
       // Escape to deselect
       if (e.key === "Escape") {
         e.preventDefault();
