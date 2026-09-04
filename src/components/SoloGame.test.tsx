@@ -43,6 +43,27 @@ describe("SoloGame numpad selection", () => {
     expect(document.activeElement).toBe(gear);
   });
 
+  it("blocks every board-changing control while paused", () => {
+    render(<SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+    fireEvent.keyDown(window, { key: "5" });
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    for (const name of ["Undo", "Erase", "Hint"]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    const seven = screen.getByRole("button", { name: "7" });
+    expect(seven).toBeDisabled();
+    fireEvent.pointerDown(seven, { pointerType: "touch" });
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.pointerUp(seven, { pointerType: "touch" });
+    fireEvent.keyDown(window, { key: "Backspace" });
+    expect(screen.getByLabelText(/^Cell row 1 column 1, value 5/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Resume game" }));
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
+  });
+
   it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
