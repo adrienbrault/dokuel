@@ -4,6 +4,8 @@ import type { Position } from "../lib/types.ts";
 export const KEYBOARD_SHORTCUTS: { keys: string; label: string }[] = [
   { keys: "1–9", label: "Place number" },
   { keys: "←↑→↓", label: "Move cursor" },
+  { keys: "Home / End", label: "Row edges" },
+  { keys: "Ctrl Home / End", label: "Board edges" },
   { keys: "N", label: "Toggle notes" },
   { keys: "Backspace", label: "Erase" },
   { keys: "⌘Z", label: "Undo" },
@@ -46,9 +48,16 @@ export function useKeyboard({
         return;
       if (
         (e.ctrlKey || e.metaKey || e.altKey) &&
-        !(e.key === "z" && (e.ctrlKey || e.metaKey))
+        !(e.key === "z" && (e.ctrlKey || e.metaKey)) &&
+        !(e.ctrlKey && (e.key === "Home" || e.key === "End"))
       )
         return;
+      if (e.key === "Home" || e.key === "End") {
+        e.preventDefault();
+        const edge = e.key === "Home" ? 0 : 8;
+        onSelectCell(e.ctrlKey ? edge : (selectedCell?.row ?? 0), edge);
+        return;
+      }
       // Escape to deselect
       if (e.key === "Escape") {
         e.preventDefault();
