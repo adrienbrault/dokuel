@@ -29,6 +29,32 @@ const BASE_STATE: RoomState = {
 };
 
 describe("Lobby", () => {
+  it("shows that our ready action is waiting for the other player", () => {
+    const state: RoomState = {
+      ...BASE_STATE,
+      readyPlayers: ["p1"],
+      players: [
+        ...BASE_STATE.players,
+        { ...BASE_STATE.players[0]!, id: "p2", name: "Bob" },
+      ],
+    };
+    render(
+      <Lobby
+        roomState={state}
+        playerId="p1"
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Ready — waiting for friend" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Both players agree to the rules, then the same three-second countdown begins.",
+      ),
+    ).toBeInTheDocument();
+  });
   it("shows room code and waiting message with one player", () => {
     render(<Lobby roomState={BASE_STATE} onStart={vi.fn()} onBack={vi.fn()} />);
 
