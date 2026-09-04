@@ -26,6 +26,29 @@ test("landing page", async ({ page }, testInfo) => {
   });
 });
 
+test("interactive controls guide", async ({ page }, testInfo) => {
+  await page.goto("/solo/easy/guide-check");
+  const before = await readBoard(page);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Try the controls" }).click();
+  await page.getByRole("button", { name: "Practice cell" }).click();
+  await page.getByRole("button", { name: "Practice digit 5" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Value placed. Now try a note.",
+  );
+  await page.getByRole("button", { name: "Try notes" }).click();
+  await page.getByRole("button", { name: "Practice digit 5" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Note added. Tap again to remove it.",
+  );
+  await page.screenshot({
+    path: screenshotPath("controls-guide", testInfo.project.name),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Got it" }).click();
+  expect(await readBoard(page)).toBe(before);
+});
+
 test("solo game", async ({ page }, testInfo) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Start Solo" }).click();
