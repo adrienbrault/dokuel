@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isDailyCompleted } from "./daily-streak.ts";
 import { completeGame } from "./game-completion.ts";
 import { loadGame, saveGame } from "./game-storage.ts";
-import { getStatsForDifficulty, saveGameResult } from "./stats.ts";
+import { getStats, getStatsForDifficulty, saveGameResult } from "./stats.ts";
 
 describe("completeGame", () => {
   beforeEach(() => localStorage.clear());
@@ -65,6 +65,73 @@ describe("completeGame", () => {
       stats: { gamesPlayed: 1, bestTime: 30 },
       isNewPB: true,
     });
+  });
+
+  it("records a stable attempt only once across repeated completions", () => {
+    const context = {
+      gameKey: "repeatable-attempt",
+      attemptId: "repeatable-attempt",
+      puzzleId: "repeatable-puzzle",
+      difficulty: "easy" as const,
+      assistLevel: "standard" as const,
+      timeSeconds: 30,
+      hintsUsed: 0,
+    };
+
+    const first = completeGame(context);
+    const second = completeGame({ ...context, timeSeconds: 1 });
+
+    expect(first.stats).toMatchObject({ gamesPlayed: 1, bestTime: 30 });
+    expect(second.stats).toMatchObject({ gamesPlayed: 1, bestTime: 30 });
+    expect(second.isNewPB).toBe(false);
+    expect(
+      JSON.parse(localStorage.getItem("sudoku_result_store") ?? "{}").attempts[
+        "repeatable-attempt"
+      ],
+    ).toMatchObject({ time: 30, puzzleId: "repeatable-puzzle" });
+  });
+
+  it("does not mark a faster repeat of a puzzle as a generated personal best", () => {
+    completeGame({
+      gameKey: "first-generated",
+      attemptId: "first-generated",
+      puzzleId: "replayed-puzzle",
+      difficulty: "easy",
+      assistLevel: "standard",
+      timeSeconds: 90,
+      hintsUsed: 0,
+    });
+    const replay = completeGame({
+      gameKey: "second-generated",
+      attemptId: "second-generated",
+      puzzleId: "replayed-puzzle",
+      difficulty: "easy",
+      assistLevel: "standard",
+      timeSeconds: 1,
+      hintsUsed: 0,
+    });
+
+    expect(replay.isNewPB).toBe(false);
+    expect(getStatsForDifficulty("easy", "standard")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: 90,
+    });
+    expect(getStatsForDifficulty("easy", "standard", "replay")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: 1,
+    });
+  });
+
+  it("floors the completion receipt while retaining precise recorded time", () => {
+    const result = completeGame({
+      difficulty: "easy",
+      assistLevel: "standard",
+      timeSeconds: 12.75,
+      hintsUsed: 0,
+    });
+
+    expect(result.timeSeconds).toBe(12);
+    expect(getStats()[0]?.time).toBe(12.75);
   });
 
   it("survives a throwing localStorage at the moment of winning", async () => {
