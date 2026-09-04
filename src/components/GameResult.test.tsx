@@ -51,7 +51,7 @@ describe("GameResult", () => {
       />,
     );
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: /play again/i }),
+      screen.getByRole("button", { name: /another puzzle/i }),
     );
   });
 
@@ -123,7 +123,7 @@ describe("GameResult", () => {
     expect(screen.getByText(/new personal best/i)).toBeInTheDocument();
   });
 
-  it("shows Play Again in solo mode and Rematch in multiplayer", () => {
+  it("shows Another puzzle in solo mode and Rematch in multiplayer", () => {
     const { rerender } = render(
       <GameResult
         isWinner={true}
@@ -133,7 +133,7 @@ describe("GameResult", () => {
       />,
     );
 
-    expect(screen.getByText("Play Again")).toBeInTheDocument();
+    expect(screen.getByText("Another puzzle")).toBeInTheDocument();
 
     rerender(
       <GameResult
@@ -195,10 +195,10 @@ describe("GameResult", () => {
       />,
     );
 
-    await userEvent.click(screen.getByText("Play Again"));
+    await userEvent.click(screen.getByText("Another puzzle"));
     expect(onRematch).toHaveBeenCalledOnce();
 
-    await userEvent.click(screen.getByText("New Game"));
+    await userEvent.click(screen.getByText("Back to home"));
     expect(onNewGame).toHaveBeenCalledOnce();
   });
 });

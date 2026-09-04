@@ -89,7 +89,9 @@ export function GameResult({
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previouslyFocused = document.activeElement;
-    const primary = panelRef.current?.querySelector<HTMLElement>("button");
+    const primary = panelRef.current?.querySelector<HTMLElement>(
+      "button:not(:disabled)",
+    );
     primary?.focus();
     return () => {
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
@@ -141,7 +143,7 @@ export function GameResult({
   };
 
   return (
-    <div className="modal-overlay p-6">
+    <div className="modal-overlay p-3 sm:p-6">
       {isWinner && (
         <div className="confetti-container">
           <span />
@@ -162,11 +164,11 @@ export function GameResult({
         aria-labelledby="game-result-title"
         onKeyDown={trapTab}
         ref={panelRef}
-        className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative"
+        className="modal-panel gap-5 short:gap-3 max-w-sm sm:max-w-md w-full relative"
       >
         <div className="flex flex-col items-center gap-2.5">
           <span
-            className={`flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce ${
+            className={`flex items-center justify-center w-16 h-16 short:w-10 short:h-10 shrink-0 rounded-full text-4xl short:text-2xl animate-emoji-bounce ${
               isWinner ? "bg-accent-light" : "bg-bg-inset"
             }`}
           >
@@ -184,7 +186,7 @@ export function GameResult({
           )}
         </div>
         <div className="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
-          <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
+          <span className="text-5xl short:text-4xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
@@ -231,7 +233,9 @@ export function GameResult({
                   : rematchState === "offered"
                     ? "Accept rematch"
                     : "Rematch"
-                : "Play Again"}
+                : difficulty
+                  ? `New ${DIFFICULTY_LABELS[difficulty]} puzzle`
+                  : "Another puzzle"}
             </button>
           )}
           {rematchState === "requested" && (
@@ -244,7 +248,7 @@ export function GameResult({
             className="btn btn-secondary w-full py-3 text-lg"
             onClick={onNewGame}
           >
-            New Game
+            {isMultiplayer ? "Leave room" : "Back to home"}
           </button>
           {!isMultiplayer && (
             <button
