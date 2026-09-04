@@ -371,29 +371,37 @@ export function getPlayers(room: P2PRoom): Player[] {
 }
 
 /**
- * Seed an empty Yjs room from a localStorage snapshot. Only writes
- * keys that are still missing, so calling this after a partial IDB
- * restore is safe — the peer's eventual sync will reconcile via CRDT.
+ * Restore an empty room or an initialized, unstarted lobby. A started
+ * room keeps its existing fields; the Room owns the grace window that
+ * gives live peer state priority over this recovery snapshot.
  * The caller decides when to invoke; typically only when the room has
  * no started game in Yjs but a recent snapshot exists.
  */
 export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
   const roomMap = room.doc.getMap("room");
   const playersMap = room.doc.getMap("players");
+  const staleLobby = roomMap.get("gameNumber") === 0 && snap.gameNumber > 0;
   room.doc.transact(() => {
-    if (!roomMap.has("status")) roomMap.set("status", snap.status);
-    if (!roomMap.has("gameNumber")) roomMap.set("gameNumber", snap.gameNumber);
-    if (!roomMap.has("puzzle")) roomMap.set("puzzle", snap.puzzle);
-    if (!roomMap.has("solution"))
+    if (staleLobby || !roomMap.has("status"))
+      roomMap.set("status", snap.status);
+    if (staleLobby || !roomMap.has("gameNumber"))
+      roomMap.set("gameNumber", snap.gameNumber);
+    if (staleLobby || !roomMap.has("puzzle"))
+      roomMap.set("puzzle", snap.puzzle);
+    if (staleLobby || !roomMap.has("solution"))
       roomMap.set("solution", snap.solution ?? null);
-    if (!roomMap.has("difficulty")) roomMap.set("difficulty", snap.difficulty);
-    if (!roomMap.has("assistLevel"))
+    if (staleLobby || !roomMap.has("difficulty"))
+      roomMap.set("difficulty", snap.difficulty);
+    if (staleLobby || !roomMap.has("assistLevel"))
       roomMap.set("assistLevel", snap.assistLevel);
-    if (!roomMap.has("hostId")) roomMap.set("hostId", snap.hostId);
-    if (!roomMap.has("winnerId")) roomMap.set("winnerId", snap.winnerId);
-    if (!roomMap.has("winnerName")) roomMap.set("winnerName", snap.winnerName);
+    if (staleLobby || !roomMap.has("hostId"))
+      roomMap.set("hostId", snap.hostId);
+    if (staleLobby || !roomMap.has("winnerId"))
+      roomMap.set("winnerId", snap.winnerId);
+    if (staleLobby || !roomMap.has("winnerName"))
+      roomMap.set("winnerName", snap.winnerName);
     snap.players.forEach((p, joinOrder) => {
-      if (playersMap.has(p.id)) return;
+      if (playersMap.has(p.id) && !staleLobby) return;
       const pm = new Y.Map<unknown>();
       pm.set("name", p.name);
       pm.set("color", p.color);
