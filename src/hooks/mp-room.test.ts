@@ -634,6 +634,50 @@ describe("hydration", () => {
     });
     restored.close();
   });
+
+  it("round-trips playing progress before accepting a newer live room", () => {
+    const source = setupStartedGame();
+    const sourcePuzzle = source.room.snapshot().puzzle;
+    updateProgress(source.p2p, "p1", 12, 85);
+    updateProgress(source.p2p, "p2", 20, 75);
+    source.room.persistSnapshot();
+    source.room.close();
+
+    const restored = createRoom({
+      doc: new Doc(),
+      roomId: ROOM_ID,
+      playerId: "p1",
+      playerName: () => "Alice",
+      initialDifficulty: null,
+      now: () => T0,
+    });
+    restored.apply({ type: "local-sync-complete", now: T0 });
+    restored.apply({ type: "tick", now: restored.nextWakeAt() ?? T0 });
+
+    expect(restored.snapshot().roomState).toMatchObject({
+      status: "playing",
+      gameNumber: 1,
+      puzzle: sourcePuzzle,
+      solution: source.solution,
+      players: [
+        expect.objectContaining({
+          id: "p1",
+          cellsRemaining: 12,
+          completionPercent: 85,
+        }),
+        expect.objectContaining({
+          id: "p2",
+          cellsRemaining: 20,
+          completionPercent: 75,
+        }),
+      ],
+    });
+    expect(restored.snapshot().opponentProgress).toEqual({
+      cellsRemaining: 20,
+      completionPercent: 75,
+    });
+    restored.close();
+  });
 });
 
 describe("commands", () => {
