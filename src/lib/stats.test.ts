@@ -9,6 +9,15 @@ import {
 } from "./stats.ts";
 
 describe("stats", () => {
+  it("has no personal best when every completed game used hints", () => {
+    localStorage.clear();
+    saveGameResult("easy", "standard", 30, true, 1);
+    expect(getStatsForDifficulty("easy", "standard")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: null,
+      averageTime: 30,
+    });
+  });
   beforeEach(() => {
     localStorage.clear();
   });
