@@ -5,6 +5,13 @@ import { saveGameResult } from "../lib/stats.ts";
 import { Stats } from "./Stats.tsx";
 
 describe("Stats page — solo section", () => {
+  it("shows lifetime totals after recent records are evicted", () => {
+    localStorage.clear();
+    for (let index = 0; index < 101; index++)
+      saveGameResult("easy", "standard", 60, true);
+    render(<Stats onBack={vi.fn()} />);
+    expect(screen.getByText("101 games played")).toBeInTheDocument();
+  });
   it("lets players inspect friend results separately from fresh puzzles", () => {
     localStorage.clear();
     saveGameResult({
