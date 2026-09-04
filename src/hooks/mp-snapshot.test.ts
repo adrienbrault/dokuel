@@ -91,6 +91,31 @@ describe("mp-snapshot", () => {
     });
   });
 
+  it("round-trips shared start and both completion proofs", () => {
+    const solution = "1".repeat(81);
+    saveSnapshot(
+      "room-shared-start",
+      makeState({
+        startedAt: 1_000,
+        readyPlayers: ["p1", "p2"],
+        results: {
+          p1: { completedAt: 2_000, board: solution },
+          p2: { completedAt: 3_000, board: solution },
+        },
+      }),
+    );
+
+    expect(loadSnapshot("room-shared-start")).toMatchObject({
+      version: 2,
+      startedAt: 1_000,
+      readyPlayers: ["p1", "p2"],
+      results: {
+        p1: { completedAt: 2_000, board: solution },
+        p2: { completedAt: 3_000, board: solution },
+      },
+    });
+  });
+
   it("migrates an unversioned snapshot with defaults for new recovery fields", () => {
     localStorage.setItem(
       "dokuel_mp_snap_legacy",
