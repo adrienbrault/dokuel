@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // biome-ignore lint/performance/noNamespaceImport: vi.spyOn needs the module namespace object
 import * as dateModule from "./date.ts";
 import {
+  getLifetimeGamesPlayed,
   getStats,
   getStatsByAssistLevel,
   getStatsForDifficulty,
@@ -54,6 +55,15 @@ describe("stats", () => {
       gamesPlayed: 101,
       bestTime: 1,
     });
+  });
+
+  it("reports total lifetime wins instead of the bounded recent count", () => {
+    for (let i = 0; i < 101; i++) {
+      saveGameResult("easy", "standard", 100 + i, true);
+    }
+
+    expect(getStats()).toHaveLength(100);
+    expect(getLifetimeGamesPlayed()).toBe(101);
   });
 
   it("stamps records with the app's local calendar date", () => {
