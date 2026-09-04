@@ -43,7 +43,17 @@ export function decodeSnapshot(raw: string): MpSnapshot | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
-    return parsed as MpSnapshot;
+    const record = parsed as Record<string, unknown>;
+    const version = record.version;
+    if (version !== undefined && version !== 1 && version !== 2) return null;
+    return {
+      ...record,
+      version: MP_SNAPSHOT_VERSION,
+      winnerBoard: record.winnerBoard ?? null,
+      rematchReady: Array.isArray(record.rematchReady)
+        ? record.rematchReady
+        : [],
+    } as MpSnapshot;
   } catch {
     return null;
   }
