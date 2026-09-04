@@ -582,6 +582,7 @@ describe("p2p-room", () => {
   describe("hydrateRoomFromSnapshot", () => {
     function makeSnap(overrides: Partial<MpSnapshot> = {}): MpSnapshot {
       return {
+        version: 2,
         gameNumber: 2,
         puzzle: ".".repeat(81),
         solution: "1".repeat(81),
@@ -607,6 +608,8 @@ describe("p2p-room", () => {
         ],
         winnerId: null,
         winnerName: null,
+        winnerBoard: null,
+        rematchReady: [],
         savedAt: Date.now(),
         ...overrides,
       };
