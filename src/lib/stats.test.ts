@@ -43,6 +43,19 @@ describe("stats", () => {
     expect(getStats().length).toBeLessThanOrEqual(100);
   });
 
+  it("keeps lifetime games and personal best beyond the recent-history cap", () => {
+    saveGameResult("easy", "standard", 1, true);
+    for (let i = 0; i < 100; i++) {
+      saveGameResult("easy", "standard", 200 + i, true);
+    }
+
+    expect(getStats()).toHaveLength(100);
+    expect(getStatsForDifficulty("easy", "standard")).toMatchObject({
+      gamesPlayed: 101,
+      bestTime: 1,
+    });
+  });
+
   it("stamps records with the app's local calendar date", () => {
     // date.ts is the single source of "today": toISOString() reports
     // the UTC date, which is tomorrow for an evening game in any
