@@ -116,6 +116,20 @@ describe("mp-snapshot", () => {
     });
   });
 
+  it("rejects a snapshot with a malformed player record", () => {
+    saveSnapshot("room-corrupt-player", makeState());
+    const raw = JSON.parse(
+      localStorage.getItem("dokuel_mp_snap_room-corrupt-player") as string,
+    ) as Record<string, unknown>;
+    raw.players = [{ id: "p1" }];
+    localStorage.setItem(
+      "dokuel_mp_snap_room-corrupt-player",
+      JSON.stringify(raw),
+    );
+
+    expect(loadSnapshot("room-corrupt-player")).toBeNull();
+  });
+
   it("skips saving when no game has started", () => {
     saveSnapshot("room-1", makeState({ gameNumber: 0 }));
     expect(loadSnapshot("room-1")).toBeNull();
