@@ -17,6 +17,11 @@ createRoot(root).render(
   </StrictMode>,
 );
 
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  // Registration can fail in restricted browsers; online play still works.
+  void navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+}
+
 // Boot housekeeping, deferred off the startup path: drop room
 // snapshots past their resume window and the y-indexeddb databases
 // behind them. The delay keeps first paint clean and lands well after
