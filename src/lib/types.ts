@@ -67,12 +67,16 @@ export type HintTechnique =
   | "mistake"
   | "reveal";
 
+export type HintStep = "nudge" | "pattern" | "elimination" | "reveal";
+
 export type ActiveHint = {
   position: Position;
   value: number;
   technique: HintTechnique;
   explanation: string;
   relatedCells: Position[];
+  /** Progressive teaching stage; omitted for legacy callers. */
+  step?: HintStep | undefined;
 };
 
 export type GameStatus = "idle" | "playing" | "completed";

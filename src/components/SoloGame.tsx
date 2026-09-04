@@ -225,7 +225,11 @@ export function SoloGame({
       controls={
         <>
           {game.activeHint && (
-            <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
+            <HintBanner
+              hint={game.activeHint}
+              onDismiss={game.dismissHint}
+              onAdvance={game.hint}
+            />
           )}
           <GameControls
             notesMode={game.notesMode}
