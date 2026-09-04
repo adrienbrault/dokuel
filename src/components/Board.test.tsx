@@ -19,6 +19,21 @@ function makeBoard(overrides: [number, number, number][] = []): BoardType {
 }
 
 describe("Board same-number row/col highlighting (full assist)", () => {
+  it("offers one tab stop and moves actual focus with the selected cell", () => {
+    const props = {
+      board: makeBoard(),
+      conflicts: new Set<number>(),
+      onSelectCell: vi.fn(),
+    };
+    const { rerender } = render(<Board {...props} selectedCell={null} />);
+    expect(screen.getAllByRole("button").filter((cell) => cell.tabIndex === 0)).toHaveLength(1);
+    const first = screen.getByLabelText("Cell row 1 column 1, empty");
+    first.focus();
+    rerender(<Board {...props} selectedCell={{ row: 0, col: 1 }} />);
+    expect(screen.getByLabelText("Cell row 1 column 2, empty")).toHaveFocus();
+    expect(first.tabIndex).toBe(-1);
+  });
+
   it("highlights rows and columns of matching-number cells", () => {
     // Place a 5 at (1,2) and (4,6) — selecting (1,2)
     const board = makeBoard([
