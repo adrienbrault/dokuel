@@ -198,9 +198,7 @@ describe("MultiplayerBoard local autosave", () => {
 
   it("uses wall-clock time when a backgrounded tab suspends performance ticks", () => {
     const dateNow = vi.spyOn(Date, "now").mockReturnValue(1_000);
-    const performanceNow = vi
-      .spyOn(performance, "now")
-      .mockReturnValue(1_000);
+    const performanceNow = vi.spyOn(performance, "now").mockReturnValue(1_000);
 
     try {
       const props = baseProps();

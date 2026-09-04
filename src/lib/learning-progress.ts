@@ -60,7 +60,9 @@ function validProgress(value: unknown): TechniqueProgressMap | null {
 }
 
 export function getTechniqueProgress(): TechniqueProgressMap {
-  return readJson(STORAGE_KEY, emptyProgress(), validProgress) ?? emptyProgress();
+  return (
+    readJson(STORAGE_KEY, emptyProgress(), validProgress) ?? emptyProgress()
+  );
 }
 
 export function recordTechniquePractice(

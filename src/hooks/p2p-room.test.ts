@@ -12,9 +12,9 @@ import {
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
-  markPlayerReady,
   judgeClaim,
   leaveRoom,
+  markPlayerReady,
   observeRoomChanges,
   type P2PRoom,
   requestRematch,
@@ -283,10 +283,7 @@ describe("p2p-room", () => {
 
       markPlayerReady(room, "player1");
       markPlayerReady(room, "player2");
-      expect(getRoomState(room)?.readyPlayers).toEqual([
-        "player1",
-        "player2",
-      ]);
+      expect(getRoomState(room)?.readyPlayers).toEqual(["player1", "player2"]);
 
       setDifficulty(room, "hard");
       expect(getRoomState(room)?.readyPlayers).toEqual([]);
