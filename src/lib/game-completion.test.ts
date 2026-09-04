@@ -50,6 +50,23 @@ describe("completeGame", () => {
     expect(getStatsForDifficulty("expert", "standard")).toBeNull();
   });
 
+  it("accepts an attempt id that matches an object prototype property", () => {
+    const result = completeGame({
+      gameKey: "toString",
+      attemptId: "toString",
+      puzzleId: "prototype-key-puzzle",
+      difficulty: "easy",
+      assistLevel: "standard",
+      timeSeconds: 30,
+      hintsUsed: 0,
+    });
+
+    expect(result).toMatchObject({
+      stats: { gamesPlayed: 1, bestTime: 30 },
+      isNewPB: true,
+    });
+  });
+
   it("survives a throwing localStorage at the moment of winning", async () => {
     // Quota exhaustion / blocked storage throws on setItem. This runs
     // inside the completion effect — an unhandled throw here crashes
