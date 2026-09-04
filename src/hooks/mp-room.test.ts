@@ -546,6 +546,20 @@ describe("hydration", () => {
     expect(room.nextWakeAt()).toBe(T0 + 3_000);
   });
 
+  it("recovers a newer snapshot over a stale initialized lobby", () => {
+    seedSnapshot();
+    const { p2p, room } = setup(null);
+    initializeRoom(p2p, "p1", "easy");
+    joinRoom(p2p, "p1", "Alice");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    room.apply({ type: "tick", now: room.nextWakeAt() ?? 0 });
+    expect(room.snapshot()).toMatchObject({
+      hasStartedGame: true,
+      roomState: { gameNumber: 4, status: "playing", difficulty: "hard" },
+      puzzle: SNAPSHOT.puzzle,
+    });
+  });
+
   it("prefers live peer state that arrives during the grace window", () => {
     // Hydrating a recent snapshot into a FRESH doc makes every key
     // causally concurrent with the live room — per-key LWW can then roll
