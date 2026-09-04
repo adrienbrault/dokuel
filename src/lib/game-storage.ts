@@ -1,4 +1,5 @@
 import type { FriendChallenge } from "./challenge.ts";
+import { isCalendarDate, todayLocalISO } from "./date.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type MultiplayerGameIdentity = {
@@ -117,6 +118,7 @@ export function loadGame(key: string): SavedGame | null {
 }
 
 export type SavedGameSummary = {
+  dailyDate?: string | undefined;
   challenge?: FriendChallenge | undefined;
   key: string;
   roomId?: string | undefined;
@@ -133,14 +135,22 @@ export function listSavedGames(): SavedGameSummary[] {
       const storageKey = localStorage.key(i);
       if (!storageKey?.startsWith(STORAGE_PREFIX)) continue;
       const key = storageKey.slice(STORAGE_PREFIX.length);
-      // Skip daily challenge saves — they have their own entry point
-      if (key.startsWith("daily-")) continue;
+      const dailyDate = /^daily-(\d{4}-\d{2}-\d{2})-medium$/.exec(key)?.[1];
+      // Today's daily has a dedicated action; older saves need a resume entry.
+      if (
+        key.startsWith("daily-") &&
+        (!dailyDate ||
+          !isCalendarDate(dailyDate) ||
+          dailyDate >= todayLocalISO())
+      )
+        continue;
       const game = loadGame(key);
       if (!game) continue;
       const filledCells = game.values.split("").filter((c) => c !== ".").length;
       const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
         key,
+        dailyDate,
         challenge: game.challenge,
         roomId:
           game.multiplayer?.roomId ??

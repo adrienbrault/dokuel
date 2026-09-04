@@ -288,14 +288,19 @@ function ContinueRow({
         </span>
         <span className="flex-1 min-w-0">
           <span className="block text-[0.95rem] font-bold leading-tight text-text-primary">
-            {game.roomId
-              ? "Return to duel"
-              : game.challenge
-                ? "Continue challenge"
-                : "Continue"}
+            {game.dailyDate
+              ? "Continue daily"
+              : game.roomId
+                ? "Return to duel"
+                : game.challenge
+                  ? "Continue challenge"
+                  : "Continue"}
           </span>
           <span className="block text-xs leading-tight mt-0.5 text-text-muted truncate">
-            {DIFFICULTY_LABELS[game.difficulty]} · {formatTime(game.timer)}
+            {game.dailyDate
+              ? formatShortDate(game.dailyDate)
+              : DIFFICULTY_LABELS[game.difficulty]}{" "}
+            · {formatTime(game.timer)}
           </span>
         </span>
         <span className="rounded-full bg-accent-light px-2 py-1 text-xs font-bold text-accent tabular-nums">
