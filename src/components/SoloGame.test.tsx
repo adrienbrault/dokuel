@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadGame } from "../lib/game-storage.ts";
+import { getTechniqueProgress } from "../lib/learning-progress.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
 // A solved grid; the puzzle blanks all of row 0 so every numpad digit
@@ -16,6 +17,7 @@ const SOLVED =
   "287419635" +
   "345286179";
 const PUZZLE = ".".repeat(9) + SOLVED.slice(9);
+const SINGLE_HOLE_PUZZLE = "." + SOLVED.slice(1);
 
 describe("SoloGame numpad selection", () => {
   beforeEach(() => {
@@ -84,6 +86,65 @@ describe("SoloGame numpad selection", () => {
     act(() => window.dispatchEvent(new Event("pagehide")));
 
     expect(loadGame("elapsed-save")?.timer).toBe(2.5005);
+  });
+
+  it("opens focused practice from the reveal step of a hint", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={SINGLE_HOLE_PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Hint" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show pattern hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show elimination hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show reveal hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Practice naked single" }),
+    );
+
+    expect(
+      screen.getByRole("region", { name: "Technique practice" }),
+    ).toBeTruthy();
+  });
+
+  it("persists wrong and solved focused practice attempts", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={SINGLE_HOLE_PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Hint" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show pattern hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show elimination hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show reveal hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Practice naked single" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Answer 4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Answer 5" }));
+
+    expect(getTechniqueProgress()["naked-single"]).toEqual({
+      attempts: 2,
+      solved: 1,
+    });
   });
 
   it("shows one notes mode for keyboard and numpad input", () => {
