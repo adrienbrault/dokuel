@@ -450,6 +450,7 @@ describe("win claims", () => {
       initialDifficulty: null,
       now: () => T0 + 5_000,
     });
+    second.apply({ type: "local-sync-complete", now: T0 + 5_000 });
     second.complete(first.solution);
 
     expect(first.room.snapshot().roomState).toMatchObject({
@@ -705,6 +706,38 @@ describe("hydration", () => {
     });
     restored.close();
   });
+
+  it("restores shared start, readiness, and both completion proofs", () => {
+    const solution = "1".repeat(81);
+    localStorage.setItem(
+      `dokuel_mp_snap_${ROOM_ID}`,
+      JSON.stringify({
+        ...SNAPSHOT,
+        solution,
+        startedAt: T0 + 4_000,
+        readyPlayers: ["p1", "p2"],
+        results: {
+          p1: { completedAt: T0 + 5_000, board: solution },
+          p2: { completedAt: T0 + 6_000, board: solution },
+        },
+        savedAt: Date.now(),
+      }),
+    );
+
+    const { room } = setup(null);
+    room.apply({ type: "local-sync-complete", now: T0 });
+    room.apply({ type: "tick", now: room.nextWakeAt() ?? T0 });
+
+    expect(room.snapshot().roomState).toMatchObject({
+      startedAt: T0 + 4_000,
+      readyPlayers: ["p1", "p2"],
+      results: {
+        p1: { completedAt: T0 + 5_000, board: solution },
+        p2: { completedAt: T0 + 6_000, board: solution },
+      },
+    });
+    room.close();
+  });
 });
 
 describe("commands", () => {
@@ -744,6 +777,50 @@ describe("commands", () => {
 
     opponent.close();
     room.close();
+  });
+
+  it("uses the wall clock for shared start and completion timestamps", () => {
+    const doc = new Doc();
+    const p2p = createRoomFromDoc(doc, ROOM_ID);
+    const monotonicNow = 42;
+    const wallNow = 1_700_000_000_000;
+    const first = createRoom({
+      doc,
+      roomId: ROOM_ID,
+      playerId: "p1",
+      playerName: () => "Alice",
+      initialDifficulty: "easy",
+      now: () => monotonicNow,
+      wallNow: () => wallNow,
+    });
+    first.apply({ type: "local-sync-complete", now: monotonicNow });
+    joinRoom(p2p, "p2", "Bob");
+    const second = createRoom({
+      doc,
+      roomId: ROOM_ID,
+      playerId: "p2",
+      playerName: () => "Bob",
+      initialDifficulty: null,
+      now: () => monotonicNow,
+      wallNow: () => wallNow,
+    });
+    second.apply({ type: "local-sync-complete", now: monotonicNow });
+
+    first.ready();
+    second.ready();
+
+    const solution = first.snapshot().solution;
+    expect(first.snapshot().roomState?.startedAt).toBe(wallNow + 3_000);
+    expect(solution).toEqual(expect.any(String));
+
+    first.complete(solution as string);
+
+    expect(first.snapshot().roomState?.results?.p1).toEqual({
+      completedAt: wallNow,
+      board: solution,
+    });
+    second.close();
+    first.close();
   });
 
   it("keeps the finished puzzle until both seated players agree to rematch", () => {
