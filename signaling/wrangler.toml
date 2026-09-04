@@ -19,3 +19,12 @@ new_classes = ["SignalingRoom"]
 name = "TURN_RATE_LIMITER"
 namespace_id = "2026090501"
 simple = { limit = 60, period = 60 }
+
+[[ratelimits]]
+name = "EVENT_RATE_LIMITER"
+namespace_id = "2026090502"
+simple = { limit = 120, period = 60 }
+
+[[analytics_engine_datasets]]
+binding = "PRODUCT_ANALYTICS"
+dataset = "dokuel_product_events"
