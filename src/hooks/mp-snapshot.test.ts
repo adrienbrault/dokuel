@@ -130,6 +130,49 @@ describe("mp-snapshot", () => {
     expect(loadSnapshot("room-corrupt-player")).toBeNull();
   });
 
+  it.each([
+    ["status", { status: "paused" }],
+    ["difficulty", { difficulty: "unknown" }],
+    ["assist level", { assistLevel: "helpful" }],
+    ["game counter", { gameNumber: 0 }],
+    ["timestamp", { savedAt: "now" }],
+    ["puzzle shape", { puzzle: "not-a-grid" }],
+    ["solution shape", { solution: "not-a-grid" }],
+    ["puzzle givens", { puzzle: `2${".".repeat(80)}` }],
+    ["winner nullability", { winnerId: "p1" }],
+    [
+      "winner proof",
+      {
+        status: "finished",
+        winnerId: "p1",
+        winnerName: "Alice",
+        winnerBoard: "2".repeat(81),
+      },
+    ],
+    ["host membership", { hostId: "ghost" }],
+    [
+      "rematch player membership",
+      {
+        status: "finished",
+        winnerId: "p1",
+        winnerName: "Alice",
+        rematchReady: ["ghost"],
+      },
+    ],
+  ])("rejects corrupt durable field: %s", (_field, changes) => {
+    saveSnapshot("room-corrupt-field", makeState());
+    const raw = JSON.parse(
+      localStorage.getItem("dokuel_mp_snap_room-corrupt-field") as string,
+    ) as Record<string, unknown>;
+    Object.assign(raw, changes);
+    localStorage.setItem(
+      "dokuel_mp_snap_room-corrupt-field",
+      JSON.stringify(raw),
+    );
+
+    expect(loadSnapshot("room-corrupt-field")).toBeNull();
+  });
+
   it("skips saving when no game has started", () => {
     saveSnapshot("room-1", makeState({ gameNumber: 0 }));
     expect(loadSnapshot("room-1")).toBeNull();
