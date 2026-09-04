@@ -56,7 +56,9 @@ export type MultiplayerBoardProps = {
   onRematch: () => void;
   rematchReady?: string[] | undefined;
   onBack: () => void;
-  /** Injected monotonic clock for deterministic duration tests. */
+  /** Shared wall-clock start instant, including the room's countdown. */
+  startedAt?: number | null | undefined;
+  /** Injected wall clock for deterministic duration tests. */
   now?: (() => number) | undefined;
 };
 
@@ -77,6 +79,7 @@ export function MultiplayerBoard({
   onRematch,
   rematchReady = [],
   onBack,
+  startedAt,
   now,
 }: MultiplayerBoardProps) {
   const identity = useMemo(
@@ -109,14 +112,17 @@ export function MultiplayerBoard({
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
+  const clockNow = now ?? Date.now;
+  const hasSharedStart = typeof startedAt === "number";
   const elapsedClock = useElapsedClock({
     running: game.status === "playing",
-    initialSeconds: saved?.timer ?? 0,
-    resetKey: gameKey,
+    initialSeconds: hasSharedStart ? 0 : (saved?.timer ?? 0),
+    resetKey: `${gameKey}:${startedAt ?? "legacy"}`,
     // A live duel must include time while this tab is backgrounded or the
     // browser suspends performance callbacks. Solo passes its monotonic
     // clock separately because active-play time there pauses when hidden.
-    now: now ?? Date.now,
+    now: clockNow,
+    startAt: hasSharedStart ? startedAt : null,
   });
   const elapsedSeconds = elapsedClock.getElapsedSeconds();
   const prevCellsRef = useRef(game.cellsRemaining);

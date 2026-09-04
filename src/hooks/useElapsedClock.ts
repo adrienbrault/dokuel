@@ -4,6 +4,7 @@ import { createElapsedClock, type ElapsedClock } from "../lib/elapsed-clock.ts";
 export type UseElapsedClockOptions = {
   running: boolean;
   initialSeconds?: number;
+  startAt?: number | null;
   resetKey?: string | number;
   now?: (() => number) | undefined;
   intervalMs?: number;
@@ -21,6 +22,7 @@ export type UseElapsedClockResult = {
 export function useElapsedClock({
   running,
   initialSeconds = 0,
+  startAt = null,
   resetKey,
   now,
   intervalMs = 1_000,
@@ -31,7 +33,9 @@ export function useElapsedClock({
 
   if (clockRef.current === null || keyRef.current !== resetKey) {
     clockRef.current = createElapsedClock(
-      now === undefined ? { initialSeconds } : { initialSeconds, now },
+      now === undefined
+        ? { initialSeconds, startAt }
+        : { initialSeconds, now, startAt },
     );
     keyRef.current = resetKey;
     startedRef.current = false;
