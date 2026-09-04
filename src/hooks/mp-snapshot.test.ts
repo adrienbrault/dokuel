@@ -59,6 +59,38 @@ describe("mp-snapshot", () => {
     expect(snap?.solution).toBe("1".repeat(81));
   });
 
+  it("round-trips finished proof and rematch consent in the versioned schema", () => {
+    const solution = "1".repeat(81);
+    saveSnapshot(
+      "room-finished",
+      makeState({
+        status: "finished",
+        winnerId: "p2",
+        winnerName: "Bob",
+        winnerBoard: solution,
+        rematchReady: ["p1"],
+      }),
+    );
+
+    const snap = loadSnapshot("room-finished") as typeof loadSnapshot extends (
+      roomId: string,
+    ) => infer Snapshot
+      ? Snapshot & {
+          version?: number;
+          rematchReady?: string[];
+        }
+      : never;
+
+    expect(snap).toMatchObject({
+      version: 2,
+      status: "finished",
+      winnerId: "p2",
+      winnerName: "Bob",
+      winnerBoard: solution,
+      rematchReady: ["p1"],
+    });
+  });
+
   it("skips saving when no game has started", () => {
     saveSnapshot("room-1", makeState({ gameNumber: 0 }));
     expect(loadSnapshot("room-1")).toBeNull();
