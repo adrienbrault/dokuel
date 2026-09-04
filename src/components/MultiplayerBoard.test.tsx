@@ -73,6 +73,17 @@ describe("MultiplayerBoard local autosave", () => {
     ).not.toBeNull();
   });
 
+  it("starts fresh when another game has the exact same puzzle", () => {
+    const props = baseProps();
+    const { unmount } = render(<MultiplayerBoard {...props} />);
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    fireEvent.click(screen.getByRole("button", { name: "5" }));
+    expect(screen.getByLabelText(/Cell row 1 column 1, value 5/)).toBeTruthy();
+    unmount();
+    render(<MultiplayerBoard {...props} gameNumber={2} />);
+    expect(screen.getByLabelText(/Cell row 1 column 1, empty/)).toBeTruthy();
+  });
+
   it("swaps to the merged puzzle when a start collision changes it without a gameNumber bump", () => {
     // Concurrent Start/Rematch: both writers used the same gameNumber,
     // LWW picked the other player's puzzle. The board must adopt it —
