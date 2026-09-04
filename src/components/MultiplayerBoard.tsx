@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useElapsedClock } from "../hooks/useElapsedClock.ts";
 import { useFlushOnExit } from "../hooks/useFlushOnExit.ts";
+import { useMultiplayerElapsedClock } from "../hooks/useMultiplayerElapsedClock.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
@@ -12,7 +12,6 @@ import { formatTime } from "../lib/format.ts";
 import {
   deleteGame,
   loadMultiplayerGame,
-  multiplayerGameKey,
   saveMultiplayerGame,
 } from "../lib/game-storage.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
@@ -86,18 +85,21 @@ export function MultiplayerBoard({
     () => ({ roomId, playerId, gameNumber, puzzle }),
     [roomId, playerId, gameNumber, puzzle],
   );
-  const gameKey = multiplayerGameKey(identity);
   const saved = useMemo(() => loadMultiplayerGame(identity), [identity]);
   const savedBoard = useMemo(
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
     [saved],
   );
   const game = useSudoku(puzzle, solution ?? undefined, savedBoard);
-  // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
-  // Reset the reducer in-place rather than remount the whole subtree:
-  // keeps the timer ref, num-pad position, and any other UI state alive.
-  // The puzzle is tracked too: after a concurrent start/rematch merge
-  // the number can stay put while the puzzle changes under us.
+  const { gameKey, elapsedClock } = useMultiplayerElapsedClock({
+    identity,
+    saved,
+    running: game.status === "playing",
+    startedAt,
+    now,
+  });
+  // Rematches reset the reducer in place, preserving refs and UI state;
+  // track puzzle too because a concurrent merge can keep the same number.
   const prevGameNumberRef = useRef(gameNumber);
   const prevPuzzleRef = useRef(puzzle);
   const changingGame =
@@ -112,18 +114,6 @@ export function MultiplayerBoard({
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
-  const clockNow = now ?? Date.now;
-  const hasSharedStart = typeof startedAt === "number";
-  const elapsedClock = useElapsedClock({
-    running: game.status === "playing",
-    initialSeconds: hasSharedStart ? 0 : (saved?.timer ?? 0),
-    resetKey: `${gameKey}:${startedAt ?? "legacy"}`,
-    // A live duel must include time while this tab is backgrounded or the
-    // browser suspends performance callbacks. Solo passes its monotonic
-    // clock separately because active-play time there pauses when hidden.
-    now: clockNow,
-    startAt: hasSharedStart ? startedAt : null,
-  });
   const elapsedSeconds = elapsedClock.getElapsedSeconds();
   const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
