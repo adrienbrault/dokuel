@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useElapsedClock } from "../hooks/useElapsedClock.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
@@ -39,6 +40,8 @@ type SoloGameProps = {
     | ((time: number, result: GameCompletionResult) => void)
     | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
+  /** Injected monotonic clock for deterministic duration tests. */
+  now?: (() => number) | undefined;
 };
 
 export function SoloGame({
@@ -54,8 +57,9 @@ export function SoloGame({
   onRematch,
   onComplete,
   streakInfo,
+  now,
 }: SoloGameProps) {
-  const timerSecondsRef = useRef(0);
+  const timerApiRef = useRef<ReturnType<typeof useElapsedClock> | null>(null);
 
   const {
     game,
@@ -71,20 +75,24 @@ export function SoloGame({
     difficulty,
     initialAssistLevel,
     challenge,
-    getTimerSeconds: () => timerSecondsRef.current,
+    getTimerSeconds: () => timerApiRef.current?.getElapsedSeconds() ?? 0,
     dailyDate,
     onComplete,
   });
-
-  // Seed the ref so saves before the first onTick capture the resumed timer.
-  if (timerSecondsRef.current === 0 && initialTimerSeconds > 0) {
-    timerSecondsRef.current = initialTimerSeconds;
-  }
 
   const { position, setPosition } = useNumPadPosition();
   const revealed = useDelayedFlag(true, 600);
   const showResult = useDelayedFlag(game.status === "completed", 300);
   const [paused, setPaused] = useState(false);
+  const timerRunning = game.status === "playing" && !paused && revealed;
+  const elapsedClock = useElapsedClock({
+    running: timerRunning,
+    initialSeconds: initialTimerSeconds,
+    resetKey: `${gameKey ?? "solo"}:${puzzle}`,
+    now,
+  });
+  timerApiRef.current = elapsedClock;
+  const elapsedSeconds = elapsedClock.getElapsedSeconds();
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
   );
@@ -124,13 +132,14 @@ export function SoloGame({
   useEffect(() => {
     const handleVisibility = () => {
       if (document.hidden && game.status === "playing") {
+        elapsedClock.pause();
         setPaused(true);
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibility);
-  }, [game.status]);
+  }, [elapsedClock.pause, game.status]);
 
   const hintCells = useMemo(() => {
     if (!game.activeHint) return undefined;
@@ -162,11 +171,7 @@ export function SoloGame({
       }
       timer={
         <TimerPill
-          running={game.status === "playing" && !paused && revealed}
-          initialSeconds={initialTimerSeconds}
-          onTick={(s) => {
-            timerSecondsRef.current = s;
-          }}
+          seconds={elapsedClock.seconds}
           onClick={() => game.status === "playing" && setPaused((p) => !p)}
           ariaLabel={paused ? "Resume" : "Pause"}
           subline={
@@ -237,8 +242,8 @@ export function SoloGame({
         showResult ? (
           <GameResult
             isWinner={true}
-            time={formatTime(timerSecondsRef.current)}
-            timeSeconds={timerSecondsRef.current}
+            time={formatTime(elapsedSeconds)}
+            timeSeconds={Math.floor(elapsedSeconds)}
             difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}

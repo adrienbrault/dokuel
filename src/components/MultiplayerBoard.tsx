@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useElapsedClock } from "../hooks/useElapsedClock.ts";
 import { useFlushOnExit } from "../hooks/useFlushOnExit.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
@@ -55,6 +56,8 @@ export type MultiplayerBoardProps = {
   onRematch: () => void;
   rematchReady?: string[] | undefined;
   onBack: () => void;
+  /** Injected monotonic clock for deterministic duration tests. */
+  now?: (() => number) | undefined;
 };
 
 export function MultiplayerBoard({
@@ -74,6 +77,7 @@ export function MultiplayerBoard({
   onRematch,
   rematchReady = [],
   onBack,
+  now,
 }: MultiplayerBoardProps) {
   const identity = useMemo(
     () => ({ roomId, playerId, gameNumber, puzzle }),
@@ -101,14 +105,17 @@ export function MultiplayerBoard({
     prevGameNumberRef.current = gameNumber;
     prevPuzzleRef.current = puzzle;
     game.reset(puzzle, solution ?? undefined, savedBoard);
-    // The new game starts from zero; without this the recorded match
-    // time for game 2 includes game 1's clock.
-    timerSecondsRef.current = 0;
   }, [changingGame, gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
-  const timerSecondsRef = useRef(saved?.timer ?? 0);
+  const elapsedClock = useElapsedClock({
+    running: game.status === "playing",
+    initialSeconds: saved?.timer ?? 0,
+    resetKey: gameKey,
+    now,
+  });
+  const elapsedSeconds = elapsedClock.getElapsedSeconds();
   const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
   // The loser keeps playing after the opponent wins; only show the result
@@ -163,7 +170,7 @@ export function MultiplayerBoard({
       puzzle,
       values,
       notes,
-      timer: timerSecondsRef.current,
+      timer: elapsedClock.getElapsedSeconds(),
       difficulty,
       assistLevel,
       hintsUsed: game.hintsUsed,
@@ -177,6 +184,7 @@ export function MultiplayerBoard({
     puzzle,
     difficulty,
     assistLevel,
+    elapsedClock.getElapsedSeconds,
   ]);
   useEffect(persist, [persist]);
   useFlushOnExit(persist);
@@ -195,7 +203,7 @@ export function MultiplayerBoard({
     assistLevel,
     playerId,
     opponentName,
-    getTimeSeconds: () => timerSecondsRef.current,
+    getTimeSeconds: elapsedClock.getElapsedSeconds,
   });
 
   // Keyed off local status only — the loser keeps interacting until they
@@ -222,12 +230,7 @@ export function MultiplayerBoard({
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
         <TimerPill
-          timerKey={gameNumber}
-          running={game.status === "playing"}
-          initialSeconds={saved?.timer ?? 0}
-          onTick={(s) => {
-            timerSecondsRef.current = s;
-          }}
+          seconds={elapsedClock.seconds}
           subline={
             <>
               <span className="text-accent font-medium">
@@ -290,7 +293,7 @@ export function MultiplayerBoard({
         showResult && gameOver && iFinished ? (
           <GameResult
             isWinner={iWon}
-            time={formatTime(timerSecondsRef.current)}
+            time={formatTime(elapsedSeconds)}
             difficulty={difficulty}
             isMultiplayer
             rematchState={

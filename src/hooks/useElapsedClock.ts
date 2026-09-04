@@ -5,13 +5,15 @@ export type UseElapsedClockOptions = {
   running: boolean;
   initialSeconds?: number;
   resetKey?: string | number;
-  now?: () => number;
+  now?: (() => number) | undefined;
   intervalMs?: number;
 };
 
 export type UseElapsedClockResult = {
   seconds: number;
   getElapsedSeconds: () => number;
+  pause: () => number;
+  resume: () => void;
   checkpoint: () => number;
   finalize: () => number;
 };
@@ -37,6 +39,14 @@ export function useElapsedClock({
 
   const clock = clockRef.current;
   const [seconds, setSeconds] = useState(initialSeconds);
+  const pause = useCallback(() => {
+    const current = clock.pause();
+    setSeconds(current);
+    return current;
+  }, [clock]);
+  const resume = useCallback(() => {
+    clock.resume();
+  }, [clock]);
   const checkpoint = useCallback(() => {
     const current = clock.checkpoint();
     setSeconds(current);
@@ -55,12 +65,12 @@ export function useElapsedClock({
 
   useEffect(() => {
     if (!running) {
-      setSeconds(clock.pause());
+      pause();
       return;
     }
 
     if (startedRef.current) {
-      clock.resume();
+      resume();
     } else {
       clock.start();
       startedRef.current = true;
@@ -68,7 +78,7 @@ export function useElapsedClock({
 
     const interval = setInterval(checkpoint, intervalMs);
     return () => clearInterval(interval);
-  }, [clock, running, checkpoint, intervalMs]);
+  }, [clock, running, pause, resume, checkpoint, intervalMs]);
 
   useEffect(() => {
     return () => {
@@ -76,5 +86,5 @@ export function useElapsedClock({
     };
   }, [clock]);
 
-  return { seconds, getElapsedSeconds, checkpoint, finalize };
+  return { seconds, getElapsedSeconds, pause, resume, checkpoint, finalize };
 }
