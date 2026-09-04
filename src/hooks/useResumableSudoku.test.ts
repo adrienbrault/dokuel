@@ -164,6 +164,22 @@ describe("useResumableSudoku", () => {
     }
   });
 
+  it("saves idle thinking time when leaving the game without a page reload", () => {
+    let seconds = 0;
+    const { unmount } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "leave-game",
+        initialPuzzle: puzzleMissingOneCell(),
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => seconds,
+      }),
+    );
+    seconds = 300;
+    unmount();
+    expect(loadGame("leave-game")?.timer).toBe(300);
+  });
+
   it("saves on pagehide so idle thinking time survives a refresh", () => {
     // The save effect fires on board changes; five minutes of thinking
     // without a move used to be lost on refresh, rewinding the timer.
