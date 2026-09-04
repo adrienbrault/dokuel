@@ -113,7 +113,10 @@ export function MultiplayerBoard({
     running: game.status === "playing",
     initialSeconds: saved?.timer ?? 0,
     resetKey: gameKey,
-    now,
+    // A live duel must include time while this tab is backgrounded or the
+    // browser suspends performance callbacks. Solo passes its monotonic
+    // clock separately because active-play time there pauses when hidden.
+    now: now ?? Date.now,
   });
   const elapsedSeconds = elapsedClock.getElapsedSeconds();
   const prevCellsRef = useRef(game.cellsRemaining);
