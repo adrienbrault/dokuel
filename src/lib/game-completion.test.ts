@@ -1,7 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isDailyCompleted } from "./daily-streak.ts";
 import { completeGame } from "./game-completion.ts";
 import { loadGame, saveGame } from "./game-storage.ts";
+// biome-ignore lint/performance/noNamespaceImport: spyOn needs the module namespace
+import * as productEvents from "./product-events.ts";
 import { getStats, getStatsForDifficulty, saveGameResult } from "./stats.ts";
 
 describe("completeGame", () => {
@@ -120,6 +122,26 @@ describe("completeGame", () => {
       gamesPlayed: 1,
       bestTime: 1,
     });
+  });
+
+  it("tracks only durable first completions with a privacy-safe product mode", () => {
+    const track = vi.spyOn(productEvents, "trackProductEvent");
+    const context = {
+      gameKey: "event-attempt",
+      attemptId: "event-attempt",
+      puzzleId: "event-puzzle",
+      origin: "friend" as const,
+      difficulty: "easy" as const,
+      assistLevel: "standard" as const,
+      timeSeconds: 121,
+      hintsUsed: 0,
+    };
+    completeGame(context);
+    completeGame({ ...context, timeSeconds: 1 });
+
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith("game_complete", "friend", 121);
+    track.mockRestore();
   });
 
   it("floors the completion receipt while retaining precise recorded time", () => {

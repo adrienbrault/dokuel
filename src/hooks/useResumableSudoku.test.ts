@@ -500,6 +500,67 @@ describe("useResumableSudoku", () => {
     expect(result.current.saveStatus).toBe("failed");
   });
 
+  it("retries a failed in-progress autosave", () => {
+    const puzzle = `.${SOLVED.slice(1, 80)}.`;
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "retry-save",
+        initialPuzzle: puzzle,
+        origin: "generated",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 30,
+      }),
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      act(() => result.current.game.selectCell(0, 0));
+      act(() => result.current.game.placeNumber(5));
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.current.saveStatus).toBe("failed");
+    act(() => result.current.retrySave());
+    expect(result.current.saveStatus).toBe("saved");
+    expect(loadGame("retry-save")).not.toBeNull();
+  });
+
+  it("retries a failed completion result and then clears its autosave", () => {
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "retry-result",
+        initialPuzzle: puzzleMissingOneCell(),
+        origin: "generated",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 30,
+      }),
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      act(() => result.current.game.selectCell(0, 0));
+      act(() => result.current.game.placeNumber(5));
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.current.completion).toMatchObject({ persisted: false });
+    expect(loadGame("retry-result")).not.toBeNull();
+    act(() => result.current.retryCompletion());
+    expect(result.current.completion?.persisted).not.toBe(false);
+    expect(loadGame("retry-result")).toBeNull();
+    expect(getStatsForDifficulty("easy")?.gamesPlayed).toBe(1);
+  });
+
   it("records the win only once across re-renders after completion", () => {
     const { result, rerender } = renderHook(() =>
       useResumableSudoku({
