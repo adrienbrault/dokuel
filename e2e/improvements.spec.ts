@@ -105,6 +105,18 @@ test.describe("friend challenge", () => {
   });
 });
 
+test("the solo controls and number pad fit without scrolling", async ({
+  page,
+}) => {
+  await page.goto("/solo/easy/controls-fit");
+  const bounds = await page
+    .getByRole("group", { name: "Number pad" })
+    .boundingBox();
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(
+    page.viewportSize()!.height,
+  );
+});
+
 test("pause disables all input and leaves the saved board unchanged", async ({
   page,
 }) => {
