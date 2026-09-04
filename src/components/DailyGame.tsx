@@ -5,8 +5,14 @@ import { formatShortDate } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
-export function DailyGame({ onBack }: { onBack: () => void }) {
-  const date = useMemo(() => todayLocalISO(), []);
+export function DailyGame({
+  onBack,
+  date: requestedDate,
+}: {
+  onBack: () => void;
+  date?: string | undefined;
+}) {
+  const date = useMemo(() => requestedDate ?? todayLocalISO(), [requestedDate]);
   const { puzzle } = useMemo(() => getDailyPuzzle(date, "medium"), [date]);
   const [streakInfo, setStreakInfo] = useState<{
     currentStreak: number;

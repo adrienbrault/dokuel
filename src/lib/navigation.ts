@@ -4,6 +4,7 @@ import {
   type FriendChallenge,
   parseChallenge,
 } from "./challenge.ts";
+import { isCalendarDate } from "./date.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type Screen =
@@ -16,7 +17,7 @@ export type Screen =
       gameKey: string;
       assistLevel: AssistLevel;
     }
-  | { name: "daily" }
+  | { name: "daily"; date?: string | undefined }
   | {
       name: "multiplayer";
       roomId: string;
@@ -47,7 +48,7 @@ export function screenToPath(screen: Screen): string {
     case "challenge":
       return challengePath(screen.challenge);
     case "daily":
-      return "/daily";
+      return screen.date ? `/daily/${screen.date}` : "/daily";
     case "join":
       return "/join";
     case "stats":
@@ -64,6 +65,12 @@ export function pathToScreen(pathname: string): Screen {
 
   if (path === "") return { name: "landing" };
   if (path === "daily") return { name: "daily" };
+  if (path.startsWith("daily/")) {
+    const date = path.slice(6);
+    return isCalendarDate(date)
+      ? { name: "daily", date }
+      : { name: "notFound", path: pathname };
+  }
   if (path === "join") return { name: "join" };
   if (path === "stats") return { name: "stats" };
 

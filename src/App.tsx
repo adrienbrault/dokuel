@@ -90,6 +90,10 @@ function App() {
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
             onContinue={(game) => {
+              if (game.dailyDate) {
+                navigate({ name: "daily", date: game.dailyDate });
+                return;
+              }
               if (game.challenge) {
                 navigate({ name: "challenge", challenge: game.challenge });
                 return;
@@ -171,7 +175,13 @@ function App() {
       );
 
     case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+      return (
+        <DailyGame
+          key={screen.date ?? "today"}
+          date={screen.date}
+          onBack={() => navigate({ name: "landing" })}
+        />
+      );
 
     case "multiplayer":
       return (
