@@ -59,6 +59,26 @@ describe("useResumableSudoku", () => {
     expect(result.current.initialTimerSeconds).toBe(0);
   });
 
+  it("records the strongest assistance used even after switching and reloading", () => {
+    const options = {
+      gameKey: "assist-history",
+      initialPuzzle: puzzleMissingOneCell(),
+      difficulty: "easy" as const,
+      initialAssistLevel: "paper" as const,
+      getTimerSeconds: () => 60,
+    };
+    const first = renderHook(() => useResumableSudoku(options));
+    act(() => first.result.current.setAssistLevel("full"));
+    act(() => first.result.current.setAssistLevel("paper"));
+    first.unmount();
+    const { result } = renderHook(() => useResumableSudoku(options));
+    expect(result.current.assistLevel).toBe("paper");
+    act(() => result.current.game.selectCell(0, 0));
+    act(() => result.current.game.placeNumber(5));
+    expect(getStatsForDifficulty("easy", "paper")).toBeNull();
+    expect(getStatsForDifficulty("easy", "full")?.bestTime).toBe(60);
+  });
+
   it("resumes puzzle, timer, and assistLevel from a saved game", () => {
     saveGame(
       "test-key",
