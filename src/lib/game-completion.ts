@@ -1,6 +1,6 @@
 import { type DailyStreak, recordDailyCompletion } from "./daily-streak.ts";
 import { deleteGame } from "./game-storage.ts";
-import { saveGameResult } from "./stats.ts";
+import { getStatsForDifficulty, saveGameResult } from "./stats.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type GameCompletionContext = {
@@ -17,6 +17,10 @@ export type GameCompletionContext = {
 };
 
 export type GameCompletionResult = {
+  stats: ReturnType<typeof getStatsForDifficulty>;
+  isNewPB: boolean;
+  assistLevel: AssistLevel;
+  timeSeconds: number;
   /** Streak after this completion. Present iff dailyDate was supplied. */
   streak?: DailyStreak;
 };
@@ -32,15 +36,23 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
   if (ctx.gameKey) {
     deleteGame(ctx.gameKey);
   }
-  saveGameResult(
+  const priorBest =
+    getStatsForDifficulty(ctx.difficulty, ctx.assistLevel)?.bestTime ?? null;
+  const stats = saveGameResult(
     ctx.difficulty,
     ctx.assistLevel,
     ctx.timeSeconds,
     true,
     ctx.hintsUsed,
   );
-  if (ctx.dailyDate) {
-    return { streak: recordDailyCompletion(ctx.dailyDate) };
-  }
-  return {};
+  const result: GameCompletionResult = {
+    stats,
+    isNewPB:
+      ctx.hintsUsed === 0 &&
+      (priorBest === null || ctx.timeSeconds < priorBest),
+    assistLevel: ctx.assistLevel,
+    timeSeconds: ctx.timeSeconds,
+  };
+  if (ctx.dailyDate) result.streak = recordDailyCompletion(ctx.dailyDate);
+  return result;
 }

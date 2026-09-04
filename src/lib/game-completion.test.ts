@@ -11,7 +11,10 @@ describe("completeGame", () => {
   it("returns updated statistics and the personal-best decision for the completed game", () => {
     saveGameResult("easy", "standard", 60, true, 0);
     const result = completeGame({
-      difficulty: "easy", assistLevel: "standard", timeSeconds: 30, hintsUsed: 0,
+      difficulty: "easy",
+      assistLevel: "standard",
+      timeSeconds: 30,
+      hintsUsed: 0,
     });
     expect(result).toMatchObject({
       stats: { gamesPlayed: 2, bestTime: 30, averageTime: 45 },

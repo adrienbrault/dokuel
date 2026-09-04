@@ -174,6 +174,9 @@ export function useResumableSudoku({
   // On completion: orchestrate side effects via completeGame, notify caller.
   // Guarded so dep churn (getTimerSeconds is recreated every render) can't
   // re-fire completeGame and log the same win multiple times.
+  const [completion, setCompletion] = useState<GameCompletionResult | null>(
+    null,
+  );
   const completedRef = useRef(false);
   useEffect(() => {
     if (game.status !== "completed") {
@@ -191,6 +194,7 @@ export function useResumableSudoku({
       hintsUsed: game.hintsUsed,
       dailyDate,
     });
+    setCompletion(result);
     onComplete?.(seconds, result);
   }, [
     game.status,
@@ -206,6 +210,7 @@ export function useResumableSudoku({
   return {
     game,
     puzzle,
+    completion,
     initialTimerSeconds: saved?.timer ?? 0,
     assistLevel,
     setAssistLevel,

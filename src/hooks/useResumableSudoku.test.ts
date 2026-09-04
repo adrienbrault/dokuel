@@ -319,7 +319,7 @@ describe("useResumableSudoku", () => {
     expect(getStatsForDifficulty("easy")!.gamesPlayed).toBe(1);
   });
 
-  it("calls onComplete with the timer value and an empty result for non-daily games", () => {
+  it("calls onComplete with the timer value and recorded result for non-daily games", () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() =>
       useResumableSudoku({
@@ -334,7 +334,12 @@ describe("useResumableSudoku", () => {
     act(() => result.current.game.selectCell(0, 0));
     act(() => result.current.game.placeNumber(5));
 
-    expect(onComplete).toHaveBeenCalledWith(73, {});
+    expect(onComplete).toHaveBeenCalledWith(73, {
+      assistLevel: "standard",
+      isNewPB: true,
+      timeSeconds: 73,
+      stats: { gamesPlayed: 1, bestTime: 73, averageTime: 73 },
+    });
   });
 
   it("when dailyDate is given, onComplete receives the recorded streak", () => {

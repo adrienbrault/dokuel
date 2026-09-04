@@ -48,10 +48,9 @@ export function saveGameResult(
     won,
     hintsUsed: hintsUsed ?? 0,
   });
-  writeJson(
-    STORAGE_KEY,
-    evictPerBucket(stats, (s) => s.difficulty + s.assistLevel),
-  );
+  const retained = evictPerBucket(stats, (s) => s.difficulty + s.assistLevel);
+  writeJson(STORAGE_KEY, retained);
+  return summarizeStats(retained, difficulty, assistLevel);
 }
 
 /** Drop the oldest entries of any bucket that exceeds the cap,
@@ -82,7 +81,15 @@ export function getStatsForDifficulty(
   difficulty: Difficulty,
   assistLevel?: AssistLevel,
 ) {
-  const stats = getStats().filter(
+  return summarizeStats(getStats(), difficulty, assistLevel);
+}
+
+function summarizeStats(
+  history: GameStats[],
+  difficulty: Difficulty,
+  assistLevel?: AssistLevel,
+) {
+  const stats = history.filter(
     (s) =>
       s.difficulty === difficulty &&
       s.won &&

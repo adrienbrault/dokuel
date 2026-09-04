@@ -60,6 +60,7 @@ export function SoloGame({
     assistLevel,
     setAssistLevel,
     maxAssistLevel,
+    completion,
     initialTimerSeconds,
   } = useResumableSudoku({
     gameKey,
@@ -245,17 +246,8 @@ export function SoloGame({
             difficulty={difficulty}
             onNewGame={onBack}
             onRematch={onRematch}
-            stats={
-              priorStats ?? {
-                gamesPlayed: 0,
-                bestTime: timerSecondsRef.current,
-                averageTime: timerSecondsRef.current,
-              }
-            }
-            isNewPB={
-              game.hintsUsed === 0 &&
-              (personalBest === null || timerSecondsRef.current < personalBest)
-            }
+            stats={completion?.stats ?? null}
+            isNewPB={completion?.isNewPB}
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
             isDaily={isDaily}
