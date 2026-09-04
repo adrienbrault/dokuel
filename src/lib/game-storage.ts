@@ -1,5 +1,6 @@
 import type { FriendChallenge } from "./challenge.ts";
 import { isCalendarDate, todayLocalISO } from "./date.ts";
+import type { GameOrigin } from "./result-store-types.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type MultiplayerGameIdentity = {
@@ -46,6 +47,12 @@ export type SavedGame = {
   // Hints taken so far. Persisted so a save/resume cycle can't launder
   // a hint-assisted game into PB eligibility.
   hintsUsed: number;
+  /** Provenance retained so a resumed game keeps its result category. */
+  origin?: GameOrigin;
+  /** Stable attempt identity used to make completion recording idempotent. */
+  attemptId?: string;
+  /** Stable puzzle identity retained for result history and comparison. */
+  puzzleId?: string;
 };
 
 const STORAGE_PREFIX = "sudoku_save_";
@@ -111,10 +118,28 @@ export function loadGame(key: string): SavedGame | null {
     ) {
       data.hintsUsed = 0;
     }
+    if (data.origin !== undefined && !isGameOrigin(data.origin)) {
+      delete data.origin;
+    }
+    if (!isOptionalId(data.attemptId)) delete data.attemptId;
+    if (!isOptionalId(data.puzzleId)) delete data.puzzleId;
     return data as SavedGame;
   } catch {
     return null;
   }
+}
+
+function isGameOrigin(value: unknown): value is GameOrigin {
+  return (
+    typeof value === "string" &&
+    ["generated", "daily", "friend", "imported", "replay"].includes(value)
+  );
+}
+
+function isOptionalId(value: unknown): value is string | undefined {
+  return (
+    value === undefined || (typeof value === "string" && value.length <= 256)
+  );
 }
 
 export type SavedGameSummary = {

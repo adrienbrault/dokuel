@@ -7,6 +7,7 @@ import {
   type GameCompletionResult,
 } from "../lib/game-completion.ts";
 import { loadGame, saveGame } from "../lib/game-storage.ts";
+import type { GameOrigin } from "../lib/result-store-types.ts";
 import { generatePuzzleWithSolution, solvePuzzle } from "../lib/sudoku.ts";
 import type { AssistLevel, Cell, Difficulty } from "../lib/types.ts";
 import { useFlushOnExit } from "./useFlushOnExit.ts";
@@ -26,6 +27,12 @@ type UseResumableSudokuOptions = {
   getTimerSeconds: () => number;
   /** ISO date (YYYY-MM-DD) — signals a daily challenge, drives streak. */
   dailyDate?: string | undefined;
+  /** Explicit result category; inferred from dailyDate/challenge when absent. */
+  origin?: GameOrigin | undefined;
+  /** Stable attempt identity; defaults to gameKey when one exists. */
+  attemptId?: string | undefined;
+  /** Stable puzzle identity; defaults to the resolved puzzle string. */
+  puzzleId?: string | undefined;
   /** Called once when the board transitions to completed. */
   onComplete?:
     | ((timeSeconds: number, result: GameCompletionResult) => void)
@@ -49,6 +56,9 @@ export function useResumableSudoku({
   initialAssistLevel,
   getTimerSeconds,
   dailyDate,
+  origin,
+  attemptId,
+  puzzleId,
   onComplete,
 }: UseResumableSudokuOptions) {
   // Resolve puzzle + solution + save together: a saved or provided
@@ -74,6 +84,12 @@ export function useResumableSudoku({
     return { saved: null, ...generatePuzzleWithSolution(difficulty, rng) };
   }, [gameKey, initialPuzzle, difficulty]);
   const { saved, puzzle, solution } = resolved;
+  const resultOrigin =
+    saved?.origin ??
+    origin ??
+    (dailyDate ? "daily" : challenge ? "friend" : "generated");
+  const resultAttemptId = saved?.attemptId ?? attemptId ?? gameKey;
+  const resultPuzzleId = saved?.puzzleId ?? puzzleId ?? puzzle;
 
   const savedBoard = useMemo(
     () =>
@@ -124,6 +140,9 @@ export function useResumableSudoku({
       maxAssistLevel,
       challenge,
       hintsUsed: game.hintsUsed,
+      origin: resultOrigin,
+      ...(resultAttemptId === undefined ? {} : { attemptId: resultAttemptId }),
+      ...(resultPuzzleId === undefined ? {} : { puzzleId: resultPuzzleId }),
     });
   }, [
     game.board,
@@ -135,6 +154,9 @@ export function useResumableSudoku({
     assistLevel,
     maxAssistLevel,
     challenge,
+    resultOrigin,
+    resultAttemptId,
+    resultPuzzleId,
   ]);
 
   useEffect(persist, [persist]);
@@ -162,6 +184,9 @@ export function useResumableSudoku({
       timeSeconds: seconds,
       hintsUsed: game.hintsUsed,
       dailyDate,
+      origin: resultOrigin,
+      attemptId: resultAttemptId,
+      puzzleId: resultPuzzleId,
     });
     setCompletion(result);
     onComplete?.(seconds, result);
@@ -172,6 +197,9 @@ export function useResumableSudoku({
     gameKey,
     game.hintsUsed,
     dailyDate,
+    resultOrigin,
+    resultAttemptId,
+    resultPuzzleId,
     getTimerSeconds,
     onComplete,
   ]);
