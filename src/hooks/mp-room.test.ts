@@ -605,6 +605,22 @@ describe("hydration", () => {
 });
 
 describe("commands", () => {
+  it("keeps the finished puzzle until both seated players agree to rematch", () => {
+    const { doc, room, solution } = setupStartedGame();
+    const opponent = createRoom({ doc, roomId: ROOM_ID, playerId: "p2", playerName: () => "Bob", initialDifficulty: null, now: () => T0 });
+    room.complete(solution);
+    const puzzle = room.snapshot().puzzle;
+    room.rematch();
+    expect(room.snapshot().puzzle).toBe(puzzle);
+    expect(room.snapshot().roomState?.gameNumber).toBe(1);
+    opponent.rematch();
+    expect(room.snapshot().roomState?.gameNumber).toBe(2);
+    expect(room.snapshot().gameOver).toBeNull();
+    expect(opponent.snapshot().puzzle).toBe(room.snapshot().puzzle);
+    opponent.close();
+    room.close();
+  });
+
   function countClues(puzzle: string): number {
     return puzzle.split("").filter((c) => c !== ".").length;
   }
