@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   deleteGame,
+  listSavedGames,
   loadGame,
   type SavedGame,
   saveGame,
@@ -25,6 +26,13 @@ describe("game-storage", () => {
   it("round-trips a saved game", () => {
     saveGame("k", VALID_GAME);
     expect(loadGame("k")).toEqual(VALID_GAME);
+  });
+
+  it("identifies the room when listing a legacy multiplayer save", () => {
+    saveGame("mp_calm-lamb-g4bb_123.........", VALID_GAME);
+    expect(listSavedGames()).toEqual([
+      expect.objectContaining({ roomId: "calm-lamb-g4bb" }),
+    ]);
   });
 
   it("returns null for a missing key", () => {
