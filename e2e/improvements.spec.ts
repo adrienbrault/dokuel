@@ -1,6 +1,19 @@
 import { expect } from "@playwright/test";
 import { nearlyWonSave, preparePage, readBoard, test } from "./fixtures.ts";
 
+test("expanded settings stay within the viewport", async ({ page }) => {
+  await page.goto("/solo/easy/accessible-settings");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Try the controls" }).click();
+  const panel = page.getByText("Numpad position", { exact: true }).locator("../..");
+  const bounds = await panel.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  await page.getByRole("button", { name: "Got it" }).click();
+  await expect(page.getByRole("button", { name: "How to play" })).toBeVisible();
+});
+
 // Real browser checks for the cross-screen promises made by the review fixes.
 test.describe("friend challenge", () => {
   test.use({ storage: { "sudoku_save_share-source": nearlyWonSave } });
