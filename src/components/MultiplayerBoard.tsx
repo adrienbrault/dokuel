@@ -14,7 +14,7 @@ import {
   loadMultiplayerGame,
   saveMultiplayerGame,
 } from "../lib/game-storage.ts";
-import type { AssistLevel, Cell } from "../lib/types.ts";
+import type { AssistLevel, Cell, MultiplayerResult } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -54,6 +54,8 @@ export type MultiplayerBoardProps = {
   onComplete: (board: string) => void;
   onRematch: () => void;
   rematchReady?: string[] | undefined;
+  /** Verified finish records projected from the room. */
+  results?: Record<string, MultiplayerResult> | undefined;
   onBack: () => void;
   /** Shared wall-clock start instant, including the room's countdown. */
   startedAt?: number | null | undefined;
@@ -77,6 +79,7 @@ export function MultiplayerBoard({
   onComplete,
   onRematch,
   rematchReady = [],
+  results,
   onBack,
   startedAt,
   now,
@@ -295,6 +298,18 @@ export function MultiplayerBoard({
             time={formatTime(elapsedSeconds)}
             difficulty={difficulty}
             isMultiplayer
+            multiplayerResults={
+              startedAt !== null && startedAt !== undefined
+                ? {
+                    playerId,
+                    opponentName,
+                    results: results ?? {},
+                    startedAt,
+                    playerTimeSeconds: elapsedSeconds,
+                    winnerId: gameOver?.winnerId,
+                  }
+                : undefined
+            }
             rematchState={
               rematchRequested
                 ? "requested"

@@ -117,6 +117,7 @@ export function MultiplayerGame({
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
           startedAt={mp.roomState?.startedAt}
+          results={mp.roomState?.results}
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}

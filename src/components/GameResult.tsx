@@ -7,6 +7,10 @@ import {
 import { formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
 
+import {
+  MultiplayerResultComparison,
+  type MultiplayerResultComparisonProps,
+} from "./MultiplayerResultComparison.tsx";
 import { ResultShare } from "./ResultShare.tsx";
 
 type GameResultProps = {
@@ -17,6 +21,7 @@ type GameResultProps = {
   timeSeconds?: number | undefined;
   difficulty?: Difficulty | undefined;
   isMultiplayer?: boolean | undefined;
+  multiplayerResults?: MultiplayerResultComparisonProps | undefined;
   rematchState?: "requested" | "offered" | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
@@ -40,6 +45,7 @@ export function GameResult({
   time,
   difficulty,
   isMultiplayer,
+  multiplayerResults,
   onRematch,
   rematchState,
   onNewGame,
@@ -140,6 +146,10 @@ export function GameResult({
             </span>
           )}
         </div>
+
+        {isMultiplayer && multiplayerResults && (
+          <MultiplayerResultComparison {...multiplayerResults} />
+        )}
 
         {comparison && (
           <p
