@@ -3,6 +3,7 @@ import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
+  MultiplayerResult,
   Player,
   RoomState,
 } from "../lib/types.ts";
@@ -178,6 +179,8 @@ export function startGame(
       p.delete("readyGameNumber");
       p.delete("readyDifficulty");
       p.delete("readyAssistLevel");
+      p.delete("completedAt");
+      p.delete("completedBoard");
       p.set("cellsRemaining", 81 - clueCount);
       p.set("completionPercent", 0);
     }
@@ -277,19 +280,40 @@ export function claimWinner(
   playerId: string,
   playerName: string,
   board: string | null,
+  completedAt = Date.now(),
 ): boolean {
   const roomMap = room.doc.getMap("room");
+  const solution = roomMap.get("solution");
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  const recordsSolvedResult =
+    playerMap !== undefined &&
+    Number.isSafeInteger(completedAt) &&
+    completedAt >= 0 &&
+    judgeClaim(board, solution) === "solved";
   const existingWinner = roomMap.get("winnerId");
   if (existingWinner !== null && existingWinner !== undefined) {
-    const solution = roomMap.get("solution");
     const existing = judgeClaim(roomMap.get("winnerBoard"), solution);
     const mayOverwrite =
       existing === "forged" ||
       (existing === "forfeit" && judgeClaim(board, solution) === "solved");
-    if (!mayOverwrite) return false;
+    if (!mayOverwrite) {
+      if (recordsSolvedResult && playerMap) {
+        room.doc.transact(() => {
+          playerMap.set("completedAt", completedAt);
+          playerMap.set("completedBoard", board);
+        });
+      }
+      return false;
+    }
   }
 
   room.doc.transact(() => {
+    if (recordsSolvedResult && playerMap) {
+      playerMap.set("completedAt", completedAt);
+      playerMap.set("completedBoard", board);
+    }
     roomMap.set("winnerId", playerId);
     roomMap.set("winnerName", playerName);
     roomMap.set("winnerBoard", board);
@@ -322,6 +346,31 @@ export function getHostId(room: P2PRoom): string {
 function projectWinnerBoard(raw: unknown): string | null {
   if (raw === null || raw === undefined) return null;
   return typeof raw === "string" ? raw : "";
+}
+
+function projectResults(
+  room: P2PRoom,
+  players: Player[],
+): Record<string, MultiplayerResult> {
+  const solution = room.doc.getMap("room").get("solution");
+  if (typeof solution !== "string") return {};
+
+  const results: Record<string, MultiplayerResult> = {};
+  const playersMap = room.doc.getMap("players");
+  for (const player of players) {
+    const playerMap = playersMap.get(player.id) as Y.Map<unknown>;
+    const completedAt = playerMap.get("completedAt");
+    const completedBoard = playerMap.get("completedBoard");
+    if (
+      typeof completedAt === "number" &&
+      Number.isSafeInteger(completedAt) &&
+      typeof completedBoard === "string" &&
+      judgeClaim(completedBoard, solution) === "solved"
+    ) {
+      results[player.id] = { completedAt, board: completedBoard };
+    }
+  }
+  return results;
 }
 
 /**
@@ -374,6 +423,7 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     // a board — a reader must not judge it a forfeit while the writer
     // judges it forged.
     winnerBoard: projectWinnerBoard(roomMap.get("winnerBoard")),
+    results: projectResults(room, players),
     startedAt:
       typeof roomMap.get("startedAt") === "number"
         ? (roomMap.get("startedAt") as number)
@@ -468,6 +518,8 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
       roomMap.set("winnerName", snap.winnerName);
     if (staleLobby || !roomMap.has("winnerBoard"))
       roomMap.set("winnerBoard", snap.winnerBoard ?? null);
+    if (staleLobby || !roomMap.has("startedAt"))
+      roomMap.set("startedAt", snap.startedAt ?? null);
     snap.players.forEach((p, joinOrder) => {
       if (playersMap.has(p.id) && !staleLobby) return;
       const pm = new Y.Map<unknown>();
@@ -476,6 +528,16 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
       pm.set("cellsRemaining", p.cellsRemaining);
       pm.set("completionPercent", p.completionPercent);
       pm.set("joinOrder", joinOrder);
+      const result = snap.results[p.id];
+      if (result) {
+        pm.set("completedAt", result.completedAt);
+        pm.set("completedBoard", result.board);
+      }
+      if (snap.readyPlayers.includes(p.id)) {
+        pm.set("readyGameNumber", snap.gameNumber);
+        pm.set("readyDifficulty", snap.difficulty);
+        pm.set("readyAssistLevel", snap.assistLevel);
+      }
       if (snap.rematchReady.includes(p.id)) {
         pm.set("rematchGameNumber", snap.gameNumber);
         pm.set("rematchPuzzle", snap.puzzle);
