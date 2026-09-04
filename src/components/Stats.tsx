@@ -180,7 +180,10 @@ function AssistModeRow({ stats }: { stats: AssistLevelStats }) {
         </span>
       </div>
       <div className="flex gap-6 text-center">
-        <ModeStat label="Best" value={formatTime(stats.bestTime)} />
+        <ModeStat
+          label="Best"
+          value={stats.bestTime === null ? "—" : formatTime(stats.bestTime)}
+        />
         <ModeStat label="Avg" value={formatTime(stats.averageTime)} />
       </div>
     </li>

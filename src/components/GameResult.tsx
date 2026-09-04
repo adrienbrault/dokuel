@@ -14,7 +14,11 @@ type GameResultProps = {
   isMultiplayer?: boolean | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
-  stats?: { gamesPlayed: number; bestTime: number; averageTime: number } | null;
+  stats?: {
+    gamesPlayed: number;
+    bestTime: number | null;
+    averageTime: number;
+  } | null;
   isNewPB?: boolean | undefined;
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
@@ -191,7 +195,10 @@ export function GameResult({
         {stats && !isMultiplayer && (
           <div className="grid grid-cols-3 gap-2.5 w-full text-center">
             <StatTile label="Played" value={String(stats.gamesPlayed)} />
-            <StatTile label="Best" value={formatTime(stats.bestTime)} />
+            <StatTile
+              label="Best"
+              value={stats.bestTime === null ? "—" : formatTime(stats.bestTime)}
+            />
             <StatTile label="Average" value={formatTime(stats.averageTime)} />
           </div>
         )}

@@ -96,7 +96,7 @@ export function getStatsForDifficulty(
     .map((s) => s.time);
   return {
     gamesPlayed: stats.length,
-    bestTime: unhinted.length > 0 ? Math.min(...unhinted) : Math.min(...times),
+    bestTime: unhinted.length > 0 ? Math.min(...unhinted) : null,
     averageTime: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
   };
 }
@@ -106,7 +106,7 @@ const ASSIST_LEVELS: readonly AssistLevel[] = ["paper", "standard", "full"];
 export type AssistLevelStats = {
   assistLevel: AssistLevel;
   gamesPlayed: number;
-  bestTime: number;
+  bestTime: number | null;
   averageTime: number;
 };
 

@@ -67,8 +67,8 @@ describe("completeGame", () => {
     const stats = getStatsForDifficulty("hard");
     expect(stats).not.toBeNull();
     expect(stats!.gamesPlayed).toBe(1);
-    // bestTime falls back to all games when no hint-free run exists
-    expect(stats!.bestTime).toBe(300);
+    // Hint-assisted wins count toward history, but not personal bests.
+    expect(stats!.bestTime).toBeNull();
   });
 
   it("returns no streak when dailyDate is omitted", () => {
