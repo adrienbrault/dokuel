@@ -122,6 +122,21 @@ describe("daily-streak", () => {
       expect(result.longestStreak).toBe(3);
     });
 
+    it("keeps current and longest streaks beyond the recent-day cap", () => {
+      const firstDay = Date.UTC(2026, 0, 1);
+      for (let offset = 0; offset < 61; offset++) {
+        const date = new Date(firstDay + offset * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        recordDailyCompletion(date);
+      }
+
+      const result = getDailyStreak();
+      expect(result.completedDates).toHaveLength(60);
+      expect(result.currentStreak).toBe(61);
+      expect(result.longestStreak).toBe(61);
+    });
+
     it("persists to localStorage", () => {
       recordDailyCompletion("2026-03-08");
       const stored = JSON.parse(localStorage.getItem("sudoku_daily_streak")!);
