@@ -1,10 +1,35 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { Stats } from "./Stats.tsx";
 
 describe("Stats page — solo section", () => {
+  it("lets players inspect friend results separately from fresh puzzles", () => {
+    localStorage.clear();
+    saveGameResult({
+      difficulty: "easy",
+      assistLevel: "standard",
+      time: 300,
+      won: true,
+      origin: "generated",
+    });
+    saveGameResult({
+      difficulty: "easy",
+      assistLevel: "standard",
+      time: 60,
+      won: true,
+      origin: "friend",
+    });
+    render(<Stats onBack={vi.fn()} />);
+    const section = screen.getByRole("region", { name: "Solo" });
+    expect(within(section).queryByText("01:00")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "Puzzle source" }), {
+      target: { value: "friend" },
+    });
+    expect(within(section).getAllByText("01:00").length).toBeGreaterThan(0);
+    expect(within(section).queryByText("05:00")).toBeNull();
+  });
   beforeEach(() => {
     localStorage.clear();
   });
