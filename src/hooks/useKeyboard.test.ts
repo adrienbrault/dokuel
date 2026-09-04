@@ -19,6 +19,18 @@ function setup(overrides: Partial<Parameters<typeof useKeyboard>[0]> = {}) {
 }
 
 describe("useKeyboard", () => {
+  it("leaves settings radio keys to the focused control", () => {
+    const opts = setup();
+    const radio = document.createElement("button");
+    radio.setAttribute("role", "radio");
+    document.body.append(radio);
+    fireEvent.keyDown(radio, { key: "ArrowRight" });
+    fireEvent.keyDown(radio, { key: "n" });
+    expect(opts.onSelectCell).not.toHaveBeenCalled();
+    expect(opts.onToggleNotes).not.toHaveBeenCalled();
+    radio.remove();
+  });
+
   it("moves to row and board edges with Home and End", () => {
     const opts = setup({ selectedCell: { row: 3, col: 4 } });
     fireEvent.keyDown(window, { key: "Home" });
