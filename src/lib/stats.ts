@@ -1,4 +1,5 @@
 import {
+  getLifetimeGamesPlayed,
   getRecentResultsForOrigin,
   getSummary,
   readRecentResults,
@@ -112,6 +113,7 @@ export function getStatsForOrigin(
 }
 
 export { getRecentResultsForOrigin };
+export { getLifetimeGamesPlayed };
 
 function metadataFromOptions(options: SaveGameResultOptions): ResultMetadata {
   return {
