@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { expect } from "@playwright/test";
 import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
   fillCells,
@@ -534,6 +535,21 @@ test.describe("multiplayer session", () => {
       path: screenshotPath("multiplayer-opponent-finished-banner", project),
     });
 
+    // A rematch request must leave the unfinished board playable until accepted.
+    const beforeRequest = await readBoard(page);
+    await guest.getByRole("button", { name: "Rematch", exact: true }).click();
+    await expect(
+      guest.getByRole("button", { name: "Rematch requested" }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "Accept rematch" }).waitFor();
+    expect(await readBoard(page)).toBe(beforeRequest);
+    await page.screenshot({
+      path: screenshotPath("multiplayer-rematch-request", project),
+    });
+    await page.getByRole("button", { name: "Accept rematch" }).click();
+    await expect(guest.getByRole("dialog")).toBeHidden();
+    await expect.poll(() => readBoard(page)).not.toBe(beforeRequest);
+    expect(await readBoard(page)).toBe(await readBoard(guest));
     await guest.close();
   });
 });
