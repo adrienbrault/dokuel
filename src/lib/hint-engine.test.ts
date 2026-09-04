@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
+import { presentHint } from "./learning-hints.ts";
 import { parsePuzzle, solvePuzzle } from "./sudoku.ts";
 
 describe("findHint", () => {
@@ -315,6 +316,22 @@ describe("findHint", () => {
       expect(hint!.technique).toBe("naked-quad");
       expect(hint!.position).toEqual({ row: 3, col: 0 });
       expect(hint!.value).toBe(9);
+    });
+
+    it("teaches an elimination even when it does not unlock a placement", () => {
+      const CHAINS_STUCK =
+        "..982..454....5982582.9..372.8...519154982376.9.5.14289.7...8513657182948.1.59763";
+      const board = parsePuzzle(CHAINS_STUCK);
+      const hint = findHint(board, solvePuzzle(CHAINS_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("locked-candidates");
+      expect(hint!.eliminationOnly).toBe(true);
+      expect(hint!.relatedCells.length).toBeGreaterThan(0);
+
+      const reveal = presentHint(hint!, "reveal");
+      expect(reveal.explanation).toContain("Apply that elimination");
+      expect(reveal.explanation).not.toContain("Enter ");
     });
   });
 
