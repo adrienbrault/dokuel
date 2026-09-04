@@ -17,13 +17,16 @@ Premium, mobile-first web app for solo and real-time 1v1 sudoku. No accounts req
 
 ### Landing Page
 Four primary actions, always visible:
-1. **Start Solo** — immediately pick difficulty, start playing
-2. **Daily Challenge** — same puzzle for everyone, every day (seeded RNG)
-3. **Create Game** — create a 1v1 room, get a share link
+1. **Challenge a friend** — primary action; create a live 1v1 room and share its link
+2. **Start Solo** — immediately pick difficulty, start playing
+3. **Daily Challenge** — same puzzle for everyone, every day (seeded RNG)
 4. **Join Game** — join from invite link (or manual room code)
 
 Plus contextual entries:
-- **Continue** — resume the most recent in-progress solo game
+- **Continue**, **Continue challenge**, or **Return to duel** — resume the saved
+  game in its original mode, preserving room and game identity
+- **Try the controls** — a short interactive value-entry and notes guide;
+  available again in game settings
 - **View Stats** — per-difficulty solo stats and multiplayer match history
 - Current daily streak indicator
 
@@ -40,21 +43,24 @@ Available before every game (solo or multiplayer):
   chains or trial-and-error required
 
 **Assistance selector** (three levels, also switchable mid-game from the
-settings popover):
-- **Paper** — no help at all: no conflict marks, no auto-cleared notes
-- **Standard** — conflicts highlighted, resolved pencil notes auto-cleared
+settings popover, except fixed-assistance friend challenges):
+- **Paper** — no automatic help: no error marks or auto-cleared notes; solo
+  hints remain available and exclude the result from personal bests
+- **Standard** — incorrect entries highlighted, peer notes auto-cleared
 - **Full** — Standard plus remaining-digit counts on the numpad and
   row/column/box halos for the highlighted digit
 
 ### Solo Game
 - Standard sudoku with timer
-- Notes mode (with subtle board ring indicator when active), erase, undo (with move count badge)
+- Visible Notes toggle shared by keyboard and touch, erase, and undo
+- Interactive controls guide for value entry and notes
 - Hint system — surfaces the next logical step (naked or hidden single) with
   an explanation and the proving cells highlighted; if the board contains a
   wrong entry, the hint points at the mistake first. Falls back to revealing
   the selected cell's correct value when no deduction applies.
-- Pause functionality — overlay hides the board while paused; auto-pauses
-  when the tab is hidden
+- Pause functionality — overlay hides the board and disables every input
+  path (keyboard, gestures, notes, erase, undo, hints); auto-pauses when the
+  tab is hidden
 - Soft validation: conflicts shown, not blocked (per the assist level)
 - Auto-save — game progress persists across browser sessions via localStorage
 - Shareable board URLs — `/solo/<difficulty>/<key>` seeds generation, so the
@@ -63,8 +69,10 @@ settings popover):
   (hint-assisted games are excluded from PB tracking)
 - Completion when all cells filled and valid
 - Per-difficulty stats tracking (best time, average, games played) in
-  localStorage, kept per assist level
-- Win modal with stats summary, personal best indicator, and share button
+  localStorage, classified by the strongest assistance used across the game
+  and reloads; hinted-only history has no personal best
+- Win modal uses the just-recorded stats and PB result, fits short viewports
+  with scrolling, and offers Challenge a friend, New puzzle, and Back to home
 - Confetti celebration animation on completion
 
 ### Daily Challenge
@@ -73,8 +81,17 @@ settings popover):
 - Medium difficulty
 - Streak tracking — current streak and longest streak shown on landing page
 
+### Friend Time Challenge
+- After a solo or daily win, Challenge a friend shares the exact puzzle,
+  target time, strongest assistance used, and hint count in `/challenge/<payload>`
+- Uses the native share sheet, then clipboard, then selectable text if needed
+- Recipient sees the target and conditions before starting their own timer
+- Progress resumes under the challenge identity; assistance stays fixed
+- Completion compares times; extra hints label the result as practice
+- Links need no account or game server; times are casual, client-reported results
+
 ### Create Game Flow
-1. User taps "Create Game"
+1. User taps "Challenge a friend" on the landing page
 2. Selects difficulty
 3. Lobby opens with shareable link and room code (tap to copy)
 4. User shares link (Web Share API or copy)
@@ -186,8 +203,9 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 - Winner announcement with confetti celebration
 - Stats: time, personal best indicator
 - Share result button
-- "Rematch" button (same players, new puzzle, same difficulty)
-- "New Game" button (back to landing)
+- "Rematch" requests a new puzzle at the same difficulty. Both players must
+  agree; the unfinished player can keep solving or choose Accept rematch
+- "Leave room" returns to the landing page
 - Match recorded to multiplayer history (opponent, outcome, time) shown on
   the Stats screen
 

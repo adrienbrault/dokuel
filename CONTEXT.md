@@ -29,9 +29,10 @@ conflict.
 _Avoid_: wrong cell, conflict
 
 **Assist level**:
-How much the game helps: `paper` (nothing), `standard`, or `full`. Gates
-conflict display, peer-note elimination, remaining counts, and the row/column/
-box halo.
+How much automatic help the game provides: `paper`, `standard`, or `full`.
+Gates error display, peer-note elimination, remaining counts, and the
+row/column/box halo. Solo hints remain available at every level. Results are
+classified by the strongest assist level used, including before a reload.
 _Avoid_: difficulty, help mode, validation mode
 
 **Peer**:
@@ -51,10 +52,19 @@ _Avoid_: daily challenge, puzzle of the day
 **Streak**:
 Consecutive days on which the daily was completed.
 
+**Friend challenge**:
+An exact puzzle plus a target time, fixed assist level, and hint allowance
+shared in a link. Friends play independently; extra hints produce a practice
+result instead of a competitive comparison.
+
 **Game key**:
 The identity of one playable game; also the seed for a shareable solo puzzle.
 
 ### Input
+
+**Notes mode**:
+A visible toggle that makes numpad taps and digit keys toggle notes. The same
+mode applies in solo and multiplayer; holding a digit also enters a note.
 
 **Selection**:
 The cell(s) the player is acting on. A single selected cell is the cursor.
@@ -174,7 +184,9 @@ The room's monotonic counter of started games; every start and rematch bumps
 it.
 
 **Rematch**:
-Starting a new game in the same room with the same seats.
+Starting a new game in the same room with the same seats after both players
+agree. Each request belongs to the current game number and puzzle; a request
+alone leaves the unfinished board playable.
 
 **Snapshot**:
 The synchronous local mirror of a room's state kept for crash and reload
@@ -182,7 +194,7 @@ recovery. Not the projected room state used for rendering — call that *room
 state*.
 
 **Hydration grace window**:
-The short wait before a snapshot is applied to an empty room so live peer
+The short wait before a snapshot is applied to an empty room or a stale unstarted lobby so live peer
 state gets first chance.
 
 **Match record**:
