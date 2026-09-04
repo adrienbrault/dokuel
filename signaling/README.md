@@ -80,3 +80,23 @@ credentials, e.g. for local testing against coturn).
 ## Cost
 
 Cloudflare Workers free tier: 100K requests/day, 10ms CPU time/request. The signaling server is extremely lightweight — each multiplayer session only needs a handful of signaling messages for peer discovery.
+# Credential issuance limits
+
+`GET /turn-credentials` uses the `TURN_RATE_LIMITER` binding in
+`wrangler.toml`: 60 requests per minute for each trusted client IP at each
+Cloudflare location. This is an abuse cap, not a global quota; users behind
+the same mobile or office NAT share the allowance. The client caches a
+successful credential response for its page session.
+
+Limited requests return `429` with `Retry-After: 60`. Missing TURN secrets
+still return `404` so the client can use STUN; a missing rate-limit binding
+returns `503` instead of minting without the cap. Credential responses use
+`Cache-Control: no-store`. The upstream fetch times out after five seconds.
+
+Namespace `2026090501` is reserved here for this binding. Deploy the Worker
+configuration together with its source; the limit is not active until then.
+
+Run the HTTP boundary checks with
+`bun run test -- signaling/tests/turn-credentials.test.ts` from the repository
+root. See [Cloudflare's rate-limit binding documentation](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+for locality and namespace behavior.
