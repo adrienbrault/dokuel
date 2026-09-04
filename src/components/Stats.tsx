@@ -12,7 +12,7 @@ import {
   getMultiplayerSummary,
   type MultiplayerGameRecord,
 } from "../lib/multiplayer-stats.ts";
-import { getStats } from "../lib/stats.ts";
+import { getLifetimeGamesPlayed } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { SoloStats } from "./SoloStats.tsx";
 
@@ -23,9 +23,8 @@ type StatsProps = {
 const RECENT_MATCHES_LIMIT = 10;
 
 export function Stats({ onBack }: StatsProps) {
-  const allStats = useMemo(() => getStats(), []);
   const streak = useMemo(() => getDailyStreak(), []);
-  const totalSoloWins = allStats.filter((s) => s.won).length;
+  const totalSoloWins = useMemo(() => getLifetimeGamesPlayed(), []);
   const mpSummary = useMemo(() => getMultiplayerSummary(), []);
   const mpRecent = useMemo(() => {
     const all = getMultiplayerStats();
