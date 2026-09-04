@@ -112,9 +112,20 @@ export type Player = {
   completionPercent: number;
 };
 
+export type MultiplayerResult = {
+  completedAt: number;
+  board: string;
+};
+
 export type RoomState = {
   /** Players who agreed to replace the current game with a rematch. */
   rematchReady?: string[];
+  /** Players who accepted the current lobby rules. */
+  readyPlayers?: string[];
+  /** Shared wall-clock instant at which the current game becomes live. */
+  startedAt?: number | null;
+  /** Verified completion proofs keyed by player id. */
+  results?: Record<string, MultiplayerResult>;
   roomId: string;
   status: RoomStatus;
   difficulty: Difficulty;

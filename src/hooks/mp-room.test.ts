@@ -681,6 +681,44 @@ describe("hydration", () => {
 });
 
 describe("commands", () => {
+  it("waits for both players before starting a shared countdown", () => {
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    joinRoom(p2p, "p2", "Bob");
+
+    const opponent = createRoom({
+      doc,
+      roomId: ROOM_ID,
+      playerId: "p2",
+      playerName: () => "Bob",
+      initialDifficulty: null,
+      now: () => T0,
+    });
+
+    room.start();
+
+    expect(room.snapshot().roomState).toMatchObject({
+      status: "lobby",
+      readyPlayers: ["p1"],
+      startedAt: null,
+    });
+    expect(doc.getMap("room").get("puzzle")).toBeNull();
+
+    opponent.start();
+
+    expect(room.snapshot().roomState).toMatchObject({
+      status: "playing",
+      gameNumber: 1,
+      readyPlayers: [],
+      startedAt: T0 + 3_000,
+    });
+    expect(doc.getMap("room").get("startedAt")).toBe(T0 + 3_000);
+    expect(doc.getMap("room").get("puzzle")).toEqual(expect.any(String));
+
+    opponent.close();
+    room.close();
+  });
+
   it("keeps the finished puzzle until both seated players agree to rematch", () => {
     const { doc, room, solution } = setupStartedGame();
     const opponent = createRoom({
