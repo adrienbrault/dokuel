@@ -48,14 +48,18 @@ test.describe("game completion", () => {
       dialog.getByRole("button", { name: "Challenge a friend" }),
     ).toBeVisible();
 
-    // The win landed in stats and the autosave was consumed.
-    const { statsCount, saveGone } = await page.evaluate(() => ({
-      statsCount: JSON.parse(localStorage.getItem("sudoku_stats") ?? "[]")
-        .length,
-      saveGone: localStorage.getItem("sudoku_save_e2e-done") === null,
-    }));
-    expect(statsCount).toBe(3);
-    expect(saveGone).toBe(true);
+    expect(
+      await page.evaluate(
+        () => localStorage.getItem("sudoku_save_e2e-done") === null,
+      ),
+    ).toBe(true);
+
+    // A fresh page must show both migrated wins plus the new completion.
+    // Assert the public result, independent of the storage envelope's key.
+    await page.goto("/stats");
+    await expect(
+      page.getByText("3 games played", { exact: true }),
+    ).toBeVisible();
   });
 });
 
