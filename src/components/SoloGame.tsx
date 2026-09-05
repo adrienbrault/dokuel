@@ -74,6 +74,7 @@ export function SoloGame({
       initialAssistLevel,
       getTimerSeconds: () => timerSecondsRef.current,
       dailyDate,
+      dailyArchive: archiveDate !== undefined,
       onComplete,
     });
 

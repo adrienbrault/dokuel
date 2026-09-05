@@ -111,6 +111,7 @@ describe("completeGame", () => {
       timeSeconds: 400,
       hintsUsed: 0,
       dailyDate: "2026-05-16",
+      archive: true,
     });
 
     expect(result.streak).toBeUndefined();
@@ -118,6 +119,27 @@ describe("completeGame", () => {
     expect(getDailyStreak().longestStreak).toBe(0);
     expect(isDailyCompleted("2026-05-16")).toBe(false);
     expect(getDailyResult("2026-05-16")?.time).toBe(400);
+  });
+
+  it("credits the streak for today's daily finished after midnight", () => {
+    // Opened at 23:55, solved at 00:05: still the daily the player sat
+    // down to, and the streak walk over completed dates already copes
+    // with the date being yesterday. Deciding by the wall clock at the
+    // moment of the win would break the run instead.
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const date = todayLocalISO(yesterday);
+
+    const result = completeGame({
+      difficulty: "medium",
+      assistLevel: "standard",
+      timeSeconds: 300,
+      hintsUsed: 0,
+      dailyDate: date,
+    });
+
+    expect(result.streak?.currentStreak).toBe(1);
+    expect(isDailyCompleted(date)).toBe(true);
   });
 
   it("records a result for today's daily as well as the streak", () => {

@@ -16,6 +16,12 @@ export function DailyGame({
   onArchive?: (() => void) | undefined;
 }) {
   const date = useMemo(() => dateProp ?? todayLocalISO(), [dateProp]);
+  // Whether this is a replay is settled when the game opens. Re-deciding
+  // on every render would turn today's daily into an archive entry the
+  // moment the clock passes midnight, and cost the player their streak.
+  const [archiveDate] = useState(() =>
+    date === todayLocalISO() ? undefined : date,
+  );
   const [puzzle, setPuzzle] = useState<string | null>(null);
   const [streakInfo, setStreakInfo] = useState<{
     currentStreak: number;
@@ -60,7 +66,7 @@ export function DailyGame({
       gameKey={`daily-${date}-medium`}
       initialPuzzle={puzzle}
       dailyDate={date}
-      archiveDate={date === todayLocalISO() ? undefined : date}
+      archiveDate={archiveDate}
       title={`Daily Challenge - ${formatShortDate(date)}`}
       isDaily={true}
       onBack={onBack}

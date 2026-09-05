@@ -23,6 +23,8 @@ type UseResumableSudokuOptions = {
   getTimerSeconds: () => number;
   /** ISO date (YYYY-MM-DD) — signals a daily challenge, drives streak. */
   dailyDate?: string | undefined;
+  /** The daily is an archive replay: recorded, but never a streak day. */
+  dailyArchive?: boolean | undefined;
   /** Called once when the board transitions to completed. */
   onComplete?:
     | ((timeSeconds: number, result: GameCompletionResult) => void)
@@ -45,6 +47,7 @@ export function useResumableSudoku({
   initialAssistLevel,
   getTimerSeconds,
   dailyDate,
+  dailyArchive,
   onComplete,
 }: UseResumableSudokuOptions) {
   // Resolve puzzle + solution + save together: a saved or provided
@@ -176,6 +179,7 @@ export function useResumableSudoku({
       timeSeconds: seconds,
       hintsUsed: game.hintsUsed,
       dailyDate,
+      archive: dailyArchive,
     });
     onComplete?.(seconds, result);
   }, [
@@ -185,6 +189,7 @@ export function useResumableSudoku({
     gameKey,
     game.hintsUsed,
     dailyDate,
+    dailyArchive,
     getTimerSeconds,
     onComplete,
   ]);

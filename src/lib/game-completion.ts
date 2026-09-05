@@ -1,6 +1,5 @@
 import { recordDailyResult } from "./daily-results.ts";
 import { type DailyStreak, recordDailyCompletion } from "./daily-streak.ts";
-import { todayLocalISO } from "./date.ts";
 import { deleteGame } from "./game-storage.ts";
 import { saveGameResult } from "./stats.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
@@ -16,10 +15,16 @@ export type GameCompletionContext = {
   hintsUsed: number;
   /** ISO date (YYYY-MM-DD) of the daily challenge; signals daily flow. */
   dailyDate?: string | undefined;
+  /**
+   * The daily was replayed from the archive rather than opened as the
+   * day's puzzle. Decided when the game opens, not when it is won: a
+   * daily started at 23:55 and solved at 00:05 is still that day's.
+   */
+  archive?: boolean | undefined;
 };
 
 export type GameCompletionResult = {
-  /** Streak after this completion. Present only for today's daily. */
+  /** Streak after this completion. Present only for a non-archive daily. */
   streak?: DailyStreak;
 };
 
@@ -43,10 +48,10 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
   );
   if (ctx.dailyDate) {
     recordDailyResult(ctx.dailyDate, ctx.timeSeconds);
-    // Only today's daily is a day of the streak. Archive dailies earn
+    // Only the day's daily is a day of the streak. Archive dailies earn
     // their record and their checkmark, but an afternoon spent
     // catching up on old dates must not mint a run nobody played.
-    if (ctx.dailyDate === todayLocalISO()) {
+    if (!ctx.archive) {
       return { streak: recordDailyCompletion(ctx.dailyDate) };
     }
   }
