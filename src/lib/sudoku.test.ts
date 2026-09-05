@@ -147,6 +147,46 @@ describe("generatePuzzle", () => {
   });
 });
 
+describe("generation performance", () => {
+  // Generation runs on the main thread the moment a player picks a
+  // difficulty, so a slow tail is a frozen screen. Hard and expert are
+  // the ones at risk: both re-dig until the grader signs off, and hard
+  // gets a 160-attempt budget.
+  //
+  // The budget is deliberately generous - measured p95 here is around
+  // 220ms for hard and 140ms for expert - because a shared CI runner is
+  // not a benchmark rig. It catches an order-of-magnitude regression,
+  // not a 20% one, and reads p95 rather than the max so one descheduled
+  // run cannot fail the suite.
+  const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
+  const BUDGET_MS = 1500;
+
+  function p95(samples: number[]): number {
+    const sorted = [...samples].sort((a, b) => a - b);
+    return sorted[Math.ceil(sorted.length * 0.95) - 1]!;
+  }
+
+  function timeGeneration(difficulty: "hard" | "expert"): number[] {
+    return SEEDS.map((seed) => {
+      const started = performance.now();
+      generatePuzzle(difficulty, seededRandom(seed));
+      return performance.now() - started;
+    });
+  }
+
+  it("generates a hard board well inside the budget", {
+    timeout: 60_000,
+  }, () => {
+    expect(p95(timeGeneration("hard"))).toBeLessThan(BUDGET_MS);
+  });
+
+  it("generates an expert board well inside the budget", {
+    timeout: 60_000,
+  }, () => {
+    expect(p95(timeGeneration("expert"))).toBeLessThan(BUDGET_MS);
+  });
+});
+
 describe("generatePuzzleWithSolution", () => {
   it("returns the solution the puzzle was dug from", () => {
     const { puzzle, solution } = generatePuzzleWithSolution("medium");
