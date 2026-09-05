@@ -38,6 +38,8 @@ type SoloGameProps = {
   archiveDate?: string | undefined;
   /** A friend's time to beat, carried by the link that opened this board. */
   challenge?: SoloChallenge | undefined;
+  /** An extra link for the result dialog (the daily offers its archive). */
+  resultLink?: { label: string; onClick: () => void } | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
   onComplete?:
@@ -56,6 +58,7 @@ export function SoloGame({
   isDaily = false,
   archiveDate,
   challenge,
+  resultLink,
   onBack,
   onRematch,
   onComplete,
@@ -260,6 +263,7 @@ export function SoloGame({
             isDaily={isDaily}
             archiveDate={archiveDate}
             challenge={challenge}
+            footerLink={resultLink}
             challengeUrl={
               // Daily boards are the same for everyone, so a seeded
               // link would only re-send today's puzzle; the challenge

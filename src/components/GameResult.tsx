@@ -30,6 +30,8 @@ type GameResultProps = {
   challenge?: SoloChallenge | undefined;
   /** Link that replays this exact board against the player's time. */
   challengeUrl?: string | undefined;
+  /** An extra way out, shown under the share action. */
+  footerLink?: { label: string; onClick: () => void } | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
 };
@@ -90,6 +92,7 @@ export function GameResult({
   archiveDate,
   challenge,
   challengeUrl,
+  footerLink,
   tip,
   onDismissTip,
 }: GameResultProps) {
@@ -311,6 +314,15 @@ export function GameResult({
               onClick={handleShare}
             >
               {copied === "result" ? "Copied!" : "Share Result"}
+            </button>
+          )}
+          {footerLink && (
+            <button
+              type="button"
+              className="btn btn-ghost w-full py-2"
+              onClick={footerLink.onClick}
+            >
+              {footerLink.label}
             </button>
           )}
         </div>

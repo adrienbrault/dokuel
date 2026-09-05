@@ -8,10 +8,12 @@ import { SoloGame } from "./SoloGame.tsx";
 export function DailyGame({
   date: dateProp,
   onBack,
+  onArchive,
 }: {
   /** ISO date of an archived daily; omitted for today's. */
   date?: string | undefined;
   onBack: () => void;
+  onArchive?: (() => void) | undefined;
 }) {
   const date = useMemo(() => dateProp ?? todayLocalISO(), [dateProp]);
   const [puzzle, setPuzzle] = useState<string | null>(null);
@@ -63,6 +65,9 @@ export function DailyGame({
       isDaily={true}
       onBack={onBack}
       onComplete={handleComplete}
+      resultLink={
+        onArchive ? { label: "Past dailies", onClick: onArchive } : undefined
+      }
       streakInfo={streakInfo}
     />
   );

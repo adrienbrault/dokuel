@@ -196,6 +196,22 @@ describe("GameResult", () => {
     expect(text).toContain("https://dokuel.com/daily/2026-05-16");
   });
 
+  it("offers the caller's extra link under the share action", async () => {
+    const onClick = vi.fn();
+    render(
+      <GameResult
+        isWinner={true}
+        time="04:00"
+        onNewGame={vi.fn()}
+        footerLink={{ label: "Past dailies", onClick }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Past dailies" }));
+
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
   it("calls onRematch and onNewGame when buttons clicked", async () => {
     const onRematch = vi.fn();
     const onNewGame = vi.fn();

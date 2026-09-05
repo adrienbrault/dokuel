@@ -90,6 +90,7 @@ function App() {
             onCreate={() => navigate({ name: "difficulty", mode: "create" })}
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
+            onArchive={() => navigate({ name: "dailyArchive" })}
             onContinue={(gameKey, difficulty) => {
               navigate({
                 name: "solo",
@@ -157,6 +158,7 @@ function App() {
           key={screen.date ?? "today"}
           date={screen.date}
           onBack={() => navigate({ name: "landing" })}
+          onArchive={() => navigate({ name: "dailyArchive" })}
         />
       );
 
