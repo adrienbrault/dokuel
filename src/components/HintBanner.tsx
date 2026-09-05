@@ -20,6 +20,7 @@ export function HintBanner({ hint, onDismiss }: HintBannerProps) {
     "xy-wing": "XY-Wing",
     swordfish: "Swordfish",
     mistake: "Mistake",
+    "note-conflict": "Impossible Note",
     reveal: "Reveal",
   };
   const techniqueLabel = TECHNIQUE_LABELS[hint.technique];

@@ -327,6 +327,41 @@ describe("findHint", () => {
     });
   });
 
+  describe("impossible notes", () => {
+    // Singles are exhausted on this board, so nothing above the note
+    // check can shadow it.
+    const PAIRS_STUCK =
+      "5.....3277.982.4656..57.891.7....1.49.31.5.78..1..7..9497.1.5823..4927161..758943";
+
+    it("calls out a note the player's own board already rules out", () => {
+      const board = parsePuzzle(PAIRS_STUCK);
+      board[0]![1]!.notes = new Set([5]);
+
+      const hint = findHint(board, solvePuzzle(PAIRS_STUCK)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.kind).toBe("elimination");
+      expect(hint!.technique).toBe("note-conflict");
+      expect(hint!.position).toEqual({ row: 0, col: 1 });
+      if (hint!.kind !== "elimination") throw new Error("expected elimination");
+      expect(hint!.digits).toEqual([5]);
+      expect(hint!.eliminatedCells).toEqual([{ row: 0, col: 1 }]);
+      // The 5 sitting in r1c1 is what proves it.
+      expect(hint!.relatedCells).toContainEqual({ row: 0, col: 0 });
+      expect(hint!.explanation).toContain("r1c2");
+      expect(hint!.explanation).toContain("row 1");
+    });
+
+    it("leaves a note the board still allows alone", () => {
+      const board = parsePuzzle(PAIRS_STUCK);
+      board[0]![1]!.notes = new Set([1]);
+
+      const hint = findHint(board, solvePuzzle(PAIRS_STUCK)!);
+
+      expect(hint!.technique).not.toBe("note-conflict");
+    });
+  });
+
   describe("fallback", () => {
     it("returns a hint from solution when no simple technique applies", () => {
       // A board with many empty cells where techniques are complex

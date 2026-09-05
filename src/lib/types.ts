@@ -77,6 +77,7 @@ export type HintTechnique =
   | "xy-wing"
   | "swordfish"
   | "mistake"
+  | "note-conflict"
   | "reveal";
 
 /** A hint that names a digit the player can write in. */

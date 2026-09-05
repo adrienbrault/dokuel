@@ -7,12 +7,71 @@ import {
 } from "./singles.ts";
 import { getErrors } from "./sudoku.ts";
 import { findTechniqueHint } from "./technique-hint.ts";
-import type { ActiveHint, Board, Position } from "./types.ts";
+import type { ActiveHint, Board, EliminationHint, Position } from "./types.ts";
 
 // Alias, not a parallel definition: board-engine stores findHint's
 // result in an ActiveHint field, and two structurally-identical types
 // only stay identical by luck.
 export type HintExplanation = ActiveHint;
+
+/** The unit that already holds `digit`, and the cell proving it. */
+function noteConflictIn(
+  board: Board,
+  row: number,
+  col: number,
+  digit: number,
+): { unit: string; proof: Position } | null {
+  for (let c = 0; c < 9; c++) {
+    if (c !== col && board[row]![c]!.value === digit) {
+      return { unit: `row ${row + 1}`, proof: { row, col: c } };
+    }
+  }
+  for (let r = 0; r < 9; r++) {
+    if (r !== row && board[r]![col]!.value === digit) {
+      return { unit: `column ${col + 1}`, proof: { row: r, col } };
+    }
+  }
+  const boxRow = Math.floor(row / 3) * 3;
+  const boxCol = Math.floor(col / 3) * 3;
+  for (let r = boxRow; r < boxRow + 3; r++) {
+    for (let c = boxCol; c < boxCol + 3; c++) {
+      if ((r !== row || c !== col) && board[r]![c]!.value === digit) {
+        const box = Math.floor(row / 3) * 3 + Math.floor(col / 3) + 1;
+        return { unit: `box ${box}`, proof: { row: r, col: c } };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * A pencilled digit that one of the cell's own peers already holds.
+ * The player wrote it before the peer was placed, or simply misread
+ * the grid; either way every deduction they make from it is poisoned,
+ * so it is worth more than any technique the ladder could teach next.
+ */
+function findImpossibleNote(board: Board): EliminationHint | null {
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      const cell = board[row]![col]!;
+      if (cell.value !== null) continue;
+      for (const digit of [...cell.notes].sort((a, b) => a - b)) {
+        const conflict = noteConflictIn(board, row, col, digit);
+        if (!conflict) continue;
+        return {
+          kind: "elimination",
+          position: { row, col },
+          technique: "note-conflict",
+          explanation: `The ${digit} pencilled in r${row + 1}c${col + 1} already sits in ${conflict.unit}, so rub it out.`,
+          digits: [digit],
+          eliminatedCells: [{ row, col }],
+          relatedCells: [conflict.proof],
+        };
+      }
+    }
+  }
+  return null;
+}
 
 /**
  * Find the best hint for the current board state.
@@ -59,6 +118,11 @@ export function findHint(
 
   const hiddenSingle = findHiddenSingle(board);
   if (hiddenSingle) return hiddenSingle;
+
+  // Before teaching a technique, clear the player's own board of a
+  // note that cannot be true: they would otherwise reason from it.
+  const impossibleNote = findImpossibleNote(board);
+  if (impossibleNote) return impossibleNote;
 
   // No single anywhere — the state graded boards put players in. Look
   // for the elimination (locked candidates, pairs, triples, X-wing)
