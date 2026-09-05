@@ -5,6 +5,8 @@ import {
   type SoloChallenge,
 } from "./challenge.ts";
 import { isPlayableDailyDate } from "./daily-archive.ts";
+import { getLastMultiplayerDifficulty } from "./mp-preferences.ts";
+import { generateRoomCode } from "./room-code.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 /**
@@ -14,7 +16,7 @@ import type { AssistLevel, Difficulty } from "./types.ts";
  */
 export type Screen =
   | { name: "landing" }
-  | { name: "difficulty"; mode: "solo" | "create" }
+  | { name: "difficulty" }
   | {
       name: "solo";
       difficulty: Difficulty;
@@ -44,6 +46,22 @@ const VALID_DIFFICULTIES = new Set<string>([
 // Invite codes are word-word-xxxx (see room-code.ts); the two-word
 // form covers links minted before the entropy suffix existed.
 const ROOM_CODE_RE = /^[a-z]+-[a-z]+(-[a-z0-9]{4})?$/;
+
+type MultiplayerScreenState = Extract<Screen, { name: "multiplayer" }>;
+
+/**
+ * The screen "Create Game" lands on. Hosting used to detour through the
+ * difficulty picker even though the lobby it opens carries difficulty
+ * and assistance selectors of its own; the room now opens directly on
+ * whatever the player last raced, and stays editable there.
+ */
+export function createdRoomScreen(): MultiplayerScreenState {
+  return {
+    name: "multiplayer",
+    roomId: generateRoomCode(),
+    difficulty: getLastMultiplayerDifficulty(),
+  };
+}
 
 export function screenToPath(screen: Screen): string {
   switch (screen.name) {

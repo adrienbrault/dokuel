@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import { setLastMultiplayerDifficulty } from "../lib/mp-preferences.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -10,6 +11,8 @@ type MultiplayerGameProps = {
   playerName: string;
   roomId: string;
   difficulty: import("../lib/types.ts").Difficulty | null;
+  /** The creator's own assistance preference; a joiner's is ignored. */
+  assistLevel?: import("../lib/types.ts").AssistLevel;
   onRename?: (name: string) => void;
   onBack: () => void;
 };
@@ -19,10 +22,17 @@ export function MultiplayerGame({
   playerName,
   roomId,
   difficulty,
+  assistLevel = "standard",
   onRename,
   onBack,
 }: MultiplayerGameProps) {
-  const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
+  const mp = useYjsMultiplayer({
+    roomId,
+    playerId,
+    playerName,
+    difficulty,
+    assistLevel,
+  });
   const [toast, setToast] = useState<string | null>(null);
   // Arms after the disconnect has persisted for a beat; combined with
   // the live value below so the banner hides instantly on return.
@@ -87,9 +97,13 @@ export function MultiplayerGame({
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
           opponentName={opponent?.name ?? ""}
           opponentProgress={mp.opponentProgress}
+          opponentMask={mp.opponentMask}
+          opponentReaction={mp.opponentReaction}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
           onProgress={mp.sendProgress}
+          onMask={mp.sendMask}
+          onReact={mp.sendReaction}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
           onBack={onBack}
@@ -153,7 +167,13 @@ export function MultiplayerGame({
             mp.updateName(name);
           }}
           onAssistLevelChange={mp.setAssistLevel}
-          onDifficultyChange={mp.setDifficulty}
+          onDifficultyChange={(level) => {
+            // The create flow has no picker any more, so the lobby is
+            // where the player's multiplayer difficulty is chosen and
+            // therefore where the next room's default is written.
+            setLastMultiplayerDifficulty(level);
+            mp.setDifficulty(level);
+          }}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />

@@ -11,8 +11,12 @@ import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { generateId } from "./lib/id.ts";
-import { generateRoomCode } from "./lib/room-code.ts";
-import { pathToScreen, type Screen, screenToPath } from "./lib/routes.ts";
+import {
+  createdRoomScreen,
+  pathToScreen,
+  type Screen,
+  screenToPath,
+} from "./lib/routes.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { Difficulty } from "./lib/types.ts";
 import "./index.css";
@@ -89,9 +93,9 @@ function App() {
             />
           </div>
           <Landing
-            onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
+            onSolo={() => navigate({ name: "difficulty" })}
             onDaily={() => navigate({ name: "daily" })}
-            onCreate={() => navigate({ name: "difficulty", mode: "create" })}
+            onCreate={() => navigate(createdRoomScreen())}
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
             onArchive={() => navigate({ name: "dailyArchive" })}
@@ -112,21 +116,12 @@ function App() {
         <div className="screen">
           <DifficultyPicker
             onSelect={(difficulty, assistLevel) => {
-              if (screen.mode === "solo") {
-                navigate({
-                  name: "solo",
-                  difficulty,
-                  gameKey: generateId(),
-                  assistLevel,
-                });
-              } else {
-                const roomId = generateRoomCode();
-                navigate({
-                  name: "multiplayer",
-                  roomId,
-                  difficulty,
-                });
-              }
+              navigate({
+                name: "solo",
+                difficulty,
+                gameKey: generateId(),
+                assistLevel,
+              });
             }}
             onBack={() => navigate({ name: "landing" })}
           />

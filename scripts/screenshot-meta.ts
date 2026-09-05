@@ -98,6 +98,9 @@ export function sceneLabel(scene: string): string {
     "multiplayer-progress-bars-dark": "Multiplayer · progress bars (dark)",
     "multiplayer-progress-hidden": "Multiplayer · progress hidden",
     "multiplayer-settings-toggle": "Multiplayer · settings toggle",
+    "multiplayer-reactions": "Multiplayer · reaction picker",
+    "multiplayer-reaction-received-dark":
+      "Multiplayer · reaction received (dark)",
   };
   return overrides[scene] ?? titleCase(scene);
 }

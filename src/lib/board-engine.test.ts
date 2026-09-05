@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  filledMask,
   initState,
   projectBoard,
   reducer,
@@ -32,6 +33,33 @@ describe("serializeBoard", () => {
     const board = initState({ puzzle }).board;
     const { values } = serializeBoard(board);
     expect(values).toBe(puzzle);
+  });
+});
+
+describe("filledMask", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("marks givens and the player's own digits alike", () => {
+    // The mask is what the opponent sees of this board. It says where
+    // a cell is written, never what is in it.
+    const board = initState({ puzzle }).board;
+    board[0]![2]!.value = 4;
+
+    const mask = filledMask(board);
+
+    expect(mask).toHaveLength(81);
+    expect(mask[0]).toBe("1");
+    expect(mask[2]).toBe("1");
+    expect(mask[3]).toBe("0");
+    expect(/^[01]{81}$/.test(mask)).toBe(true);
+  });
+
+  it("ignores notes, which are nobody else's business", () => {
+    const board = initState({ puzzle }).board;
+    board[0]![3]!.notes = new Set([1, 2, 9]);
+
+    expect(filledMask(board)[3]).toBe("0");
   });
 });
 

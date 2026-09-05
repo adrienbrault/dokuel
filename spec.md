@@ -119,7 +119,9 @@ settings popover):
 - Both players get the same puzzle
 - Each has their own separate board
 - First to valid completion wins
-- Live opponent progress visible (completion %), hideable via settings
+- Live opponent progress visible (completion %, cells left, and a board
+  silhouette), hideable via settings
+- Emoji reactions between the two players
 
 ## Game Board
 
@@ -186,8 +188,33 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 
 ### Opponent Visibility
 - Nickname + assigned color
-- Completion percentage progress bar (toggleable in settings)
+- Progress bar showing completion percentage and cells still empty
+  ("29% · 41 left"), toggleable in settings
+- Board silhouette: a 9x9 of dots beside the bars, tinted where the
+  opponent has written, so a race shows *where* they are working and not
+  just how far along. Shared givens are discounted from the puzzle both
+  players already hold. Under the same settings toggle as the bars
 - Online/reconnecting status indicator
+
+### Reactions
+- Four fixed emoji (👋 🔥 😅 🎉), sent from a picker beside Undo/Erase
+- Rate limited to one per second; the opponent sees it float over their
+  bar for two seconds with a light haptic
+- Nothing is persisted and nothing is queued: a reaction is gone the
+  moment it fades
+
+### The Ephemeral Channel
+Silhouettes and reactions ride the peers' presence/awareness channel,
+never the synced document:
+- **Nothing leaks**: the mask says which cells hold a value, never which
+  digit; the values never leave the device
+- **Nothing accumulates**: presence dies with the tab, so nothing is
+  persisted, replayed on reconnect, or recoverable from a snapshot
+- **Nothing floods**: the mask is throttled to one update per 250ms
+  (always flushing the final state), reactions to one per second
+- Because presence is last-write-wins state rather than a message queue,
+  a reaction carries a timestamp and a nonce, because otherwise sending
+  the same emoji twice would be no change at all
 
 ### Reconnect Handling
 - The synced game is persisted locally (IndexedDB) plus a synchronous
