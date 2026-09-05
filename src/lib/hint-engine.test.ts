@@ -352,6 +352,30 @@ describe("findHint", () => {
       expect(hint!.explanation).toContain("row 1");
     });
 
+    it("names the column when that is what rules the note out", () => {
+      const board = parsePuzzle(PAIRS_STUCK);
+      // No 9 in row 1, but r7c2 holds one in the same column.
+      board[0]![1]!.notes = new Set([9]);
+
+      const hint = findHint(board, solvePuzzle(PAIRS_STUCK)!);
+
+      expect(hint!.technique).toBe("note-conflict");
+      expect(hint!.explanation).toContain("column 2");
+      expect(hint!.relatedCells).toContainEqual({ row: 6, col: 1 });
+    });
+
+    it("names the box when neither line rules the note out", () => {
+      const board = parsePuzzle(PAIRS_STUCK);
+      // The 6 sits in neither row 1 nor column 2, but shares box 1.
+      board[0]![1]!.notes = new Set([6]);
+
+      const hint = findHint(board, solvePuzzle(PAIRS_STUCK)!);
+
+      expect(hint!.technique).toBe("note-conflict");
+      expect(hint!.explanation).toContain("box 1");
+      expect(hint!.relatedCells).toContainEqual({ row: 2, col: 0 });
+    });
+
     it("leaves a note the board still allows alone", () => {
       const board = parsePuzzle(PAIRS_STUCK);
       board[0]![1]!.notes = new Set([1]);
