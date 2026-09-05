@@ -3,9 +3,10 @@ import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
+import { useRaceProgress } from "../hooks/useRaceProgress.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
-import { filledMask, serializeBoard } from "../lib/board-engine.ts";
+import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
 import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
@@ -118,7 +119,6 @@ export function MultiplayerBoard({
     useOpponentProgressVisible();
   const initialTimerSeconds = saved?.timer ?? 0;
   const timerSecondsRef = useRef(initialTimerSeconds);
-  const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
   // The loser keeps playing after the opponent wins; only show the result
   // modal once they've actually finished their own board (or won themselves).
@@ -126,36 +126,15 @@ export function MultiplayerBoard({
   const iFinished = iWon || game.status === "completed";
   const showResult = useDelayedFlag(iFinished, 300);
 
-  const myPercent = useMemo(() => {
-    const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-    const filled = total - game.cellsRemaining;
-    return total > 0 ? Math.round((filled / total) * 100) : 0;
-  }, [game.cellsRemaining, puzzle]);
-
-  // Send progress when cells change
-  useEffect(() => {
-    if (prevCellsRef.current !== game.cellsRemaining) {
-      prevCellsRef.current = game.cellsRemaining;
-      const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-      const filled = total - game.cellsRemaining;
-      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-      onProgress(game.cellsRemaining, percent);
-    }
-  }, [game.cellsRemaining, onProgress, puzzle]);
-
-  // Publish the silhouette on every board change. Which cells are
-  // filled is race information, not game state: it rides presence, so
-  // it costs nothing to send often and vanishes with the player.
-  useEffect(() => {
-    onMask(filledMask(game.board as Cell[][]));
-  }, [game.board, onMask]);
-
-  // Check completion — the claim ships the actual filled board so the
-  // opponent's client can verify it against the room's solution.
-  useEffect(() => {
-    if (game.status !== "completed") return;
-    onComplete(serializeBoard(game.board as Cell[][]).values);
-  }, [game.status, game.board, onComplete]);
+  const myPercent = useRaceProgress({
+    board: game.board,
+    cellsRemaining: game.cellsRemaining,
+    status: game.status,
+    puzzle,
+    onProgress,
+    onMask,
+    onComplete,
+  });
 
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
