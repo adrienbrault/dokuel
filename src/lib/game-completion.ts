@@ -1,4 +1,8 @@
-import { type DailyStreak, recordDailyCompletion } from "./daily-streak.ts";
+import {
+  type DailyCompletionResult,
+  type DailyStreak,
+  recordDailyCompletionWithStatus,
+} from "./daily-streak.ts";
 import { deleteGame } from "./game-storage.ts";
 import { trackProductEvent } from "./product-events.ts";
 import { recordResult } from "./result-store.ts";
@@ -64,22 +68,52 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
   });
   const recordedOrigin = recorded.record.origin ?? origin;
   trackCompletionEvent(recorded, recordedOrigin);
-  if (ctx.gameKey && recorded.persisted) {
-    deleteGame(ctx.gameKey);
-  }
+  const daily = recordDailyStreak(ctx.dailyDate);
+  const persisted = isCompletionPersisted(recorded.persisted, daily);
   const result: GameCompletionResult = {
     stats: recorded.summary,
-    isNewPB:
-      !recorded.duplicate &&
-      recordedOrigin === "generated" &&
-      ctx.hintsUsed === 0 &&
-      (priorBest === null || ctx.timeSeconds < priorBest),
+    isNewPB: isNewPersonalBest(
+      recorded.duplicate,
+      recordedOrigin,
+      ctx.hintsUsed,
+      ctx.timeSeconds,
+      priorBest,
+    ),
     assistLevel: ctx.assistLevel,
     timeSeconds: Math.floor(recorded.record.time),
   };
-  if (!recorded.persisted) result.persisted = false;
-  if (ctx.dailyDate) result.streak = recordDailyCompletion(ctx.dailyDate);
+  if (!persisted) result.persisted = false;
+  if (daily) result.streak = daily.streak;
+  if (ctx.gameKey && persisted) deleteGame(ctx.gameKey);
   return result;
+}
+
+function recordDailyStreak(
+  date: string | undefined,
+): DailyCompletionResult | undefined {
+  return date === undefined ? undefined : recordDailyCompletionWithStatus(date);
+}
+
+function isCompletionPersisted(
+  resultPersisted: boolean,
+  daily: DailyCompletionResult | undefined,
+): boolean {
+  return resultPersisted && (daily?.persisted ?? true);
+}
+
+function isNewPersonalBest(
+  duplicate: boolean,
+  origin: GameOrigin,
+  hintsUsed: number,
+  timeSeconds: number,
+  priorBest: number | null,
+): boolean {
+  return (
+    !duplicate &&
+    origin === "generated" &&
+    hintsUsed === 0 &&
+    (priorBest === null || timeSeconds < priorBest)
+  );
 }
 
 function trackCompletionEvent(

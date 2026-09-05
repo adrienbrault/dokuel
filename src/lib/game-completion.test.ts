@@ -214,6 +214,55 @@ describe("completeGame", () => {
     expect(loadGame("failed-result")).not.toBeNull();
   });
 
+  it("keeps the autosave when the daily streak is only partially persisted", () => {
+    saveGame("failed-daily", {
+      puzzle: ".".repeat(81),
+      values: ".".repeat(81),
+      notes: Array.from({ length: 81 }, () => []),
+      timer: 12,
+      difficulty: "easy",
+      assistLevel: "standard",
+      hintsUsed: 0,
+    });
+    const context = {
+      gameKey: "failed-daily",
+      attemptId: "failed-daily",
+      puzzleId: "failed-daily-puzzle",
+      difficulty: "easy" as const,
+      assistLevel: "standard" as const,
+      timeSeconds: 30,
+      hintsUsed: 0,
+      dailyDate: "2026-07-28",
+    };
+    const originalSetItem = Storage.prototype.setItem;
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key, value) {
+        if (key === "sudoku_daily_streak_lifetime") {
+          throw new Error("quota");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+    let first: ReturnType<typeof completeGame>;
+    try {
+      first = completeGame(context);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(first?.persisted).toBe(false);
+    expect(first?.streak?.currentStreak).toBe(1);
+    expect(loadGame("failed-daily")).not.toBeNull();
+
+    const retry = completeGame(context);
+    expect(retry.persisted).toBeUndefined();
+    expect(loadGame("failed-daily")).toBeNull();
+    expect(getStatsForDifficulty("easy", "standard", "daily")).toMatchObject({
+      gamesPlayed: 1,
+    });
+    expect(isDailyCompleted("2026-07-28")).toBe(true);
+  });
+
   it("deletes the autosave when a gameKey is given", () => {
     saveGame("active-easy", {
       puzzle: ".".repeat(81),

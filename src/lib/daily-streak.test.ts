@@ -3,6 +3,7 @@ import {
   getDailyStreak,
   isDailyCompleted,
   recordDailyCompletion,
+  recordDailyCompletionWithStatus,
 } from "./daily-streak.ts";
 
 describe("daily-streak", () => {
@@ -161,6 +162,40 @@ describe("daily-streak", () => {
       const result = recordDailyCompletion("2026-07-28");
       expect(result.currentStreak).toBe(2);
       expect(result.longestStreak).toBe(2);
+    });
+
+    it("repairs either half of a streak write on retry", () => {
+      for (const failedKey of [
+        "sudoku_daily_streak",
+        "sudoku_daily_streak_lifetime",
+      ]) {
+        localStorage.clear();
+        const originalSetItem = Storage.prototype.setItem;
+        const spy = vi
+          .spyOn(Storage.prototype, "setItem")
+          .mockImplementation(function (this: Storage, key, value) {
+            if (key === failedKey) throw new Error("quota");
+            return originalSetItem.call(this, key, value);
+          });
+        let first: ReturnType<typeof recordDailyCompletionWithStatus>;
+        try {
+          first = recordDailyCompletionWithStatus("2026-03-08");
+        } finally {
+          spy.mockRestore();
+        }
+
+        expect(first.persisted).toBe(false);
+        expect(isDailyCompleted("2026-03-08")).toBe(true);
+        expect(localStorage.getItem(failedKey)).toBeNull();
+
+        const retry = recordDailyCompletionWithStatus("2026-03-08");
+        expect(retry.persisted).toBe(true);
+        expect(isDailyCompleted("2026-03-08")).toBe(true);
+        expect(localStorage.getItem("sudoku_daily_streak")).not.toBeNull();
+        expect(
+          localStorage.getItem("sudoku_daily_streak_lifetime"),
+        ).not.toBeNull();
+      }
     });
   });
 

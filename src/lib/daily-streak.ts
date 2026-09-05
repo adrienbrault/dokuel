@@ -17,6 +17,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 type DayRange = { start: string; end: string };
 type LifetimeStreak = { version: 1; completedRanges: DayRange[] };
 
+export type DailyCompletionResult = { streak: DailyStreak; persisted: boolean };
+
 const DEFAULT_STREAK: DailyStreak = {
   currentStreak: 0,
   lastCompletedDate: "",
@@ -79,34 +81,28 @@ function parseDateUTC(date: string): number | null {
 }
 
 export function recordDailyCompletion(date: string): DailyStreak {
-  const primary = readPrimaryStreak();
-  if (parseDateUTC(date) === null) return getDailyStreak();
+  return recordDailyCompletionWithStatus(date).streak;
+}
 
-  const lifetime = readLifetimeStreak(primary);
-  if (lifetime.completedRanges.some((range) => isDateInRange(date, range))) {
-    return project(lifetime, primary);
+export function recordDailyCompletionWithStatus(
+  date: string,
+): DailyCompletionResult {
+  const primary = readPrimaryStreak();
+  if (parseDateUTC(date) === null) {
+    return { streak: getDailyStreak(), persisted: false };
   }
 
-  lifetime.completedRanges = addDateToRanges(lifetime.completedRanges, date);
-  const current = lifetime.completedRanges.at(-1);
-  if (!current) return project(lifetime, primary);
-  const dates = recentDates(
-    primary.completedDates.length > 0
-      ? [...primary.completedDates, date]
-      : recentDatesFromRanges(lifetime.completedRanges).concat(date),
-  );
-  const next: DailyStreak = {
-    currentStreak: rangeLength(current),
-    lastCompletedDate: current.end,
-    longestStreak: Math.max(
-      primary.longestStreak,
-      ...lifetime.completedRanges.map(rangeLength),
-    ),
-    completedDates: dates,
-  };
-  writeJson(STORAGE_KEY, next);
-  writeJson(LIFETIME_STORAGE_KEY, lifetime);
-  return next;
+  const lifetime = readLifetimeStreak(primary);
+  if (!lifetime.completedRanges.some((range) => isDateInRange(date, range))) {
+    lifetime.completedRanges = addDateToRanges(lifetime.completedRanges, date);
+  }
+  const next = project(lifetime, {
+    ...primary,
+    completedDates: [...primary.completedDates, date],
+  });
+  const primaryPersisted = writeJson(STORAGE_KEY, next);
+  const lifetimePersisted = writeJson(LIFETIME_STORAGE_KEY, lifetime);
+  return { streak: next, persisted: primaryPersisted && lifetimePersisted };
 }
 
 export function isDailyCompleted(date: string): boolean {
@@ -123,7 +119,17 @@ function readLifetimeStreak(primary: DailyStreak): LifetimeStreak {
     undefined,
     (value) => value,
   );
-  return validateLifetimeStreak(raw) ?? migrateLifetime(primary);
+  const stored = validateLifetimeStreak(raw);
+  if (!stored) return migrateLifetime(primary);
+  for (const date of primary.completedDates) {
+    if (
+      parseDateUTC(date) !== null &&
+      !stored.completedRanges.some((range) => isDateInRange(date, range))
+    ) {
+      stored.completedRanges = addDateToRanges(stored.completedRanges, date);
+    }
+  }
+  return stored;
 }
 
 function validateLifetimeStreak(value: unknown): LifetimeStreak | null {
