@@ -8,13 +8,24 @@ import { boxIndex } from "./board-geometry.ts";
 import type { Elimination } from "./candidates.ts";
 import type { HintExplanation } from "./hint-engine.ts";
 import {
+  findElimination,
   findUnlockingPlacement,
+  type RemovalPredicate,
   type UnlockingPlacement,
 } from "./techniques.ts";
-import type { Board, HintTechnique, Position } from "./types.ts";
+import type {
+  Board,
+  EliminationHint,
+  HintTechnique,
+  Position,
+} from "./types.ts";
 
 function toPosition(cell: number): Position {
   return { row: Math.floor(cell / 9), col: cell % 9 };
+}
+
+function cellName(cell: number): string {
+  return `r${Math.floor(cell / 9) + 1}c${(cell % 9) + 1}`;
 }
 
 function boardValues(board: Board): string {
@@ -142,6 +153,51 @@ const TECHNIQUE_OF_KIND: Record<Elimination["kind"], HintTechnique> = {
   swordfish: "swordfish",
 };
 
+/**
+ * Name the candidates the pattern takes off the board. Spelled out one
+ * by one while the list is short enough to follow on the grid; past
+ * that the highlight does the pointing.
+ */
+function describeRemovals(removed: { cell: number; digit: number }[]): string {
+  const cells = [...new Set(removed.map((r) => r.cell))];
+  const digits = [...new Set(removed.map((r) => r.digit))].sort(
+    (a, b) => a - b,
+  );
+  if (removed.length <= 4) {
+    const parts = removed.map((r) => `the ${r.digit} in ${cellName(r.cell)}`);
+    return ` Rub out ${listNames(parts)}.`;
+  }
+  return ` Rub ${listDigits(digits, "and")} out of the ${cells.length} highlighted cells.`;
+}
+
+/**
+ * The hint for a board where a technique removes candidates without
+ * exposing a placement. The player cannot write anything in yet, so
+ * the hint asks them to erase instead: same technique, same prose,
+ * one rung further down the ladder than an unlocking placement.
+ */
+export function findEliminationHint(
+  board: Board,
+  preferences: RemovalPredicate[] = [],
+): EliminationHint | null {
+  const elimination = findElimination(boardValues(board), preferences);
+  if (!elimination) return null;
+  const cells = [...new Set(elimination.removed.map((r) => r.cell))];
+  return {
+    kind: "elimination",
+    // The first cell losing a candidate: where the player looks first.
+    position: toPosition(cells[0]!),
+    technique: TECHNIQUE_OF_KIND[elimination.kind],
+    explanation:
+      describeElimination(elimination) + describeRemovals(elimination.removed),
+    digits: [...new Set(elimination.removed.map((r) => r.digit))].sort(
+      (a, b) => a - b,
+    ),
+    eliminatedCells: cells.map(toPosition),
+    relatedCells: elimination.patternCells.map(toPosition),
+  };
+}
+
 /** The technique hint for a board whose singles have run dry — null
  * when only chains or guessing can progress. */
 export function findTechniqueHint(board: Board): HintExplanation | null {
@@ -160,6 +216,7 @@ function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
     ...elimination.removed.map((r) => r.cell),
   ];
   return {
+    kind: "placement",
     position: toPosition(single.cell),
     value: single.digit,
     technique: TECHNIQUE_OF_KIND[elimination.kind],

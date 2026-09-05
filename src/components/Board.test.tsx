@@ -18,6 +18,30 @@ function makeBoard(overrides: [number, number, number][] = []): BoardType {
   return board;
 }
 
+describe("Board hint highlighting", () => {
+  it("tints the cells to clear apart from the cells that prove it", () => {
+    const board = makeBoard();
+
+    render(
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        hintCells={new Set([cellKey(0, 0)])}
+        eliminatedCells={new Set([cellKey(4, 4)])}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText(/^Cell row 1 column 1, empty/).className,
+    ).toContain("bg-cell-hint");
+    expect(
+      screen.getByLabelText(/^Cell row 5 column 5, empty/).className,
+    ).toContain("bg-cell-conflict-bg");
+  });
+});
+
 describe("Board same-number row/col highlighting (full assist)", () => {
   it("highlights rows and columns of matching-number cells", () => {
     // Place a 5 at (1,2) and (4,6) — selecting (1,2)

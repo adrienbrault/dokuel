@@ -299,3 +299,205 @@ describe("PLACE_NUMBER overwrite protection", () => {
     expect(state.history).toHaveLength(1);
   });
 });
+
+describe("REDO action", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("re-applies the placement an undo reverted", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.value).toBeNull();
+
+    state = reducer(state, { type: "REDO" });
+
+    expect(state.board[0]![2]!.value).toBe(4);
+    expect(state.history).toHaveLength(1);
+    expect(state.redo).toHaveLength(0);
+  });
+
+  it("restores the peer notes the redone placement had cleared", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 3, value: 4 });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: true,
+    });
+    expect(state.board[0]![3]!.notes.has(4)).toBe(false);
+
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![3]!.notes.has(4)).toBe(true);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![3]!.notes.has(4)).toBe(false);
+  });
+
+  it("replays an erase", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    state = reducer(state, { type: "ERASE" });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.value).toBe(4);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.value).toBeNull();
+  });
+
+  it("replays a note toggle and a fill-notes sweep", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 9 });
+    state = reducer(state, { type: "FILL_NOTES" });
+    state = reducer(state, { type: "UNDO" });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.notes.size).toBe(0);
+
+    state = reducer(state, { type: "REDO" });
+    expect([...state.board[0]![2]!.notes]).toEqual([9]);
+
+    state = reducer(state, { type: "REDO" });
+    expect([...state.board[0]![2]!.notes].sort()).toEqual([1, 2, 4]);
+  });
+
+  it("replays a batch note toggle and a batch erase", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, {
+      type: "SET_SELECTED_CELLS",
+      cells: new Set([2, 3]),
+      primary: { row: 0, col: 2 },
+    });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+      asNote: true,
+    });
+    state = reducer(state, { type: "ERASE" });
+    state = reducer(state, { type: "UNDO" });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![3]!.notes.size).toBe(0);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.notes.has(4)).toBe(true);
+    expect(state.board[0]![3]!.notes.has(4)).toBe(true);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.notes.size).toBe(0);
+    expect(state.board[0]![3]!.notes.size).toBe(0);
+  });
+
+  it("drops the redo stack once the player acts again", () => {
+    // The undone future no longer follows from the board in front of
+    // the player, so replaying it would splice in an unrelated edit.
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.redo).toHaveLength(1);
+
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 9,
+      autoEliminateNotes: false,
+    });
+    expect(state.redo).toHaveLength(0);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.value).toBe(9);
+  });
+
+  it("is inert on a completed board", () => {
+    // Undo is blocked once the game is won; redo has to hold the same
+    // line or a won board could be edited out from under the result.
+    const solved =
+      "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+    let state = initState({ puzzle: `${solved.slice(0, 80)}.` });
+    state = reducer(state, { type: "SELECT_CELL", row: 8, col: 8 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 9,
+      autoEliminateNotes: false,
+    });
+    expect(state.status).toBe("completed");
+
+    const before = state;
+    state = reducer(state, { type: "UNDO" });
+    expect(state).toBe(before);
+    state = reducer(state, { type: "REDO" });
+    expect(state).toBe(before);
+  });
+});
+
+describe("FILL_NOTES action", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("pencils each empty cell's candidates as one undoable step", () => {
+    let state = initState({ puzzle });
+
+    state = reducer(state, { type: "FILL_NOTES" });
+
+    // r1c3 sees 5, 3, 7 in its row, 8 in its column, and 5, 3, 6, 9, 8
+    // in its box, so only 1, 2 and 4 survive.
+    expect([...state.board[0]![2]!.notes].sort()).toEqual([1, 2, 4]);
+    expect(state.history).toHaveLength(1);
+
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.notes.size).toBe(0);
+  });
+
+  it("replaces stale notes and leaves filled cells alone", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 9 });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 3 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 6,
+      autoEliminateNotes: false,
+    });
+
+    state = reducer(state, { type: "FILL_NOTES" });
+
+    // The impossible 9 is gone, replaced by the real candidates.
+    expect([...state.board[0]![2]!.notes].sort()).toEqual([1, 2, 4]);
+    // A cell holding a value keeps it and gains no notes; so does a given.
+    expect(state.board[0]![3]!.value).toBe(6);
+    expect(state.board[0]![3]!.notes.size).toBe(0);
+    expect(state.board[0]![0]!.notes.size).toBe(0);
+  });
+
+  it("adds no history entry when the notes are already filled", () => {
+    // Pressing Notes twice must not cost the player an undo step that
+    // changes nothing on the board.
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "FILL_NOTES" });
+    const filled = state;
+
+    state = reducer(state, { type: "FILL_NOTES" });
+
+    expect(state).toBe(filled);
+    expect(state.history).toHaveLength(1);
+  });
+
+  it("does not count as a hint", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "FILL_NOTES" });
+    expect(state.hintsUsed).toBe(0);
+  });
+});

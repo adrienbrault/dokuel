@@ -43,6 +43,30 @@ describe("SoloGame numpad selection", () => {
     expect(document.activeElement).toBe(gear);
   });
 
+  it("offers fill-notes at standard assist", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Fill notes" }),
+    ).toBeInTheDocument();
+  });
+
+  it("withholds fill-notes on paper, where the game offers no help", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={PUZZLE}
+        assistLevel="paper"
+        onBack={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Fill notes" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,

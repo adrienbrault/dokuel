@@ -264,7 +264,10 @@ export function MultiplayerBoard({
           <GameControls
             onErase={game.erase}
             onUndo={game.undo}
+            onRedo={game.redo}
+            onFillNotes={assistLevel === "paper" ? undefined : game.fillNotes}
             historyLength={game.historyLength}
+            redoLength={game.redoLength}
           />
           <ReactionPicker onSend={onReact} />
         </div>

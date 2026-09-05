@@ -119,6 +119,36 @@ describe("useSudoku", () => {
     expect(result.current.board[pos.row]![pos.col]!.value).toBeNull();
   });
 
+  it("redo replays the move undo reverted, and reports what is left", () => {
+    const { result } = setupHook();
+
+    const pos = findEmptyCell(result.current.board);
+    if (!pos) throw new Error("No empty cell found");
+
+    act(() => result.current.selectCell(pos.row, pos.col));
+    act(() => result.current.placeNumber(5));
+    expect(result.current.redoLength).toBe(0);
+
+    act(() => result.current.undo());
+    expect(result.current.redoLength).toBe(1);
+
+    act(() => result.current.redo());
+    expect(result.current.board[pos.row]![pos.col]!.value).toBe(5);
+    expect(result.current.redoLength).toBe(0);
+  });
+
+  it("fillNotes pencils the candidates of every empty cell", () => {
+    const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE));
+
+    act(() => result.current.fillNotes());
+
+    // Both holes are naked singles, so each gets exactly its own digit.
+    expect([...result.current.board[0]![0]!.notes]).toEqual([5]);
+    expect([...result.current.board[0]![5]!.notes]).toEqual([8]);
+    expect(result.current.historyLength).toBe(1);
+    expect(result.current.hintsUsed).toBe(0);
+  });
+
   it("erase clears a non-given cell", () => {
     const { result } = setupHook();
 
@@ -492,7 +522,9 @@ describe("useSudoku", () => {
 
       expect(result.current.activeHint).not.toBeNull();
       expect(result.current.activeHint!.position).toEqual({ row: 0, col: 0 });
-      expect(result.current.activeHint!.value).toBe(5);
+      const hint = result.current.activeHint!;
+      expect(hint.kind).toBe("placement");
+      expect(hint.kind === "placement" && hint.value).toBe(5);
     });
 
     it("adds nothing to undo history", () => {

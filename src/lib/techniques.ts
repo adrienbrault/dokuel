@@ -182,6 +182,37 @@ const TECHNIQUES: ((s: CandidateState) => Elimination | null)[] = [
   swordfish,
 ];
 
+/** Judges an elimination by what it removes, to rank competing finds. */
+export type RemovalPredicate = (removed: Elimination["removed"]) => boolean;
+
+/**
+ * The technique that takes candidates off the board, even when the
+ * removal exposes no placement. This is the move a player makes when
+ * nothing can be written in yet, and the hint the ladder owes them
+ * before it resorts to reading the solution.
+ *
+ * `preferences` rank the finds in priority order: the cheapest
+ * technique accepted by the first preference wins, and if none accept
+ * anything, the cheapest applicable technique is the fallback.
+ */
+export function findElimination(
+  puzzle: string,
+  preferences: RemovalPredicate[] = [],
+): Elimination | null {
+  const s = initCandidates(puzzle);
+  if (!s) return null;
+  const found: Elimination[] = [];
+  for (const technique of TECHNIQUES) {
+    const elimination = technique(cloneCandidates(s));
+    if (elimination) found.push(elimination);
+  }
+  for (const prefers of preferences) {
+    const preferred = found.find((e) => prefers(e.removed));
+    if (preferred) return preferred;
+  }
+  return found[0] ?? null;
+}
+
 /**
  * On a board whose singles have run dry, find the elimination that
  * makes the next placement visible. Prefers an elimination that

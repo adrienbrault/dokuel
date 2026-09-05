@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { initCandidates } from "./candidates.ts";
 import { solvePuzzle } from "./sudoku.ts";
-import { findUnlockingPlacement } from "./techniques.ts";
+import { findElimination, findUnlockingPlacement } from "./techniques.ts";
 import { swordfish, xyWing } from "./wings.ts";
 
 // Boards captured by playing naked/hidden singles to exhaustion on
@@ -97,5 +97,56 @@ describe("findUnlockingPlacement", () => {
     // richer wording; this path must not shadow them.
     const nearlyDone = `.${solvePuzzle(PAIRS_STUCK)!.slice(1)}`;
     expect(findUnlockingPlacement(nearlyDone)).toBeNull();
+  });
+});
+
+describe("findElimination", () => {
+  // Singles are gone here and no elimination unlocks one, but several
+  // techniques still have candidates to take off the board.
+  const ELIMINATION_ONLY =
+    ".....7..4392...715.7....86.1..7..58.7....5.3..5..2...72.5.6..796.8579...917432658";
+
+  it("returns the cheapest technique that removes anything", () => {
+    const elimination = findElimination(ELIMINATION_ONLY);
+
+    expect(elimination).not.toBeNull();
+    expect(elimination!.kind).toBe("pointing");
+    expect(elimination!.removed.length).toBeGreaterThan(0);
+    // Soundness: a removal may never strip the solution's own digit.
+    const solution = solvePuzzle(ELIMINATION_ONLY)!;
+    for (const r of elimination!.removed) {
+      expect(r.digit).not.toBe(Number(solution[r.cell]));
+    }
+  });
+
+  it("walks the preferences in order before falling back", () => {
+    const wantsNakedPair = findElimination(ELIMINATION_ONLY, [
+      (removed) => removed.some((r) => r.cell === 60 && r.digit === 1),
+    ]);
+    expect(wantsNakedPair!.kind).toBe("naked-pair");
+
+    // A preference nothing satisfies leaves the cheapest find standing,
+    // so the caller always gets the best available move.
+    const impossible = findElimination(ELIMINATION_ONLY, [() => false]);
+    expect(impossible!.kind).toBe("pointing");
+  });
+
+  it("still finds work where no elimination unlocks a placement", () => {
+    // This is the board the old ladder gave up on: nothing it removes
+    // ever exposes a single, so the hint fell through to the solution.
+    expect(findUnlockingPlacement(CHAINS_STUCK)).toBeNull();
+
+    const elimination = findElimination(CHAINS_STUCK);
+
+    expect(elimination).not.toBeNull();
+    expect(elimination!.removed.length).toBeGreaterThan(0);
+    const solution = solvePuzzle(CHAINS_STUCK)!;
+    for (const r of elimination!.removed) {
+      expect(r.digit).not.toBe(Number(solution[r.cell]));
+    }
+  });
+
+  it("returns null when no technique applies at all", () => {
+    expect(findElimination(".".repeat(81))).toBeNull();
   });
 });

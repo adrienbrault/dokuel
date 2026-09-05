@@ -25,6 +25,24 @@ function defaultProps() {
   };
 }
 
+describe("Cell hint highlights", () => {
+  it("separates the cells to clear from the cells that prove it", () => {
+    // A hint that removes candidates points at two different things at
+    // once; one tint for both would leave the player guessing which
+    // cells they are meant to edit.
+    const { container: proving } = render(
+      <Cell {...defaultProps()} cell={makeCell()} isHintRelated={true} />,
+    );
+    const { container: clearing } = render(
+      <Cell {...defaultProps()} cell={makeCell()} isHintEliminated={true} />,
+    );
+
+    expect(proving.firstElementChild!.className).toContain("bg-cell-hint");
+    expect(clearing.firstElementChild!.className).not.toContain("bg-cell-hint");
+    expect(clearing.firstElementChild!.className).toContain("bg-cell-conflict");
+  });
+});
+
 describe("Cell accessible state", () => {
   it("announces a conflict in the label, not just via color", () => {
     // The red background/text is invisible to screen readers and

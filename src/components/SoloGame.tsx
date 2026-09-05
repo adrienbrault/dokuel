@@ -141,6 +141,7 @@ export function SoloGame({
     onPlaceNumber: keyDigit,
     onErase: game.erase,
     onUndo: game.undo,
+    onRedo: game.redo,
     onToggleNotes: game.toggleNotesMode,
     enabled: game.status === "playing" && !paused,
   });
@@ -149,6 +150,18 @@ export function SoloGame({
     if (!game.activeHint) return undefined;
     const set = new Set<number>();
     for (const pos of game.activeHint.relatedCells) {
+      set.add(cellKey(pos.row, pos.col));
+    }
+    return set;
+  }, [game.activeHint]);
+
+  // An elimination hint points at two sets of cells: the ones proving
+  // it, above, and the ones the player is asked to clear.
+  const eliminatedCells = useMemo(() => {
+    const hint = game.activeHint;
+    if (hint?.kind !== "elimination") return undefined;
+    const set = new Set<number>();
+    for (const pos of hint.eliminatedCells) {
       set.add(cellKey(pos.row, pos.col));
     }
     return set;
@@ -199,6 +212,7 @@ export function SoloGame({
             assistLevel={assistLevel}
             conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
             hintCells={hintCells}
+            eliminatedCells={eliminatedCells}
             highlightedDigit={paused ? null : highlight.highlightedDigit}
             onSelectCell={paused ? () => {} : highlight.selectCell}
             onSetSelectedCells={paused ? undefined : highlight.setSelectedCells}
@@ -233,7 +247,10 @@ export function SoloGame({
           <GameControls
             onErase={game.erase}
             onUndo={game.undo}
+            onRedo={game.redo}
+            onFillNotes={assistLevel === "paper" ? undefined : game.fillNotes}
             historyLength={game.historyLength}
+            redoLength={game.redoLength}
             onHint={game.hint}
           />
         </>
