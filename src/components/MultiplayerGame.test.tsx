@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getLastMultiplayerDifficulty } from "../lib/mp-preferences.ts";
 import type { RoomState } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
 
@@ -78,6 +79,28 @@ function renderGame() {
     />,
   );
 }
+
+describe("MultiplayerGame lobby", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = { ...roomState, status: "lobby", puzzle: null };
+    mockMp.puzzle = null;
+    mockMp.hasStartedGame = false;
+  });
+
+  it("remembers the difficulty the host picked for the next room", () => {
+    // Creating a game skips the picker and opens on the remembered
+    // difficulty, so the lobby's own selector is where that memory is
+    // written - otherwise every room forever opens on medium.
+    renderGame();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Hard" }));
+
+    expect(mockMp.setDifficulty).toHaveBeenCalledWith("hard");
+    expect(getLastMultiplayerDifficulty()).toBe("hard");
+  });
+});
 
 describe("MultiplayerGame full room", () => {
   beforeEach(() => {

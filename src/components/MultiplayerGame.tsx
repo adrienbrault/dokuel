@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import { setLastMultiplayerDifficulty } from "../lib/mp-preferences.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -162,7 +163,13 @@ export function MultiplayerGame({
             mp.updateName(name);
           }}
           onAssistLevelChange={mp.setAssistLevel}
-          onDifficultyChange={mp.setDifficulty}
+          onDifficultyChange={(level) => {
+            // The create flow has no picker any more, so the lobby is
+            // where the player's multiplayer difficulty is chosen and
+            // therefore where the next room's default is written.
+            setLastMultiplayerDifficulty(level);
+            mp.setDifficulty(level);
+          }}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
