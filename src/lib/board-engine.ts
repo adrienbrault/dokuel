@@ -557,6 +557,19 @@ export function serializeBoard(board: Board): SavedBoard {
   return { values, notes };
 }
 
+/**
+ * The 81-char silhouette of a board: "1" wherever a cell holds a value
+ * (given or written), "0" where it is still empty. This is what one
+ * player publishes about themselves in a race - it shows the opponent
+ * where the work has happened without ever carrying a digit, so it can
+ * ride an ephemeral channel with nothing to leak.
+ */
+export function filledMask(board: Board): string {
+  return board
+    .flatMap((row) => row.map((c) => (c.value === null ? "0" : "1")))
+    .join("");
+}
+
 export function initState(args: {
   puzzle: string;
   solution?: string | undefined;
