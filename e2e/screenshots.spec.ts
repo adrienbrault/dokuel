@@ -419,6 +419,49 @@ test.describe("solo win modal", () => {
   });
 });
 
+test.describe("solo challenge link", () => {
+  // The same one-cell-from-done save the win-modal scene uses, opened
+  // through a real challenge link: 03:42 beats the seeded 04:12.
+  test.use({
+    storage: {
+      "sudoku_save_e2e-win": nearlyWonSave,
+      sudoku_stats: priorEasyStats,
+    },
+  });
+
+  test("solo game - challenge banner", async ({ page }, testInfo) => {
+    await page.goto("/solo/easy/e2e-win?t=252&by=Swift+Panda");
+    await page.waitForSelector(
+      '[role="group"][aria-label="Number pad"]:visible',
+    );
+    await page
+      .getByText("Swift Panda solved this in 04:12. Beat it!")
+      .waitFor();
+
+    await page.screenshot({
+      path: screenshotPath("solo-challenge-banner", testInfo.project.name),
+    });
+  });
+
+  test("solo game - challenge win modal", async ({ page }, testInfo) => {
+    await page.goto("/solo/easy/e2e-win?t=252&by=Swift+Panda");
+    await page.waitForSelector(
+      '[role="group"][aria-label="Number pad"]:visible',
+    );
+
+    await page.locator('button[aria-label*=", empty"]').click();
+    await page.keyboard.press("5");
+
+    const dialog = page.getByRole("dialog");
+    await dialog.getByText(/You beat Swift Panda/).waitFor();
+    await dialog.getByRole("button", { name: "Challenge a friend" }).waitFor();
+
+    await page.screenshot({
+      path: screenshotPath("solo-challenge-win", testInfo.project.name),
+    });
+  });
+});
+
 // --- Multiplayer: real two-tab session ---
 //
 // y-webrtc syncs same-origin tabs over a BroadcastChannel, so two pages

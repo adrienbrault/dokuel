@@ -85,6 +85,8 @@ export function sceneLabel(scene: string): string {
     "solo-numpad-right": "Solo · numpad right",
     "solo-in-progress": "Solo · in progress",
     "solo-win-modal": "Solo · win modal",
+    "solo-challenge-banner": "Solo · challenge banner",
+    "solo-challenge-win": "Solo · challenge win",
     "solo-settings-popover": "Solo · settings popover",
     difficulty: "Difficulty picker",
     "difficulty-dark": "Difficulty picker (dark)",
