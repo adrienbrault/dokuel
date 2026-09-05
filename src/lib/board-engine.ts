@@ -64,6 +64,7 @@ export type Action =
     }
   | { type: "PLACE_NOTE_AT"; row: number; col: number; value: number }
   | { type: "ERASE" }
+  | { type: "FILL_NOTES" }
   | { type: "UNDO" }
   | { type: "REDO" }
   | { type: "HINT" }
@@ -353,6 +354,86 @@ function handleErase(state: State): State {
   };
 }
 
+/**
+ * Digits already placed in each row, column, and box, as bitmasks.
+ * One pass over the board answers every cell's candidate question,
+ * instead of re-walking 20 peers per cell.
+ */
+function placedDigitMasks(board: Board): {
+  rows: number[];
+  cols: number[];
+  boxes: number[];
+} {
+  const rows = new Array<number>(9).fill(0);
+  const cols = new Array<number>(9).fill(0);
+  const boxes = new Array<number>(9).fill(0);
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      const value = board[row]![col]!.value;
+      if (value === null) continue;
+      const bit = 1 << value;
+      rows[row]! |= bit;
+      cols[col]! |= bit;
+      boxes[Math.floor(row / 3) * 3 + Math.floor(col / 3)]! |= bit;
+    }
+  }
+  return { rows, cols, boxes };
+}
+
+/**
+ * Pencil every empty cell full of the digits its row, column, and box
+ * still allow, replacing whatever was there. Candidates come from
+ * placed values only, never from other notes: notes are the player's
+ * working memory and may be wrong or half-finished.
+ *
+ * The whole sweep is one history entry, so a player who did not want
+ * it gets their own notes back with a single undo.
+ */
+function handleFillNotes(state: State): State {
+  if (state.status === "completed") return state;
+  const { rows, cols, boxes } = placedDigitMasks(state.board);
+  const editor = editBoard(state.board);
+  const cells: {
+    position: Position;
+    previousNotes: Set<number>;
+    notes: Set<number>;
+  }[] = [];
+
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      const cell = editor.peek(row, col);
+      if (cell.isGiven || cell.value !== null) continue;
+      const used =
+        rows[row]! |
+        cols[col]! |
+        boxes[Math.floor(row / 3) * 3 + Math.floor(col / 3)]!;
+      const notes = new Set<number>();
+      for (let digit = 1; digit <= 9; digit++) {
+        if (!(used & (1 << digit))) notes.add(digit);
+      }
+      if (
+        notes.size === cell.notes.size &&
+        [...notes].every((d) => cell.notes.has(d))
+      ) {
+        continue;
+      }
+      cells.push({
+        position: { row, col },
+        previousNotes: new Set(cell.notes),
+        notes,
+      });
+      editor.edit(row, col).notes = new Set(notes);
+    }
+  }
+
+  if (cells.length === 0) return state;
+  return {
+    ...state,
+    board: editor.board,
+    history: pushHistory(state.history, { type: "fillNotes", cells }),
+  };
+}
+
 /** Roll one action back: the exact inverse of {@link applyMove}. */
 function revertMove(editor: BoardEditor, action: MoveAction): void {
   switch (action.type) {
@@ -398,6 +479,13 @@ function revertMove(editor: BoardEditor, action: MoveAction): void {
         const target = editor.edit(row, col);
         target.value = entry.previousValue;
         target.notes = new Set(entry.previousNotes);
+      }
+      break;
+    }
+    case "fillNotes": {
+      for (const entry of action.cells) {
+        const { row, col } = entry.position;
+        editor.edit(row, col).notes = new Set(entry.previousNotes);
       }
       break;
     }
@@ -451,6 +539,13 @@ function applyMove(editor: BoardEditor, action: MoveAction): void {
         const target = editor.edit(row, col);
         target.value = null;
         target.notes = new Set();
+      }
+      break;
+    }
+    case "fillNotes": {
+      for (const entry of action.cells) {
+        const { row, col } = entry.position;
+        editor.edit(row, col).notes = new Set(entry.notes);
       }
       break;
     }
@@ -549,6 +644,9 @@ function dispatchAction(state: State, action: Action): State {
 
     case "ERASE":
       return handleErase(state);
+
+    case "FILL_NOTES":
+      return handleFillNotes(state);
 
     case "UNDO":
       return handleUndo(state);

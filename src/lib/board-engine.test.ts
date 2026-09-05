@@ -373,3 +373,48 @@ describe("REDO action", () => {
     expect(state).toBe(before);
   });
 });
+
+describe("FILL_NOTES action", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("pencils each empty cell's candidates as one undoable step", () => {
+    let state = initState({ puzzle });
+
+    state = reducer(state, { type: "FILL_NOTES" });
+
+    // r1c3 sees 5, 3, 7 in its row, 8 in its column, and 5, 3, 6, 9, 8
+    // in its box, so only 1, 2 and 4 survive.
+    expect([...state.board[0]![2]!.notes].sort()).toEqual([1, 2, 4]);
+    expect(state.history).toHaveLength(1);
+
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.notes.size).toBe(0);
+  });
+
+  it("replaces stale notes and leaves filled cells alone", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 9 });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 3 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 6,
+      autoEliminateNotes: false,
+    });
+
+    state = reducer(state, { type: "FILL_NOTES" });
+
+    // The impossible 9 is gone, replaced by the real candidates.
+    expect([...state.board[0]![2]!.notes].sort()).toEqual([1, 2, 4]);
+    // A cell holding a value keeps it and gains no notes; so does a given.
+    expect(state.board[0]![3]!.value).toBe(6);
+    expect(state.board[0]![3]!.notes.size).toBe(0);
+    expect(state.board[0]![0]!.notes.size).toBe(0);
+  });
+
+  it("does not count as a hint", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "FILL_NOTES" });
+    expect(state.hintsUsed).toBe(0);
+  });
+});

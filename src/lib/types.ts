@@ -41,6 +41,18 @@ export type MoveAction =
       removed: Position[];
     }
   | {
+      /**
+       * One sweep of the fill-notes control: every empty cell's notes
+       * replaced by its candidates, undone and redone as a single step.
+       */
+      type: "fillNotes";
+      cells: {
+        position: Position;
+        previousNotes: Set<number>;
+        notes: Set<number>;
+      }[];
+    }
+  | {
       type: "batchErase";
       cells: {
         position: Position;
