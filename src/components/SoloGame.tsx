@@ -4,35 +4,33 @@ import { useElapsedClock } from "../hooks/useElapsedClock.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
-import { compareChallenge, type FriendChallenge } from "../lib/challenge.ts";
+import type { FriendChallenge } from "../lib/challenge.ts";
 import { ASSIST_LEVEL_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
+import type { FriendRoundPlan } from "../lib/friend-receipt.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
-import { recordTechniquePractice } from "../lib/learning-progress.ts";
+import {
+  createLearningExercise,
+  type LearningExerciseData,
+} from "../lib/learning-exercises.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
-import type { AssistLevel, Difficulty, HintTechnique } from "../lib/types.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
-import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
-import { GameResult } from "./GameResult.tsx";
-import { HintBanner } from "./HintBanner.tsx";
-import { LearningExercise } from "./LearningExercise.tsx";
 import { NumPad } from "./NumPad.tsx";
+import { SoloGameControls } from "./SoloGameControls.tsx";
+import { SoloGameResult } from "./SoloGameResult.tsx";
 import { TimerPill } from "./TimerPill.tsx";
 
 const EMPTY_CONFLICTS = new Set<number>();
 
-type LearningExerciseState = {
-  technique: HintTechnique;
-  prompt: string;
-  answer: number;
-};
-
 type SoloGameProps = {
   challenge?: FriendChallenge | undefined;
+  /** A solved fresh board can become the next friend target. */
+  friendRound?: FriendRoundPlan | undefined;
   difficulty: Difficulty;
   gameKey?: string | undefined;
   assistLevel?: AssistLevel | undefined;
@@ -55,6 +53,7 @@ type SoloGameProps = {
 export function SoloGame({
   difficulty,
   challenge,
+  friendRound,
   gameKey,
   assistLevel: initialAssistLevel = "standard",
   initialPuzzle,
@@ -77,12 +76,16 @@ export function SoloGame({
     completion,
     puzzle,
     initialTimerSeconds,
+    saveStatus,
+    retrySave,
+    retryCompletion,
   } = useResumableSudoku({
     gameKey,
     initialPuzzle,
     difficulty,
     initialAssistLevel,
     challenge,
+    origin: friendRound ? "friend" : undefined,
     getTimerSeconds: () => timerApiRef.current?.getElapsedSeconds() ?? 0,
     dailyDate,
     onComplete,
@@ -105,7 +108,7 @@ export function SoloGame({
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
   );
   const [learningExercise, setLearningExercise] =
-    useState<LearningExerciseState | null>(null);
+    useState<LearningExerciseData | null>(null);
 
   // Capture PB for this difficulty + assist mode, before this result saves.
   const priorStats = useMemo(
@@ -163,11 +166,8 @@ export function SoloGame({
   const handlePractice = () => {
     const hint = game.activeHint;
     if (!hint) return;
-    setLearningExercise({
-      technique: hint.technique,
-      prompt: `Which digit belongs in row ${hint.position.row + 1}, column ${hint.position.col + 1}?`,
-      answer: hint.value,
-    });
+    const exercise = createLearningExercise(hint.technique, puzzle);
+    if (exercise) setLearningExercise(exercise);
   };
 
   return (
@@ -244,25 +244,15 @@ export function SoloGame({
       }
       controls={
         <>
-          {game.activeHint && (
-            <HintBanner
-              hint={game.activeHint}
-              onDismiss={game.dismissHint}
-              onAdvance={game.hint}
-              onPractice={handlePractice}
-            />
-          )}
-          {learningExercise && (
-            <LearningExercise
-              technique={learningExercise.technique}
-              prompt={learningExercise.prompt}
-              answer={learningExercise.answer}
-              onSolved={() => {}}
-              onAttempt={recordTechniquePractice}
-              onClose={() => setLearningExercise(null)}
-            />
-          )}
-          <GameControls
+          <SoloGameControls
+            saveStatus={saveStatus}
+            onRetrySave={retrySave}
+            activeHint={game.activeHint}
+            learningExercise={learningExercise}
+            onDismissHint={game.dismissHint}
+            onAdvanceHint={game.hint}
+            onPractice={handlePractice}
+            onClosePractice={() => setLearningExercise(null)}
             notesMode={game.notesMode}
             onToggleNotes={game.toggleNotesMode}
             disabled={paused || game.status !== "playing"}
@@ -275,43 +265,23 @@ export function SoloGame({
       }
       footer={
         showResult ? (
-          <GameResult
-            isWinner={true}
-            time={formatTime(elapsedSeconds)}
-            timeSeconds={Math.floor(elapsedSeconds)}
+          <SoloGameResult
+            elapsedSeconds={elapsedSeconds}
             difficulty={difficulty}
-            onNewGame={onBack}
-            onRematch={onRematch}
-            shareChallenge={
-              completion
-                ? {
-                    version: 1,
-                    puzzle,
-                    difficulty,
-                    assistLevel: completion.assistLevel,
-                    timeSeconds: completion.timeSeconds,
-                    hintsUsed: game.hintsUsed,
-                  }
-                : undefined
-            }
-            comparison={
-              challenge && completion
-                ? compareChallenge(challenge, {
-                    ...completion,
-                    hintsUsed: game.hintsUsed,
-                  })
-                : undefined
-            }
-            stats={completion?.stats ?? null}
-            isNewPB={completion?.isNewPB}
+            puzzle={puzzle}
+            challenge={challenge}
+            friendRound={friendRound}
+            gameKey={gameKey}
+            completion={completion}
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
             isDaily={isDaily}
-            tip={
-              !tipDismissed && position === "bottom"
-                ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."
-                : undefined
-            }
+            tipDismissed={tipDismissed}
+            position={position}
+            onNewGame={onBack}
+            onRematch={onRematch}
+            persistenceError={completion?.persisted === false}
+            onRetryPersistence={retryCompletion}
             onDismissTip={() => {
               setTipDismissed(true);
               localStorage.setItem("sudoku_numpad_tip_dismissed", "1");

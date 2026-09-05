@@ -5,8 +5,8 @@ import {
   DIFFICULTY_LABELS,
 } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
+import type { FriendReceipt } from "../lib/friend-receipt.ts";
 import type { Difficulty } from "../lib/types.ts";
-
 import {
   MultiplayerResultComparison,
   type MultiplayerResultComparisonProps,
@@ -15,6 +15,7 @@ import { ResultShare } from "./ResultShare.tsx";
 
 type GameResultProps = {
   shareChallenge?: FriendChallenge | undefined;
+  shareReceipt?: FriendReceipt | undefined;
   comparison?: ReturnType<typeof compareChallenge> | undefined;
   isWinner: boolean;
   time: string;
@@ -31,6 +32,8 @@ type GameResultProps = {
     averageTime: number;
   } | null;
   isNewPB?: boolean | undefined;
+  persistenceError?: boolean | undefined;
+  onRetryPersistence?: (() => void) | undefined;
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
@@ -42,6 +45,7 @@ export function GameResult({
   isWinner,
   comparison,
   shareChallenge,
+  shareReceipt,
   time,
   difficulty,
   isMultiplayer,
@@ -51,6 +55,8 @@ export function GameResult({
   onNewGame,
   stats,
   isNewPB,
+  persistenceError,
+  onRetryPersistence,
   hintsUsed,
   streakInfo,
   isDaily,
@@ -165,6 +171,23 @@ export function GameResult({
                   : `Puzzle complete — ${formatTime(comparison.seconds)} after the target.`}
           </p>
         )}
+        {persistenceError && onRetryPersistence && (
+          <div
+            role="status"
+            className="flex flex-col items-center gap-2 rounded-xl bg-bg-inset p-3 text-center"
+          >
+            <p className="text-sm text-negative-text">
+              This result could not be saved. Keep this page open and try again.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary w-full"
+              onClick={onRetryPersistence}
+            >
+              Try saving again
+            </button>
+          </div>
+        )}
         {stats && !isMultiplayer && (
           <div className="grid grid-cols-3 gap-2.5 w-full text-center">
             <StatTile label="Played" value={String(stats.gamesPlayed)} />
@@ -198,6 +221,7 @@ export function GameResult({
               streakInfo={streakInfo}
               isDaily={isDaily}
               shareChallenge={shareChallenge}
+              shareReceipt={shareReceipt}
             />
           )}
 

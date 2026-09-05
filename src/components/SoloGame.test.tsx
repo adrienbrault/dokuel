@@ -114,6 +114,8 @@ describe("SoloGame numpad selection", () => {
     expect(
       screen.getByRole("region", { name: "Technique practice" }),
     ).toBeTruthy();
+    expect(screen.getByRole("grid", { name: "Practice board" })).toBeTruthy();
+    expect(screen.getByText(/on this new board/i)).toBeTruthy();
   });
 
   it("persists wrong and solved focused practice attempts", () => {
@@ -145,6 +147,61 @@ describe("SoloGame numpad selection", () => {
       attempts: 2,
       solved: 1,
     });
+  });
+
+  it("shows and retries a failed in-progress save", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        gameKey="solo-save-feedback"
+        initialPuzzle={PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+      fireEvent.keyDown(window, { key: "5" });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(screen.getByRole("status")).toHaveTextContent(/could not be saved/i);
+    fireEvent.click(screen.getByRole("button", { name: /try saving again/i }));
+    expect(screen.queryByText(/could not be saved/i)).toBeNull();
+    expect(loadGame("solo-save-feedback")).not.toBeNull();
+  });
+
+  it("shows and retries a failed completion result", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        gameKey="solo-result-feedback"
+        initialPuzzle={SINGLE_HOLE_PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+      fireEvent.keyDown(window, { key: "5" });
+    } finally {
+      spy.mockRestore();
+    }
+    act(() => vi.advanceTimersByTime(400));
+
+    expect(screen.getByRole("status")).toHaveTextContent(/could not be saved/i);
+    fireEvent.click(screen.getByRole("button", { name: /try saving again/i }));
+    expect(screen.queryByText(/could not be saved/i)).toBeNull();
+    expect(loadGame("solo-result-feedback")).toBeNull();
   });
 
   it("shows one notes mode for keyboard and numpad input", () => {

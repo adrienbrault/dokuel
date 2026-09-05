@@ -124,6 +124,25 @@ describe("GameResult", () => {
     expect(screen.getByText(/new personal best/i)).toBeInTheDocument();
   });
 
+  it("shows a retry action when the durable result write failed", async () => {
+    const onRetry = vi.fn();
+    render(
+      <GameResult
+        isWinner={true}
+        time="02:00"
+        onNewGame={vi.fn()}
+        persistenceError={true}
+        onRetryPersistence={onRetry}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(/could not be saved/i);
+    await userEvent.click(
+      screen.getByRole("button", { name: /try saving again/i }),
+    );
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
   it("shows Another puzzle in solo mode and Rematch in multiplayer", () => {
     const { rerender } = render(
       <GameResult
@@ -265,4 +284,42 @@ it("shares an exact friend challenge instead of the homepage", async () => {
     expect.stringContaining("Paper assistance"),
   );
   expect(writeText).toHaveBeenCalledWith(expect.stringContaining("1 hint"));
+});
+
+it("offers a comparison receipt when a friend challenge is completed", () => {
+  render(
+    <GameResult
+      isWinner
+      time="03:00"
+      onNewGame={vi.fn()}
+      shareReceipt={{
+        version: 1,
+        matchId: "match-1",
+        challenge: {
+          version: 1,
+          puzzle:
+            ".34678912672195348198342567859761423426853791713924856961537284287419635345286179",
+          difficulty: "easy",
+          assistLevel: "paper",
+          timeSeconds: 222,
+          hintsUsed: 0,
+        },
+        challenger: {
+          name: "Adrien",
+          timeSeconds: 222,
+          assistLevel: "paper",
+          hintsUsed: 0,
+        },
+        friend: {
+          name: "Luna",
+          timeSeconds: 180,
+          assistLevel: "paper",
+          hintsUsed: 0,
+        },
+      }}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Send result to friend" }),
+  ).toBeInTheDocument();
 });
