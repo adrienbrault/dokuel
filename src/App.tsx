@@ -1,18 +1,20 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { DailyArchive } from "./components/DailyArchive.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
 import { JoinScreen } from "./components/JoinScreen.tsx";
 import { Landing } from "./components/Landing.tsx";
+import { NotFoundScreen } from "./components/NotFoundScreen.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
-import { MAX_ROOM_KEY_LENGTH } from "./hooks/mp-connection.ts";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { generateId } from "./lib/id.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
+import { pathToScreen, type Screen, screenToPath } from "./lib/routes.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
-import type { AssistLevel, Difficulty } from "./lib/types.ts";
+import type { Difficulty } from "./lib/types.ts";
 import "./index.css";
 
 // The multiplayer screen pulls in yjs + y-webrtc + y-indexeddb —
@@ -24,99 +26,9 @@ const MultiplayerScreen = lazy(() =>
   })),
 );
 
-type Screen =
-  | { name: "landing" }
-  | { name: "difficulty"; mode: "solo" | "create" }
-  | {
-      name: "solo";
-      difficulty: Difficulty;
-      gameKey: string;
-      assistLevel: AssistLevel;
-    }
-  | { name: "daily" }
-  | {
-      name: "multiplayer";
-      roomId: string;
-      difficulty: Difficulty | null;
-    }
-  | { name: "join" }
-  | { name: "stats" }
-  | { name: "notFound"; path: string };
-
-const VALID_DIFFICULTIES = new Set<string>([
-  "easy",
-  "medium",
-  "hard",
-  "expert",
-]);
-
-// Invite codes are word-word-xxxx (see room-code.ts); the two-word
-// form covers links minted before the entropy suffix existed.
-const ROOM_CODE_RE = /^[a-z]+-[a-z]+(-[a-z0-9]{4})?$/;
-
-export function screenToPath(screen: Screen): string {
-  switch (screen.name) {
-    case "landing":
-    case "difficulty":
-      return "/";
-    case "solo":
-      return `/solo/${screen.difficulty}/${screen.gameKey}`;
-    case "daily":
-      return "/daily";
-    case "join":
-      return "/join";
-    case "stats":
-      return "/stats";
-    case "multiplayer":
-      return `/${screen.roomId}`;
-    case "notFound":
-      return screen.path;
-  }
-}
-
-export function pathToScreen(pathname: string): Screen {
-  const path = pathname.replace(/^\/+|\/+$/g, "");
-
-  if (path === "") return { name: "landing" };
-  if (path === "daily") return { name: "daily" };
-  if (path === "join") return { name: "join" };
-  if (path === "stats") return { name: "stats" };
-
-  if (path.startsWith("solo/")) {
-    const parts = path.slice(5).split("/");
-    const difficulty = parts[0] ?? "";
-    const gameKey = parts[1] ?? "";
-    if (VALID_DIFFICULTIES.has(difficulty) && gameKey) {
-      return {
-        name: "solo",
-        difficulty: difficulty as Difficulty,
-        gameKey,
-        assistLevel: "standard",
-      };
-    }
-    return { name: "landing" };
-  }
-
-  // Only a room-code-shaped path is a multiplayer room. Pasted links
-  // arrive capitalized (messaging apps, mobile keyboards) while Yjs
-  // room names are case-sensitive — normalize instead of dropping the
-  // joiner into a different, empty room. Anything else is a 404, not
-  // an excuse to boot the WebRTC stack.
-  const candidate = path.toLowerCase();
-  if (candidate.length <= MAX_ROOM_KEY_LENGTH && ROOM_CODE_RE.test(candidate)) {
-    return {
-      name: "multiplayer",
-      roomId: candidate,
-      difficulty: null,
-    };
-  }
-
-  return { name: "notFound", path: pathname };
-}
-
 function App() {
   const [screen, setScreen] = useState<Screen>(() =>
-    pathToScreen(window.location.pathname),
+    pathToScreen(window.location.pathname, window.location.search),
   );
 
   const navigate = useCallback(
@@ -128,13 +40,17 @@ function App() {
         window.history.pushState(null, "", path);
       }
       setScreen(newScreen);
+      // pushState keeps the previous page's scroll offset, so a screen
+      // opened from a link near the bottom (the archive, stats) would
+      // open scrolled past its own heading.
+      window.scrollTo?.(0, 0);
     },
     [],
   );
 
   useEffect(() => {
     const handlePopState = () => {
-      setScreen(pathToScreen(window.location.pathname));
+      setScreen(pathToScreen(window.location.pathname, window.location.search));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -146,7 +62,7 @@ function App() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only by design — navigate() already writes canonical paths
   useEffect(() => {
     const canonical = screenToPath(screen);
-    if (canonical !== window.location.pathname) {
+    if (canonical !== window.location.pathname + window.location.search) {
       window.history.replaceState(null, "", canonical);
     }
   }, []);
@@ -178,6 +94,7 @@ function App() {
             onCreate={() => navigate({ name: "difficulty", mode: "create" })}
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
+            onArchive={() => navigate({ name: "dailyArchive" })}
             onContinue={(gameKey, difficulty) => {
               navigate({
                 name: "solo",
@@ -223,6 +140,7 @@ function App() {
           difficulty={screen.difficulty}
           gameKey={screen.gameKey}
           assistLevel={screen.assistLevel}
+          challenge={screen.challenge}
           onBack={() => navigate({ name: "landing" })}
           onRematch={() => {
             navigate(
@@ -239,7 +157,22 @@ function App() {
       );
 
     case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+      return (
+        <DailyGame
+          key={screen.date ?? "today"}
+          date={screen.date}
+          onBack={() => navigate({ name: "landing" })}
+          onArchive={() => navigate({ name: "dailyArchive" })}
+        />
+      );
+
+    case "dailyArchive":
+      return (
+        <DailyArchive
+          onBack={() => navigate({ name: "landing" })}
+          onPlay={(date) => navigate({ name: "daily", date })}
+        />
+      );
 
     case "multiplayer":
       return (
@@ -277,33 +210,11 @@ function App() {
 
     case "notFound":
       return (
-        <div className="screen">
-          <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
-            <h1 className="heading">Page not found</h1>
-            <p className="caption max-w-sm">
-              Nothing lives at{" "}
-              <span className="text-mono break-all">{screen.path}</span>. If a
-              friend sent you an invite, double-check the link or enter the room
-              code by hand.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                className="btn btn-lg btn-primary"
-                onClick={() => navigate({ name: "landing" })}
-              >
-                Go to Dokuel
-              </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => navigate({ name: "join" })}
-              >
-                Enter a room code
-              </button>
-            </div>
-          </div>
-        </div>
+        <NotFoundScreen
+          path={screen.path}
+          onHome={() => navigate({ name: "landing" })}
+          onJoin={() => navigate({ name: "join" })}
+        />
       );
   }
 }

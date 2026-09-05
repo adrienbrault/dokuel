@@ -32,6 +32,7 @@ type LandingProps = {
   onJoin: () => void;
   onContinue: (gameKey: string, difficulty: string) => void;
   onStats: () => void;
+  onArchive: () => void;
 };
 
 export function Landing({
@@ -41,6 +42,7 @@ export function Landing({
   onJoin,
   onContinue,
   onStats,
+  onArchive,
 }: LandingProps) {
   const today = useMemo(() => todayLocalISO(), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
@@ -155,14 +157,24 @@ export function Landing({
       </div>
 
       <div className="flex flex-col items-center gap-3">
-        <button
-          type="button"
-          className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-accent transition-colors touch-manipulation"
-          onClick={onStats}
-        >
-          <ChartColumn size={16} aria-hidden="true" />
-          View Stats
-        </button>
+        <div className="flex items-center gap-5">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-accent transition-colors touch-manipulation"
+            onClick={onStats}
+          >
+            <ChartColumn size={16} aria-hidden="true" />
+            View Stats
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-accent transition-colors touch-manipulation"
+            onClick={onArchive}
+          >
+            <CalendarDays size={16} aria-hidden="true" />
+            Past Dailies
+          </button>
+        </div>
         <a
           href="https://github.com/adrienbrault/dokuel"
           target="_blank"

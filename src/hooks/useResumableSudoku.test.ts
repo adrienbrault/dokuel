@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { todayLocalISO } from "../lib/date.ts";
 import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { useResumableSudoku } from "./useResumableSudoku.ts";
@@ -317,7 +318,7 @@ describe("useResumableSudoku", () => {
     expect(onComplete).toHaveBeenCalledWith(73, {});
   });
 
-  it("when dailyDate is given, onComplete receives the recorded streak", () => {
+  it("when today's daily is finished, onComplete receives the streak", () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() =>
       useResumableSudoku({
@@ -325,7 +326,7 @@ describe("useResumableSudoku", () => {
         difficulty: "medium",
         initialAssistLevel: "standard",
         getTimerSeconds: () => 90,
-        dailyDate: "2026-05-16",
+        dailyDate: todayLocalISO(),
         onComplete,
       }),
     );
@@ -338,7 +339,7 @@ describe("useResumableSudoku", () => {
       expect.objectContaining({
         streak: expect.objectContaining({
           currentStreak: 1,
-          lastCompletedDate: "2026-05-16",
+          lastCompletedDate: todayLocalISO(),
         }),
       }),
     );

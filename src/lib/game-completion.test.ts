@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { isDailyCompleted } from "./daily-streak.ts";
+import { getDailyResult } from "./daily-results.ts";
+import { getDailyStreak, isDailyCompleted } from "./daily-streak.ts";
+import { todayLocalISO } from "./date.ts";
 import { completeGame } from "./game-completion.ts";
 import { loadGame, saveGame } from "./game-storage.ts";
 import { getStatsForDifficulty } from "./stats.ts";
@@ -82,8 +84,8 @@ describe("completeGame", () => {
     expect(result.streak).toBeUndefined();
   });
 
-  it("records the daily streak and returns it when dailyDate is given", () => {
-    const date = "2026-05-16";
+  it("records the daily streak and returns it for today's daily", () => {
+    const date = todayLocalISO();
 
     const result = completeGame({
       difficulty: "medium",
@@ -97,6 +99,39 @@ describe("completeGame", () => {
     expect(result.streak!.currentStreak).toBe(1);
     expect(result.streak!.lastCompletedDate).toBe(date);
     expect(isDailyCompleted(date)).toBe(true);
+  });
+
+  it("records an archive daily without touching the streak", () => {
+    // Playing back through the archive is not a day of the streak:
+    // otherwise a rainy afternoon spent on old dailies would mint a
+    // run the player never actually played daily.
+    const result = completeGame({
+      difficulty: "medium",
+      assistLevel: "standard",
+      timeSeconds: 400,
+      hintsUsed: 0,
+      dailyDate: "2026-05-16",
+    });
+
+    expect(result.streak).toBeUndefined();
+    expect(getDailyStreak().currentStreak).toBe(0);
+    expect(getDailyStreak().longestStreak).toBe(0);
+    expect(isDailyCompleted("2026-05-16")).toBe(false);
+    expect(getDailyResult("2026-05-16")?.time).toBe(400);
+  });
+
+  it("records a result for today's daily as well as the streak", () => {
+    const date = todayLocalISO();
+
+    completeGame({
+      difficulty: "medium",
+      assistLevel: "standard",
+      timeSeconds: 250,
+      hintsUsed: 0,
+      dailyDate: date,
+    });
+
+    expect(getDailyResult(date)?.time).toBe(250);
   });
 
   it("is safe to call without a gameKey (no autosave to delete)", () => {

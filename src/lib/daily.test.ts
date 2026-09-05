@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { getDailyPuzzle } from "./daily.ts";
+import dailies from "./dailies.json";
+import { getDailyPuzzle, getDailyPuzzleFor } from "./daily.ts";
 import { todayLocalISO } from "./date.ts";
 import { countSolutions } from "./solver.ts";
 
@@ -51,5 +52,49 @@ describe("getDailyPuzzle", () => {
     expect(jul.solution).toBe(
       "718623459395478621426159873941582367567394182283761594874236915159847236632915748",
     );
+  });
+});
+
+describe("the frozen daily table", () => {
+  const table = dailies as Record<string, string>;
+  const dates = Object.keys(table);
+
+  it("covers every date from 2026-05-01 through 2027-12-31", () => {
+    expect(dates[0]).toBe("2026-05-01");
+    expect(dates[dates.length - 1]).toBe("2027-12-31");
+    expect(dates).toHaveLength(610);
+  });
+
+  it("preserves the puzzle the generator produces for the golden date", () => {
+    // The point of the table is that it can never fork from what
+    // players already saw: a mismatch here means the generator drifted
+    // and the table was not regenerated with it.
+    expect(table["2026-07-27"]).toBe(getDailyPuzzle("2026-07-27").puzzle);
+  });
+
+  it("stores solvable 81-cell boards", () => {
+    // Every entry costs a full solve, so a spread sample stands in for
+    // the whole table rather than making the suite grind.
+    for (let i = 0; i < dates.length; i += 61) {
+      const date = dates[i] as string;
+      const puzzle = table[date] as string;
+      expect(puzzle).toMatch(/^[.1-9]{81}$/);
+      expect(countSolutions(puzzle)).toBe(1);
+    }
+  });
+});
+
+describe("getDailyPuzzleFor", () => {
+  it("serves the frozen board for a date the table covers", async () => {
+    const { puzzle, date } = await getDailyPuzzleFor("2026-07-27");
+    expect(puzzle).toBe((dailies as Record<string, string>)["2026-07-27"]);
+    expect(date).toBe("2026-07-27");
+  });
+
+  it("falls back to the generator for a date outside the table", async () => {
+    // Dates before the table starts (and after it ends) must still
+    // produce a playable board rather than an empty screen.
+    const { puzzle } = await getDailyPuzzleFor("2026-01-01");
+    expect(puzzle).toBe(getDailyPuzzle("2026-01-01").puzzle);
   });
 });

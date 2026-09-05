@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildShareText, GameResult } from "./GameResult.tsx";
 
 describe("GameResult", () => {
@@ -182,6 +182,36 @@ describe("GameResult", () => {
     expect(text).toContain("🔥 5-day streak");
   });
 
+  it("share text points an archived daily at its own date", () => {
+    // Sharing an archive run with the bare site link would send
+    // friends to today's puzzle instead of the one just played.
+    const text = buildShareText({
+      difficulty: "medium",
+      time: "06:10",
+      isDaily: true,
+      archiveDate: "2026-05-16",
+    });
+
+    expect(text).toContain("May 16");
+    expect(text).toContain("https://dokuel.com/daily/2026-05-16");
+  });
+
+  it("offers the caller's extra link under the share action", async () => {
+    const onClick = vi.fn();
+    render(
+      <GameResult
+        isWinner={true}
+        time="04:00"
+        onNewGame={vi.fn()}
+        footerLink={{ label: "Past dailies", onClick }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Past dailies" }));
+
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
   it("calls onRematch and onNewGame when buttons clicked", async () => {
     const onRematch = vi.fn();
     const onNewGame = vi.fn();
@@ -200,5 +230,117 @@ describe("GameResult", () => {
 
     await userEvent.click(screen.getByText("New Game"));
     expect(onNewGame).toHaveBeenCalledOnce();
+  });
+});
+
+describe("GameResult challenge link", () => {
+  const CHALLENGE_URL = "https://dokuel.com/solo/medium/abc123?t=252&by=Ann";
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "share");
+  });
+
+  it("offers no challenge action without a link", () => {
+    render(<GameResult isWinner={true} time="03:42" onNewGame={vi.fn()} />);
+
+    expect(
+      screen.queryByRole("button", { name: /challenge a friend/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hands the link to the native share sheet when there is one", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { share });
+
+    render(
+      <GameResult
+        isWinner={true}
+        time="04:12"
+        difficulty="medium"
+        challengeUrl={CHALLENGE_URL}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /challenge a friend/i }),
+    );
+
+    expect(share).toHaveBeenCalledWith({
+      text: `I solved this Medium sudoku in 04:12. Beat my time!\n${CHALLENGE_URL}`,
+    });
+  });
+
+  it("copies the link and confirms only once the write lands", async () => {
+    Reflect.deleteProperty(navigator, "share");
+    let resolveWrite: () => void = () => {};
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockReturnValue(
+          new Promise<void>((resolve) => {
+            resolveWrite = resolve;
+          }),
+        ),
+      },
+    });
+
+    render(
+      <GameResult
+        isWinner={true}
+        time="04:12"
+        difficulty="medium"
+        challengeUrl={CHALLENGE_URL}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /challenge a friend/i }),
+    );
+    expect(screen.queryByText("Copied!")).not.toBeInTheDocument();
+
+    resolveWrite();
+    expect(await screen.findByText("Copied!")).toBeInTheDocument();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining(CHALLENGE_URL),
+    );
+  });
+});
+
+describe("GameResult challenge comparison", () => {
+  it("leads with the comparison when the player wins the race", () => {
+    render(
+      <GameResult
+        isWinner={true}
+        time="03:25"
+        timeSeconds={205}
+        difficulty="medium"
+        challenge={{ time: 252, by: "Swift Panda" }}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("You beat Swift Panda's 04:12!"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("00:47 faster")).toBeInTheDocument();
+  });
+
+  it("says who was faster when the challenge stands", () => {
+    render(
+      <GameResult
+        isWinner={true}
+        time="05:00"
+        timeSeconds={300}
+        difficulty="medium"
+        challenge={{ time: 252, by: "Swift Panda" }}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Swift Panda was faster: 04:12"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("00:48 behind")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pathToScreen, screenToPath } from "./App.tsx";
+import { pathToScreen, screenToPath } from "./routes.ts";
 
 describe("pathToScreen", () => {
   it("maps the static screens", () => {
@@ -56,11 +56,51 @@ describe("pathToScreen", () => {
     }
   });
 
+  it("plays a past date from the daily archive", () => {
+    expect(pathToScreen("/daily/2026-05-16")).toEqual({
+      name: "daily",
+      date: "2026-05-16",
+    });
+  });
+
+  it("opens the archive listing at /daily/archive", () => {
+    expect(pathToScreen("/daily/archive")).toEqual({ name: "dailyArchive" });
+  });
+
+  it("falls back to today's daily for a date with no daily", () => {
+    // Hand-edited or stale links must land somewhere playable rather
+    // than on a board generated for a day nobody ever saw.
+    for (const path of ["/daily/2026-04-30", "/daily/2099-01-01", "/daily/x"]) {
+      expect(pathToScreen(path)).toEqual({ name: "daily" });
+    }
+  });
+
   it("parses a valid solo path", () => {
     expect(pathToScreen("/solo/hard/abc123")).toMatchObject({
       name: "solo",
       difficulty: "hard",
       gameKey: "abc123",
+    });
+  });
+
+  it("reads a beat-my-time challenge off a solo link", () => {
+    expect(
+      pathToScreen("/solo/medium/abc123", "?t=252&by=Swift+Panda"),
+    ).toMatchObject({
+      name: "solo",
+      gameKey: "abc123",
+      challenge: { time: 252, by: "Swift Panda" },
+    });
+  });
+
+  it("opens the board anyway when the challenge params are malformed", () => {
+    // A link mangled by a chat client must still play, just without
+    // the challenge framing.
+    expect(pathToScreen("/solo/medium/abc123", "?t=nope&by=Ann")).toEqual({
+      name: "solo",
+      difficulty: "medium",
+      gameKey: "abc123",
+      assistLevel: "standard",
     });
   });
 
@@ -73,6 +113,27 @@ describe("pathToScreen", () => {
 describe("screenToPath", () => {
   it("keeps the offending path for the not-found screen", () => {
     expect(screenToPath({ name: "notFound", path: "/statss" })).toBe("/statss");
+  });
+
+  it("round-trips a solo challenge so refreshing keeps it", () => {
+    // App canonicalizes the address bar on mount by rewriting it to
+    // screenToPath(screen); dropping the query there would strip the
+    // challenge from every link the moment it opened.
+    const screen = pathToScreen("/solo/medium/abc123", "?t=252&by=Swift+Panda");
+    expect(screenToPath(screen)).toBe(
+      "/solo/medium/abc123?t=252&by=Swift+Panda",
+    );
+  });
+
+  it("round-trips the archive listing", () => {
+    expect(screenToPath({ name: "dailyArchive" })).toBe("/daily/archive");
+  });
+
+  it("round-trips an archived daily date", () => {
+    expect(screenToPath(pathToScreen("/daily/2026-05-16"))).toBe(
+      "/daily/2026-05-16",
+    );
+    expect(screenToPath(pathToScreen("/daily"))).toBe("/daily");
   });
 
   it("round-trips a multiplayer room", () => {
