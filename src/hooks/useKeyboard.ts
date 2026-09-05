@@ -7,6 +7,7 @@ export const KEYBOARD_SHORTCUTS: { keys: string; label: string }[] = [
   { keys: "N", label: "Toggle notes" },
   { keys: "Backspace", label: "Erase" },
   { keys: "⌘Z", label: "Undo" },
+  { keys: "⇧⌘Z", label: "Redo" },
   { keys: "Esc", label: "Deselect" },
 ];
 
@@ -17,6 +18,7 @@ type UseKeyboardOptions = {
   onPlaceNumber: (value: number) => void;
   onErase: () => void;
   onUndo: () => void;
+  onRedo: () => void;
   onToggleNotes: () => void;
   enabled: boolean;
 };
@@ -28,6 +30,7 @@ export function useKeyboard({
   onPlaceNumber,
   onErase,
   onUndo,
+  onRedo,
   onToggleNotes,
   enabled,
 }: UseKeyboardOptions) {
@@ -91,10 +94,22 @@ export function useKeyboard({
         return;
       }
 
-      // Ctrl+Z / Cmd+Z for undo
-      if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+      // Ctrl+Z / Cmd+Z for undo, with Shift for redo. The key arrives
+      // upper-cased while Shift is held, so both cases are matched.
+      if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        onUndo();
+        if (e.shiftKey) {
+          onRedo();
+        } else {
+          onUndo();
+        }
+        return;
+      }
+
+      // Ctrl+Y: the Windows redo binding.
+      if ((e.key === "y" || e.key === "Y") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        onRedo();
         return;
       }
     };
@@ -108,6 +123,7 @@ export function useKeyboard({
     onPlaceNumber,
     onErase,
     onUndo,
+    onRedo,
     onToggleNotes,
     enabled,
   ]);

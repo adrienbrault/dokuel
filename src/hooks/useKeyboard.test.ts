@@ -10,6 +10,7 @@ function setup(overrides: Partial<Parameters<typeof useKeyboard>[0]> = {}) {
     onPlaceNumber: vi.fn(),
     onErase: vi.fn(),
     onUndo: vi.fn(),
+    onRedo: vi.fn(),
     onToggleNotes: vi.fn(),
     enabled: true,
     ...overrides,
@@ -121,6 +122,19 @@ describe("useKeyboard", () => {
     const opts = setup();
     fireEvent.keyDown(window, { key: "z", metaKey: true });
     expect(opts.onUndo).toHaveBeenCalled();
+  });
+
+  it("calls onRedo for Shift+Cmd+Z, not onUndo", () => {
+    const opts = setup();
+    fireEvent.keyDown(window, { key: "Z", metaKey: true, shiftKey: true });
+    expect(opts.onRedo).toHaveBeenCalled();
+    expect(opts.onUndo).not.toHaveBeenCalled();
+  });
+
+  it("calls onRedo for Ctrl+Y", () => {
+    const opts = setup();
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true });
+    expect(opts.onRedo).toHaveBeenCalled();
   });
 
   it("calls onDeselectCell for Escape key", () => {

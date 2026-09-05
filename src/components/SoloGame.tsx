@@ -129,6 +129,7 @@ export function SoloGame({
     onPlaceNumber: keyDigit,
     onErase: game.erase,
     onUndo: game.undo,
+    onRedo: game.redo,
     onToggleNotes: game.toggleNotesMode,
     enabled: game.status === "playing" && !paused,
   });
