@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // biome-ignore lint/performance/noNamespaceImport: vi.spyOn needs the module namespace object
 import * as dateModule from "./date.ts";
 import {
+  getLifetimeGamesPlayed,
   getStats,
   getStatsByAssistLevel,
   getStatsForDifficulty,
@@ -9,6 +10,15 @@ import {
 } from "./stats.ts";
 
 describe("stats", () => {
+  it("has no personal best when every completed game used hints", () => {
+    localStorage.clear();
+    saveGameResult("easy", "standard", 30, true, 1);
+    expect(getStatsForDifficulty("easy", "standard")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: null,
+      averageTime: 30,
+    });
+  });
   beforeEach(() => {
     localStorage.clear();
   });
@@ -32,6 +42,28 @@ describe("stats", () => {
       saveGameResult("easy", "standard", 200 + i, true);
     }
     expect(getStats().length).toBeLessThanOrEqual(100);
+  });
+
+  it("keeps lifetime games and personal best beyond the recent-history cap", () => {
+    saveGameResult("easy", "standard", 1, true);
+    for (let i = 0; i < 100; i++) {
+      saveGameResult("easy", "standard", 200 + i, true);
+    }
+
+    expect(getStats()).toHaveLength(100);
+    expect(getStatsForDifficulty("easy", "standard")).toMatchObject({
+      gamesPlayed: 101,
+      bestTime: 1,
+    });
+  });
+
+  it("reports total lifetime wins instead of the bounded recent count", () => {
+    for (let i = 0; i < 101; i++) {
+      saveGameResult("easy", "standard", 100 + i, true);
+    }
+
+    expect(getStats()).toHaveLength(100);
+    expect(getLifetimeGamesPlayed()).toBe(101);
   });
 
   it("stamps records with the app's local calendar date", () => {

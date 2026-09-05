@@ -21,17 +21,24 @@
 ### Solo Play
 
 - Four difficulty levels: Easy, Medium, Hard, Expert
-- Three assistance levels — Paper (no help), Standard (highlights conflicts, auto-clears resolved notes), Full (also shows remaining-digit counts on the numpad); switchable mid-game from the settings popover
-- Pencil notes with a 3x3 mini-grid per cell
+- Three assistance levels — Paper (no automatic help), Standard (highlights incorrect entries, auto-clears peer notes), Full (also shows remaining-digit counts on the numpad); switchable mid-game from the settings popover
+- Visible Notes toggle for keyboard and touch, with a 3x3 mini-grid per cell
 - Multi-cell selection — drag across cells to place or erase notes in bulk
 - Multi-level undo
 - Hint system — surfaces the next logical step (naked or hidden single), explains the reasoning, and highlights the cells that prove it
-- Pause with board overlay; also auto-pauses when the browser tab loses focus
+- Pause with board overlay and all input disabled; also auto-pauses when the browser tab loses focus
 - Soft validation — conflicts are surfaced visually but never block a move (off at the Paper assist level)
-- Auto-save — resume in-progress games across browser sessions
+- Auto-save — resume the correct solo game, friend challenge, or duel across sessions, including idle thinking time
 - Personal best time shown near the timer; PB indicator on win (hint-assisted games are excluded)
-- Per-difficulty stats — best time, average, games played — tracked separately per assist level
+- Per-difficulty stats — best time, average, games played — tracked by the strongest assistance used, preserved across reloads
 - Confetti celebration with haptic feedback, sound, and a share button
+
+### Friend Time Challenges
+
+- Share the exact puzzle and your target time after a solo or daily win
+- Friends see the difficulty, fixed assistance, and hint allowance before starting
+- Resume later and compare times when finished; extra hints count as practice
+- Native sharing with clipboard and selectable-text fallbacks; no accounts needed
 
 ### Daily Challenge
 
@@ -47,11 +54,13 @@
 - Live opponent progress bar (cells remaining, completion %)
 - Resilient to refreshes and brief drops — the synced game is persisted locally via IndexedDB
 - 60-second disconnect countdown, then claim the win if the opponent doesn't return
-- Rematch without leaving the room
+- Mutual rematches without leaving the room — the unfinished player can keep solving until they accept
 - Win/loss record, win rate, and recent-match history on the Stats screen
 
 ### Mobile-First UX
 
+- Interactive first-use guide for value entry and notes
+- Keyboard gameplay in solo and multiplayer
 - Touch-optimized with 44px+ tap targets
 - Numpad gestures — tap to enter a value, press-and-hold to pencil a note, or drag a digit onto the board (drop high for a value, low for a note)
 - Tap a numpad digit with no cell selected to highlight every matching digit on the board

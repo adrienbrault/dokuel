@@ -169,14 +169,13 @@ describe("digitIntent — keyboard", () => {
     });
   });
 
-  it("pencils a note and releases the selection when notes mode is on", () => {
-    // Unlike a range tap, the keyboard note does NOT spotlight the digit
-    // — the N-then-1 workflow just moves on.
+  it("pencils a note and keeps the selection when notes mode is on", () => {
+    // Explicit notes mode keeps the cell selected to stack candidates.
     expect(
       digitIntent({ kind: "key", notesMode: true }, cellSelected(0, 0)),
     ).toEqual({
       effect: { kind: "note", at: null },
-      after: { selection: "release", highlight: false },
+      after: { selection: "keep", highlight: false },
       label: "note",
     });
   });

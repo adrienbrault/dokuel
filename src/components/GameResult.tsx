@@ -1,21 +1,39 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import type { compareChallenge, FriendChallenge } from "../lib/challenge.ts";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
 } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
+import type { FriendReceipt } from "../lib/friend-receipt.ts";
 import type { Difficulty } from "../lib/types.ts";
+import {
+  MultiplayerResultComparison,
+  type MultiplayerResultComparisonProps,
+} from "./MultiplayerResultComparison.tsx";
+import { ResultShare } from "./ResultShare.tsx";
 
 type GameResultProps = {
+  shareChallenge?: FriendChallenge | undefined;
+  shareReceipt?: FriendReceipt | undefined;
+  comparison?: ReturnType<typeof compareChallenge> | undefined;
   isWinner: boolean;
   time: string;
   timeSeconds?: number | undefined;
   difficulty?: Difficulty | undefined;
   isMultiplayer?: boolean | undefined;
+  multiplayerResults?: MultiplayerResultComparisonProps | undefined;
+  rematchState?: "requested" | "offered" | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
-  stats?: { gamesPlayed: number; bestTime: number; averageTime: number } | null;
+  stats?: {
+    gamesPlayed: number;
+    bestTime: number | null;
+    averageTime: number;
+  } | null;
   isNewPB?: boolean | undefined;
+  persistenceError?: boolean | undefined;
+  onRetryPersistence?: (() => void) | undefined;
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
@@ -23,59 +41,28 @@ type GameResultProps = {
   onDismissTip?: (() => void) | undefined;
 };
 
-export function buildShareText({
-  difficulty,
-  time,
-  isNewPB,
-  hintsUsed,
-  streakInfo,
-  isDaily,
-}: {
-  difficulty?: Difficulty | undefined;
-  time: string;
-  isNewPB?: boolean | undefined;
-  hintsUsed?: number | undefined;
-  streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
-  isDaily?: boolean | undefined;
-}): string {
-  const title = isDaily ? "Dokuel Daily" : "Dokuel";
-  const diffLabel = difficulty ? ` ${DIFFICULTY_LABELS[difficulty]}` : "";
-  const hints = hintsUsed
-    ? ` · ${hintsUsed} hint${hintsUsed > 1 ? "s" : ""}`
-    : "";
-  const pb = isNewPB ? " ⚡" : "";
-  const streak =
-    isDaily && streakInfo && streakInfo.currentStreak > 0
-      ? `\n🔥 ${streakInfo.currentStreak}-day streak`
-      : "";
-
-  return `${title}${diffLabel}\n⏱ ${time}${hints}${pb}${streak}\nhttps://dokuel.com`;
-}
-
 export function GameResult({
   isWinner,
+  comparison,
+  shareChallenge,
+  shareReceipt,
   time,
   difficulty,
   isMultiplayer,
+  multiplayerResults,
   onRematch,
+  rematchState,
   onNewGame,
   stats,
   isNewPB,
+  persistenceError,
+  onRetryPersistence,
   hintsUsed,
   streakInfo,
   isDaily,
   tip,
   onDismissTip,
 }: GameResultProps) {
-  const [copied, setCopied] = useState(false);
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
-    },
-    [],
-  );
-
   // Modal focus management: move focus onto the primary action when the
   // result opens (this is also what makes screen readers announce the
   // outcome), restore it when the dialog goes away, and keep Tab
@@ -83,7 +70,9 @@ export function GameResult({
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previouslyFocused = document.activeElement;
-    const primary = panelRef.current?.querySelector<HTMLElement>("button");
+    const primary = panelRef.current?.querySelector<HTMLElement>(
+      "button:not(:disabled)",
+    );
     primary?.focus();
     return () => {
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
@@ -94,7 +83,9 @@ export function GameResult({
     const panel = panelRef.current;
     if (!panel) return;
     const focusable = Array.from(
-      panel.querySelectorAll<HTMLElement>("button, [href], [tabindex]"),
+      panel.querySelectorAll<HTMLElement>(
+        "button, input, textarea, [href], [tabindex]",
+      ),
     ).filter((el) => !el.hasAttribute("disabled"));
     if (focusable.length === 0) return;
     const first = focusable[0]!;
@@ -108,34 +99,8 @@ export function GameResult({
     }
   };
 
-  const handleShare = () => {
-    const text = buildShareText({
-      difficulty,
-      time,
-      isNewPB,
-      hintsUsed,
-      streakInfo,
-      isDaily,
-    });
-    // Only claim "Copied!" once the write actually landed — on iOS the
-    // promise rejects when transient activation is lost.
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        setCopied(true);
-        if (copiedTimerRef.current !== null) {
-          clearTimeout(copiedTimerRef.current);
-        }
-        copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(() => {
-        // Copy failed (permissions, lost activation) — leave the
-        // button label unchanged so the player can try again.
-      });
-  };
-
   return (
-    <div className="modal-overlay p-6">
+    <div className="modal-overlay p-3 sm:p-6">
       {isWinner && (
         <div className="confetti-container">
           <span />
@@ -156,11 +121,11 @@ export function GameResult({
         aria-labelledby="game-result-title"
         onKeyDown={trapTab}
         ref={panelRef}
-        className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative"
+        className="modal-panel gap-5 short:gap-3 max-w-sm sm:max-w-md w-full relative"
       >
         <div className="flex flex-col items-center gap-2.5">
           <span
-            className={`flex items-center justify-center w-16 h-16 rounded-full text-4xl animate-emoji-bounce ${
+            className={`flex items-center justify-center w-16 h-16 short:w-10 short:h-10 shrink-0 rounded-full text-4xl short:text-2xl animate-emoji-bounce ${
               isWinner ? "bg-accent-light" : "bg-bg-inset"
             }`}
           >
@@ -178,7 +143,7 @@ export function GameResult({
           )}
         </div>
         <div className="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
-          <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
+          <span className="text-5xl short:text-4xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
@@ -188,10 +153,48 @@ export function GameResult({
           )}
         </div>
 
+        {isMultiplayer && multiplayerResults && (
+          <MultiplayerResultComparison {...multiplayerResults} />
+        )}
+
+        {comparison && (
+          <p
+            role="status"
+            className="text-center text-sm font-semibold text-accent"
+          >
+            {comparison.outcome === "beat"
+              ? `You beat the target by ${formatTime(comparison.seconds)}!`
+              : comparison.outcome === "matched"
+                ? "You matched the target!"
+                : comparison.outcome === "extra-help"
+                  ? "Puzzle complete with extra help — practice result."
+                  : `Puzzle complete — ${formatTime(comparison.seconds)} after the target.`}
+          </p>
+        )}
+        {persistenceError && onRetryPersistence && (
+          <div
+            role="status"
+            className="flex flex-col items-center gap-2 rounded-xl bg-bg-inset p-3 text-center"
+          >
+            <p className="text-sm text-negative-text">
+              This result could not be saved. Keep this page open and try again.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary w-full"
+              onClick={onRetryPersistence}
+            >
+              Try saving again
+            </button>
+          </div>
+        )}
         {stats && !isMultiplayer && (
           <div className="grid grid-cols-3 gap-2.5 w-full text-center">
             <StatTile label="Played" value={String(stats.gamesPlayed)} />
-            <StatTile label="Best" value={formatTime(stats.bestTime)} />
+            <StatTile
+              label="Best"
+              value={stats.bestTime === null ? "—" : formatTime(stats.bestTime)}
+            />
             <StatTile label="Average" value={formatTime(stats.averageTime)} />
           </div>
         )}
@@ -209,31 +212,49 @@ export function GameResult({
         )}
 
         <div className="flex flex-col gap-3 w-full">
+          {!isMultiplayer && (
+            <ResultShare
+              difficulty={difficulty}
+              time={time}
+              isNewPB={isNewPB}
+              hintsUsed={hintsUsed}
+              streakInfo={streakInfo}
+              isDaily={isDaily}
+              shareChallenge={shareChallenge}
+              shareReceipt={shareReceipt}
+            />
+          )}
+
           {onRematch && (
             <button
               type="button"
-              className="btn btn-primary w-full py-3 text-lg"
+              className={`btn ${shareChallenge ? "btn-secondary" : "btn-primary"} w-full py-3 text-lg`}
               onClick={onRematch}
+              disabled={rematchState === "requested"}
             >
-              {isMultiplayer ? "Rematch" : "Play Again"}
+              {isMultiplayer
+                ? rematchState === "requested"
+                  ? "Rematch requested"
+                  : rematchState === "offered"
+                    ? "Accept rematch"
+                    : "Rematch"
+                : difficulty
+                  ? `New ${DIFFICULTY_LABELS[difficulty]} puzzle`
+                  : "Another puzzle"}
             </button>
+          )}
+          {rematchState === "requested" && (
+            <p role="status" className="caption text-center">
+              Waiting for your opponent to accept.
+            </p>
           )}
           <button
             type="button"
             className="btn btn-secondary w-full py-3 text-lg"
             onClick={onNewGame}
           >
-            New Game
+            {isMultiplayer ? "Leave room" : "Back to home"}
           </button>
-          {!isMultiplayer && (
-            <button
-              type="button"
-              className="btn btn-ghost w-full py-2"
-              onClick={handleShare}
-            >
-              {copied ? "Copied!" : "Share Result"}
-            </button>
-          )}
         </div>
         {tip && (
           <button

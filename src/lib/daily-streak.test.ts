@@ -3,6 +3,7 @@ import {
   getDailyStreak,
   isDailyCompleted,
   recordDailyCompletion,
+  recordDailyCompletionWithStatus,
 } from "./daily-streak.ts";
 
 describe("daily-streak", () => {
@@ -122,6 +123,21 @@ describe("daily-streak", () => {
       expect(result.longestStreak).toBe(3);
     });
 
+    it("keeps current and longest streaks beyond the recent-day cap", () => {
+      const firstDay = Date.UTC(2026, 0, 1);
+      for (let offset = 0; offset < 61; offset++) {
+        const date = new Date(firstDay + offset * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        recordDailyCompletion(date);
+      }
+
+      const result = getDailyStreak();
+      expect(result.completedDates).toHaveLength(60);
+      expect(result.currentStreak).toBe(61);
+      expect(result.longestStreak).toBe(61);
+    });
+
     it("persists to localStorage", () => {
       recordDailyCompletion("2026-03-08");
       const stored = JSON.parse(localStorage.getItem("sudoku_daily_streak")!);
@@ -146,6 +162,40 @@ describe("daily-streak", () => {
       const result = recordDailyCompletion("2026-07-28");
       expect(result.currentStreak).toBe(2);
       expect(result.longestStreak).toBe(2);
+    });
+
+    it("repairs either half of a streak write on retry", () => {
+      for (const failedKey of [
+        "sudoku_daily_streak",
+        "sudoku_daily_streak_lifetime",
+      ]) {
+        localStorage.clear();
+        const originalSetItem = Storage.prototype.setItem;
+        const spy = vi
+          .spyOn(Storage.prototype, "setItem")
+          .mockImplementation(function (this: Storage, key, value) {
+            if (key === failedKey) throw new Error("quota");
+            return originalSetItem.call(this, key, value);
+          });
+        let first: ReturnType<typeof recordDailyCompletionWithStatus>;
+        try {
+          first = recordDailyCompletionWithStatus("2026-03-08");
+        } finally {
+          spy.mockRestore();
+        }
+
+        expect(first.persisted).toBe(false);
+        expect(isDailyCompleted("2026-03-08")).toBe(true);
+        expect(localStorage.getItem(failedKey)).toBeNull();
+
+        const retry = recordDailyCompletionWithStatus("2026-03-08");
+        expect(retry.persisted).toBe(true);
+        expect(isDailyCompleted("2026-03-08")).toBe(true);
+        expect(localStorage.getItem("sudoku_daily_streak")).not.toBeNull();
+        expect(
+          localStorage.getItem("sudoku_daily_streak_lifetime"),
+        ).not.toBeNull();
+      }
     });
   });
 

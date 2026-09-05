@@ -67,12 +67,20 @@ export type HintTechnique =
   | "mistake"
   | "reveal";
 
+export type HintStep = "nudge" | "pattern" | "elimination" | "reveal";
+
 export type ActiveHint = {
   position: Position;
   value: number;
   technique: HintTechnique;
   explanation: string;
   relatedCells: Position[];
+  /** Progressive teaching stage; omitted for legacy callers. */
+  step?: HintStep | undefined;
+  /** Explanations for eliminations needed before a decisive technique. */
+  intermediateSteps?: string[] | undefined;
+  /** True when the hint teaches an elimination without a resulting placement. */
+  eliminationOnly?: boolean | undefined;
 };
 
 export type GameStatus = "idle" | "playing" | "completed";
@@ -112,7 +120,20 @@ export type Player = {
   completionPercent: number;
 };
 
+export type MultiplayerResult = {
+  completedAt: number;
+  board: string;
+};
+
 export type RoomState = {
+  /** Players who agreed to replace the current game with a rematch. */
+  rematchReady?: string[];
+  /** Players who accepted the current lobby rules. */
+  readyPlayers?: string[];
+  /** Shared wall-clock instant at which the current game becomes live. */
+  startedAt?: number | null;
+  /** Verified completion proofs keyed by player id. */
+  results?: Record<string, MultiplayerResult>;
   roomId: string;
   status: RoomStatus;
   difficulty: Difficulty;

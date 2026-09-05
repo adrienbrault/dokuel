@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadGame } from "../lib/game-storage.ts";
+import { getTechniqueProgress } from "../lib/learning-progress.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
 // A solved grid; the puzzle blanks all of row 0 so every numpad digit
@@ -15,6 +17,7 @@ const SOLVED =
   "287419635" +
   "345286179";
 const PUZZLE = ".".repeat(9) + SOLVED.slice(9);
+const SINGLE_HOLE_PUZZLE = "." + SOLVED.slice(1);
 
 describe("SoloGame numpad selection", () => {
   beforeEach(() => {
@@ -41,6 +44,183 @@ describe("SoloGame numpad selection", () => {
 
     expect(screen.queryByText("Numpad position")).not.toBeInTheDocument();
     expect(document.activeElement).toBe(gear);
+  });
+
+  it("blocks every board-changing control while paused", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+    fireEvent.keyDown(window, { key: "5" });
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    for (const name of ["Undo", "Erase", "Hint"]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    const seven = screen.getByRole("button", { name: "7" });
+    expect(seven).toBeDisabled();
+    fireEvent.pointerDown(seven, { pointerType: "touch" });
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.pointerUp(seven, { pointerType: "touch" });
+    fireEvent.keyDown(window, { key: "Backspace" });
+    expect(screen.getByLabelText(/^Cell row 1 column 1, value 5/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Resume game" }));
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
+  });
+
+  it("saves current elapsed time before a display tick runs", () => {
+    let now = 1_000;
+    render(
+      <SoloGame
+        difficulty="easy"
+        gameKey="elapsed-save"
+        initialPuzzle={PUZZLE}
+        now={() => now}
+        onBack={vi.fn()}
+      />,
+    );
+
+    act(() => vi.advanceTimersByTime(600));
+    now += 2_500.5;
+    act(() => window.dispatchEvent(new Event("pagehide")));
+
+    expect(loadGame("elapsed-save")?.timer).toBe(2.5005);
+  });
+
+  it("opens focused practice from the reveal step of a hint", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={SINGLE_HOLE_PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Hint" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show pattern hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show elimination hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show reveal hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Practice naked single" }),
+    );
+
+    expect(
+      screen.getByRole("region", { name: "Technique practice" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("grid", { name: "Practice board" })).toBeTruthy();
+    expect(screen.getByText(/on this new board/i)).toBeTruthy();
+  });
+
+  it("persists wrong and solved focused practice attempts", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={SINGLE_HOLE_PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Hint" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show pattern hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show elimination hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show reveal hint step" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Practice naked single" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Answer 4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Answer 5" }));
+
+    expect(getTechniqueProgress()["naked-single"]).toEqual({
+      attempts: 2,
+      solved: 1,
+    });
+  });
+
+  it("shows and retries a failed in-progress save", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        gameKey="solo-save-feedback"
+        initialPuzzle={PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+      fireEvent.keyDown(window, { key: "5" });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(screen.getByRole("status")).toHaveTextContent(/could not be saved/i);
+    fireEvent.click(screen.getByRole("button", { name: /try saving again/i }));
+    expect(screen.queryByText(/could not be saved/i)).toBeNull();
+    expect(loadGame("solo-save-feedback")).not.toBeNull();
+  });
+
+  it("shows and retries a failed completion result", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        gameKey="solo-result-feedback"
+        initialPuzzle={SINGLE_HOLE_PUZZLE}
+        onBack={vi.fn()}
+      />,
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+      fireEvent.keyDown(window, { key: "5" });
+    } finally {
+      spy.mockRestore();
+    }
+    act(() => vi.advanceTimersByTime(400));
+
+    expect(screen.getByRole("status")).toHaveTextContent(/could not be saved/i);
+    fireEvent.click(screen.getByRole("button", { name: /try saving again/i }));
+    expect(screen.queryByText(/could not be saved/i)).toBeNull();
+    expect(loadGame("solo-result-feedback")).toBeNull();
+  });
+
+  it("shows one notes mode for keyboard and numpad input", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+    const notes = screen.getByRole("button", { name: "Notes" });
+    fireEvent.keyDown(window, { key: "n" });
+    expect(notes).toHaveAttribute("aria-pressed", "true");
+    fireEvent.keyDown(window, { key: "3" });
+    fireEvent.click(screen.getByRole("button", { name: /^5,/ }));
+    expect(
+      screen.getByLabelText(/^Cell row 1 column 1, empty, notes 3 5/),
+    ).toBeTruthy();
+    fireEvent.click(notes);
+    expect(notes).toHaveAttribute("aria-pressed", "false");
+    fireEvent.keyDown(window, { key: "5" });
+    expect(screen.getByLabelText(/^Cell row 1 column 1, value 5/)).toBeTruthy();
   });
 
   it("places a value and keeps the cell selected after a numpad tap", () => {

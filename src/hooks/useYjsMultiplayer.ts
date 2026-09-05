@@ -10,8 +10,8 @@ import { recordRoomMount } from "./mp-telemetry.ts";
  * monotonic where `Date.now` is not: the Room only ever compares and
  * spans instants, and a wall clock that steps backwards (NTP
  * correction, VM restore) would make a deadline unreachable and a
- * countdown negative. Nothing here is persisted or shown to a player,
- * so epoch time buys nothing.
+ * countdown negative. Shared start and finish timestamps use the separate
+ * wallNow source because they must survive reloads and cross devices.
  */
 const now = () => performance.now();
 
@@ -77,14 +77,14 @@ export function useYjsMultiplayer({
     // async because the relay credentials must be resolved before the
     // peer connection exists.
     const start = (connection: Connection): (() => void) => {
-      const doc = connection.doc;
       const room = createRoom({
-        doc,
+        doc: connection.doc,
         roomId,
         playerId,
         playerName: () => playerNameRef.current,
         initialDifficulty: initialDifficultyRef.current,
         now,
+        wallNow: Date.now,
       });
       roomRef.current = room;
       connectionRef.current = connection;

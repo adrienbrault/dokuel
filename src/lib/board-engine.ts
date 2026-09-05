@@ -1,4 +1,5 @@
 import { findHint } from "./hint-engine.ts";
+import { nextHintStep, presentHint } from "./learning-hints.ts";
 import {
   cellKey,
   getConflicts,
@@ -420,14 +421,17 @@ function handleHint(state: State): State {
   const hint = findHint(state.board, state.solution, state.selectedCell);
   if (!hint) return state;
 
-  const { row, col } = hint.position;
+  const step = nextHintStep(state.activeHint?.step);
+  const presentedHint = presentHint(hint, step);
+
+  const { row, col } = presentedHint.position;
 
   return {
     ...state,
-    selectedCell: hint.position,
+    selectedCell: presentedHint.position,
     selectedCells: new Set([cellKey(row, col)]),
-    activeHint: hint,
-    hintsUsed: state.hintsUsed + 1,
+    activeHint: presentedHint,
+    hintsUsed: state.activeHint ? state.hintsUsed : state.hintsUsed + 1,
   };
 }
 

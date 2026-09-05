@@ -1,7 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { FriendChallenge } from "../lib/challenge.ts";
 import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
-import { getStatsForDifficulty } from "../lib/stats.ts";
+import { getStats, getStatsForDifficulty } from "../lib/stats.ts";
 import { useResumableSudoku } from "./useResumableSudoku.ts";
 
 const SOLVED =
@@ -57,6 +58,27 @@ describe("useResumableSudoku", () => {
     );
     expect(result.current.puzzle).toBe(puzzle);
     expect(result.current.initialTimerSeconds).toBe(0);
+  });
+
+  it("records the strongest assistance used even after switching and reloading", () => {
+    const options = {
+      gameKey: "assist-history",
+      initialPuzzle: puzzleMissingOneCell(),
+      origin: "generated" as const,
+      difficulty: "easy" as const,
+      initialAssistLevel: "paper" as const,
+      getTimerSeconds: () => 60,
+    };
+    const first = renderHook(() => useResumableSudoku(options));
+    act(() => first.result.current.setAssistLevel("full"));
+    act(() => first.result.current.setAssistLevel("paper"));
+    first.unmount();
+    const { result } = renderHook(() => useResumableSudoku(options));
+    expect(result.current.assistLevel).toBe("paper");
+    act(() => result.current.game.selectCell(0, 0));
+    act(() => result.current.game.placeNumber(5));
+    expect(getStatsForDifficulty("easy", "paper")).toBeNull();
+    expect(getStatsForDifficulty("easy", "full")?.bestTime).toBe(60);
   });
 
   it("resumes puzzle, timer, and assistLevel from a saved game", () => {
@@ -142,6 +164,22 @@ describe("useResumableSudoku", () => {
     } finally {
       setItem.mockRestore();
     }
+  });
+
+  it("saves idle thinking time when leaving the game without a page reload", () => {
+    let seconds = 0;
+    const { unmount } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "leave-game",
+        initialPuzzle: puzzleMissingOneCell(),
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => seconds,
+      }),
+    );
+    seconds = 300;
+    unmount();
+    expect(loadGame("leave-game")?.timer).toBe(300);
   });
 
   it("saves on pagehide so idle thinking time survives a refresh", () => {
@@ -261,6 +299,7 @@ describe("useResumableSudoku", () => {
     const { result } = renderHook(() =>
       useResumableSudoku({
         initialPuzzle: puzzleMissingOneCell(),
+        origin: "generated",
         difficulty: "easy",
         initialAssistLevel: "standard",
         getTimerSeconds: () => 90,
@@ -276,10 +315,257 @@ describe("useResumableSudoku", () => {
     expect(stats!.bestTime).toBe(90);
   });
 
+  it("keeps friend challenge completions out of generated personal records", () => {
+    const puzzle = puzzleMissingOneCell();
+    const challenge: FriendChallenge = {
+      version: 1,
+      puzzle,
+      difficulty: "easy",
+      assistLevel: "standard",
+      timeSeconds: 120,
+      hintsUsed: 0,
+    };
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "friend-hook-key",
+        initialPuzzle: puzzle,
+        challenge,
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 90,
+      }),
+    );
+
+    act(() => result.current.game.selectCell(0, 0));
+    act(() => result.current.game.placeNumber(5));
+
+    expect(getStatsForDifficulty("easy", "standard", "friend")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: 90,
+    });
+    expect(getStatsForDifficulty("easy", "standard")).toBeNull();
+    expect(loadGame("friend-hook-key")).toBeNull();
+  });
+
+  it("records a second completion of the same puzzle as a replay", () => {
+    const puzzle = puzzleMissingOneCell();
+    const options = {
+      gameKey: "replay-route",
+      initialPuzzle: puzzle,
+      origin: "generated" as const,
+      difficulty: "easy" as const,
+      initialAssistLevel: "standard" as const,
+      getTimerSeconds: () => 90,
+    };
+
+    const first = renderHook(() => useResumableSudoku(options));
+    act(() => first.result.current.game.selectCell(0, 0));
+    act(() => first.result.current.game.placeNumber(5));
+    first.unmount();
+
+    const second = renderHook(() => useResumableSudoku(options));
+    act(() => second.result.current.game.selectCell(0, 0));
+    act(() => second.result.current.game.placeNumber(5));
+
+    expect(
+      getStatsForDifficulty("easy", "standard", "generated"),
+    ).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: 90,
+    });
+    expect(getStatsForDifficulty("easy", "standard", "replay")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: 90,
+    });
+    expect(
+      getStats().filter((record) => record.puzzleId === puzzle),
+    ).toHaveLength(2);
+    expect(getStats().map((record) => record.origin)).toEqual([
+      "generated",
+      "replay",
+    ]);
+  });
+
+  it("records a second completion of a daily puzzle as a replay", () => {
+    const puzzle = puzzleMissingOneCell();
+    const options = {
+      gameKey: "daily-replay-route",
+      initialPuzzle: puzzle,
+      dailyDate: "2026-05-17",
+      difficulty: "medium" as const,
+      initialAssistLevel: "standard" as const,
+      getTimerSeconds: () => 90,
+    };
+
+    const first = renderHook(() => useResumableSudoku(options));
+    act(() => first.result.current.game.selectCell(0, 0));
+    act(() => first.result.current.game.placeNumber(5));
+    first.unmount();
+
+    const second = renderHook(() => useResumableSudoku(options));
+    act(() => second.result.current.game.selectCell(0, 0));
+    act(() => second.result.current.game.placeNumber(5));
+
+    expect(getStatsForDifficulty("medium", "standard", "daily")).toMatchObject({
+      gamesPlayed: 1,
+      bestTime: 90,
+    });
+    expect(getStatsForDifficulty("medium", "standard", "replay")).toMatchObject(
+      { gamesPlayed: 1, bestTime: 90 },
+    );
+  });
+
+  it("classifies a supplied puzzle without a daily or challenge as imported", () => {
+    const puzzle = puzzleMissingOneCell();
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "imported-puzzle",
+        initialPuzzle: puzzle,
+        difficulty: "expert",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 1,
+      }),
+    );
+
+    act(() => result.current.game.selectCell(0, 0));
+    act(() => result.current.game.placeNumber(5));
+
+    expect(
+      getStatsForDifficulty("expert", "standard", "imported"),
+    ).toMatchObject({ gamesPlayed: 1, bestTime: 1 });
+    expect(getStatsForDifficulty("expert", "standard")).toBeNull();
+    expect(getStats()[0]).toMatchObject({
+      origin: "imported",
+      puzzleId: puzzle,
+    });
+  });
+
+  it("surfaces a failed result write while retaining the autosave", () => {
+    const onComplete = vi.fn();
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "quota-hook",
+        initialPuzzle: puzzleMissingOneCell(),
+        origin: "generated",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 30,
+        onComplete,
+      }),
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      act(() => result.current.game.selectCell(0, 0));
+      act(() => result.current.game.placeNumber(5));
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.current.completion).toMatchObject({ persisted: false });
+    expect(onComplete).toHaveBeenCalledWith(
+      30,
+      expect.objectContaining({ persisted: false }),
+    );
+    expect(loadGame("quota-hook")).not.toBeNull();
+  });
+
+  it("reports an autosave failure while the game is still in progress", () => {
+    const puzzle = `.${SOLVED.slice(1, 80)}.`;
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "quota-save",
+        initialPuzzle: puzzle,
+        origin: "generated",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 30,
+      }),
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      act(() => result.current.game.selectCell(0, 0));
+      act(() => result.current.game.placeNumber(5));
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.current.saveStatus).toBe("failed");
+  });
+
+  it("retries a failed in-progress autosave", () => {
+    const puzzle = `.${SOLVED.slice(1, 80)}.`;
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "retry-save",
+        initialPuzzle: puzzle,
+        origin: "generated",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 30,
+      }),
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      act(() => result.current.game.selectCell(0, 0));
+      act(() => result.current.game.placeNumber(5));
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.current.saveStatus).toBe("failed");
+    act(() => result.current.retrySave());
+    expect(result.current.saveStatus).toBe("saved");
+    expect(loadGame("retry-save")).not.toBeNull();
+  });
+
+  it("retries a failed completion result and then clears its autosave", () => {
+    const { result } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "retry-result",
+        initialPuzzle: puzzleMissingOneCell(),
+        origin: "generated",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 30,
+      }),
+    );
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota");
+      });
+    try {
+      act(() => result.current.game.selectCell(0, 0));
+      act(() => result.current.game.placeNumber(5));
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.current.completion).toMatchObject({ persisted: false });
+    expect(loadGame("retry-result")).not.toBeNull();
+    act(() => result.current.retryCompletion());
+    expect(result.current.completion?.persisted).not.toBe(false);
+    expect(loadGame("retry-result")).toBeNull();
+    expect(getStatsForDifficulty("easy")?.gamesPlayed).toBe(1);
+  });
+
   it("records the win only once across re-renders after completion", () => {
     const { result, rerender } = renderHook(() =>
       useResumableSudoku({
         initialPuzzle: puzzleMissingOneCell(),
+        origin: "generated",
         difficulty: "easy",
         initialAssistLevel: "standard",
         getTimerSeconds: () => 90,
@@ -299,11 +585,12 @@ describe("useResumableSudoku", () => {
     expect(getStatsForDifficulty("easy")!.gamesPlayed).toBe(1);
   });
 
-  it("calls onComplete with the timer value and an empty result for non-daily games", () => {
+  it("calls onComplete with the timer value and recorded result for non-daily games", () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() =>
       useResumableSudoku({
         initialPuzzle: puzzleMissingOneCell(),
+        origin: "generated",
         difficulty: "easy",
         initialAssistLevel: "standard",
         getTimerSeconds: () => 73,
@@ -314,7 +601,12 @@ describe("useResumableSudoku", () => {
     act(() => result.current.game.selectCell(0, 0));
     act(() => result.current.game.placeNumber(5));
 
-    expect(onComplete).toHaveBeenCalledWith(73, {});
+    expect(onComplete).toHaveBeenCalledWith(73, {
+      assistLevel: "standard",
+      isNewPB: true,
+      timeSeconds: 73,
+      stats: { gamesPlayed: 1, bestTime: 73, averageTime: 73 },
+    });
   });
 
   it("when dailyDate is given, onComplete receives the recorded streak", () => {

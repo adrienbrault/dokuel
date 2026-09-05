@@ -4,6 +4,7 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "**/network.spec.ts",
   outputDir: "./e2e/results",
   snapshotPathTemplate: "{testDir}/screenshots/{arg}{ext}",
   globalSetup: "./e2e/check-build-fresh.ts",

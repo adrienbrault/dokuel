@@ -11,6 +11,7 @@ import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
+import { InputGuide } from "./InputGuide.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 import { SoundToggle } from "./SoundToggle.tsx";
 
@@ -194,7 +195,7 @@ function SettingsButton({
         <Settings size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)]">
+        <div className="absolute right-0 top-full mt-2 bg-surface border border-border-default rounded-2xl shadow-xl p-3.5 z-50 animate-fade-in w-72 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-text-muted font-medium">
               Numpad position
@@ -235,6 +236,7 @@ function SettingsButton({
               {extra}
             </div>
           )}
+          <InputGuide />
           <div className="hidden lg:block mt-3 pt-3 border-t border-border-default">
             <p className="text-xs text-text-muted mb-2 font-medium">
               Keyboard shortcuts

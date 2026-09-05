@@ -59,6 +59,145 @@ describe("mp-snapshot", () => {
     expect(snap?.solution).toBe("1".repeat(81));
   });
 
+  it("round-trips finished proof and rematch consent in the versioned schema", () => {
+    const solution = "1".repeat(81);
+    saveSnapshot(
+      "room-finished",
+      makeState({
+        status: "finished",
+        winnerId: "p2",
+        winnerName: "Bob",
+        winnerBoard: solution,
+        rematchReady: ["p1"],
+      }),
+    );
+
+    const snap = loadSnapshot("room-finished") as typeof loadSnapshot extends (
+      roomId: string,
+    ) => infer Snapshot
+      ? Snapshot & {
+          version?: number;
+          rematchReady?: string[];
+        }
+      : never;
+
+    expect(snap).toMatchObject({
+      version: 2,
+      status: "finished",
+      winnerId: "p2",
+      winnerName: "Bob",
+      winnerBoard: solution,
+      rematchReady: ["p1"],
+    });
+  });
+
+  it("round-trips shared start and both completion proofs", () => {
+    const solution = "1".repeat(81);
+    saveSnapshot(
+      "room-shared-start",
+      makeState({
+        startedAt: 1_000,
+        readyPlayers: ["p1", "p2"],
+        results: {
+          p1: { completedAt: 2_000, board: solution },
+          p2: { completedAt: 3_000, board: solution },
+        },
+      }),
+    );
+
+    expect(loadSnapshot("room-shared-start")).toMatchObject({
+      version: 2,
+      startedAt: 1_000,
+      readyPlayers: ["p1", "p2"],
+      results: {
+        p1: { completedAt: 2_000, board: solution },
+        p2: { completedAt: 3_000, board: solution },
+      },
+    });
+  });
+
+  it("migrates an unversioned snapshot with defaults for new recovery fields", () => {
+    localStorage.setItem(
+      "dokuel_mp_snap_legacy",
+      JSON.stringify({
+        gameNumber: 3,
+        puzzle: ".".repeat(81),
+        solution: "1".repeat(81),
+        status: "playing",
+        difficulty: "medium",
+        assistLevel: "standard",
+        hostId: "p1",
+        players: makeState().players,
+        winnerId: null,
+        winnerName: null,
+        savedAt: Date.now(),
+      }),
+    );
+
+    expect(loadSnapshot("legacy")).toMatchObject({
+      version: 2,
+      winnerBoard: null,
+      rematchReady: [],
+    });
+  });
+
+  it("rejects a snapshot with a malformed player record", () => {
+    saveSnapshot("room-corrupt-player", makeState());
+    const raw = JSON.parse(
+      localStorage.getItem("dokuel_mp_snap_room-corrupt-player") as string,
+    ) as Record<string, unknown>;
+    raw.players = [{ id: "p1" }];
+    localStorage.setItem(
+      "dokuel_mp_snap_room-corrupt-player",
+      JSON.stringify(raw),
+    );
+
+    expect(loadSnapshot("room-corrupt-player")).toBeNull();
+  });
+
+  it.each([
+    ["status", { status: "paused" }],
+    ["difficulty", { difficulty: "unknown" }],
+    ["assist level", { assistLevel: "helpful" }],
+    ["game counter", { gameNumber: 0 }],
+    ["timestamp", { savedAt: "now" }],
+    ["puzzle shape", { puzzle: "not-a-grid" }],
+    ["solution shape", { solution: "not-a-grid" }],
+    ["puzzle givens", { puzzle: `2${".".repeat(80)}` }],
+    ["winner nullability", { winnerId: "p1" }],
+    [
+      "winner proof",
+      {
+        status: "finished",
+        winnerId: "p1",
+        winnerName: "Alice",
+        winnerBoard: "2".repeat(81),
+      },
+    ],
+    ["host membership", { hostId: "ghost" }],
+    [
+      "rematch player membership",
+      {
+        status: "finished",
+        winnerId: "p1",
+        winnerName: "Alice",
+        rematchReady: ["ghost"],
+      },
+    ],
+  ])("rejects corrupt durable field: %s", (_field, changes) => {
+    saveSnapshot("room-corrupt-field", makeState());
+    const raw = JSON.parse(
+      localStorage.getItem("dokuel_mp_snap_room-corrupt-field") as string,
+    ) as Record<string, unknown>;
+    Object.assign(raw, changes);
+    localStorage.setItem(
+      "dokuel_mp_snap_room-corrupt-field",
+      JSON.stringify(raw),
+    );
+
+    expect(loadSnapshot("room-corrupt-field")).toBeNull();
+  });
+
   it("skips saving when no game has started", () => {
     saveSnapshot("room-1", makeState({ gameNumber: 0 }));
     expect(loadSnapshot("room-1")).toBeNull();

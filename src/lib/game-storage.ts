@@ -1,24 +1,74 @@
+import type { FriendChallenge } from "./challenge.ts";
+import { isCalendarDate, todayLocalISO } from "./date.ts";
+import {
+  exportSavedGames as exportPortableSavedGames,
+  replaceSavedGames as replacePortableSavedGames,
+  type SavedGameBackupEntry,
+} from "./portable-game-storage.ts";
+import type { GameOrigin } from "./result-store-types.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
+export type MultiplayerGameIdentity = {
+  roomId: string;
+  playerId: string;
+  gameNumber: number;
+  puzzle: string;
+};
+
+export function multiplayerGameKey(game: MultiplayerGameIdentity): string {
+  return `mp_${game.roomId}_${game.gameNumber}_${encodeURIComponent(game.playerId)}_${game.puzzle}`;
+}
+
+export function loadMultiplayerGame(
+  game: MultiplayerGameIdentity,
+): SavedGame | null {
+  const saved =
+    loadGame(multiplayerGameKey(game)) ??
+    loadGame(`mp_${game.roomId}_${game.puzzle.slice(0, 12)}`);
+  return saved?.puzzle === game.puzzle ? saved : null;
+}
+
+export function saveMultiplayerGame(
+  game: MultiplayerGameIdentity,
+  data: SavedGame,
+): void {
+  saveGame(multiplayerGameKey(game), { ...data, multiplayer: game });
+  // Consume the legacy identity after migration so another game cannot adopt it.
+  if (loadGame(multiplayerGameKey(game))) {
+    deleteGame(`mp_${game.roomId}_${game.puzzle.slice(0, 12)}`);
+  }
+}
+
 export type SavedGame = {
+  challenge?: FriendChallenge | undefined;
+  multiplayer?: MultiplayerGameIdentity;
   puzzle: string;
   values: string;
   notes: number[][];
   timer: number;
   difficulty: Difficulty;
   assistLevel: AssistLevel;
+  maxAssistLevel?: AssistLevel;
   // Hints taken so far. Persisted so a save/resume cycle can't launder
   // a hint-assisted game into PB eligibility.
   hintsUsed: number;
+  /** Provenance retained so a resumed game keeps its result category. */
+  origin?: GameOrigin;
+  /** Stable attempt identity used to make completion recording idempotent. */
+  attemptId?: string;
+  /** Stable puzzle identity retained for result history and comparison. */
+  puzzleId?: string;
 };
 
 const STORAGE_PREFIX = "sudoku_save_";
 
-export function saveGame(key: string, data: SavedGame): void {
+export function saveGame(key: string, data: SavedGame): boolean {
   try {
     localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+    return true;
   } catch {
     // localStorage full or unavailable — silently ignore
+    return false;
   }
 }
 
@@ -36,6 +86,19 @@ function isValidNotes(notes: unknown): notes is number[][] {
             typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 9,
         ),
     )
+  );
+}
+
+function isGameOrigin(value: unknown): value is GameOrigin {
+  return (
+    typeof value === "string" &&
+    ["generated", "daily", "friend", "imported", "replay"].includes(value)
+  );
+}
+
+function isOptionalId(value: unknown): value is string | undefined {
+  return (
+    value === undefined || (typeof value === "string" && value.length <= 256)
   );
 }
 
@@ -75,6 +138,11 @@ export function loadGame(key: string): SavedGame | null {
     ) {
       data.hintsUsed = 0;
     }
+    if (data.origin !== undefined && !isGameOrigin(data.origin)) {
+      delete data.origin;
+    }
+    if (!isOptionalId(data.attemptId)) delete data.attemptId;
+    if (!isOptionalId(data.puzzleId)) delete data.puzzleId;
     return data as SavedGame;
   } catch {
     return null;
@@ -82,7 +150,10 @@ export function loadGame(key: string): SavedGame | null {
 }
 
 export type SavedGameSummary = {
+  dailyDate?: string | undefined;
+  challenge?: FriendChallenge | undefined;
   key: string;
+  roomId?: string | undefined;
   difficulty: Difficulty;
   filledCells: number;
   givenCells: number;
@@ -96,14 +167,26 @@ export function listSavedGames(): SavedGameSummary[] {
       const storageKey = localStorage.key(i);
       if (!storageKey?.startsWith(STORAGE_PREFIX)) continue;
       const key = storageKey.slice(STORAGE_PREFIX.length);
-      // Skip daily challenge saves — they have their own entry point
-      if (key.startsWith("daily-")) continue;
+      const dailyDate = /^daily-(\d{4}-\d{2}-\d{2})-medium$/.exec(key)?.[1];
+      // Today's daily has a dedicated action; older saves need a resume entry.
+      if (
+        key.startsWith("daily-") &&
+        (!dailyDate ||
+          !isCalendarDate(dailyDate) ||
+          dailyDate >= todayLocalISO())
+      )
+        continue;
       const game = loadGame(key);
       if (!game) continue;
       const filledCells = game.values.split("").filter((c) => c !== ".").length;
       const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
         key,
+        dailyDate,
+        challenge: game.challenge,
+        roomId:
+          game.multiplayer?.roomId ??
+          (key.startsWith("mp_") ? key.split("_")[1] : undefined),
         difficulty: game.difficulty,
         filledCells,
         givenCells,
@@ -143,3 +226,7 @@ export function clearAllSavedGames(): void {
     // localStorage unavailable
   }
 }
+
+export const exportSavedGames = exportPortableSavedGames;
+export const replaceSavedGames = replacePortableSavedGames;
+export type { SavedGameBackupEntry };

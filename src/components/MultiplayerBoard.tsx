@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useFlushOnExit } from "../hooks/useFlushOnExit.ts";
+import { useMultiplayerElapsedClock } from "../hooks/useMultiplayerElapsedClock.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
@@ -7,8 +9,9 @@ import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
-import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
-import type { AssistLevel, Cell } from "../lib/types.ts";
+import { deleteGame, loadMultiplayerGame } from "../lib/game-storage.ts";
+import { saveMultiplayerBoard } from "../lib/multiplayer-board-save.ts";
+import type { AssistLevel, Cell, MultiplayerResult } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -24,14 +27,7 @@ const EMPTY_CONFLICTS = new Set<number>();
 export type MultiplayerBoardProps = {
   roomId: string;
   puzzle: string;
-  /**
-   * The puzzle's solution, computed once when the game started and
-   * carried in the Yjs room. Authoritative for error highlighting —
-   * never recomputed locally, because the solver picks a random valid
-   * solution for non-unique puzzles, so a reload would otherwise flip
-   * correct digits to red. Null only for pre-existing games restored
-   * from an older snapshot that predates this field.
-   */
+  /** Room-owned solution; null for legacy snapshots. */
   solution: string | null;
   /**
    * Monotonic counter from the Yjs room; bumps on every new puzzle
@@ -54,7 +50,14 @@ export type MultiplayerBoardProps = {
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
+  rematchReady?: string[] | undefined;
+  /** Verified finish records projected from the room. */
+  results?: Record<string, MultiplayerResult> | undefined;
   onBack: () => void;
+  /** Shared wall-clock start instant, including the room's countdown. */
+  startedAt?: number | null | undefined;
+  /** Injected wall clock for deterministic duration tests. */
+  now?: (() => number) | undefined;
 };
 
 export function MultiplayerBoard({
@@ -72,50 +75,52 @@ export function MultiplayerBoard({
   onProgress,
   onComplete,
   onRematch,
+  rematchReady = [],
+  results,
   onBack,
+  startedAt,
+  now,
 }: MultiplayerBoardProps) {
-  // Scope the autosave key by room + puzzle so a rematch in the same room
-  // gets a fresh slate, and a different room never restores stale data.
-  const gameKey = useMemo(
-    () => `mp_${roomId}_${puzzle.slice(0, 12)}`,
-    [roomId, puzzle],
+  const identity = useMemo(
+    () => ({ roomId, playerId, gameNumber, puzzle }),
+    [roomId, playerId, gameNumber, puzzle],
   );
-  const saved = useMemo(() => loadGame(gameKey), [gameKey]);
+  const saved = useMemo(() => loadMultiplayerGame(identity), [identity]);
   const savedBoard = useMemo(
     () => (saved ? { values: saved.values, notes: saved.notes } : undefined),
     [saved],
   );
   const game = useSudoku(puzzle, solution ?? undefined, savedBoard);
-  // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
-  // Reset the reducer in-place rather than remount the whole subtree:
-  // keeps the timer ref, num-pad position, and any other UI state alive.
-  // The puzzle is tracked too: after a concurrent start/rematch merge
-  // the number can stay put while the puzzle changes under us.
+  const { gameKey, elapsedClock } = useMultiplayerElapsedClock({
+    identity,
+    saved,
+    running: game.status === "playing",
+    startedAt,
+    now,
+  });
+  // Rematches reset the reducer in place, preserving refs and UI state;
+  // track puzzle too because a concurrent merge can keep the same number.
   const prevGameNumberRef = useRef(gameNumber);
   const prevPuzzleRef = useRef(puzzle);
+  const changingGame =
+    gameNumber !== prevGameNumberRef.current ||
+    puzzle !== prevPuzzleRef.current;
   useEffect(() => {
-    if (
-      gameNumber === prevGameNumberRef.current &&
-      puzzle === prevPuzzleRef.current
-    ) {
-      return;
-    }
+    if (!changingGame) return;
     prevGameNumberRef.current = gameNumber;
     prevPuzzleRef.current = puzzle;
     game.reset(puzzle, solution ?? undefined, savedBoard);
-    // The new game starts from zero; without this the recorded match
-    // time for game 2 includes game 1's clock.
-    timerSecondsRef.current = 0;
-  }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
+  }, [changingGame, gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
-  const initialTimerSeconds = saved?.timer ?? 0;
-  const timerSecondsRef = useRef(initialTimerSeconds);
+  const elapsedSeconds = elapsedClock.getElapsedSeconds();
   const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
   // The loser keeps playing after the opponent wins; only show the result
   // modal once they've actually finished their own board (or won themselves).
+  const rematchRequested = rematchReady.includes(playerId);
+  const opponentRequested = rematchReady.some((id) => id !== playerId);
   const iWon = gameOver?.winnerId === playerId;
   const iFinished = iWon || game.status === "completed";
   const showResult = useDelayedFlag(iFinished, 300);
@@ -130,44 +135,24 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (prevCellsRef.current !== game.cellsRemaining) {
       prevCellsRef.current = game.cellsRemaining;
-      const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-      const filled = total - game.cellsRemaining;
-      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-      onProgress(game.cellsRemaining, percent);
+      onProgress(game.cellsRemaining, myPercent);
     }
-  }, [game.cellsRemaining, onProgress, puzzle]);
+  }, [game.cellsRemaining, onProgress, myPercent]);
 
   // Check completion — the claim ships the actual filled board so the
   // opponent's client can verify it against the room's solution.
   useEffect(() => {
-    if (game.status !== "completed") return;
+    if (changingGame || game.status !== "completed") return;
     onComplete(serializeBoard(game.board as Cell[][]).values);
-  }, [game.status, game.board, onComplete]);
+  }, [changingGame, game.status, game.board, onComplete]);
 
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
   // the puzzle + opponent progress; the filled cells live here.
-  useEffect(() => {
-    if (game.status === "completed") return;
-    // On rematch this effect and the RESET dispatch share a commit: the
-    // reducer still holds the OLD game's board while gameKey already
-    // points at the new one. Writing that mix would resume game 2
-    // wearing game 1's cells if the tab dies before the next render.
-    const boardMatchesPuzzle = game.board.every((boardRow, r) =>
-      boardRow.every((boardCell, c) => {
-        const ch = puzzle[r * 9 + c];
-        return ch === "."
-          ? !boardCell.isGiven
-          : boardCell.isGiven && boardCell.value === Number(ch);
-      }),
-    );
-    if (!boardMatchesPuzzle) return;
-    const { values, notes } = serializeBoard(game.board as Cell[][]);
-    saveGame(gameKey, {
-      puzzle,
-      values,
-      notes,
-      timer: timerSecondsRef.current,
+  const persist = useCallback(() => {
+    if (changingGame || game.status === "completed") return;
+    saveMultiplayerBoard(identity, game.board, {
+      timer: elapsedClock.getElapsedSeconds(),
       difficulty,
       assistLevel,
       hintsUsed: game.hintsUsed,
@@ -176,17 +161,20 @@ export function MultiplayerBoard({
     game.board,
     game.status,
     game.hintsUsed,
-    gameKey,
-    puzzle,
+    identity,
+    changingGame,
     difficulty,
     assistLevel,
+    elapsedClock.getElapsedSeconds,
   ]);
+  useEffect(persist, [persist]);
+  useFlushOnExit(persist);
 
   // Clear the save once this player finishes — keyed off local status so
   // the loser's in-progress save survives the opponent's win.
   useEffect(() => {
-    if (game.status === "completed") deleteGame(gameKey);
-  }, [game.status, gameKey]);
+    if (!changingGame && game.status === "completed") deleteGame(gameKey);
+  }, [changingGame, game.status, gameKey]);
 
   useRecordMultiplayerMatch({
     gameOver,
@@ -196,7 +184,7 @@ export function MultiplayerBoard({
     assistLevel,
     playerId,
     opponentName,
-    getTimeSeconds: () => timerSecondsRef.current,
+    getTimeSeconds: elapsedClock.getElapsedSeconds,
   });
 
   // Keyed off local status only — the loser keeps interacting until they
@@ -223,12 +211,7 @@ export function MultiplayerBoard({
       headerClassName="max-w-[min(100vw-2rem,28rem)]"
       timer={
         <TimerPill
-          timerKey={gameNumber}
-          running={game.status === "playing"}
-          initialSeconds={initialTimerSeconds}
-          onTick={(s) => {
-            timerSecondsRef.current = s;
-          }}
+          seconds={elapsedClock.seconds}
           subline={
             <>
               <span className="text-accent font-medium">
@@ -261,6 +244,9 @@ export function MultiplayerBoard({
       }
       controls={
         <GameControls
+          notesMode={game.notesMode}
+          onToggleNotes={game.toggleNotesMode}
+          disabled={game.status !== "playing" || changingGame}
           onErase={game.erase}
           onUndo={game.undo}
           historyLength={game.historyLength}
@@ -281,15 +267,35 @@ export function MultiplayerBoard({
           opponentProgress={opponentProgress}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
+          onAcceptRematch={opponentRequested ? onRematch : undefined}
         />
       }
       footer={
         showResult && gameOver && iFinished ? (
           <GameResult
             isWinner={iWon}
-            time={formatTime(timerSecondsRef.current)}
+            time={formatTime(elapsedSeconds)}
             difficulty={difficulty}
             isMultiplayer
+            multiplayerResults={
+              startedAt !== null && startedAt !== undefined
+                ? {
+                    playerId,
+                    opponentName,
+                    results: results ?? {},
+                    startedAt,
+                    playerTimeSeconds: elapsedSeconds,
+                    winnerId: gameOver?.winnerId,
+                  }
+                : undefined
+            }
+            rematchState={
+              rematchRequested
+                ? "requested"
+                : opponentRequested
+                  ? "offered"
+                  : undefined
+            }
             onNewGame={onBack}
             onRematch={onRematch}
           />

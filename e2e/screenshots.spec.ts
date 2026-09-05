@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { expect } from "@playwright/test";
 import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
   fillCells,
@@ -23,6 +24,29 @@ test("landing page", async ({ page }, testInfo) => {
   await page.screenshot({
     path: screenshotPath("landing", testInfo.project.name),
   });
+});
+
+test("interactive controls guide", async ({ page }, testInfo) => {
+  await page.goto("/solo/easy/guide-check");
+  const before = await readBoard(page);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Try the controls" }).click();
+  await page.getByRole("button", { name: "Practice cell" }).click();
+  await page.getByRole("button", { name: "Practice digit 5" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Value placed. Now try a note.",
+  );
+  await page.getByRole("button", { name: "Try notes" }).click();
+  await page.getByRole("button", { name: "Practice digit 5" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Note added. Tap again to remove it.",
+  );
+  await page.screenshot({
+    path: screenshotPath("controls-guide", testInfo.project.name),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Got it" }).click();
+  expect(await readBoard(page)).toBe(before);
 });
 
 test("solo game", async ({ page }, testInfo) => {
@@ -76,7 +100,7 @@ test("difficulty picker", async ({ page }, testInfo) => {
 
 test("multiplayer lobby", async ({ page }, testInfo) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Create Game" }).click();
+  await page.getByRole("button", { name: "Challenge a friend" }).click();
   await page.getByRole("button", { name: "Easy" }).click();
   await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
   await page.screenshot({
@@ -456,7 +480,7 @@ test.describe("multiplayer session", () => {
 
     // Host creates a room and lands in the lobby.
     await page.goto("/");
-    await page.getByRole("button", { name: "Create Game" }).click();
+    await page.getByRole("button", { name: "Challenge a friend" }).click();
     await page.getByRole("button", { name: "Easy" }).click();
     await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
     const roomId = new URL(page.url()).pathname.slice(1);
@@ -472,7 +496,16 @@ test.describe("multiplayer session", () => {
     await page.getByText("Brave Otter").waitFor();
     await guest.getByText("Clever Fox").waitFor();
 
-    await page.getByRole("button", { name: "Start Game" }).click();
+    await page.getByRole("button", { name: "Ready to start" }).click();
+    await expect(
+      page.getByRole("button", { name: "Ready — waiting for friend" }),
+    ).toBeDisabled();
+    await expect(page.getByRole("grid")).toHaveCount(0);
+    await guest.getByRole("button", { name: "Ready to start" }).click();
+    await expect(page.getByRole("status")).toContainText("Starting in");
+    await page.screenshot({
+      path: screenshotPath("shared-countdown", project),
+    });
     await page.waitForSelector(
       '[role="group"][aria-label="Number pad"]:visible',
     );
@@ -534,6 +567,40 @@ test.describe("multiplayer session", () => {
       path: screenshotPath("multiplayer-opponent-finished-banner", project),
     });
 
+    // A rematch request must leave the unfinished board playable until accepted.
+    const beforeRequest = await readBoard(page);
+    await guest.getByRole("button", { name: "Rematch", exact: true }).click();
+    await expect(
+      guest.getByRole("button", { name: "Rematch requested" }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "Accept rematch" }).waitFor();
+    expect(await readBoard(page)).toBe(beforeRequest);
+    await page.screenshot({
+      path: screenshotPath("multiplayer-rematch-request", project),
+    });
+    await page.getByRole("button", { name: "Accept rematch" }).click();
+    await expect(guest.getByRole("dialog")).toBeHidden();
+    await expect(page.getByRole("grid").getByRole("button")).toHaveCount(81);
+    await expect(guest.getByRole("grid").getByRole("button")).toHaveCount(81);
+    await expect.poll(() => readBoard(page)).not.toBe(beforeRequest);
+    expect(await readBoard(page)).toBe(await readBoard(guest));
+    const rematchPuzzle = await readBoard(page);
+    const rematchSolution = solvePuzzle(rematchPuzzle);
+    if (!rematchSolution) throw new Error("Rematch is unsolvable");
+    const rematchEmpties = [...rematchPuzzle].flatMap((cell, index) =>
+      cell === "." ? [index] : [],
+    );
+    await fillCells(page, rematchSolution, rematchEmpties);
+    await page.getByRole("dialog").getByText("You Won!").waitFor();
+    await fillCells(guest, rematchSolution, rematchEmpties);
+    await guest.getByRole("dialog").getByText("Puzzle Complete!").waitFor();
+    const comparison = page.getByRole("region", { name: "Race results" });
+    await expect(comparison.getByRole("listitem")).toHaveCount(2);
+    await expect(comparison.getByRole("status")).toContainText("ahead");
+    await page.screenshot({
+      path: screenshotPath("multiplayer-both-finished", project),
+      fullPage: true,
+    });
     await guest.close();
   });
 });

@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { pathToScreen, screenToPath } from "./App.tsx";
+import { pathToScreen, screenToPath } from "./lib/navigation.ts";
 
 describe("pathToScreen", () => {
+  it("round-trips a dated daily resume link", () => {
+    const screen = pathToScreen("/daily/2025-01-02");
+    expect(screen).toEqual({ name: "daily", date: "2025-01-02" });
+    expect(screenToPath(screen)).toBe("/daily/2025-01-02");
+    expect(pathToScreen("/daily/2025-02-30")).toEqual({
+      name: "notFound",
+      path: "/daily/2025-02-30",
+    });
+  });
   it("maps the static screens", () => {
     expect(pathToScreen("/")).toEqual({ name: "landing" });
     expect(pathToScreen("/daily")).toEqual({ name: "daily" });

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadGame } from "../lib/game-storage.ts";
+import { loadGame, multiplayerGameKey } from "../lib/game-storage.ts";
 import { getMultiplayerStats } from "../lib/multiplayer-stats.ts";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 
@@ -73,6 +73,40 @@ describe("MultiplayerBoard local autosave", () => {
     ).not.toBeNull();
   });
 
+  it("starts fresh when another game has the exact same puzzle", () => {
+    const props = baseProps();
+    const { unmount } = render(<MultiplayerBoard {...props} />);
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    fireEvent.click(screen.getByRole("button", { name: "5" }));
+    expect(screen.getByLabelText(/Cell row 1 column 1, value 5/)).toBeTruthy();
+    unmount();
+    render(<MultiplayerBoard {...props} gameNumber={2} />);
+    expect(screen.getByLabelText(/Cell row 1 column 1, empty/)).toBeTruthy();
+  });
+
+  it("supports keyboard notes, values, undo and erase in a duel", () => {
+    render(<MultiplayerBoard {...baseProps()} />);
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    fireEvent.keyDown(window, { key: "n" });
+    expect(screen.getByRole("button", { name: "Notes" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.keyDown(window, { key: "3" });
+    expect(
+      screen.getByLabelText(/Cell row 1 column 1, empty, notes 3/),
+    ).toBeTruthy();
+    fireEvent.keyDown(window, { key: "n" });
+    fireEvent.keyDown(window, { key: "5" });
+    expect(screen.getByLabelText(/Cell row 1 column 1, value 5/)).toBeTruthy();
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    expect(
+      screen.getByLabelText(/Cell row 1 column 1, empty, notes 3/),
+    ).toBeTruthy();
+    fireEvent.keyDown(window, { key: "Backspace" });
+    expect(screen.getByLabelText("Cell row 1 column 1, empty")).toBeTruthy();
+  });
+
   it("swaps to the merged puzzle when a start collision changes it without a gameNumber bump", () => {
     // Concurrent Start/Rematch: both writers used the same gameNumber,
     // LWW picked the other player's puzzle. The board must adopt it —
@@ -113,7 +147,7 @@ describe("MultiplayerBoard local autosave", () => {
       rerender(
         <MultiplayerBoard {...props} puzzle={PUZZLE_B} gameNumber={2} />,
       );
-      const newKey = `sudoku_save_mp_${props.roomId}_${PUZZLE_B.slice(0, 12)}`;
+      const newKey = `sudoku_save_${multiplayerGameKey({ ...props, puzzle: PUZZLE_B, gameNumber: 2 })}`;
       const writesForNewGame = setItem.mock.calls.filter(
         ([key]) => key === newKey,
       );
@@ -151,6 +185,72 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("saves current multiplayer elapsed time before a display tick runs", () => {
+    let now = 1_000;
+    const props = baseProps();
+    render(<MultiplayerBoard {...props} now={() => now} />);
+
+    now += 2_500.5;
+    act(() => window.dispatchEvent(new Event("pagehide")));
+
+    expect(loadGame(multiplayerGameKey(props))?.timer).toBe(2.5005);
+  });
+
+  it("uses wall-clock time when a backgrounded tab suspends performance ticks", () => {
+    const dateNow = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    const performanceNow = vi.spyOn(performance, "now").mockReturnValue(1_000);
+
+    try {
+      const props = baseProps();
+      render(<MultiplayerBoard {...props} />);
+
+      dateNow.mockReturnValue(5_000);
+      performanceNow.mockReturnValue(1_000);
+      act(() => window.dispatchEvent(new Event("pagehide")));
+
+      expect(loadGame(multiplayerGameKey(props))?.timer).toBe(4);
+    } finally {
+      dateNow.mockRestore();
+      performanceNow.mockRestore();
+    }
+  });
+
+  it("restores the shared wall-clock elapsed time across a reload gap", () => {
+    let now = 11_000;
+    const props = {
+      ...baseProps(),
+      startedAt: 1_000,
+      now: () => now,
+    };
+    const { unmount } = render(<MultiplayerBoard {...props} />);
+
+    act(() => window.dispatchEvent(new Event("pagehide")));
+    expect(loadGame(multiplayerGameKey(props))?.timer).toBe(10);
+
+    unmount();
+    now = 16_000;
+    render(<MultiplayerBoard {...props} />);
+    act(() => window.dispatchEvent(new Event("pagehide")));
+
+    expect(loadGame(multiplayerGameKey(props))?.timer).toBe(15);
+  });
+
+  it("saves idle time on page exit and internal navigation", () => {
+    vi.useFakeTimers();
+    try {
+      const props = baseProps();
+      const { unmount } = render(<MultiplayerBoard {...props} />);
+      act(() => vi.advanceTimersByTime(7000));
+      act(() => window.dispatchEvent(new Event("pagehide")));
+      expect(loadGame(multiplayerGameKey(props))?.timer).toBe(7);
+      act(() => vi.advanceTimersByTime(3000));
+      unmount();
+      expect(loadGame(multiplayerGameKey(props))?.timer).toBe(10);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores the elapsed timer on remount", () => {
     vi.useFakeTimers();
     try {
@@ -169,7 +269,7 @@ describe("MultiplayerBoard local autosave", () => {
       fireEvent.click(cell);
       fireEvent.click(screen.getAllByLabelText("5")[0]!);
 
-      const saved = loadGame(`mp_${props.roomId}_${props.puzzle.slice(0, 12)}`);
+      const saved = loadGame(multiplayerGameKey(props));
       expect(saved?.timer).toBeGreaterThanOrEqual(7);
 
       unmount();
@@ -466,6 +566,24 @@ describe("MultiplayerBoard after opponent wins", () => {
     localStorage.clear();
   });
 
+  it("offers an optional rematch while the loser can keep solving", () => {
+    const props = baseProps();
+    render(
+      <MultiplayerBoard
+        {...props}
+        gameOver={{ winnerId: "p2", winnerName: "Bob" }}
+        rematchReady={["p2"]}
+      />,
+    );
+    expect(screen.getByText(/Your current puzzle will end/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    fireEvent.keyDown(window, { key: "5" });
+    expect(screen.getByLabelText(/Cell row 1 column 1, value 5/)).toBeTruthy();
+    expect(props.onRematch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Accept rematch" }));
+    expect(props.onRematch).toHaveBeenCalledOnce();
+  });
+
   it("lets the loser keep placing digits after the opponent wins", () => {
     vi.useFakeTimers();
     try {
@@ -626,7 +744,7 @@ describe("MultiplayerBoard after opponent wins", () => {
       fireEvent.pointerUp(five, { pointerType: "touch" });
 
       // Save should exist while the loser is still working on their board.
-      const key = `mp_${props.roomId}_${props.puzzle.slice(0, 12)}`;
+      const key = multiplayerGameKey(props);
       expect(loadGame(key)).not.toBeNull();
 
       unmount();

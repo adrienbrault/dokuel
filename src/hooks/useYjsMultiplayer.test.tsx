@@ -7,6 +7,7 @@ import {
   claimWinner,
   initializeRoom,
   joinRoom,
+  markPlayerReady,
   startGame,
 } from "./p2p-room.ts";
 import { useYjsMultiplayer } from "./useYjsMultiplayer.ts";
@@ -198,6 +199,7 @@ describe("useYjsMultiplayer", () => {
     });
     await flushSync();
     const doc = connections.last!.doc;
+    const beforeReady = Date.now();
     act(() => {
       joinRoom({ doc, roomId: "room-commands" }, "p2", "Bob");
     });
@@ -207,7 +209,11 @@ describe("useYjsMultiplayer", () => {
       result.current.setAssistLevel("paper");
       result.current.updateName("Alicia");
       result.current.sendStartGame();
+      markPlayerReady({ doc, roomId: "room-commands" }, "p2");
     });
+    expect(result.current.roomState?.startedAt).toBeGreaterThanOrEqual(
+      beforeReady + 3000,
+    );
     const solution = doc.getMap("room").get("solution") as string;
     act(() => {
       result.current.sendComplete(solution);
@@ -222,9 +228,10 @@ describe("useYjsMultiplayer", () => {
     const roomMap = doc.getMap("room");
     expect(roomMap.get("difficulty")).toBe("hard");
     expect(roomMap.get("assistLevel")).toBe("paper");
-    expect(roomMap.get("gameNumber")).toBe(2);
+    expect(roomMap.get("gameNumber")).toBe(1);
+    expect(result.current.roomState?.rematchReady).toEqual(["p1"]);
     expect(result.current.roomState?.players[0]?.name).toBe("Alicia");
-    // The rematch resets progress, so assert the write landed before it.
+    // The rematch request leaves the current game intact until the opponent agrees.
     expect(connections.last!.awareness.getLocalState()?.user).toEqual({
       id: "p1",
       name: "Alicia",
@@ -572,6 +579,7 @@ describe("useYjsMultiplayer", () => {
       act(() => {
         joinRoom(fakeRoom, "p2", "Bob");
         result.current.sendStartGame();
+        markPlayerReady(fakeRoom, "p2");
       });
 
       expect(localStorage.getItem("dokuel_mp_snap_room-pagehide")).toBeNull();

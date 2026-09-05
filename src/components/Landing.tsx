@@ -25,12 +25,14 @@ import {
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
 
+import { InputGuide } from "./InputGuide.tsx";
+
 type LandingProps = {
   onSolo: () => void;
   onDaily: () => void;
   onCreate: () => void;
   onJoin: () => void;
-  onContinue: (gameKey: string, difficulty: string) => void;
+  onContinue: (game: SavedGameSummary) => void;
   onStats: () => void;
 };
 
@@ -107,13 +109,19 @@ export function Landing({
           <ContinueRow
             key={game.key}
             game={game}
-            onClick={() => onContinue(game.key, game.difficulty)}
+            onClick={() => onContinue(game)}
             onDelete={() => handleDelete(game.key)}
           />
         ))}
 
         <ActionRow
           variant="primary"
+          icon={<Swords size={20} aria-hidden="true" />}
+          label="Challenge a friend"
+          sublabel="Play together in a live duel"
+          onClick={onCreate}
+        />
+        <ActionRow
           icon={<Play size={20} aria-hidden="true" />}
           label="Start Solo"
           sublabel="Pick a difficulty and play"
@@ -140,12 +148,7 @@ export function Landing({
             ) : undefined
           }
         />
-        <ActionRow
-          icon={<Swords size={20} aria-hidden="true" />}
-          label="Create Game"
-          sublabel="Host a 1v1 room"
-          onClick={onCreate}
-        />
+
         <ActionRow
           icon={<LogIn size={20} aria-hidden="true" />}
           label="Join Game"
@@ -154,6 +157,7 @@ export function Landing({
         />
       </div>
 
+      <InputGuide />
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"
@@ -284,10 +288,19 @@ function ContinueRow({
         </span>
         <span className="flex-1 min-w-0">
           <span className="block text-[0.95rem] font-bold leading-tight text-text-primary">
-            Continue
+            {game.dailyDate
+              ? "Continue daily"
+              : game.roomId
+                ? "Return to duel"
+                : game.challenge
+                  ? "Continue challenge"
+                  : "Continue"}
           </span>
           <span className="block text-xs leading-tight mt-0.5 text-text-muted truncate">
-            {DIFFICULTY_LABELS[game.difficulty]} · {formatTime(game.timer)}
+            {game.dailyDate
+              ? formatShortDate(game.dailyDate)
+              : DIFFICULTY_LABELS[game.difficulty]}{" "}
+            · {formatTime(game.timer)}
           </span>
         </span>
         <span className="rounded-full bg-accent-light px-2 py-1 text-xs font-bold text-accent tabular-nums">

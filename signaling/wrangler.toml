@@ -14,3 +14,8 @@ bindings = [
 [[migrations]]
 tag = "v1"
 new_classes = ["SignalingRoom"]
+
+[[ratelimits]]
+name = "TURN_RATE_LIMITER"
+namespace_id = "2026090501"
+simple = { limit = 60, period = 60 }

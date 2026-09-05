@@ -495,6 +495,24 @@ describe("useSudoku", () => {
       expect(result.current.activeHint!.value).toBe(5);
     });
 
+    it("progresses a hint from nudge through pattern, elimination, and reveal", () => {
+      const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
+
+      act(() => result.current.hint());
+      expect(result.current.activeHint?.step).toBe("nudge");
+
+      act(() => result.current.hint());
+      expect(result.current.activeHint?.step).toBe("pattern");
+
+      act(() => result.current.hint());
+      expect(result.current.activeHint?.step).toBe("elimination");
+
+      act(() => result.current.hint());
+      expect(result.current.activeHint?.step).toBe("reveal");
+      expect(result.current.activeHint?.value).toBe(5);
+      expect(result.current.hintsUsed).toBe(1);
+    });
+
     it("adds nothing to undo history", () => {
       const { result } = renderHook(() => useSudoku(TWO_HOLE_PUZZLE, SOLVED));
 

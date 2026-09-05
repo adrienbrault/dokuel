@@ -603,11 +603,14 @@ body {
     0 8px 24px -14px oklch(0 0 0 / 0.18);
 }
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md;
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md overflow-y-auto;
   animation: modal-backdrop-in 0.2s ease-out;
 }
 .modal-panel {
-  @apply flex flex-col items-center gap-6 bg-surface border border-border-default rounded-3xl p-8;
+  @apply flex flex-col items-center gap-6 bg-surface border border-border-default rounded-3xl p-4 sm:p-6;
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   box-shadow: 0 24px 60px -16px oklch(0 0 0 / 0.4);
   animation: modal-content-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -681,4 +684,12 @@ body {
   .confetti-container {
     display: none;
   }
+}
+/* Row-major accessible grid retains the original thin lines and box dividers. */
+.sudoku-grid-row:not(:nth-child(3n)) {
+  box-shadow: 0 1px var(--color-border-default);
+}
+.sudoku-grid-cell:nth-child(3),
+.sudoku-grid-cell:nth-child(6) {
+  box-shadow: 2px 0 var(--color-board-border);
 }

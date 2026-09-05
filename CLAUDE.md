@@ -38,7 +38,8 @@ The frontend deploys automatically on push to `main`. Multiplayer uses WebRTC pe
 
 ### Frontend (Cloudflare Pages)
 - **Project**: `sudoku` on Cloudflare Pages, connected to `adrienbrault/dokuel` on GitHub
-- **Build**: `bun install && bun run build` → `dist/`
+- **Build**: `bun install --frozen-lockfile && bun run build` → `dist/`
+- **Build environment (Production and Preview)**: `BUN_VERSION=1.3.14`, `SKIP_DEPENDENCY_INSTALL=1`. The latter skips Pages' automatic npm install, which can fail before the configured Bun build command runs. Retry the failed deployment after updating both environments.
 - **URL**: https://dokuel.com (custom domain), https://sudoku-4cc.pages.dev (default)
 - Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
 

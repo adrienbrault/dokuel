@@ -3,6 +3,7 @@ import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
+  MultiplayerResult,
   Player,
   RoomState,
 } from "../lib/types.ts";
@@ -66,6 +67,7 @@ export function initializeRoom(
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
     roomMap.set("winnerBoard", null);
+    roomMap.set("startedAt", null);
     roomMap.set("gameNumber", 0);
   });
 }
@@ -112,19 +114,48 @@ export function leaveRoom(room: P2PRoom, playerId: string): void {
   });
 }
 
+function clearReadyPlayers(room: P2PRoom): void {
+  for (const [, playerMap] of room.doc.getMap("players")) {
+    const p = playerMap as Y.Map<unknown>;
+    p.delete("readyGameNumber");
+    p.delete("readyDifficulty");
+    p.delete("readyAssistLevel");
+  }
+}
+
 export function setAssistLevel(room: P2PRoom, level: AssistLevel): void {
   room.doc.transact(() => {
     room.doc.getMap("room").set("assistLevel", level);
+    clearReadyPlayers(room);
   });
 }
 
 export function setDifficulty(room: P2PRoom, level: Difficulty): void {
   room.doc.transact(() => {
     room.doc.getMap("room").set("difficulty", level);
+    clearReadyPlayers(room);
   });
 }
 
-export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
+export function markPlayerReady(room: P2PRoom, playerId: string): void {
+  const roomMap = room.doc.getMap("room");
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!playerMap || roomMap.get("status") !== "lobby") return;
+
+  room.doc.transact(() => {
+    playerMap.set("readyGameNumber", roomMap.get("gameNumber") ?? 0);
+    playerMap.set("readyDifficulty", roomMap.get("difficulty") ?? "medium");
+    playerMap.set("readyAssistLevel", roomMap.get("assistLevel") ?? "standard");
+  });
+}
+
+export function startGame(
+  room: P2PRoom,
+  difficulty?: Difficulty,
+  startedAt: number | null = null,
+): void {
   const roomMap = room.doc.getMap("room");
   const actualDifficulty =
     difficulty ?? ((roomMap.get("difficulty") as Difficulty) || "medium");
@@ -139,11 +170,17 @@ export function startGame(room: P2PRoom, difficulty?: Difficulty): void {
     roomMap.set("winnerId", null);
     roomMap.set("winnerName", null);
     roomMap.set("winnerBoard", null);
+    roomMap.set("startedAt", startedAt);
     roomMap.set("gameNumber", ((roomMap.get("gameNumber") as number) || 0) + 1);
 
     const players = room.doc.getMap("players");
     for (const [, playerMap] of players) {
       const p = playerMap as Y.Map<unknown>;
+      p.delete("readyGameNumber");
+      p.delete("readyDifficulty");
+      p.delete("readyAssistLevel");
+      p.delete("completedAt");
+      p.delete("completedBoard");
       p.set("cellsRemaining", 81 - clueCount);
       p.set("completionPercent", 0);
     }
@@ -243,19 +280,40 @@ export function claimWinner(
   playerId: string,
   playerName: string,
   board: string | null,
+  completedAt = Date.now(),
 ): boolean {
   const roomMap = room.doc.getMap("room");
+  const solution = roomMap.get("solution");
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  const recordsSolvedResult =
+    playerMap !== undefined &&
+    Number.isSafeInteger(completedAt) &&
+    completedAt >= 0 &&
+    judgeClaim(board, solution) === "solved";
   const existingWinner = roomMap.get("winnerId");
   if (existingWinner !== null && existingWinner !== undefined) {
-    const solution = roomMap.get("solution");
     const existing = judgeClaim(roomMap.get("winnerBoard"), solution);
     const mayOverwrite =
       existing === "forged" ||
       (existing === "forfeit" && judgeClaim(board, solution) === "solved");
-    if (!mayOverwrite) return false;
+    if (!mayOverwrite) {
+      if (recordsSolvedResult && playerMap) {
+        room.doc.transact(() => {
+          playerMap.set("completedAt", completedAt);
+          playerMap.set("completedBoard", board);
+        });
+      }
+      return false;
+    }
   }
 
   room.doc.transact(() => {
+    if (recordsSolvedResult && playerMap) {
+      playerMap.set("completedAt", completedAt);
+      playerMap.set("completedBoard", board);
+    }
     roomMap.set("winnerId", playerId);
     roomMap.set("winnerName", playerName);
     roomMap.set("winnerBoard", board);
@@ -264,8 +322,17 @@ export function claimWinner(
   return true;
 }
 
-export function requestRematch(room: P2PRoom, difficulty?: Difficulty): void {
-  startGame(room, difficulty);
+export function requestRematch(room: P2PRoom, playerId: string): void {
+  const state = getRoomState(room);
+  if (!state || state.status !== "finished") return;
+  const player = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!player) return;
+  room.doc.transact(() => {
+    player.set("rematchGameNumber", state.gameNumber);
+    player.set("rematchPuzzle", state.puzzle);
+  });
 }
 
 export function getRoomStatus(room: P2PRoom): string {
@@ -279,6 +346,31 @@ export function getHostId(room: P2PRoom): string {
 function projectWinnerBoard(raw: unknown): string | null {
   if (raw === null || raw === undefined) return null;
   return typeof raw === "string" ? raw : "";
+}
+
+function projectResults(
+  room: P2PRoom,
+  players: Player[],
+): Record<string, MultiplayerResult> {
+  const solution = room.doc.getMap("room").get("solution");
+  if (typeof solution !== "string") return {};
+
+  const results: Record<string, MultiplayerResult> = {};
+  const playersMap = room.doc.getMap("players");
+  for (const player of players) {
+    const playerMap = playersMap.get(player.id) as Y.Map<unknown>;
+    const completedAt = playerMap.get("completedAt");
+    const completedBoard = playerMap.get("completedBoard");
+    if (
+      typeof completedAt === "number" &&
+      Number.isSafeInteger(completedAt) &&
+      typeof completedBoard === "string" &&
+      judgeClaim(completedBoard, solution) === "solved"
+    ) {
+      results[player.id] = { completedAt, board: completedBoard };
+    }
+  }
+  return results;
 }
 
 /**
@@ -296,6 +388,25 @@ export function getRoomState(room: P2PRoom): RoomState | null {
 
   return {
     roomId: room.roomId,
+    rematchReady: players
+      .filter((player) => {
+        const map = room.doc.getMap("players").get(player.id) as Y.Map<unknown>;
+        return (
+          map.get("rematchGameNumber") === roomMap.get("gameNumber") &&
+          map.get("rematchPuzzle") === roomMap.get("puzzle")
+        );
+      })
+      .map((player) => player.id),
+    readyPlayers: players
+      .filter((player) => {
+        const map = room.doc.getMap("players").get(player.id) as Y.Map<unknown>;
+        return (
+          map.get("readyGameNumber") === (roomMap.get("gameNumber") ?? 0) &&
+          map.get("readyDifficulty") === roomMap.get("difficulty") &&
+          map.get("readyAssistLevel") === roomMap.get("assistLevel")
+        );
+      })
+      .map((player) => player.id),
     status: status as RoomState["status"],
     difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
@@ -312,6 +423,11 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     // a board — a reader must not judge it a forfeit while the writer
     // judges it forged.
     winnerBoard: projectWinnerBoard(roomMap.get("winnerBoard")),
+    results: projectResults(room, players),
+    startedAt:
+      typeof roomMap.get("startedAt") === "number"
+        ? (roomMap.get("startedAt") as number)
+        : null,
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
   };
 }
@@ -371,35 +487,61 @@ export function getPlayers(room: P2PRoom): Player[] {
 }
 
 /**
- * Seed an empty Yjs room from a localStorage snapshot. Only writes
- * keys that are still missing, so calling this after a partial IDB
- * restore is safe — the peer's eventual sync will reconcile via CRDT.
+ * Restore an empty room or an initialized, unstarted lobby. A started
+ * room keeps its existing fields; the Room owns the grace window that
+ * gives live peer state priority over this recovery snapshot.
  * The caller decides when to invoke; typically only when the room has
  * no started game in Yjs but a recent snapshot exists.
  */
 export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
   const roomMap = room.doc.getMap("room");
   const playersMap = room.doc.getMap("players");
+  const staleLobby = roomMap.get("gameNumber") === 0 && snap.gameNumber > 0;
   room.doc.transact(() => {
-    if (!roomMap.has("status")) roomMap.set("status", snap.status);
-    if (!roomMap.has("gameNumber")) roomMap.set("gameNumber", snap.gameNumber);
-    if (!roomMap.has("puzzle")) roomMap.set("puzzle", snap.puzzle);
-    if (!roomMap.has("solution"))
+    if (staleLobby || !roomMap.has("status"))
+      roomMap.set("status", snap.status);
+    if (staleLobby || !roomMap.has("gameNumber"))
+      roomMap.set("gameNumber", snap.gameNumber);
+    if (staleLobby || !roomMap.has("puzzle"))
+      roomMap.set("puzzle", snap.puzzle);
+    if (staleLobby || !roomMap.has("solution"))
       roomMap.set("solution", snap.solution ?? null);
-    if (!roomMap.has("difficulty")) roomMap.set("difficulty", snap.difficulty);
-    if (!roomMap.has("assistLevel"))
+    if (staleLobby || !roomMap.has("difficulty"))
+      roomMap.set("difficulty", snap.difficulty);
+    if (staleLobby || !roomMap.has("assistLevel"))
       roomMap.set("assistLevel", snap.assistLevel);
-    if (!roomMap.has("hostId")) roomMap.set("hostId", snap.hostId);
-    if (!roomMap.has("winnerId")) roomMap.set("winnerId", snap.winnerId);
-    if (!roomMap.has("winnerName")) roomMap.set("winnerName", snap.winnerName);
+    if (staleLobby || !roomMap.has("hostId"))
+      roomMap.set("hostId", snap.hostId);
+    if (staleLobby || !roomMap.has("winnerId"))
+      roomMap.set("winnerId", snap.winnerId);
+    if (staleLobby || !roomMap.has("winnerName"))
+      roomMap.set("winnerName", snap.winnerName);
+    if (staleLobby || !roomMap.has("winnerBoard"))
+      roomMap.set("winnerBoard", snap.winnerBoard ?? null);
+    if (staleLobby || !roomMap.has("startedAt"))
+      roomMap.set("startedAt", snap.startedAt ?? null);
     snap.players.forEach((p, joinOrder) => {
-      if (playersMap.has(p.id)) return;
+      if (playersMap.has(p.id) && !staleLobby) return;
       const pm = new Y.Map<unknown>();
       pm.set("name", p.name);
       pm.set("color", p.color);
       pm.set("cellsRemaining", p.cellsRemaining);
       pm.set("completionPercent", p.completionPercent);
       pm.set("joinOrder", joinOrder);
+      const result = snap.results[p.id];
+      if (result) {
+        pm.set("completedAt", result.completedAt);
+        pm.set("completedBoard", result.board);
+      }
+      if (snap.readyPlayers.includes(p.id)) {
+        pm.set("readyGameNumber", snap.gameNumber);
+        pm.set("readyDifficulty", snap.difficulty);
+        pm.set("readyAssistLevel", snap.assistLevel);
+      }
+      if (snap.rematchReady.includes(p.id)) {
+        pm.set("rematchGameNumber", snap.gameNumber);
+        pm.set("rematchPuzzle", snap.puzzle);
+      }
       playersMap.set(p.id, pm);
     });
   });

@@ -1,10 +1,89 @@
-import { render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { exportBackupJson } from "../lib/backup.ts";
 import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { Stats } from "./Stats.tsx";
 
 describe("Stats page — solo section", () => {
+  it("offers portable progress backup controls", () => {
+    localStorage.clear();
+    render(<Stats onBack={vi.fn()} />);
+    const backup = screen.getByRole("region", { name: "Progress backup" });
+    expect(
+      within(backup).getByRole("button", { name: /export progress/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(backup).getByLabelText(/import progress/i),
+    ).toBeInTheDocument();
+  });
+
+  it("refreshes lifetime totals after restoring a backup", async () => {
+    saveGameResult("easy", "standard", 60, true);
+    const raw = exportBackupJson();
+    localStorage.clear();
+    render(<Stats onBack={vi.fn()} />);
+    expect(screen.getByText("0 games played")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/import progress/i), {
+      target: {
+        files: [
+          new File([raw], "dokuel-progress.json", {
+            type: "application/json",
+          }),
+        ],
+      },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText(/1 saved game|0 saved games/i),
+      ).toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /replace local progress/i }),
+    );
+
+    expect(screen.getByText("1 game played")).toBeInTheDocument();
+  });
+
+  it("shows lifetime totals after recent records are evicted", () => {
+    localStorage.clear();
+    for (let index = 0; index < 101; index++)
+      saveGameResult("easy", "standard", 60, true);
+    render(<Stats onBack={vi.fn()} />);
+    expect(screen.getByText("101 games played")).toBeInTheDocument();
+  });
+  it("lets players inspect friend results separately from fresh puzzles", () => {
+    localStorage.clear();
+    saveGameResult({
+      difficulty: "easy",
+      assistLevel: "standard",
+      time: 300,
+      won: true,
+      origin: "generated",
+    });
+    saveGameResult({
+      difficulty: "easy",
+      assistLevel: "standard",
+      time: 60,
+      won: true,
+      origin: "friend",
+    });
+    render(<Stats onBack={vi.fn()} />);
+    const section = screen.getByRole("region", { name: "Solo" });
+    expect(within(section).queryByText("01:00")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "Puzzle source" }), {
+      target: { value: "friend" },
+    });
+    expect(within(section).getAllByText("01:00").length).toBeGreaterThan(0);
+    expect(within(section).queryByText("05:00")).toBeNull();
+  });
   beforeEach(() => {
     localStorage.clear();
   });
@@ -19,7 +98,7 @@ describe("Stats page — solo section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: /solo/i });
+    const section = screen.getByRole("region", { name: "Solo" });
     expect(within(section).getByText("Paper")).toBeTruthy();
     expect(within(section).getByText("Full")).toBeTruthy();
     expect(within(section).getAllByText("05:00").length).toBeGreaterThan(0);
@@ -33,7 +112,7 @@ describe("Stats page — solo section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: /solo/i });
+    const section = screen.getByRole("region", { name: "Solo" });
     expect(within(section).getByText("3 wins")).toBeTruthy();
   });
 });
@@ -92,6 +171,48 @@ describe("Stats page — multiplayer section", () => {
     expect(within(section).getAllByText("50%").length).toBeGreaterThanOrEqual(
       1,
     );
+  });
+
+  it("refreshes multiplayer lifetime totals after restoring a backup", async () => {
+    saveMultiplayerGameResult({
+      difficulty: "medium",
+      assistLevel: "standard",
+      time: 300,
+      date: "2026-05-19",
+      timestamp: 1,
+      won: true,
+      opponentName: "Brave Otter",
+      roomId: "room-backup",
+      gameNumber: 1,
+    });
+    const raw = exportBackupJson();
+    localStorage.clear();
+    render(<Stats onBack={vi.fn()} />);
+    expect(
+      within(screen.getByRole("region", { name: /multiplayer/i })).getByText(
+        /no multiplayer games yet/i,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/import progress/i), {
+      target: {
+        files: [
+          new File([raw], "dokuel-progress.json", {
+            type: "application/json",
+          }),
+        ],
+      },
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/1 multiplayer result/i)).toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /replace local progress/i }),
+    );
+
+    const section = screen.getByRole("region", { name: /multiplayer/i });
+    const playedLabel = within(section).getAllByText(/^Played$/i)[0];
+    expect(playedLabel?.parentElement?.textContent).toMatch(/1Played/);
   });
 
   it("lists recent matches with opponent name, time, and outcome", () => {

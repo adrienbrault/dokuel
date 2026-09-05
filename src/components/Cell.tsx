@@ -27,6 +27,7 @@ type CellProps = {
   isSameNumberRowCol?: boolean | undefined;
   assistLevel?: AssistLevel | undefined;
   onSelect: (row: number, col: number) => void;
+  tabIndex?: number | undefined;
   revealDelay?: number | undefined;
   /**
    * When set, render the digit as an overlay that flourishes a freshly
@@ -62,6 +63,7 @@ export const Cell = memo(function Cell({
   isSameNumberRowCol,
   assistLevel = "standard",
   onSelect,
+  tabIndex,
   revealDelay,
   chargingDigit,
   isDragSource,
@@ -111,6 +113,8 @@ export const Cell = memo(function Cell({
   return (
     <button
       type="button"
+      tabIndex={tabIndex}
+      onFocus={() => onSelect(row, col)}
       className={`
 					relative flex items-center justify-center
 					aspect-square w-full

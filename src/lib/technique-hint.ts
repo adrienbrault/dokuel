@@ -8,6 +8,8 @@ import { boxIndex } from "./board-geometry.ts";
 import type { Elimination } from "./candidates.ts";
 import type { HintExplanation } from "./hint-engine.ts";
 import {
+  type AvailableElimination,
+  findAvailableElimination,
   findUnlockingPlacement,
   type UnlockingPlacement,
 } from "./techniques.ts";
@@ -145,12 +147,15 @@ const TECHNIQUE_OF_KIND: Record<Elimination["kind"], HintTechnique> = {
 /** The technique hint for a board whose singles have run dry — null
  * when only chains or guessing can progress. */
 export function findTechniqueHint(board: Board): HintExplanation | null {
-  const unlock = findUnlockingPlacement(boardValues(board));
-  return unlock ? buildTechniqueHint(unlock) : null;
+  const puzzle = boardValues(board);
+  const unlock = findUnlockingPlacement(puzzle);
+  if (unlock) return buildTechniqueHint(unlock);
+  const elimination = findAvailableElimination(puzzle);
+  return elimination ? buildEliminationHint(elimination) : null;
 }
 
 function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
-  const { elimination, single, priorSteps } = unlock;
+  const { elimination, single, priorSteps, priorEliminations } = unlock;
   const preamble =
     priorSteps > 0
       ? `This one sits ${priorSteps + 1} eliminations deep — the decisive step: `
@@ -166,5 +171,25 @@ function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
     explanation:
       preamble + describeElimination(elimination) + describeConsequence(unlock),
     relatedCells: [...new Set(related)].map(toPosition),
+    intermediateSteps: priorEliminations.map(describeElimination),
+  };
+}
+
+function buildEliminationHint(
+  available: AvailableElimination,
+): HintExplanation {
+  const { elimination, priorEliminations } = available;
+  const related = [
+    ...elimination.patternCells,
+    ...elimination.removed.map((r) => r.cell),
+  ];
+  return {
+    position: toPosition(elimination.removed[0]!.cell),
+    value: elimination.digits[0]!,
+    technique: TECHNIQUE_OF_KIND[elimination.kind],
+    explanation: describeElimination(elimination),
+    relatedCells: [...new Set(related)].map(toPosition),
+    intermediateSteps: priorEliminations.map(describeElimination),
+    eliminationOnly: true,
   };
 }

@@ -18,6 +18,7 @@ import {
   judgeClaim,
   leaveRoom,
   MAX_PLAYERS,
+  markPlayerReady,
   observeRoomChanges,
   requestRematch,
   setAssistLevel as setRoomAssistLevel,
@@ -173,6 +174,8 @@ export type Room = {
   start(): void;
   /** Same, for a room that already finished a game. */
   rematch(): void;
+  /** Accept the current lobby rules and wait for the other player. */
+  ready(): void;
   progress(cellsRemaining: number, completionPercent: number): void;
   updateName(name: string): void;
   setAssistLevel(level: AssistLevel): void;
@@ -205,6 +208,12 @@ export type RoomConfig = {
   initialDifficulty: Difficulty | null;
   /** Injected clock. Only the forfeit trust window reads it. */
   now?: () => number;
+  /**
+   * Epoch clock for values shared with the UI and other tabs. Keep this
+   * separate from `now`, which may be monotonic and is used for local
+   * liveness deadlines.
+   */
+  wallNow?: () => number;
 };
 
 export function createRoom({
@@ -214,6 +223,7 @@ export function createRoom({
   playerName,
   initialDifficulty,
   now = Date.now,
+  wallNow = now,
 }: RoomConfig): Room {
   const p2p = createRoomFromDoc(doc, roomId);
   const listeners = new Set<() => void>();
@@ -406,12 +416,42 @@ export function createRoom({
       detectWinner(state, now());
       trackOpponentProgress();
       settleSeat(state);
+      if (
+        state.status === "lobby" &&
+        state.players.length === MAX_PLAYERS &&
+        state.readyPlayers?.length === MAX_PLAYERS &&
+        state.players[0]?.id === playerId
+      ) {
+        startGame(p2p, state.difficulty, wallNow() + 3_000);
+        return;
+      }
+      // Seat order is agreed across peers. One writer deals the next board,
+      // including when both requests arrive concurrently after reconnecting.
+      if (
+        draft.gameOver &&
+        state.status === "finished" &&
+        state.players[0]?.id === playerId &&
+        state.players.length === MAX_PLAYERS &&
+        state.players.every((player) => state.rematchReady?.includes(player.id))
+      ) {
+        startGame(p2p, state.difficulty, wallNow() + 3_000);
+        return;
+      }
     }
     publish();
   }
 
   function publish(): void {
     for (const listener of listeners) listener();
+  }
+
+  function ready(): void {
+    if (getPlayers(p2p).length < 2) {
+      set("error", { message: "Need 2 players to start" });
+      publish();
+      return;
+    }
+    markPlayerReady(p2p, playerId);
   }
 
   /**
@@ -493,22 +533,16 @@ export function createRoom({
     },
     complete(board) {
       if (judgeClaim(board, verifiedSolution) !== "solved") return;
-      claimWinner(p2p, playerId, playerName(), board);
+      claimWinner(p2p, playerId, playerName(), board, wallNow());
     },
     claimForfeit({ hasOtherPeer }) {
       if (hasReachableOpponent(hasOtherPeer)) return;
       claimWinner(p2p, playerId, playerName(), null);
     },
-    start() {
-      if (getPlayers(p2p).length < 2) {
-        set("error", { message: "Need 2 players to start" });
-        publish();
-        return;
-      }
-      startGame(p2p);
-    },
+    start: ready,
+    ready,
     rematch() {
-      requestRematch(p2p);
+      if (draft.gameOver) requestRematch(p2p, playerId);
     },
     progress(cellsRemaining, completionPercent) {
       updateProgress(p2p, playerId, cellsRemaining, completionPercent);

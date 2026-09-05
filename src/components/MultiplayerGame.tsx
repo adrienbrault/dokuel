@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useSharedCountdown } from "../hooks/useSharedCountdown.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import { ASSIST_LEVEL_LABELS, DIFFICULTY_LABELS } from "../lib/constants.ts";
+import { ConnectionDiagnostics } from "./ConnectionDiagnostics.tsx";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -23,6 +26,7 @@ export function MultiplayerGame({
   onBack,
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
+  const countdown = useSharedCountdown(mp.roomState?.startedAt);
   const [toast, setToast] = useState<string | null>(null);
   // Arms after the disconnect has persisted for a beat; combined with
   // the live value below so the banner hides instantly on return.
@@ -74,6 +78,30 @@ export function MultiplayerGame({
   // the local board state (cells, notes, progress) lives in
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
+    if (countdown > 0) {
+      return (
+        <div className="screen">
+          <div className="screen-content items-center justify-center min-h-dvh gap-4 text-center">
+            <h1 className="heading">Both players ready</h1>
+            <p
+              role="status"
+              aria-atomic="true"
+              className="text-3xl font-bold text-accent"
+            >
+              Starting in {countdown}
+            </p>
+            <p className="caption">
+              {DIFFICULTY_LABELS[mp.roomState?.difficulty ?? "medium"]} ·{" "}
+              {ASSIST_LEVEL_LABELS[mp.roomState?.assistLevel ?? "standard"]}{" "}
+              assistance
+            </p>
+            <p className="caption">
+              Your puzzle appears when the countdown ends.
+            </p>
+          </div>
+        </div>
+      );
+    }
     const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
     return (
       <>
@@ -89,9 +117,12 @@ export function MultiplayerGame({
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
+          startedAt={mp.roomState?.startedAt}
+          results={mp.roomState?.results}
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
+          rematchReady={mp.roomState?.rematchReady}
           onBack={onBack}
         />
         {/* opponentDisconnected is awareness-based — the only signal
@@ -114,6 +145,7 @@ export function MultiplayerGame({
         <div className="screen">
           <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
             <h1 className="heading">Still trying to connect…</h1>
+            <ConnectionDiagnostics roomId={roomId} />
             <p className="caption max-w-sm">
               The room may have ended, or the connection can't get through.
               Double-check the code with the host, make sure both of you are
@@ -157,6 +189,7 @@ export function MultiplayerGame({
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
+        <ConnectionDiagnostics roomId={roomId} />
         {toast && <Toast message={toast} />}
       </div>
     );

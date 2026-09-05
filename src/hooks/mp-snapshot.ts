@@ -1,5 +1,12 @@
-import type { Player, RoomState } from "../lib/types.ts";
+import type { RoomState } from "../lib/types.ts";
 import { roomDatabaseName } from "./mp-connection.ts";
+import {
+  decodeSnapshot,
+  encodeSnapshot,
+  type MpSnapshot,
+} from "./mp-snapshot-codec.ts";
+
+export type { MpSnapshot } from "./mp-snapshot-codec.ts";
 
 /**
  * Synchronous localStorage mirror of the room's Yjs state. y-indexeddb
@@ -12,20 +19,6 @@ import { roomDatabaseName } from "./mp-connection.ts";
  * Only fields the UI needs to render the in-progress game are mirrored
  * — opponent presence, GameEvents, and signaling state stay ephemeral.
  */
-
-export type MpSnapshot = {
-  gameNumber: number;
-  puzzle: string | null;
-  solution: string | null;
-  status: RoomState["status"];
-  difficulty: RoomState["difficulty"];
-  assistLevel: RoomState["assistLevel"];
-  hostId: string;
-  players: Player[];
-  winnerId: string | null;
-  winnerName: string | null;
-  savedAt: number;
-};
 
 const KEY_PREFIX = "dokuel_mp_snap_";
 
@@ -41,19 +34,7 @@ function key(roomId: string): string {
 
 export function saveSnapshot(roomId: string, state: RoomState): void {
   if (state.gameNumber === 0) return;
-  const snap: MpSnapshot = {
-    gameNumber: state.gameNumber,
-    puzzle: state.puzzle,
-    solution: state.solution,
-    status: state.status,
-    difficulty: state.difficulty,
-    assistLevel: state.assistLevel,
-    hostId: state.hostId,
-    players: state.players,
-    winnerId: state.winnerId,
-    winnerName: state.winnerName,
-    savedAt: Date.now(),
-  };
+  const snap = encodeSnapshot(state, Date.now());
   try {
     localStorage.setItem(key(roomId), JSON.stringify(snap));
   } catch {
@@ -65,8 +46,9 @@ export function loadSnapshot(roomId: string): MpSnapshot | null {
   try {
     const raw = localStorage.getItem(key(roomId));
     if (!raw) return null;
-    const snap = JSON.parse(raw) as MpSnapshot;
+    const snap = decodeSnapshot(raw);
     if (
+      !snap ||
       typeof snap.gameNumber !== "number" ||
       typeof snap.savedAt !== "number" ||
       !Array.isArray(snap.players) ||

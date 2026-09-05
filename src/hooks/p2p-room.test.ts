@@ -14,9 +14,11 @@ import {
   joinRoom,
   judgeClaim,
   leaveRoom,
+  markPlayerReady,
   observeRoomChanges,
   type P2PRoom,
   requestRematch,
+  setAssistLevel,
   setDifficulty,
   startGame,
   updateProgress,
@@ -229,6 +231,27 @@ describe("p2p-room", () => {
       expect(p1.get("completionPercent")).toBe(0);
     });
 
+    it("clears completion proofs when a new game starts", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+
+      startGame(room, "medium");
+      const solution = room.doc.getMap("room").get("solution") as string;
+      claimWinner(room, "player1", "Alice", solution, 1_000);
+      expect(getRoomState(room)?.results).toEqual({
+        player1: { completedAt: 1_000, board: solution },
+      });
+
+      startGame(room, "medium");
+
+      expect(getRoomState(room)?.results).toEqual({});
+      for (const playerMap of room.doc.getMap("players").values()) {
+        expect((playerMap as Y.Map<unknown>).has("completedAt")).toBe(false);
+        expect((playerMap as Y.Map<unknown>).has("completedBoard")).toBe(false);
+      }
+    });
+
     it("increments gameNumber", () => {
       const room = createTestRoom();
       initializeRoom(room, "player1", "medium");
@@ -250,6 +273,25 @@ describe("p2p-room", () => {
       setDifficulty(room, "expert");
 
       expect(room.doc.getMap("room").get("difficulty")).toBe("expert");
+    });
+
+    it("invalidates both players' readiness when shared rules change", () => {
+      const room = createTestRoom();
+      initializeRoom(room, "player1", "medium");
+      joinRoom(room, "player1", "Alice");
+      joinRoom(room, "player2", "Bob");
+
+      markPlayerReady(room, "player1");
+      markPlayerReady(room, "player2");
+      expect(getRoomState(room)?.readyPlayers).toEqual(["player1", "player2"]);
+
+      setDifficulty(room, "hard");
+      expect(getRoomState(room)?.readyPlayers).toEqual([]);
+
+      markPlayerReady(room, "player1");
+      markPlayerReady(room, "player2");
+      setAssistLevel(room, "paper");
+      expect(getRoomState(room)?.readyPlayers).toEqual([]);
     });
   });
 
@@ -412,37 +454,23 @@ describe("p2p-room", () => {
   });
 
   describe("requestRematch", () => {
-    it("generates new puzzle and increments gameNumber", () => {
+    it("records agreement without replacing the current board or progress", () => {
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
       startGame(room, "medium");
-
-      const oldGameNumber = room.doc.getMap("room").get("gameNumber");
-
-      requestRematch(room, "medium");
-
-      const roomMap = room.doc.getMap("room");
-      // gameNumber incremented
-      expect(roomMap.get("gameNumber")).toBe((oldGameNumber as number) + 1);
-      // new puzzle generated (could theoretically be same, but extremely unlikely)
-      expect(roomMap.get("puzzle")).toHaveLength(81);
-      expect(roomMap.get("status")).toBe("playing");
-      expect(roomMap.get("winnerId")).toBeNull();
-    });
-
-    it("resets player progress", () => {
-      const room = createTestRoom();
-      joinRoom(room, "player1", "Alice");
-      joinRoom(room, "player2", "Bob");
-      startGame(room, "medium");
-
-      updateProgress(room, "player1", 5, 95);
-      requestRematch(room, "medium");
-
-      const players = room.doc.getMap("players");
-      const p1 = players.get("player1") as Y.Map<unknown>;
-      expect(p1.get("completionPercent")).toBe(0);
+      const before = getRoomState(room)!;
+      updateProgress(room, "player2", 5, 95);
+      claimWinner(room, "player1", "Alice", before.solution);
+      requestRematch(room, "player1");
+      expect(getRoomState(room)).toMatchObject({
+        puzzle: before.puzzle,
+        gameNumber: before.gameNumber,
+        rematchReady: ["player1"],
+      });
+      expect(
+        getPlayers(room).find((p) => p.id === "player2")?.completionPercent,
+      ).toBe(95);
     });
   });
 
@@ -587,7 +615,7 @@ describe("p2p-room", () => {
       setDifficulty(room, "hard");
       startGame(room);
 
-      requestRematch(room);
+      startGame(room);
 
       expect(getRoomState(room)!.difficulty).toBe("hard");
     });
@@ -596,6 +624,7 @@ describe("p2p-room", () => {
   describe("hydrateRoomFromSnapshot", () => {
     function makeSnap(overrides: Partial<MpSnapshot> = {}): MpSnapshot {
       return {
+        version: 2,
         gameNumber: 2,
         puzzle: ".".repeat(81),
         solution: "1".repeat(81),
@@ -621,6 +650,11 @@ describe("p2p-room", () => {
         ],
         winnerId: null,
         winnerName: null,
+        winnerBoard: null,
+        rematchReady: [],
+        readyPlayers: [],
+        startedAt: null,
+        results: {},
         savedAt: Date.now(),
         ...overrides,
       };

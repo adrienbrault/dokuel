@@ -94,7 +94,7 @@ export async function readBoard(page: Page): Promise<string> {
 /**
  * Fills the given empty-cell indices with their solution digits by
  * tapping the cell and then the numpad — the input path a phone player
- * uses, and the only one multiplayer supports (no keyboard hook there).
+ * uses in both solo and multiplayer.
  */
 export async function fillCells(
   page: Page,

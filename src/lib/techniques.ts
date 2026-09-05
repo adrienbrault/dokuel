@@ -164,6 +164,15 @@ export type UnlockingPlacement = {
   single: SingleFind;
   /** Eliminations silently applied before the unlocking one. */
   priorSteps: number;
+  /** The same preceding eliminations, retained for player-facing teaching. */
+  priorEliminations: Elimination[];
+};
+
+export type AvailableElimination = {
+  /** The next sound candidate elimination on the current board. */
+  elimination: Elimination;
+  /** Cheaper eliminations applied before this one became available. */
+  priorEliminations: Elimination[];
 };
 
 // Cheapest-first, matching the grader's ladder so a hint never cites
@@ -183,6 +192,36 @@ const TECHNIQUES: ((s: CandidateState) => Elimination | null)[] = [
 ];
 
 /**
+ * Find a sound elimination when the current board has no technique that
+ * immediately exposes a placement. The caller can present this as a
+ * teaching step and leave the player to apply the candidate removal.
+ */
+export function findAvailableElimination(
+  puzzle: string,
+): AvailableElimination | null {
+  const s = initCandidates(puzzle);
+  if (!s || findSingle(s)) return null;
+  const priorEliminations: Elimination[] = [];
+  for (let priorSteps = 0; priorSteps < 128; priorSteps++) {
+    for (const technique of TECHNIQUES) {
+      const preview = cloneCandidates(s);
+      const elimination = technique(preview);
+      if (elimination && !findSingle(preview)) {
+        return { elimination, priorEliminations };
+      }
+    }
+    let applied: Elimination | null = null;
+    for (const technique of TECHNIQUES) {
+      applied = technique(s);
+      if (applied) break;
+    }
+    if (!applied) return null;
+    priorEliminations.push(applied);
+  }
+  return null;
+}
+
+/**
  * On a board whose singles have run dry, find the elimination that
  * makes the next placement visible. Prefers an elimination that
  * unlocks a single immediately — its explanation stands on the visible
@@ -197,6 +236,7 @@ export function findUnlockingPlacement(
 ): UnlockingPlacement | null {
   const s = initCandidates(puzzle);
   if (!s || findSingle(s)) return null;
+  const priorEliminations: Elimination[] = [];
   // Eliminations strictly shrink the candidate pool, so the walk
   // terminates; the cap is a backstop, not a tuning knob.
   for (let priorSteps = 0; priorSteps < 128; priorSteps++) {
@@ -205,7 +245,9 @@ export function findUnlockingPlacement(
       const elimination = technique(preview);
       if (!elimination) continue;
       const single = findSingle(preview);
-      if (single) return { elimination, single, priorSteps };
+      if (single) {
+        return { elimination, single, priorSteps, priorEliminations };
+      }
     }
     let applied: Elimination | null = null;
     for (const technique of TECHNIQUES) {
@@ -213,6 +255,7 @@ export function findUnlockingPlacement(
       if (applied) break;
     }
     if (!applied) return null;
+    priorEliminations.push(applied);
   }
   return null;
 }

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Cell } from "../lib/types.ts";
@@ -19,6 +19,45 @@ function makeBoard(overrides: [number, number, number][] = []): BoardType {
 }
 
 describe("Board same-number row/col highlighting (full assist)", () => {
+  it("presents nine logical rows with cells in reading order", () => {
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+    const rows = within(screen.getByRole("grid")).getAllByRole("row");
+    expect(rows).toHaveLength(9);
+    for (const [row, element] of rows.entries()) {
+      const cells = within(element).getAllByRole("gridcell");
+      expect(cells).toHaveLength(9);
+      for (const [col, cell] of cells.entries()) {
+        expect(within(cell).getByRole("button")).toHaveAccessibleName(
+          `Cell row ${row + 1} column ${col + 1}, empty`,
+        );
+      }
+    }
+  });
+
+  it("offers one tab stop and moves actual focus with the selected cell", () => {
+    const props = {
+      board: makeBoard(),
+      conflicts: new Set<number>(),
+      onSelectCell: vi.fn(),
+    };
+    const { rerender } = render(<Board {...props} selectedCell={null} />);
+    expect(
+      screen.getAllByRole("button").filter((cell) => cell.tabIndex === 0),
+    ).toHaveLength(1);
+    const first = screen.getByLabelText("Cell row 1 column 1, empty");
+    first.focus();
+    rerender(<Board {...props} selectedCell={{ row: 0, col: 1 }} />);
+    expect(screen.getByLabelText("Cell row 1 column 2, empty")).toHaveFocus();
+    expect(first.tabIndex).toBe(-1);
+  });
+
   it("highlights rows and columns of matching-number cells", () => {
     // Place a 5 at (1,2) and (4,6) — selecting (1,2)
     const board = makeBoard([

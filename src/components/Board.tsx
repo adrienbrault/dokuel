@@ -136,7 +136,11 @@ export function Board({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const boxPx = cellPx * 3 + 2;
+  const tracks = Array.from(
+    { length: 9 },
+    (_, col) =>
+      `${cellPx}px${col === 8 ? "" : col % 3 === 2 ? " 2px" : " 1px"}`,
+  ).join(" ");
   const boardPx = cellPx * 9 + 14;
 
   // Block iOS Safari's swipe-from-edge back gesture for drags that
@@ -146,8 +150,18 @@ export function Board({
   // only block that works across iOS versions. React's onTouchStart is
   // passive (preventDefault is a no-op), so we attach it natively.
   const gridRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || !selectedCell || !grid.contains(document.activeElement))
+      return;
+    grid
+      .querySelector<HTMLButtonElement>(
+        `button[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`,
+      )
+      ?.focus({ preventScroll: true });
+  }, [selectedCell]);
   useEffect(() => {
-    const el = gridRef.current;
+    const el = containerRef.current;
     if (!el) return;
     const handler = (e: TouchEvent) => e.preventDefault();
     el.addEventListener("touchstart", handler, { passive: false });
@@ -157,6 +171,18 @@ export function Board({
   return (
     <div
       ref={containerRef}
+      role="region"
+      aria-label="Sudoku board"
+      onPointerDown={
+        onSetSelectedCells ? dragHandlers.onPointerDown : undefined
+      }
+      onPointerMove={
+        onSetSelectedCells ? dragHandlers.onPointerMove : undefined
+      }
+      onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
+      onClickCapture={
+        onSetSelectedCells ? dragHandlers.onClickCapture : undefined
+      }
       className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
     >
       <div
@@ -164,97 +190,96 @@ export function Board({
         style={{
           width: boardPx,
           height: boardPx,
-          gridTemplateColumns: `repeat(3, ${boxPx}px)`,
-          gridTemplateRows: `repeat(3, ${boxPx}px)`,
         }}
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
-        role="region"
-        aria-label="Sudoku board"
+        className="flex flex-col bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        role="grid"
+        aria-label="Sudoku puzzle"
+        aria-rowcount={9}
+        aria-colcount={9}
         data-board-glow
-        onPointerDown={
-          onSetSelectedCells ? dragHandlers.onPointerDown : undefined
-        }
-        onPointerMove={
-          onSetSelectedCells ? dragHandlers.onPointerMove : undefined
-        }
-        onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
-        onClickCapture={
-          onSetSelectedCells ? dragHandlers.onClickCapture : undefined
-        }
       >
-        {Array.from({ length: 9 }, (_, boxIdx) => {
-          const boxRow = Math.floor(boxIdx / 3);
-          const boxCol = boxIdx % 3;
-          return (
-            <div
-              key={boxIdx}
-              style={{
-                gridTemplateColumns: `repeat(3, ${cellPx}px)`,
-                gridTemplateRows: `repeat(3, ${cellPx}px)`,
-              }}
-              className="grid gap-px bg-border-default"
-            >
-              {Array.from({ length: 9 }, (_, cellIdx) => {
-                const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
-                const colIdx = boxCol * 3 + (cellIdx % 3);
-                const cell = board[rowIdx]![colIdx]!;
-                const isSelected =
-                  selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
-                const isHighlighted =
-                  !isPaper &&
-                  selectedCell !== null &&
-                  (selectedCell.row === rowIdx ||
-                    selectedCell.col === colIdx ||
-                    (Math.floor(selectedCell.row / 3) ===
-                      Math.floor(rowIdx / 3) &&
-                      Math.floor(selectedCell.col / 3) ===
-                        Math.floor(colIdx / 3)));
-                const isSameNumber =
-                  !isPaper &&
-                  !isSelected &&
-                  selectedValue !== null &&
-                  cell.value !== null &&
-                  cell.value === selectedValue;
-                const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
-                const isMultiSelected =
-                  !isSelected &&
-                  (selectedCells?.size ?? 0) > 1 &&
-                  (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isHintRelated =
-                  !isSelected &&
-                  (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isSameNumberRowCol =
-                  matchRowColSet !== null &&
-                  !isSelected &&
-                  !isSameNumber &&
-                  (matchRowColSet.rows.has(rowIdx) ||
-                    matchRowColSet.cols.has(colIdx) ||
-                    matchRowColSet.boxes.has(
-                      Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
-                    ));
+        {Array.from({ length: 9 }, (_, rowIdx) => (
+          // biome-ignore lint/a11y/useFocusableInteractive: Grid focus is managed by the cell buttons inside each row.
+          <div
+            key={rowIdx}
+            role="row"
+            aria-rowindex={rowIdx + 1}
+            style={{
+              gridTemplateColumns: tracks,
+              height: cellPx,
+              marginBottom: rowIdx === 8 ? 0 : rowIdx % 3 === 2 ? 2 : 1,
+            }}
+            className="sudoku-grid-row grid bg-border-default"
+          >
+            {Array.from({ length: 9 }, (_, colIdx) => {
+              const cell = board[rowIdx]![colIdx]!;
+              const isSelected =
+                selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
+              const isHighlighted =
+                !isPaper &&
+                selectedCell !== null &&
+                (selectedCell.row === rowIdx ||
+                  selectedCell.col === colIdx ||
+                  (Math.floor(selectedCell.row / 3) ===
+                    Math.floor(rowIdx / 3) &&
+                    Math.floor(selectedCell.col / 3) ===
+                      Math.floor(colIdx / 3)));
+              const isSameNumber =
+                !isPaper &&
+                !isSelected &&
+                selectedValue !== null &&
+                cell.value !== null &&
+                cell.value === selectedValue;
+              const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
+              const isMultiSelected =
+                !isSelected &&
+                (selectedCells?.size ?? 0) > 1 &&
+                (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+              const isHintRelated =
+                !isSelected &&
+                (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+              const isSameNumberRowCol =
+                matchRowColSet !== null &&
+                !isSelected &&
+                !isSameNumber &&
+                (matchRowColSet.rows.has(rowIdx) ||
+                  matchRowColSet.cols.has(colIdx) ||
+                  matchRowColSet.boxes.has(
+                    Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
+                  ));
 
-                // Drag-related render flags
-                const isDragSource =
-                  dragState?.source.kind === "cell" &&
-                  dragState.source.row === rowIdx &&
-                  dragState.source.col === colIdx;
-                const isDropTarget =
-                  dragState?.target?.row === rowIdx &&
-                  dragState?.target?.col === colIdx;
-                const dropTargetState =
-                  isDropTarget && dragState
-                    ? dragState.invalidTarget
-                      ? "invalid"
-                      : "valid"
-                    : null;
-                const dropMode =
-                  dropTargetState === "valid" ? dragState?.mode : undefined;
-                const dropDigit =
-                  dropTargetState === "valid" ? dragState?.digit : undefined;
+              // Drag-related render flags
+              const isDragSource =
+                dragState?.source.kind === "cell" &&
+                dragState.source.row === rowIdx &&
+                dragState.source.col === colIdx;
+              const isDropTarget =
+                dragState?.target?.row === rowIdx &&
+                dragState?.target?.col === colIdx;
+              const dropTargetState =
+                isDropTarget && dragState
+                  ? dragState.invalidTarget
+                    ? "invalid"
+                    : "valid"
+                  : null;
+              const dropMode =
+                dropTargetState === "valid" ? dragState?.mode : undefined;
+              const dropDigit =
+                dropTargetState === "valid" ? dragState?.digit : undefined;
 
-                return (
+              return (
+                // biome-ignore lint/a11y/useFocusableInteractive: The contained button owns this cell's roving focus.
+                <div
+                  key={cellKey(rowIdx, colIdx)}
+                  role="gridcell"
+                  aria-colindex={colIdx + 1}
+                  aria-selected={isSelected || isMultiSelected}
+                  aria-readonly={cell.isGiven}
+                  aria-invalid={isConflict || undefined}
+                  className="sudoku-grid-cell"
+                  style={{ gridColumn: colIdx * 2 + 1 }}
+                >
                   <Cell
-                    key={cellKey(rowIdx, colIdx)}
                     cell={cell}
                     row={rowIdx}
                     col={colIdx}
@@ -267,6 +292,12 @@ export function Board({
                     isSameNumberRowCol={isSameNumberRowCol}
                     assistLevel={assistLevel}
                     onSelect={onSelectCell}
+                    tabIndex={
+                      isSelected ||
+                      (!selectedCell && rowIdx === 0 && colIdx === 0)
+                        ? 0
+                        : -1
+                    }
                     revealDelay={
                       animateReveal && cell.isGiven
                         ? (rowIdx * 9 + colIdx) * 6
@@ -282,11 +313,11 @@ export function Board({
                     dropMode={dropMode}
                     dropDigit={dropDigit}
                   />
-                );
-              })}
-            </div>
-          );
-        })}
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );

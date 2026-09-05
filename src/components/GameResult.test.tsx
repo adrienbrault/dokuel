@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { buildShareText, GameResult } from "./GameResult.tsx";
+import { GameResult } from "./GameResult.tsx";
+import { buildShareText } from "./ResultShare.tsx";
 
 describe("GameResult", () => {
   it("renders win state with time and emoji", () => {
@@ -51,7 +52,7 @@ describe("GameResult", () => {
       />,
     );
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: /play again/i }),
+      screen.getByRole("button", { name: /share result/i }),
     );
   });
 
@@ -123,7 +124,26 @@ describe("GameResult", () => {
     expect(screen.getByText(/new personal best/i)).toBeInTheDocument();
   });
 
-  it("shows Play Again in solo mode and Rematch in multiplayer", () => {
+  it("shows a retry action when the durable result write failed", async () => {
+    const onRetry = vi.fn();
+    render(
+      <GameResult
+        isWinner={true}
+        time="02:00"
+        onNewGame={vi.fn()}
+        persistenceError={true}
+        onRetryPersistence={onRetry}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(/could not be saved/i);
+    await userEvent.click(
+      screen.getByRole("button", { name: /try saving again/i }),
+    );
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("shows Another puzzle in solo mode and Rematch in multiplayer", () => {
     const { rerender } = render(
       <GameResult
         isWinner={true}
@@ -133,7 +153,7 @@ describe("GameResult", () => {
       />,
     );
 
-    expect(screen.getByText("Play Again")).toBeInTheDocument();
+    expect(screen.getByText("Another puzzle")).toBeInTheDocument();
 
     rerender(
       <GameResult
@@ -146,6 +166,36 @@ describe("GameResult", () => {
     );
 
     expect(screen.getByText("Rematch")).toBeInTheDocument();
+  });
+
+  it("shows both multiplayer finish records in the result modal", () => {
+    const solution = "1".repeat(81);
+    render(
+      <GameResult
+        isWinner={true}
+        time="00:02"
+        isMultiplayer
+        onNewGame={vi.fn()}
+        multiplayerResults={{
+          playerId: "p1",
+          opponentName: "Brave Otter",
+          startedAt: 1_000,
+          winnerId: "p1",
+          results: {
+            p1: { completedAt: 3_000, board: solution },
+            p2: { completedAt: 8_000, board: solution },
+          },
+        }}
+      />,
+    );
+
+    const results = screen.getByRole("region", { name: /race results/i });
+    expect(results).toBeInTheDocument();
+    expect(within(results).getByText("00:02")).toBeInTheDocument();
+    expect(within(results).getByText("00:07")).toBeInTheDocument();
+    expect(
+      within(results).getByText(/You finished 00:05 ahead of Brave Otter/),
+    ).toBeInTheDocument();
   });
 
   it("share text includes difficulty, time, and URL", () => {
@@ -195,10 +245,81 @@ describe("GameResult", () => {
       />,
     );
 
-    await userEvent.click(screen.getByText("Play Again"));
+    await userEvent.click(screen.getByText("Another puzzle"));
     expect(onRematch).toHaveBeenCalledOnce();
 
-    await userEvent.click(screen.getByText("New Game"));
+    await userEvent.click(screen.getByText("Back to home"));
     expect(onNewGame).toHaveBeenCalledOnce();
   });
+});
+
+it("shares an exact friend challenge instead of the homepage", async () => {
+  const { challengePath } = await import("../lib/challenge.ts");
+  const challenge = {
+    version: 1 as const,
+    puzzle:
+      ".34678912672195348198342567859761423426853791713924856961537284287419635345286179",
+    difficulty: "easy" as const,
+    assistLevel: "paper" as const,
+    timeSeconds: 222,
+    hintsUsed: 1,
+  };
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.assign(navigator, { clipboard: { writeText } });
+  render(
+    <GameResult
+      isWinner
+      time="03:42"
+      onNewGame={vi.fn()}
+      shareChallenge={challenge}
+    />,
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Challenge a friend" }),
+  );
+  expect(writeText).toHaveBeenCalledWith(
+    expect.stringContaining(challengePath(challenge)),
+  );
+  expect(writeText).toHaveBeenCalledWith(
+    expect.stringContaining("Paper assistance"),
+  );
+  expect(writeText).toHaveBeenCalledWith(expect.stringContaining("1 hint"));
+});
+
+it("offers a comparison receipt when a friend challenge is completed", () => {
+  render(
+    <GameResult
+      isWinner
+      time="03:00"
+      onNewGame={vi.fn()}
+      shareReceipt={{
+        version: 1,
+        matchId: "match-1",
+        challenge: {
+          version: 1,
+          puzzle:
+            ".34678912672195348198342567859761423426853791713924856961537284287419635345286179",
+          difficulty: "easy",
+          assistLevel: "paper",
+          timeSeconds: 222,
+          hintsUsed: 0,
+        },
+        challenger: {
+          name: "Adrien",
+          timeSeconds: 222,
+          assistLevel: "paper",
+          hintsUsed: 0,
+        },
+        friend: {
+          name: "Luna",
+          timeSeconds: 180,
+          assistLevel: "paper",
+          hintsUsed: 0,
+        },
+      }}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Send result to friend" }),
+  ).toBeInTheDocument();
 });

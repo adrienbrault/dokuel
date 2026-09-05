@@ -1,18 +1,21 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { ChallengeGame } from "./components/ChallengeGame.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
+import { FriendReceiptView } from "./components/FriendReceiptView.tsx";
+import { FriendRoundSetup } from "./components/FriendRoundSetup.tsx";
 import { JoinScreen } from "./components/JoinScreen.tsx";
 import { Landing } from "./components/Landing.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
-import { MAX_ROOM_KEY_LENGTH } from "./hooks/mp-connection.ts";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
+import { challengePath } from "./lib/challenge.ts";
 import { generateId } from "./lib/id.ts";
+import { pathToScreen, type Screen, screenToPath } from "./lib/navigation.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
-import type { AssistLevel, Difficulty } from "./lib/types.ts";
 import "./index.css";
 
 // The multiplayer screen pulls in yjs + y-webrtc + y-indexeddb —
@@ -23,96 +26,6 @@ const MultiplayerScreen = lazy(() =>
     default: m.MultiplayerScreen,
   })),
 );
-
-type Screen =
-  | { name: "landing" }
-  | { name: "difficulty"; mode: "solo" | "create" }
-  | {
-      name: "solo";
-      difficulty: Difficulty;
-      gameKey: string;
-      assistLevel: AssistLevel;
-    }
-  | { name: "daily" }
-  | {
-      name: "multiplayer";
-      roomId: string;
-      difficulty: Difficulty | null;
-    }
-  | { name: "join" }
-  | { name: "stats" }
-  | { name: "notFound"; path: string };
-
-const VALID_DIFFICULTIES = new Set<string>([
-  "easy",
-  "medium",
-  "hard",
-  "expert",
-]);
-
-// Invite codes are word-word-xxxx (see room-code.ts); the two-word
-// form covers links minted before the entropy suffix existed.
-const ROOM_CODE_RE = /^[a-z]+-[a-z]+(-[a-z0-9]{4})?$/;
-
-export function screenToPath(screen: Screen): string {
-  switch (screen.name) {
-    case "landing":
-    case "difficulty":
-      return "/";
-    case "solo":
-      return `/solo/${screen.difficulty}/${screen.gameKey}`;
-    case "daily":
-      return "/daily";
-    case "join":
-      return "/join";
-    case "stats":
-      return "/stats";
-    case "multiplayer":
-      return `/${screen.roomId}`;
-    case "notFound":
-      return screen.path;
-  }
-}
-
-export function pathToScreen(pathname: string): Screen {
-  const path = pathname.replace(/^\/+|\/+$/g, "");
-
-  if (path === "") return { name: "landing" };
-  if (path === "daily") return { name: "daily" };
-  if (path === "join") return { name: "join" };
-  if (path === "stats") return { name: "stats" };
-
-  if (path.startsWith("solo/")) {
-    const parts = path.slice(5).split("/");
-    const difficulty = parts[0] ?? "";
-    const gameKey = parts[1] ?? "";
-    if (VALID_DIFFICULTIES.has(difficulty) && gameKey) {
-      return {
-        name: "solo",
-        difficulty: difficulty as Difficulty,
-        gameKey,
-        assistLevel: "standard",
-      };
-    }
-    return { name: "landing" };
-  }
-
-  // Only a room-code-shaped path is a multiplayer room. Pasted links
-  // arrive capitalized (messaging apps, mobile keyboards) while Yjs
-  // room names are case-sensitive — normalize instead of dropping the
-  // joiner into a different, empty room. Anything else is a 404, not
-  // an excuse to boot the WebRTC stack.
-  const candidate = path.toLowerCase();
-  if (candidate.length <= MAX_ROOM_KEY_LENGTH && ROOM_CODE_RE.test(candidate)) {
-    return {
-      name: "multiplayer",
-      roomId: candidate,
-      difficulty: null,
-    };
-  }
-
-  return { name: "notFound", path: pathname };
-}
 
 function App() {
   const [screen, setScreen] = useState<Screen>(() =>
@@ -178,11 +91,27 @@ function App() {
             onCreate={() => navigate({ name: "difficulty", mode: "create" })}
             onJoin={() => navigate({ name: "join" })}
             onStats={() => navigate({ name: "stats" })}
-            onContinue={(gameKey, difficulty) => {
+            onContinue={(game) => {
+              if (game.dailyDate) {
+                navigate({ name: "daily", date: game.dailyDate });
+                return;
+              }
+              if (game.challenge) {
+                navigate({ name: "challenge", challenge: game.challenge });
+                return;
+              }
+              if (game.roomId) {
+                navigate({
+                  name: "multiplayer",
+                  roomId: game.roomId,
+                  difficulty: null,
+                });
+                return;
+              }
               navigate({
                 name: "solo",
-                difficulty: difficulty as Difficulty,
-                gameKey,
+                difficulty: game.difficulty,
+                gameKey: game.key,
                 assistLevel: "standard",
               });
             }}
@@ -238,8 +167,64 @@ function App() {
         />
       );
 
+    case "challenge":
+      return (
+        <ChallengeGame
+          key={challengePath(screen.challenge)}
+          challenge={screen.challenge}
+          onBack={() => navigate({ name: "landing" })}
+          onLiveChallenge={() =>
+            navigate({ name: "difficulty", mode: "create" })
+          }
+        />
+      );
+
+    case "receipt":
+      return (
+        <FriendReceiptView
+          receipt={screen.receipt}
+          onBack={() => navigate({ name: "landing" })}
+          onChallengeAgain={(side) =>
+            navigate({
+              name: "friendRound",
+              receipt: screen.receipt,
+              side,
+              mode: "again",
+            })
+          }
+          onBestOfThree={(side) =>
+            navigate({
+              name: "friendRound",
+              receipt: screen.receipt,
+              side,
+              mode: "bestOfThree",
+            })
+          }
+          onLiveChallenge={() =>
+            navigate({ name: "difficulty", mode: "create" })
+          }
+        />
+      );
+
+    case "friendRound":
+      return (
+        <FriendRoundSetup
+          key={`${screen.receipt.matchId}:${screen.side}:${screen.mode}`}
+          receipt={screen.receipt}
+          side={screen.side}
+          mode={screen.mode}
+          onBack={() => navigate({ name: "receipt", receipt: screen.receipt })}
+        />
+      );
+
     case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+      return (
+        <DailyGame
+          key={screen.date ?? "today"}
+          date={screen.date}
+          onBack={() => navigate({ name: "landing" })}
+        />
+      );
 
     case "multiplayer":
       return (
