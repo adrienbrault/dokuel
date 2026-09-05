@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { pathToScreen, screenToPath } from "./App.tsx";
+import { beforeEach, describe, expect, it } from "vitest";
+import { createdRoomScreen, pathToScreen, screenToPath } from "./App.tsx";
+import { setLastMultiplayerDifficulty } from "./lib/mp-preferences.ts";
 
 describe("pathToScreen", () => {
   it("maps the static screens", () => {
@@ -78,5 +79,26 @@ describe("screenToPath", () => {
   it("round-trips a multiplayer room", () => {
     const screen = pathToScreen("/calm-lamb-g4bb");
     expect(screenToPath(screen)).toBe("/calm-lamb-g4bb");
+  });
+});
+
+describe("createdRoomScreen", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("opens a fresh room on the remembered difficulty", () => {
+    // Create Game no longer stops at the difficulty picker, so the
+    // screen it navigates to has to arrive carrying a difficulty.
+    setLastMultiplayerDifficulty("expert");
+
+    const screen = createdRoomScreen();
+
+    expect(screen).toMatchObject({ name: "multiplayer", difficulty: "expert" });
+    expect(pathToScreen(screenToPath(screen))).toMatchObject({
+      name: "multiplayer",
+    });
+  });
+
+  it("mints a different room code every time", () => {
+    expect(createdRoomScreen().roomId).not.toBe(createdRoomScreen().roomId);
   });
 });

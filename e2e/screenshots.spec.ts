@@ -75,9 +75,10 @@ test("difficulty picker", async ({ page }, testInfo) => {
 });
 
 test("multiplayer lobby", async ({ page }, testInfo) => {
+  // Create Game opens the room directly - the lobby is the first
+  // screen a host sees, difficulty and assistance included.
   await page.goto("/");
   await page.getByRole("button", { name: "Create Game" }).click();
-  await page.getByRole("button", { name: "Easy" }).click();
   await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
   await page.screenshot({
     path: screenshotPath("multiplayer-lobby", testInfo.project.name),
@@ -435,6 +436,9 @@ test.describe("solo win modal", () => {
 const HOST_IDENTITY = {
   sudoku_player_id: "e2e-host-0001",
   sudoku_player_name: "Clever Fox",
+  // The create flow reads this instead of asking: seeding it keeps the
+  // race on the smallest board so the two tabs can actually finish it.
+  sudoku_mp_difficulty: JSON.stringify("easy"),
 };
 
 const GUEST_IDENTITY = {
@@ -457,7 +461,6 @@ test.describe("multiplayer session", () => {
     // Host creates a room and lands in the lobby.
     await page.goto("/");
     await page.getByRole("button", { name: "Create Game" }).click();
-    await page.getByRole("button", { name: "Easy" }).click();
     await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
     const roomId = new URL(page.url()).pathname.slice(1);
 
