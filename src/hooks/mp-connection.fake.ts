@@ -1,4 +1,9 @@
-import { Awareness, removeAwarenessStates } from "y-protocols/awareness";
+import {
+  Awareness,
+  applyAwarenessUpdate,
+  encodeAwarenessUpdate,
+  removeAwarenessStates,
+} from "y-protocols/awareness";
 import { applyUpdate, Doc } from "yjs";
 import { awarenessPresence } from "./mp-connection.presence.ts";
 import type {
@@ -33,6 +38,13 @@ export type FakeConnection = Omit<Connection, "connected"> & {
   emitStatus(connected: boolean): void;
   /** Fire the presence listeners as a peer-set change would. */
   emitPresence(): void;
+  /**
+   * Play the opponent: publish this awareness state under a foreign
+   * client id, exactly as a remote peer's update would arrive. Repeated
+   * calls come from the same imaginary peer, so a later state replaces
+   * the earlier one instead of adding a third player to the room.
+   */
+  emitRemotePeer(state: Record<string, unknown>): void;
 };
 
 export type FakeConnections = {
@@ -77,6 +89,9 @@ export function createFakeConnections(): FakeConnections {
       const statusListeners = new Set<(connected: boolean) => void>();
       const peerListeners = new Set<() => void>();
       const presence = awarenessPresence(awareness);
+      // Built on first use so a test that never plays the opponent
+      // leaves no second awareness to destroy.
+      let remoteAwareness: Awareness | null = null;
       const seed = factory.persistedUpdate;
 
       const connection: FakeConnection = {
@@ -92,6 +107,8 @@ export function createFakeConnections(): FakeConnections {
         closed: false,
         announce: presence.announce,
         hasOtherPeer: presence.hasOtherPeer,
+        signal: presence.signal,
+        opponentSignal: presence.opponentSignal,
         onStatus(listener) {
           statusListeners.add(listener);
           return () => statusListeners.delete(listener);
@@ -121,6 +138,7 @@ export function createFakeConnections(): FakeConnections {
           statusListeners.clear();
           peerListeners.clear();
           presence.removeAllListeners();
+          remoteAwareness?.destroy();
           awareness.destroy();
         },
         emitStatus(connected) {
@@ -129,6 +147,17 @@ export function createFakeConnections(): FakeConnections {
         },
         emitPresence() {
           for (const listener of peerListeners) listener();
+        },
+        emitRemotePeer(state) {
+          remoteAwareness ??= new Awareness(new Doc());
+          remoteAwareness.setLocalState(state);
+          applyAwarenessUpdate(
+            awareness,
+            encodeAwarenessUpdate(remoteAwareness, [
+              remoteAwareness.doc.clientID,
+            ]),
+            "remote",
+          );
         },
       };
 

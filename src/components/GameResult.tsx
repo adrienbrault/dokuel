@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  buildChallengeShareText,
+  describeChallengeOutcome,
+  type SoloChallenge,
+} from "../lib/challenge.ts";
+import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
 } from "../lib/constants.ts";
-import { formatTime } from "../lib/format.ts";
+import { formatShortDate, formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
 
 type GameResultProps = {
@@ -19,6 +24,14 @@ type GameResultProps = {
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
+  /** ISO date when this is a daily replayed from the archive. */
+  archiveDate?: string | undefined;
+  /** The time this board was opened to beat, if the link carried one. */
+  challenge?: SoloChallenge | undefined;
+  /** Link that replays this exact board against the player's time. */
+  challengeUrl?: string | undefined;
+  /** An extra way out, shown under the share action. */
+  footerLink?: { label: string; onClick: () => void } | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
 };
@@ -30,6 +43,7 @@ export function buildShareText({
   hintsUsed,
   streakInfo,
   isDaily,
+  archiveDate,
 }: {
   difficulty?: Difficulty | undefined;
   time: string;
@@ -37,8 +51,18 @@ export function buildShareText({
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
+  archiveDate?: string | undefined;
 }): string {
-  const title = isDaily ? "Dokuel Daily" : "Dokuel";
+  // An archived daily names its date and links to it: the bare site
+  // link would hand the reader today's puzzle, not the one shared.
+  const title = isDaily
+    ? archiveDate
+      ? `Dokuel Daily · ${formatShortDate(archiveDate)}`
+      : "Dokuel Daily"
+    : "Dokuel";
+  const url = archiveDate
+    ? `https://dokuel.com/daily/${archiveDate}`
+    : "https://dokuel.com";
   const diffLabel = difficulty ? ` ${DIFFICULTY_LABELS[difficulty]}` : "";
   const hints = hintsUsed
     ? ` · ${hintsUsed} hint${hintsUsed > 1 ? "s" : ""}`
@@ -49,12 +73,13 @@ export function buildShareText({
       ? `\n🔥 ${streakInfo.currentStreak}-day streak`
       : "";
 
-  return `${title}${diffLabel}\n⏱ ${time}${hints}${pb}${streak}\nhttps://dokuel.com`;
+  return `${title}${diffLabel}\n⏱ ${time}${hints}${pb}${streak}\n${url}`;
 }
 
 export function GameResult({
   isWinner,
   time,
+  timeSeconds,
   difficulty,
   isMultiplayer,
   onRematch,
@@ -64,10 +89,18 @@ export function GameResult({
   hintsUsed,
   streakInfo,
   isDaily,
+  archiveDate,
+  challenge,
+  challengeUrl,
+  footerLink,
   tip,
   onDismissTip,
 }: GameResultProps) {
-  const [copied, setCopied] = useState(false);
+  const outcome =
+    challenge && timeSeconds !== undefined
+      ? describeChallengeOutcome(challenge, timeSeconds)
+      : null;
+  const [copied, setCopied] = useState<"result" | "challenge" | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -108,30 +141,55 @@ export function GameResult({
     }
   };
 
-  const handleShare = () => {
-    const text = buildShareText({
-      difficulty,
-      time,
-      isNewPB,
-      hintsUsed,
-      streakInfo,
-      isDaily,
-    });
-    // Only claim "Copied!" once the write actually landed — on iOS the
-    // promise rejects when transient activation is lost.
+  // Only claim "Copied!" once the write actually landed — on iOS the
+  // promise rejects when transient activation is lost.
+  const copyToClipboard = (text: string, action: "result" | "challenge") => {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        setCopied(true);
+        setCopied(action);
         if (copiedTimerRef.current !== null) {
           clearTimeout(copiedTimerRef.current);
         }
-        copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+        copiedTimerRef.current = setTimeout(() => setCopied(null), 2000);
       })
       .catch(() => {
         // Copy failed (permissions, lost activation) — leave the
         // button label unchanged so the player can try again.
       });
+  };
+
+  const handleShare = () => {
+    copyToClipboard(
+      buildShareText({
+        difficulty,
+        time,
+        isNewPB,
+        hintsUsed,
+        streakInfo,
+        isDaily,
+        archiveDate,
+      }),
+      "result",
+    );
+  };
+
+  const handleChallenge = () => {
+    if (!challengeUrl || !difficulty) return;
+    const text = buildChallengeShareText({
+      difficulty,
+      time,
+      url: challengeUrl,
+    });
+    // The share sheet is the whole point on a phone: it drops the
+    // link straight into the thread the friend is already in.
+    if (typeof navigator.share === "function") {
+      navigator.share({ text }).catch(() => {
+        // Dismissed or unsupported payload — nothing to report.
+      });
+      return;
+    }
+    copyToClipboard(text, "challenge");
   };
 
   return (
@@ -156,7 +214,7 @@ export function GameResult({
         aria-labelledby="game-result-title"
         onKeyDown={trapTab}
         ref={panelRef}
-        className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative"
+        className="modal-panel gap-5 short:gap-3 short:p-5 max-w-sm sm:max-w-md w-full relative"
       >
         <div className="flex flex-col items-center gap-2.5">
           <span
@@ -178,7 +236,7 @@ export function GameResult({
           )}
         </div>
         <div className="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
-          <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
+          <span className="text-5xl short:text-4xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
@@ -187,6 +245,21 @@ export function GameResult({
             </span>
           )}
         </div>
+
+        {outcome && (
+          <div className="flex flex-col items-center gap-0.5 w-full">
+            <span
+              className={`text-base font-bold text-center ${
+                outcome.beaten ? "text-accent" : "text-text-primary"
+              }`}
+            >
+              {outcome.headline}
+            </span>
+            {outcome.delta && (
+              <span className="caption text-xs">{outcome.delta}</span>
+            )}
+          </div>
+        )}
 
         {stats && !isMultiplayer && (
           <div className="grid grid-cols-3 gap-2.5 w-full text-center">
@@ -225,13 +298,31 @@ export function GameResult({
           >
             New Game
           </button>
+          {challengeUrl && difficulty && (
+            <button
+              type="button"
+              className="btn btn-secondary w-full py-3 text-lg"
+              onClick={handleChallenge}
+            >
+              {copied === "challenge" ? "Copied!" : "Challenge a friend"}
+            </button>
+          )}
           {!isMultiplayer && (
             <button
               type="button"
               className="btn btn-ghost w-full py-2"
               onClick={handleShare}
             >
-              {copied ? "Copied!" : "Share Result"}
+              {copied === "result" ? "Copied!" : "Share Result"}
+            </button>
+          )}
+          {footerLink && (
+            <button
+              type="button"
+              className="btn btn-ghost w-full py-2"
+              onClick={footerLink.onClick}
+            >
+              {footerLink.label}
             </button>
           )}
         </div>

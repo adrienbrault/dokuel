@@ -111,6 +111,32 @@ describe("generatePuzzle", () => {
     }
   });
 
+  it("keeps the technique bar in mind when every hard attempt misses", () => {
+    // An exhausted run has to ship something. Ranking a chain-free
+    // singles-only board above one that actually demanded triples or
+    // better hands the player a trivial board labelled "hard" - the
+    // exact bug the grade bar exists to prevent.
+    const puzzle = generatePuzzle("hard", seededRandom(1), {
+      attempts: 8,
+      accepts: () => false,
+    });
+
+    expect(gradePuzzle(puzzle).tier).toBeGreaterThanOrEqual(3);
+  });
+
+  it("holds the clue cap even when every hard attempt misses", () => {
+    // The accept path checked the cap; the fallback did not, so an
+    // exhausted run could ship a board outside the clue band it is
+    // supposed to define. With this seed the best-ranked attempt is a
+    // 28-clue board and a legal one is sitting right next to it.
+    const puzzle = generatePuzzle("hard", seededRandom(310), {
+      attempts: 3,
+      accepts: () => false,
+    });
+
+    expect(puzzle.replace(/\./g, "").length).toBeLessThanOrEqual(27);
+  });
+
   it("still ships a valid board when the grade bar is unreachable", () => {
     // A constant rng makes every dig identical, so the graded loop can
     // never meet its bar — generation must fall back to the best board
@@ -118,6 +144,46 @@ describe("generatePuzzle", () => {
     const puzzle = generatePuzzle("expert", () => 0);
     expect(puzzle).toMatch(/^[1-9.]{81}$/);
     expect(countSolutions(puzzle)).toBe(1);
+  });
+});
+
+describe("generation performance", () => {
+  // Generation runs on the main thread the moment a player picks a
+  // difficulty, so a slow tail is a frozen screen. Hard and expert are
+  // the ones at risk: both re-dig until the grader signs off, and hard
+  // gets a 160-attempt budget.
+  //
+  // The budget is deliberately generous - measured p95 here is around
+  // 220ms for hard and 140ms for expert - because a shared CI runner is
+  // not a benchmark rig. It catches an order-of-magnitude regression,
+  // not a 20% one, and reads p95 rather than the max so one descheduled
+  // run cannot fail the suite.
+  const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
+  const BUDGET_MS = 1500;
+
+  function p95(samples: number[]): number {
+    const sorted = [...samples].sort((a, b) => a - b);
+    return sorted[Math.ceil(sorted.length * 0.95) - 1]!;
+  }
+
+  function timeGeneration(difficulty: "hard" | "expert"): number[] {
+    return SEEDS.map((seed) => {
+      const started = performance.now();
+      generatePuzzle(difficulty, seededRandom(seed));
+      return performance.now() - started;
+    });
+  }
+
+  it("generates a hard board well inside the budget", {
+    timeout: 60_000,
+  }, () => {
+    expect(p95(timeGeneration("hard"))).toBeLessThan(BUDGET_MS);
+  });
+
+  it("generates an expert board well inside the budget", {
+    timeout: 60_000,
+  }, () => {
+    expect(p95(timeGeneration("expert"))).toBeLessThan(BUDGET_MS);
   });
 });
 

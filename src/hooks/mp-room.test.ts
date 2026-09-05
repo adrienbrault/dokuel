@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
-import type { Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { createRoom } from "./mp-room.ts";
 import {
   claimWinner,
@@ -18,7 +18,10 @@ const ROOM_ID = "test-room";
 // never touches the clock reads "we have been present all along".
 const T0 = 10_000_000;
 
-function setup(initialDifficulty: Difficulty | null = null) {
+function setup(
+  initialDifficulty: Difficulty | null = null,
+  initialAssistLevel: AssistLevel = "standard",
+) {
   const doc = new Doc();
   const p2p = createRoomFromDoc(doc, ROOM_ID);
   let clock = T0;
@@ -28,6 +31,7 @@ function setup(initialDifficulty: Difficulty | null = null) {
     playerId: "p1",
     playerName: () => "Alice",
     initialDifficulty,
+    initialAssistLevel,
     now: () => clock,
   });
   return {
@@ -449,6 +453,16 @@ describe("setup", () => {
     expect(room.snapshot().roomState?.players).toHaveLength(1);
   });
 
+  it("opens the room on the assist level the creator brought", () => {
+    // The create flow hands the player's own assistance preference to
+    // the room instead of stopping at a picker on the way in.
+    const { doc, room } = setup("expert", "full");
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(doc.getMap("room").get("assistLevel")).toBe("full");
+  });
+
   it("lets a joiner write nothing but its own seat", () => {
     // Initializing both peers concurrently would race for hostId: each
     // fresh doc sees "no host yet" before sync, both write, and LWW can
@@ -572,6 +586,36 @@ describe("hydration", () => {
 
     expect(room.snapshot().roomState?.gameNumber).toBe(7);
     expect(room.snapshot().roomState?.difficulty).toBe("medium");
+  });
+
+  it("still credits the opponent's solved win after a hydrated reload", () => {
+    // The loser refreshes with the peer already gone and IndexedDB
+    // stale, so the room is rebuilt from the snapshot. A snapshot that
+    // drops the winner's board reduces a verified solve to a forfeit
+    // claim, and this client - continuously present - is right to
+    // reject a forfeit. The game then never ended for them at all.
+    const solvedBoard = "1".repeat(81);
+    localStorage.setItem(
+      `dokuel_mp_snap_${ROOM_ID}`,
+      JSON.stringify({
+        ...SNAPSHOT,
+        solution: solvedBoard,
+        status: "finished",
+        winnerId: "p2",
+        winnerName: "Bob",
+        winnerBoard: solvedBoard,
+        savedAt: Date.now(),
+      }),
+    );
+    const { room } = setup(null);
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    room.apply({ type: "tick", now: room.nextWakeAt() ?? 0 });
+
+    expect(room.snapshot().gameOver).toEqual({
+      winnerId: "p2",
+      winnerName: "Bob",
+    });
   });
 
   it("does not hold setup back when the doc already has a started game", () => {

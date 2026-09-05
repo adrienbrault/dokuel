@@ -75,9 +75,10 @@ test("difficulty picker", async ({ page }, testInfo) => {
 });
 
 test("multiplayer lobby", async ({ page }, testInfo) => {
+  // Create Game opens the room directly - the lobby is the first
+  // screen a host sees, difficulty and assistance included.
   await page.goto("/");
   await page.getByRole("button", { name: "Create Game" }).click();
-  await page.getByRole("button", { name: "Easy" }).click();
   await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
   await page.screenshot({
     path: screenshotPath("multiplayer-lobby", testInfo.project.name),
@@ -150,6 +151,33 @@ test("daily challenge", async ({ page }, testInfo) => {
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
   await page.screenshot({
     path: screenshotPath("daily-challenge", testInfo.project.name),
+  });
+});
+
+test("daily archive", async ({ page }, testInfo) => {
+  // Seed a handful of solved dates relative to the run's own "today",
+  // so the listing shows real times instead of an all-unplayed column.
+  await page.addInitScript(() => {
+    const now = new Date();
+    const results: Record<string, { time: number; completedAt: number }> = {};
+    for (const [i, offset] of [1, 2, 4, 5, 9].entries()) {
+      const day = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - offset,
+      );
+      const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      results[iso] = { time: 190 + i * 47, completedAt: day.getTime() };
+    }
+    localStorage.setItem("sudoku_daily_results", JSON.stringify(results));
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /past dailies/i }).click();
+  await page.getByRole("heading", { name: "Past Dailies" }).waitFor();
+
+  await page.screenshot({
+    path: screenshotPath("daily-archive", testInfo.project.name),
   });
 });
 
@@ -419,6 +447,49 @@ test.describe("solo win modal", () => {
   });
 });
 
+test.describe("solo challenge link", () => {
+  // The same one-cell-from-done save the win-modal scene uses, opened
+  // through a real challenge link: 03:42 beats the seeded 04:12.
+  test.use({
+    storage: {
+      "sudoku_save_e2e-win": nearlyWonSave,
+      sudoku_stats: priorEasyStats,
+    },
+  });
+
+  test("solo game - challenge banner", async ({ page }, testInfo) => {
+    await page.goto("/solo/easy/e2e-win?t=252&by=Swift+Panda");
+    await page.waitForSelector(
+      '[role="group"][aria-label="Number pad"]:visible',
+    );
+    await page
+      .getByText("Swift Panda solved this in 04:12. Beat it!")
+      .waitFor();
+
+    await page.screenshot({
+      path: screenshotPath("solo-challenge-banner", testInfo.project.name),
+    });
+  });
+
+  test("solo game - challenge win modal", async ({ page }, testInfo) => {
+    await page.goto("/solo/easy/e2e-win?t=252&by=Swift+Panda");
+    await page.waitForSelector(
+      '[role="group"][aria-label="Number pad"]:visible',
+    );
+
+    await page.locator('button[aria-label*=", empty"]').click();
+    await page.keyboard.press("5");
+
+    const dialog = page.getByRole("dialog");
+    await dialog.getByText(/You beat Swift Panda/).waitFor();
+    await dialog.getByRole("button", { name: "Challenge a friend" }).waitFor();
+
+    await page.screenshot({
+      path: screenshotPath("solo-challenge-win", testInfo.project.name),
+    });
+  });
+});
+
 // --- Multiplayer: real two-tab session ---
 //
 // y-webrtc syncs same-origin tabs over a BroadcastChannel, so two pages
@@ -435,6 +506,9 @@ test.describe("solo win modal", () => {
 const HOST_IDENTITY = {
   sudoku_player_id: "e2e-host-0001",
   sudoku_player_name: "Clever Fox",
+  // The create flow reads this instead of asking: seeding it keeps the
+  // race on the smallest board so the two tabs can actually finish it.
+  sudoku_mp_difficulty: JSON.stringify("easy"),
 };
 
 const GUEST_IDENTITY = {
@@ -457,7 +531,6 @@ test.describe("multiplayer session", () => {
     // Host creates a room and lands in the lobby.
     await page.goto("/");
     await page.getByRole("button", { name: "Create Game" }).click();
-    await page.getByRole("button", { name: "Easy" }).click();
     await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
     const roomId = new URL(page.url()).pathname.slice(1);
 
@@ -500,6 +573,19 @@ test.describe("multiplayer session", () => {
     });
     await guest.screenshot({
       path: screenshotPath("multiplayer-progress-bars-dark", project),
+    });
+
+    // A real reaction crosses the wire: sent from the host's picker,
+    // it lands as a floating emoji over the guest's opponent bar.
+    await page.getByRole("button", { name: "Send a reaction" }).click();
+    await page.getByRole("dialog", { name: "Reactions" }).waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-reactions", project),
+    });
+    await page.getByRole("button", { name: "Send 🔥" }).click();
+    await guest.getByRole("status").filter({ hasText: "🔥" }).waitFor();
+    await guest.screenshot({
+      path: screenshotPath("multiplayer-reaction-received-dark", project),
     });
 
     // The settings popover carries the real opponent-bar toggle.

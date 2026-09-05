@@ -1,5 +1,9 @@
 import type { Awareness } from "y-protocols/awareness";
-import type { Connection, PresenceUser } from "./mp-connection.ts";
+import type {
+  Connection,
+  PresenceSignal,
+  PresenceUser,
+} from "./mp-connection.ts";
 
 /**
  * Presence over a y-protocols Awareness: whether the opponent is
@@ -20,7 +24,7 @@ import type { Connection, PresenceUser } from "./mp-connection.ts";
  */
 export type Presence = Pick<
   Connection,
-  "announce" | "hasOtherPeer" | "onPresenceChange"
+  "announce" | "hasOtherPeer" | "onPresenceChange" | "signal" | "opponentSignal"
 > & {
   /** Drop every listener this helper installed. */
   removeAllListeners(): void;
@@ -53,6 +57,28 @@ export function awarenessPresence(awareness: Awareness): Presence {
         }
       }
       return false;
+    },
+    signal(next) {
+      // Merged, not replaced: the mask is republished constantly while
+      // a reaction has to keep standing until it is superseded.
+      const state = awareness.getLocalState() ?? {};
+      const previous = (state as { signal?: PresenceSignal }).signal ?? {};
+      awareness.setLocalState({
+        ...state,
+        signal: { ...previous, ...next },
+      });
+    },
+    opponentSignal(ownPlayerId) {
+      for (const [clientId, state] of awareness.getStates()) {
+        if (clientId === awareness.clientID) continue;
+        const entry = state as {
+          user?: PresenceUser;
+          signal?: PresenceSignal;
+        };
+        if (entry.user?.id === ownPlayerId) continue;
+        if (entry.signal) return entry.signal;
+      }
+      return null;
     },
     onPresenceChange(listener) {
       listeners.add(listener);

@@ -79,6 +79,14 @@ export function useSudoku(
     dispatch({ type: "ERASE" });
   }, []);
   const undo = useCallback(() => dispatch({ type: "UNDO" }), []);
+  const redo = useCallback(() => dispatch({ type: "REDO" }), []);
+
+  // Shares the note feedback with a manual pencil mark: from the
+  // player's side this is the same gesture, done 60 times at once.
+  const fillNotes = useCallback(() => {
+    gameFeedback.onToggleNotes();
+    dispatch({ type: "FILL_NOTES" });
+  }, []);
 
   const toggleNotesMode = useCallback(() => {
     gameFeedback.onToggleNotes();
@@ -115,6 +123,7 @@ export function useSudoku(
     remainingCounts,
     cellsRemaining,
     historyLength: state.history.length,
+    redoLength: state.redo.length,
     hintsUsed: state.hintsUsed,
     cellKey,
     selectCell,
@@ -124,6 +133,8 @@ export function useSudoku(
     placeNoteAt,
     erase,
     undo,
+    redo,
+    fillNotes,
     activeHint: state.activeHint,
     toggleNotesMode,
     hint,

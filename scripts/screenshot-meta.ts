@@ -85,16 +85,22 @@ export function sceneLabel(scene: string): string {
     "solo-numpad-right": "Solo · numpad right",
     "solo-in-progress": "Solo · in progress",
     "solo-win-modal": "Solo · win modal",
+    "solo-challenge-banner": "Solo · challenge banner",
+    "solo-challenge-win": "Solo · challenge win",
     "solo-settings-popover": "Solo · settings popover",
     difficulty: "Difficulty picker",
     "difficulty-dark": "Difficulty picker (dark)",
     "daily-challenge": "Daily challenge",
+    "daily-archive": "Daily · past dailies",
     "join-game": "Join game",
     "multiplayer-lobby": "Multiplayer · lobby",
     "multiplayer-progress-bars": "Multiplayer · progress bars",
     "multiplayer-progress-bars-dark": "Multiplayer · progress bars (dark)",
     "multiplayer-progress-hidden": "Multiplayer · progress hidden",
     "multiplayer-settings-toggle": "Multiplayer · settings toggle",
+    "multiplayer-reactions": "Multiplayer · reaction picker",
+    "multiplayer-reaction-received-dark":
+      "Multiplayer · reaction received (dark)",
   };
   return overrides[scene] ?? titleCase(scene);
 }

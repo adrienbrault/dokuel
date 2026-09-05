@@ -11,6 +11,7 @@ bun run lint:fix     # Auto-fix lint + format (biome check --write)
 bun run typecheck    # TypeScript check (tsc --noEmit -p tsconfig.app.json)
 bun run ci           # Full CI: lint + typecheck + test
 bun run diff-coverage # Check test coverage on git-changed lines
+bun run dailies:generate # Regenerate src/lib/dailies.json (frozen daily boards)
 ```
 
 ## Hooks & Feedback Loops
@@ -41,6 +42,7 @@ The frontend deploys automatically on push to `main`. Multiplayer uses WebRTC pe
 - **Build**: `bun install && bun run build` → `dist/`
 - **URL**: https://dokuel.com (custom domain), https://sudoku-4cc.pages.dev (default)
 - Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
+- **Service worker**: `vite-plugin-pwa` (generateSW) precaches the built shell at build time, so solo play and the daily puzzle work offline; deep links fall back to the precached `/index.html`. Registered from `src/main.tsx` via `virtual:pwa-register` in `registerType: "prompt"` mode: a new deploy installs and waits, and `src/lib/register-sw.ts` lets it take over (a page reload) only from a menu screen, never mid-game; otherwise it activates on the next launch. Signaling and TURN are cross-origin and deliberately never cached; `public/_headers` serves `sw.js` with `Cache-Control: no-cache` so a worker cannot get stuck.
 
 ### Signaling Server (Cloudflare Worker)
 - **Project**: `dokuel-signaling` Worker with Durable Objects
@@ -180,9 +182,10 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ## Project Conventions
 
 ### File Structure
-- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing, GameLayout, GameControls, GameResult, Stats, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast)
+- Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing, GameLayout, GameControls, GameResult, ChallengeBanner, DailyGame, DailyArchive, NotFoundScreen, Stats, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast)
 - Hooks: `src/hooks/` — custom React hooks (useSudoku, useYjsMultiplayer, useKeyboard, useNumPadPosition, useDarkMode)
-- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, daily challenge, daily-streak, stats, game-storage, name-generator, haptics, sounds, format, constants)
+- Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, routes, challenge, daily challenge, dailies.json, daily-archive, daily-results, daily-streak, stats, game-storage, name-generator, player-identity, haptics, sounds, format, constants)
+- Scripts: `scripts/` — build-time tooling run with bun (generate-dailies, screenshot combining and README generation, diff-coverage, brand assets)
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
 ### Code Style (enforced by Biome)
@@ -283,7 +286,9 @@ You cannot judge visual quality from code alone. **Always screenshot, always rev
 - **Board sharing**: Sharer's cells become locked/given on both boards. Notes not shared.
 - **Numpad positions**: Bottom (default), Left, Right. Persisted in localStorage. Configured via settings popover.
 - **No accounts**: Auto-generated fun names (adjective + animal). Player id and name persisted in localStorage; name editable in lobby.
-- **Daily challenge**: Deterministic puzzle via seeded RNG — same date, same board, any device. Streak tracking (current + longest).
+- **Daily challenge**: Boards frozen in `src/lib/dailies.json` (2026-05-01 through 2027-12-31, regenerated with `bun run dailies:generate`), so generator changes can never fork a daily; dates outside the table fall back to the seeded RNG. Loaded as its own chunk. Streak tracking (current + longest), moved only by today's date.
+- **Daily archive**: `/daily/archive` lists past dailies with their results; `/daily/<YYYY-MM-DD>` replays any date since 2026-05-01. Archive completions record a result but never touch the streak.
+- **Challenge links**: A solo win shares `/solo/<difficulty>/<key>?t=<seconds>&by=<name>`, which opens the same seeded board with a time to beat and settles the comparison in the result dialog.
 - **Stats tracking**: Per-difficulty game history (best time, average, games played) in localStorage. Personal best shown during gameplay.
 - **Game persistence**: Auto-save in-progress games to localStorage. Resume on return.
 - **Hints**: Reveal one cell's correct value (solo only). Hint-assisted games excluded from PB tracking.

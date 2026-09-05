@@ -4,13 +4,16 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
+import { buildChallengeUrl, type SoloChallenge } from "../lib/challenge.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
+import { getPlayerName } from "../lib/player-identity.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
+import { ChallengeBanner } from "./ChallengeBanner.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
@@ -31,6 +34,12 @@ type SoloGameProps = {
   dailyDate?: string | undefined;
   /** Marks the daily challenge for share text — not sniffed from the title. */
   isDaily?: boolean | undefined;
+  /** ISO date when this daily comes from the archive rather than today. */
+  archiveDate?: string | undefined;
+  /** A friend's time to beat, carried by the link that opened this board. */
+  challenge?: SoloChallenge | undefined;
+  /** An extra link for the result dialog (the daily offers its archive). */
+  resultLink?: { label: string; onClick: () => void } | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
   onComplete?:
@@ -47,6 +56,9 @@ export function SoloGame({
   title,
   dailyDate,
   isDaily = false,
+  archiveDate,
+  challenge,
+  resultLink,
   onBack,
   onRematch,
   onComplete,
@@ -62,6 +74,7 @@ export function SoloGame({
       initialAssistLevel,
       getTimerSeconds: () => timerSecondsRef.current,
       dailyDate,
+      dailyArchive: archiveDate !== undefined,
       onComplete,
     });
 
@@ -129,6 +142,7 @@ export function SoloGame({
     onPlaceNumber: keyDigit,
     onErase: game.erase,
     onUndo: game.undo,
+    onRedo: game.redo,
     onToggleNotes: game.toggleNotesMode,
     enabled: game.status === "playing" && !paused,
   });
@@ -137,6 +151,18 @@ export function SoloGame({
     if (!game.activeHint) return undefined;
     const set = new Set<number>();
     for (const pos of game.activeHint.relatedCells) {
+      set.add(cellKey(pos.row, pos.col));
+    }
+    return set;
+  }, [game.activeHint]);
+
+  // An elimination hint points at two sets of cells: the ones proving
+  // it, above, and the ones the player is asked to clear.
+  const eliminatedCells = useMemo(() => {
+    const hint = game.activeHint;
+    if (hint?.kind !== "elimination") return undefined;
+    const set = new Set<number>();
+    for (const pos of hint.eliminatedCells) {
       set.add(cellKey(pos.row, pos.col));
     }
     return set;
@@ -187,6 +213,7 @@ export function SoloGame({
             assistLevel={assistLevel}
             conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
             hintCells={hintCells}
+            eliminatedCells={eliminatedCells}
             highlightedDigit={paused ? null : highlight.highlightedDigit}
             onSelectCell={paused ? () => {} : highlight.selectCell}
             onSetSelectedCells={paused ? undefined : highlight.setSelectedCells}
@@ -212,13 +239,19 @@ export function SoloGame({
       }
       controls={
         <>
+          {challenge && game.status !== "completed" && (
+            <ChallengeBanner challenge={challenge} />
+          )}
           {game.activeHint && (
             <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
           )}
           <GameControls
             onErase={game.erase}
             onUndo={game.undo}
+            onRedo={game.redo}
+            onFillNotes={assistLevel === "paper" ? undefined : game.fillNotes}
             historyLength={game.historyLength}
+            redoLength={game.redoLength}
             onHint={game.hint}
           />
         </>
@@ -246,6 +279,22 @@ export function SoloGame({
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
             isDaily={isDaily}
+            archiveDate={archiveDate}
+            challenge={challenge}
+            footerLink={resultLink}
+            challengeUrl={
+              // Daily boards are the same for everyone, so a seeded
+              // link would only re-send today's puzzle; the challenge
+              // loop is for solo boards a friend cannot already play.
+              !isDaily && gameKey
+                ? buildChallengeUrl({
+                    difficulty,
+                    gameKey,
+                    timeSeconds: timerSecondsRef.current,
+                    by: getPlayerName(),
+                  })
+                : undefined
+            }
             tip={
               !tipDismissed && position === "bottom"
                 ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."

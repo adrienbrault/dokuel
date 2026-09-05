@@ -24,6 +24,12 @@ type CellProps = {
   isSameNumber: boolean;
   isConflict: boolean;
   isHintRelated?: boolean | undefined;
+  /**
+   * A cell the active hint asks the player to clear a candidate from,
+   * as opposed to one that merely proves the deduction. Tinted like a
+   * conflict: the ask is "take something out of here".
+   */
+  isHintEliminated?: boolean | undefined;
   isSameNumberRowCol?: boolean | undefined;
   assistLevel?: AssistLevel | undefined;
   onSelect: (row: number, col: number) => void;
@@ -59,6 +65,7 @@ export const Cell = memo(function Cell({
   isSameNumber,
   isConflict,
   isHintRelated,
+  isHintEliminated,
   isSameNumberRowCol,
   assistLevel = "standard",
   onSelect,
@@ -75,7 +82,7 @@ export const Cell = memo(function Cell({
       ? isPaper
         ? "bg-cell-bg"
         : "bg-cell-selected"
-      : isConflict
+      : isConflict || isHintEliminated
         ? "bg-cell-conflict-bg"
         : isHintRelated
           ? "bg-cell-hint"

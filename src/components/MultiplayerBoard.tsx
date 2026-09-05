@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
+import type { Reaction } from "../hooks/mp-connection.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
+import { useRaceProgress } from "../hooks/useRaceProgress.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
@@ -16,6 +18,7 @@ import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
 import { NumPad } from "./NumPad.tsx";
+import { ReactionPicker } from "./ReactionPicker.tsx";
 import { TimerPill } from "./TimerPill.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
@@ -49,9 +52,17 @@ export type MultiplayerBoardProps = {
     cellsRemaining: number;
     completionPercent: number;
   } | null;
+  /** The opponent's board silhouette, published over presence. */
+  opponentMask: string | null;
+  /** Their standing reaction, from the same channel. */
+  opponentReaction: Reaction | null;
   opponentDisconnected: boolean;
   gameOver: { winnerId: string; winnerName: string } | null;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
+  /** Publish our own silhouette. Throttled downstream, so call it freely. */
+  onMask: (mask: string) => void;
+  /** Throw an emoji at the opponent. Rate-limited downstream. */
+  onReact: (emoji: string) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
   onBack: () => void;
@@ -67,9 +78,13 @@ export function MultiplayerBoard({
   assistLevel = "standard",
   opponentName,
   opponentProgress,
+  opponentMask,
+  opponentReaction,
   opponentDisconnected,
   gameOver,
   onProgress,
+  onMask,
+  onReact,
   onComplete,
   onRematch,
   onBack,
@@ -112,7 +127,6 @@ export function MultiplayerBoard({
     useOpponentProgressVisible();
   const initialTimerSeconds = saved?.timer ?? 0;
   const timerSecondsRef = useRef(initialTimerSeconds);
-  const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
   // The loser keeps playing after the opponent wins; only show the result
   // modal once they've actually finished their own board (or won themselves).
@@ -120,29 +134,15 @@ export function MultiplayerBoard({
   const iFinished = iWon || game.status === "completed";
   const showResult = useDelayedFlag(iFinished, 300);
 
-  const myPercent = useMemo(() => {
-    const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-    const filled = total - game.cellsRemaining;
-    return total > 0 ? Math.round((filled / total) * 100) : 0;
-  }, [game.cellsRemaining, puzzle]);
-
-  // Send progress when cells change
-  useEffect(() => {
-    if (prevCellsRef.current !== game.cellsRemaining) {
-      prevCellsRef.current = game.cellsRemaining;
-      const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-      const filled = total - game.cellsRemaining;
-      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-      onProgress(game.cellsRemaining, percent);
-    }
-  }, [game.cellsRemaining, onProgress, puzzle]);
-
-  // Check completion — the claim ships the actual filled board so the
-  // opponent's client can verify it against the room's solution.
-  useEffect(() => {
-    if (game.status !== "completed") return;
-    onComplete(serializeBoard(game.board as Cell[][]).values);
-  }, [game.status, game.board, onComplete]);
+  const myPercent = useRaceProgress({
+    board: game.board,
+    cellsRemaining: game.cellsRemaining,
+    status: game.status,
+    puzzle,
+    onProgress,
+    onMask,
+    onComplete,
+  });
 
   // Autosave the local board so a transient unmount/remount or page
   // refresh doesn't wipe in-flight progress. The Yjs doc only carries
@@ -260,11 +260,17 @@ export function MultiplayerBoard({
         </>
       }
       controls={
-        <GameControls
-          onErase={game.erase}
-          onUndo={game.undo}
-          historyLength={game.historyLength}
-        />
+        <div className="flex items-center justify-center gap-2">
+          <GameControls
+            onErase={game.erase}
+            onUndo={game.undo}
+            onRedo={game.redo}
+            onFillNotes={assistLevel === "paper" ? undefined : game.fillNotes}
+            historyLength={game.historyLength}
+            redoLength={game.redoLength}
+          />
+          <ReactionPicker onSend={onReact} />
+        </div>
       }
       settingsExtra={
         <ToggleSwitch
@@ -279,8 +285,12 @@ export function MultiplayerBoard({
           iFinished={iFinished}
           showOpponentProgress={showOpponentProgress}
           opponentProgress={opponentProgress}
+          opponentMask={opponentMask}
+          opponentReaction={opponentReaction}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
+          myCellsRemaining={game.cellsRemaining}
+          puzzle={puzzle}
         />
       }
       footer={

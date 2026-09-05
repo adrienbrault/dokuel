@@ -43,6 +43,30 @@ describe("SoloGame numpad selection", () => {
     expect(document.activeElement).toBe(gear);
   });
 
+  it("offers fill-notes at standard assist", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Fill notes" }),
+    ).toBeInTheDocument();
+  });
+
+  it("withholds fill-notes on paper, where the game offers no help", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={PUZZLE}
+        assistLevel="paper"
+        onBack={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Fill notes" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
@@ -217,5 +241,37 @@ describe("SoloGame numpad selection", () => {
     expect(screen.queryByTestId("digit-drag-indicator")).toBeNull();
     expect(five.className).toContain("bg-accent");
     expect(three.className).not.toContain("bg-accent");
+  });
+});
+
+describe("SoloGame challenge banner", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("names the challenger and the time to beat while playing", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={PUZZLE}
+        challenge={{ time: 252, by: "Swift Panda" }}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Swift Panda solved this in 04:12. Beat it!"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no banner when the link carried no challenge", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    expect(screen.queryByText(/Beat it!/)).not.toBeInTheDocument();
   });
 });

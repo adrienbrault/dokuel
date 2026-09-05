@@ -1,3 +1,4 @@
+import { registerSW } from "virtual:pwa-register";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
@@ -6,6 +7,7 @@ import {
   sweepStaleRoomDatabases,
   sweepStaleSnapshots,
 } from "./hooks/mp-snapshot.ts";
+import { onMenuScreen, registerServiceWorker } from "./lib/register-sw.ts";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");
@@ -24,3 +26,9 @@ createRoot(root).render(
 setTimeout(() => {
   sweepStaleRoomDatabases(sweepStaleSnapshots());
 }, 10_000);
+
+// Precache the app shell so solo and daily play survive going offline.
+// A new deploy takes over with a reload, but only from a menu screen;
+// found mid-game it waits for the next launch. The helper no-ops where
+// there is no ServiceWorker container (jsdom, older browsers).
+registerServiceWorker(registerSW, onMenuScreen);

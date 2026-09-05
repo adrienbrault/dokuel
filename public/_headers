@@ -2,3 +2,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
+
+# The service worker must never be served from a stale cache: a pinned
+# sw.js would keep handing out an old precache long after a deploy.
+/sw.js
+  Cache-Control: no-cache

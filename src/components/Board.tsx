@@ -14,7 +14,14 @@ type BoardProps = {
   selectedCell: Position | null;
   selectedCells?: Set<number> | undefined;
   conflicts: Set<number>;
+  /** Cells that prove the active hint. */
   hintCells?: Set<number> | undefined;
+  /**
+   * Cells the active hint asks the player to clear a candidate from.
+   * Kept apart from hintCells so the two halves of an elimination hint,
+   * the proof and the ask, do not read as one undifferentiated glow.
+   */
+  eliminatedCells?: Set<number> | undefined;
   /**
    * When set and no cell is selected, drives same-number highlighting
    * as if a cell containing this digit were selected. Lets the numpad
@@ -62,6 +69,7 @@ export function Board({
   selectedCells,
   conflicts,
   hintCells,
+  eliminatedCells,
   highlightedDigit,
   onSelectCell,
   onSetSelectedCells,
@@ -223,6 +231,9 @@ export function Board({
                 const isHintRelated =
                   !isSelected &&
                   (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
+                const isHintEliminated =
+                  !isSelected &&
+                  (eliminatedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
                 const isSameNumberRowCol =
                   matchRowColSet !== null &&
                   !isSelected &&
@@ -264,6 +275,7 @@ export function Board({
                     isSameNumber={isSameNumber}
                     isConflict={isConflict}
                     isHintRelated={isHintRelated}
+                    isHintEliminated={isHintEliminated}
                     isSameNumberRowCol={isSameNumberRowCol}
                     assistLevel={assistLevel}
                     onSelect={onSelectCell}

@@ -103,6 +103,16 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
     scenes: ["solo-game", "solo-numpad-left", "solo-numpad-right"],
   },
   {
+    name: "daily",
+    title: "Daily challenge & archive",
+    scenes: ["daily-challenge", "daily-archive"],
+  },
+  {
+    name: "challenge",
+    title: "Beat-my-time challenge",
+    scenes: ["solo-challenge-banner", "solo-challenge-win"],
+  },
+  {
     name: "multiplayer",
     title: "Multiplayer",
     scenes: [
@@ -111,6 +121,8 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
       "multiplayer-progress-bars-dark",
       "multiplayer-progress-hidden",
       "multiplayer-settings-toggle",
+      "multiplayer-reactions",
+      "multiplayer-reaction-received-dark",
     ],
   },
   {

@@ -203,6 +203,12 @@ export type RoomConfig = {
    * from sync, so it never races the creator for `hostId`.
    */
   initialDifficulty: Difficulty | null;
+  /**
+   * The assist level a freshly created room opens on, read from the
+   * creator's own preference. Ignored by a joiner, who learns the
+   * room's level from sync like everything else.
+   */
+  initialAssistLevel?: AssistLevel;
   /** Injected clock. Only the forfeit trust window reads it. */
   now?: () => number;
 };
@@ -213,6 +219,7 @@ export function createRoom({
   playerId,
   playerName,
   initialDifficulty,
+  initialAssistLevel = "standard",
   now = Date.now,
 }: RoomConfig): Room {
   const p2p = createRoomFromDoc(doc, roomId);
@@ -364,7 +371,7 @@ export function createRoom({
    */
   function completeSetup(): void {
     if (initialDifficulty) {
-      initializeRoom(p2p, playerId, initialDifficulty);
+      initializeRoom(p2p, playerId, initialDifficulty, initialAssistLevel);
     }
     joinRoom(p2p, playerId, playerName());
     // A refused join writes nothing and so fires no observer, yet it

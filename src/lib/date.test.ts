@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { todayLocalISO } from "./date.ts";
+import { DAY_MS, parseDateUTC, todayLocalISO, toISODateUTC } from "./date.ts";
 
 describe("todayLocalISO", () => {
   it("formats the local calendar date as YYYY-MM-DD", () => {
@@ -15,5 +15,24 @@ describe("todayLocalISO", () => {
   it("zero-pads single-digit months and days", () => {
     expect(todayLocalISO(new Date(2026, 0, 5))).toBe("2026-01-05");
     expect(todayLocalISO(new Date(2026, 8, 9))).toBe("2026-09-09");
+  });
+});
+
+describe("parseDateUTC", () => {
+  it("reads a real calendar date as UTC midnight", () => {
+    expect(parseDateUTC("2026-05-01")).toBe(Date.UTC(2026, 4, 1));
+  });
+
+  it("refuses malformed strings and days that never existed", () => {
+    // Date.UTC would happily roll 2026-02-31 into March; a date that
+    // does not round-trip is not a date.
+    for (const junk of ["", "today", "2026-6-1", "2026-02-31", "2026-13-01"]) {
+      expect(parseDateUTC(junk)).toBeNull();
+    }
+  });
+
+  it("round-trips through toISODateUTC one day at a time", () => {
+    const start = parseDateUTC("2026-12-31") ?? 0;
+    expect(toISODateUTC(start + DAY_MS)).toBe("2027-01-01");
   });
 });
