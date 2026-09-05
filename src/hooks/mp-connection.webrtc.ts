@@ -93,6 +93,8 @@ export function createWebrtcConnectionOpener({
       },
       announce: presence.announce,
       hasOtherPeer: presence.hasOtherPeer,
+      signal: presence.signal,
+      opponentSignal: presence.opponentSignal,
       onStatus(listener) {
         const wrapped = ({ connected }: { connected: boolean }) =>
           listener(connected);

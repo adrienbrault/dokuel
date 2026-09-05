@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
-import type { Connection, OpenConnection } from "./mp-connection.ts";
+import type {
+  Connection,
+  OpenConnection,
+  PresenceSignal,
+} from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
 import { INITIAL_PROJECTION, type Room } from "./mp-room.ts";
-import { startSession } from "./mp-session.ts";
+import { type Session, startSession } from "./mp-session.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 
 /**
@@ -47,8 +51,15 @@ export function useYjsMultiplayer({
   // identity stable across no-op doc fires, so React bails out of the
   // re-render without the hook comparing anything.
   const [projection, setProjection] = useState(INITIAL_PROJECTION);
+  // Ephemeral race state the opponent publishes: their board silhouette
+  // and their latest reaction. Kept out of the Room, which is about the
+  // match's rules and reads nothing but its doc.
+  const [opponentSignal, setOpponentSignal] = useState<PresenceSignal | null>(
+    null,
+  );
 
   const roomRef = useRef<Room | null>(null);
+  const sessionRef = useRef<Session | null>(null);
   const connectionRef = useRef<Connection | null>(null);
   const playerNameRef = useRef(playerName);
   playerNameRef.current = playerName;
@@ -97,13 +108,25 @@ export function useYjsMultiplayer({
         isCancelled: () => cancelled,
         onConnected: setConnected,
         onProjection: setProjection,
+        // Compared field by field, not by reference: awareness hands
+        // back a fresh object on every remote update, and a new object
+        // per opponent keystroke would re-render the whole game tree.
+        onOpponentSignal: (next) =>
+          setOpponentSignal((prev) =>
+            prev?.mask === next?.mask &&
+            prev?.reaction?.nonce === next?.reaction?.nonce
+              ? prev
+              : next,
+          ),
       });
       roomRef.current = session.room;
+      sessionRef.current = session;
       connectionRef.current = connection;
 
       return () => {
         session.close();
         roomRef.current = null;
+        sessionRef.current = null;
         connectionRef.current = null;
       };
     };
@@ -148,6 +171,10 @@ export function useYjsMultiplayer({
     },
     [],
   );
+
+  const sendMask = useCallback((mask: string) => {
+    sessionRef.current?.publishMask(mask);
+  }, []);
 
   const sendComplete = useCallback((board: string) => {
     roomRef.current?.complete(board);
@@ -194,6 +221,8 @@ export function useYjsMultiplayer({
   return {
     connected,
     ...projection,
+    opponentMask: opponentSignal?.mask ?? null,
+    sendMask,
     sendStartGame,
     sendProgress,
     sendComplete,

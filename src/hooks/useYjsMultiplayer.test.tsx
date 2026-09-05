@@ -59,6 +59,42 @@ function setTabHidden(hidden: boolean) {
 }
 
 describe("useYjsMultiplayer", () => {
+  it("publishes the local board silhouette over presence", async () => {
+    // Which cells are filled is race information, not game state: it
+    // rides the ephemeral channel so it never lands in the Y.Doc, and
+    // the values themselves never leave the device.
+    const mask = "1".repeat(20) + "0".repeat(61);
+    const { result } = renderRoom({ roomId: "room-mask", difficulty: "easy" });
+    await flushSync();
+
+    act(() => {
+      result.current.sendMask(mask);
+    });
+
+    expect(connections.last?.awareness.getLocalState()?.signal).toMatchObject({
+      mask,
+    });
+    expect(connections.last?.doc.getMap("room").has("mask")).toBe(false);
+  });
+
+  it("surfaces the opponent's silhouette when their presence carries one", async () => {
+    const mask = "0".repeat(40) + "1".repeat(41);
+    const { result } = renderRoom({
+      roomId: "room-mask-in",
+      difficulty: "easy",
+    });
+    await flushSync();
+
+    act(() => {
+      connections.last?.emitRemotePeer({
+        user: { id: "p2", name: "Bob" },
+        signal: { mask },
+      });
+    });
+
+    expect(result.current.opponentMask).toBe(mask);
+  });
+
   it("opens a created room on the creator's own assist level", async () => {
     // Creating a game goes straight to the lobby now, so the level the
     // player already set for themselves is what the room starts on.

@@ -1,5 +1,6 @@
+import { throttleTrailing } from "../lib/throttle.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
-import type { Connection } from "./mp-connection.ts";
+import type { Connection, PresenceSignal } from "./mp-connection.ts";
 import { createRoom, type Room, type RoomProjection } from "./mp-room.ts";
 import { watchTabLifecycle } from "./mp-tab-lifecycle.ts";
 
@@ -13,6 +14,13 @@ import { watchTabLifecycle } from "./mp-tab-lifecycle.ts";
  * it is left with only what a hook can do: hold the session across
  * renders, and push its projection into state.
  */
+
+/**
+ * How often the board silhouette may go out. Fast enough that the
+ * opponent's grid feels live, slow enough that a quick solver does not
+ * turn into one broadcast per cell.
+ */
+const MASK_PUBLISH_INTERVAL_MS = 250;
 
 export type SessionConfig = {
   connection: Connection;
@@ -31,10 +39,21 @@ export type SessionConfig = {
   isCancelled: () => boolean;
   onConnected: (connected: boolean) => void;
   onProjection: (projection: RoomProjection) => void;
+  /**
+   * The opponent's ephemeral race state, re-read whenever presence
+   * moves. Null while nobody is publishing one.
+   */
+  onOpponentSignal: (signal: PresenceSignal | null) => void;
 };
 
 export type Session = {
   room: Room;
+  /**
+   * Publish this player's board silhouette. Throttled: it is
+   * republished on every filled cell and would otherwise be one
+   * presence broadcast per keystroke.
+   */
+  publishMask(mask: string): void;
   /** Terminal: drops every listener and timer, then closes both sides. */
   close(): void;
 };
@@ -50,6 +69,7 @@ export function startSession({
   isCancelled,
   onConnected,
   onProjection,
+  onOpponentSignal,
 }: SessionConfig): Session {
   const room = createRoom({
     doc: connection.doc,
@@ -70,6 +90,7 @@ export function startSession({
       hasOtherPeer: connection.hasOtherPeer(playerId),
       tabHidden: document.hidden,
     });
+    onOpponentSignal(connection.opponentSignal(playerId));
   };
 
   // Track connection status via the transport
@@ -85,6 +106,11 @@ export function startSession({
   const unsubscribePresence = connection.onPresenceChange(updatePresence);
 
   onConnected(connection.connected);
+
+  const publishMask = throttleTrailing(
+    (mask: string) => connection.signal({ mask }),
+    MASK_PUBLISH_INTERVAL_MS,
+  );
 
   const stopTabLifecycle = watchTabLifecycle({
     connection,
@@ -125,6 +151,7 @@ export function startSession({
   });
 
   const close = () => {
+    publishMask.cancel();
     stopTabLifecycle();
     if (hydrateTimer !== null) {
       clearTimeout(hydrateTimer);
@@ -139,5 +166,5 @@ export function startSession({
     connection.close();
   };
 
-  return { room, close };
+  return { room, publishMask, close };
 }

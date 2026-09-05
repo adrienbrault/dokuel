@@ -120,6 +120,27 @@ export function createIceServerResolver(
 export type PresenceUser = { id: string; name: string };
 
 /**
+ * One emoji a player threw at their opponent mid-race. `at` and `nonce`
+ * exist so the receiver can tell a repeat of the same emoji from the
+ * still-standing previous one: presence is last-write-wins state, not a
+ * message queue, so "🔥 again" is only visible as a changed nonce.
+ */
+export type Reaction = { emoji: string; at: number; nonce: string };
+
+/**
+ * A player's ephemeral race state, published beside their identity and
+ * gone the moment they are: the silhouette of which cells they have
+ * filled, and their latest reaction. Never written to the Y.Doc, never
+ * persisted, and never carrying a single digit - a mask says *where*
+ * the opponent has written, never *what*.
+ */
+export type PresenceSignal = {
+  /** 81 chars, "1" where that player's board holds a value. */
+  mask?: string;
+  reaction?: Reaction;
+};
+
+/**
  * A synced, locally-persisted doc plus presence for one room, on the
  * best transport available.
  *
@@ -157,6 +178,13 @@ export type Connection = {
   announce(user: PresenceUser): void;
   /** True when some other client has announced a different player. */
   hasOtherPeer(ownPlayerId: string): boolean;
+  /**
+   * Publish ephemeral race state, merged into whatever we published
+   * before, so a mask update does not erase a standing reaction.
+   */
+  signal(signal: PresenceSignal): void;
+  /** The other player's ephemeral state, or null while nobody publishes one. */
+  opponentSignal(ownPlayerId: string): PresenceSignal | null;
   connect(): void;
   disconnect(): void;
   close(): void;
