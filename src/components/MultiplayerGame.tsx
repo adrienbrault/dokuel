@@ -98,10 +98,12 @@ export function MultiplayerGame({
           opponentName={opponent?.name ?? ""}
           opponentProgress={mp.opponentProgress}
           opponentMask={mp.opponentMask}
+          opponentReaction={mp.opponentReaction}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
           onProgress={mp.sendProgress}
           onMask={mp.sendMask}
+          onReact={mp.sendReaction}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
           onBack={onBack}

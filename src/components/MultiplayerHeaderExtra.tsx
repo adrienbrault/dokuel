@@ -1,3 +1,5 @@
+import type { Reaction } from "../hooks/mp-connection.ts";
+import { OpponentReaction } from "./OpponentReaction.tsx";
 import { OpponentSilhouette } from "./OpponentSilhouette.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
 
@@ -11,6 +13,8 @@ type MultiplayerHeaderExtraProps = {
   } | null;
   /** The opponent's silhouette, from presence. Null until they publish one. */
   opponentMask: string | null;
+  /** Their standing reaction, from the same channel. */
+  opponentReaction: Reaction | null;
   opponentDisconnected: boolean;
   myPercent: number;
   myCellsRemaining: number;
@@ -24,6 +28,7 @@ export function MultiplayerHeaderExtra({
   showOpponentProgress,
   opponentProgress,
   opponentMask,
+  opponentReaction,
   opponentDisconnected,
   myPercent,
   myCellsRemaining,
@@ -45,6 +50,7 @@ export function MultiplayerHeaderExtra({
             opponentLabel="Opponent"
             opponentProgress={opponentProgress}
             opponentMask={opponentMask}
+            opponentReaction={opponentReaction}
             puzzle={puzzle}
           />
         )}
@@ -63,6 +69,7 @@ export function MultiplayerHeaderExtra({
           }
           opponentProgress={opponentProgress}
           opponentMask={opponentMask}
+          opponentReaction={opponentReaction}
           puzzle={puzzle}
         />
       </div>
@@ -83,6 +90,7 @@ function RaceRow({
   opponentLabel,
   opponentProgress,
   opponentMask,
+  opponentReaction,
   puzzle,
 }: {
   myPercent: number;
@@ -90,10 +98,12 @@ function RaceRow({
   opponentLabel: string;
   opponentProgress: { cellsRemaining: number; completionPercent: number };
   opponentMask: string | null;
+  opponentReaction: Reaction | null;
   puzzle: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="relative flex items-center gap-2.5">
+      <OpponentReaction reaction={opponentReaction} />
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <ProgressBar
           label="You"

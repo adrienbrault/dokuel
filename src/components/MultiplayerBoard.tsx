@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import type { Reaction } from "../hooks/mp-connection.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
@@ -17,6 +18,7 @@ import { GameLayout } from "./GameLayout.tsx";
 import { GameResult } from "./GameResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
 import { NumPad } from "./NumPad.tsx";
+import { ReactionPicker } from "./ReactionPicker.tsx";
 import { TimerPill } from "./TimerPill.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
@@ -52,11 +54,15 @@ export type MultiplayerBoardProps = {
   } | null;
   /** The opponent's board silhouette, published over presence. */
   opponentMask: string | null;
+  /** Their standing reaction, from the same channel. */
+  opponentReaction: Reaction | null;
   opponentDisconnected: boolean;
   gameOver: { winnerId: string; winnerName: string } | null;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   /** Publish our own silhouette. Throttled downstream, so call it freely. */
   onMask: (mask: string) => void;
+  /** Throw an emoji at the opponent. Rate-limited downstream. */
+  onReact: (emoji: string) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
   onBack: () => void;
@@ -73,10 +79,12 @@ export function MultiplayerBoard({
   opponentName,
   opponentProgress,
   opponentMask,
+  opponentReaction,
   opponentDisconnected,
   gameOver,
   onProgress,
   onMask,
+  onReact,
   onComplete,
   onRematch,
   onBack,
@@ -252,11 +260,14 @@ export function MultiplayerBoard({
         </>
       }
       controls={
-        <GameControls
-          onErase={game.erase}
-          onUndo={game.undo}
-          historyLength={game.historyLength}
-        />
+        <div className="flex items-center justify-center gap-2">
+          <GameControls
+            onErase={game.erase}
+            onUndo={game.undo}
+            historyLength={game.historyLength}
+          />
+          <ReactionPicker onSend={onReact} />
+        </div>
       }
       settingsExtra={
         <ToggleSwitch
@@ -272,6 +283,7 @@ export function MultiplayerBoard({
           showOpponentProgress={showOpponentProgress}
           opponentProgress={opponentProgress}
           opponentMask={opponentMask}
+          opponentReaction={opponentReaction}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
           myCellsRemaining={game.cellsRemaining}
