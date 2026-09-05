@@ -5,8 +5,15 @@ import { formatShortDate } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
-export function DailyGame({ onBack }: { onBack: () => void }) {
-  const date = useMemo(() => todayLocalISO(), []);
+export function DailyGame({
+  date: dateProp,
+  onBack,
+}: {
+  /** ISO date of an archived daily; omitted for today's. */
+  date?: string | undefined;
+  onBack: () => void;
+}) {
+  const date = useMemo(() => dateProp ?? todayLocalISO(), [dateProp]);
   const [puzzle, setPuzzle] = useState<string | null>(null);
   const [streakInfo, setStreakInfo] = useState<{
     currentStreak: number;
@@ -51,6 +58,7 @@ export function DailyGame({ onBack }: { onBack: () => void }) {
       gameKey={`daily-${date}-medium`}
       initialPuzzle={puzzle}
       dailyDate={date}
+      archiveDate={date === todayLocalISO() ? undefined : date}
       title={`Daily Challenge - ${formatShortDate(date)}`}
       isDaily={true}
       onBack={onBack}

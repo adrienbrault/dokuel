@@ -8,7 +8,7 @@ import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
 } from "../lib/constants.ts";
-import { formatTime } from "../lib/format.ts";
+import { formatShortDate, formatTime } from "../lib/format.ts";
 import type { Difficulty } from "../lib/types.ts";
 
 type GameResultProps = {
@@ -24,6 +24,8 @@ type GameResultProps = {
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
+  /** ISO date when this is a daily replayed from the archive. */
+  archiveDate?: string | undefined;
   /** The time this board was opened to beat, if the link carried one. */
   challenge?: SoloChallenge | undefined;
   /** Link that replays this exact board against the player's time. */
@@ -39,6 +41,7 @@ export function buildShareText({
   hintsUsed,
   streakInfo,
   isDaily,
+  archiveDate,
 }: {
   difficulty?: Difficulty | undefined;
   time: string;
@@ -46,8 +49,18 @@ export function buildShareText({
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
+  archiveDate?: string | undefined;
 }): string {
-  const title = isDaily ? "Dokuel Daily" : "Dokuel";
+  // An archived daily names its date and links to it: the bare site
+  // link would hand the reader today's puzzle, not the one shared.
+  const title = isDaily
+    ? archiveDate
+      ? `Dokuel Daily · ${formatShortDate(archiveDate)}`
+      : "Dokuel Daily"
+    : "Dokuel";
+  const url = archiveDate
+    ? `https://dokuel.com/daily/${archiveDate}`
+    : "https://dokuel.com";
   const diffLabel = difficulty ? ` ${DIFFICULTY_LABELS[difficulty]}` : "";
   const hints = hintsUsed
     ? ` · ${hintsUsed} hint${hintsUsed > 1 ? "s" : ""}`
@@ -58,7 +71,7 @@ export function buildShareText({
       ? `\n🔥 ${streakInfo.currentStreak}-day streak`
       : "";
 
-  return `${title}${diffLabel}\n⏱ ${time}${hints}${pb}${streak}\nhttps://dokuel.com`;
+  return `${title}${diffLabel}\n⏱ ${time}${hints}${pb}${streak}\n${url}`;
 }
 
 export function GameResult({
@@ -74,6 +87,7 @@ export function GameResult({
   hintsUsed,
   streakInfo,
   isDaily,
+  archiveDate,
   challenge,
   challengeUrl,
   tip,
@@ -151,6 +165,7 @@ export function GameResult({
         hintsUsed,
         streakInfo,
         isDaily,
+        archiveDate,
       }),
       "result",
     );

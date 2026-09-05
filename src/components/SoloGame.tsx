@@ -34,6 +34,8 @@ type SoloGameProps = {
   dailyDate?: string | undefined;
   /** Marks the daily challenge for share text — not sniffed from the title. */
   isDaily?: boolean | undefined;
+  /** ISO date when this daily comes from the archive rather than today. */
+  archiveDate?: string | undefined;
   /** A friend's time to beat, carried by the link that opened this board. */
   challenge?: SoloChallenge | undefined;
   onBack: () => void;
@@ -52,6 +54,7 @@ export function SoloGame({
   title,
   dailyDate,
   isDaily = false,
+  archiveDate,
   challenge,
   onBack,
   onRematch,
@@ -255,6 +258,7 @@ export function SoloGame({
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
             isDaily={isDaily}
+            archiveDate={archiveDate}
             challenge={challenge}
             challengeUrl={
               // Daily boards are the same for everyone, so a seeded

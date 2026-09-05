@@ -4,6 +4,7 @@ import {
   parseChallenge,
   type SoloChallenge,
 } from "./challenge.ts";
+import { isPlayableDailyDate } from "./daily-archive.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 /**
@@ -22,7 +23,7 @@ export type Screen =
       /** A friend's time to beat, carried by the link that opened it. */
       challenge?: SoloChallenge | undefined;
     }
-  | { name: "daily" }
+  | { name: "daily"; date?: string | undefined }
   | {
       name: "multiplayer";
       roomId: string;
@@ -51,7 +52,7 @@ export function screenToPath(screen: Screen): string {
     case "solo":
       return `/solo/${screen.difficulty}/${screen.gameKey}${challengeQuery(screen.challenge)}`;
     case "daily":
-      return "/daily";
+      return screen.date ? `/daily/${screen.date}` : "/daily";
     case "join":
       return "/join";
     case "stats":
@@ -68,6 +69,16 @@ export function pathToScreen(pathname: string, search = ""): Screen {
 
   if (path === "") return { name: "landing" };
   if (path === "daily") return { name: "daily" };
+
+  // A dated daily plays that day's board; anything else under /daily -
+  // a date before the first daily, a future date, a typo - falls back
+  // to today rather than a board nobody ever saw.
+  if (path.startsWith("daily/")) {
+    const date = path.slice(6);
+    return isPlayableDailyDate(date)
+      ? { name: "daily", date }
+      : { name: "daily" };
+  }
   if (path === "join") return { name: "join" };
   if (path === "stats") return { name: "stats" };
 

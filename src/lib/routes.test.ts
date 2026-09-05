@@ -56,6 +56,21 @@ describe("pathToScreen", () => {
     }
   });
 
+  it("plays a past date from the daily archive", () => {
+    expect(pathToScreen("/daily/2026-05-16")).toEqual({
+      name: "daily",
+      date: "2026-05-16",
+    });
+  });
+
+  it("falls back to today's daily for a date with no daily", () => {
+    // Hand-edited or stale links must land somewhere playable rather
+    // than on a board generated for a day nobody ever saw.
+    for (const path of ["/daily/2026-04-30", "/daily/2099-01-01", "/daily/x"]) {
+      expect(pathToScreen(path)).toEqual({ name: "daily" });
+    }
+  });
+
   it("parses a valid solo path", () => {
     expect(pathToScreen("/solo/hard/abc123")).toMatchObject({
       name: "solo",
@@ -104,6 +119,13 @@ describe("screenToPath", () => {
     expect(screenToPath(screen)).toBe(
       "/solo/medium/abc123?t=252&by=Swift+Panda",
     );
+  });
+
+  it("round-trips an archived daily date", () => {
+    expect(screenToPath(pathToScreen("/daily/2026-05-16"))).toBe(
+      "/daily/2026-05-16",
+    );
+    expect(screenToPath(pathToScreen("/daily"))).toBe("/daily");
   });
 
   it("round-trips a multiplayer room", () => {

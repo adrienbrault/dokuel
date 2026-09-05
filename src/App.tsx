@@ -151,7 +151,13 @@ function App() {
       );
 
     case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+      return (
+        <DailyGame
+          key={screen.date ?? "today"}
+          date={screen.date}
+          onBack={() => navigate({ name: "landing" })}
+        />
+      );
 
     case "multiplayer":
       return (

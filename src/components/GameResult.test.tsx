@@ -182,6 +182,20 @@ describe("GameResult", () => {
     expect(text).toContain("🔥 5-day streak");
   });
 
+  it("share text points an archived daily at its own date", () => {
+    // Sharing an archive run with the bare site link would send
+    // friends to today's puzzle instead of the one just played.
+    const text = buildShareText({
+      difficulty: "medium",
+      time: "06:10",
+      isDaily: true,
+      archiveDate: "2026-05-16",
+    });
+
+    expect(text).toContain("May 16");
+    expect(text).toContain("https://dokuel.com/daily/2026-05-16");
+  });
+
   it("calls onRematch and onNewGame when buttons clicked", async () => {
     const onRematch = vi.fn();
     const onNewGame = vi.fn();
