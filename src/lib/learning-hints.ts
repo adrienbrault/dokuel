@@ -71,14 +71,27 @@ function eliminationText(hint: ActiveHint): string {
   if (hint.technique === "hidden-single") {
     return `In the highlighted house, this digit has no other legal cell besides ${cell}; the other empty cells rule it out in their rows, columns, or boxes.`;
   }
+  const earlierSteps =
+    hint.intermediateSteps?.filter(
+      (step) => !mentionsAnswer(step, hint.value),
+    ) ?? [];
   const earlier =
-    hint.intermediateSteps && hint.intermediateSteps.length > 0
-      ? `Earlier deductions: ${hint.intermediateSteps.join(" ")} `
+    earlierSteps.length > 0
+      ? `Earlier deductions: ${earlierSteps.join(" ")} `
       : "";
   if (hint.eliminationOnly) {
     return `${earlier}${hint.explanation} Apply that elimination to continue.`;
   }
   return `${earlier}Apply the highlighted ${TECHNIQUE_LABELS[hint.technique]} elimination. Cross out only the candidates that pattern rules out.`;
+}
+
+function mentionsAnswer(explanation: string, answer: number): boolean {
+  const digit = String(answer);
+  return (
+    explanation.includes(`for ${digit}`) ||
+    explanation.includes(`, ${digit} `) ||
+    explanation.includes(` ${digit} fits`)
+  );
 }
 
 function revealText(hint: ActiveHint): string {

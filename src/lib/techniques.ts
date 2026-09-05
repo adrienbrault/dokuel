@@ -206,7 +206,9 @@ export function findAvailableElimination(
     for (const technique of TECHNIQUES) {
       const preview = cloneCandidates(s);
       const elimination = technique(preview);
-      if (elimination) return { elimination, priorEliminations };
+      if (elimination && !findSingle(preview)) {
+        return { elimination, priorEliminations };
+      }
     }
     let applied: Elimination | null = null;
     for (const technique of TECHNIQUES) {
