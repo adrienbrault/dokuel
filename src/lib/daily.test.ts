@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import dailies from "./dailies.json";
-import { getDailyPuzzle } from "./daily.ts";
+import { getDailyPuzzle, getDailyPuzzleFor } from "./daily.ts";
 import { todayLocalISO } from "./date.ts";
 import { countSolutions } from "./solver.ts";
 
@@ -81,5 +81,20 @@ describe("the frozen daily table", () => {
       expect(puzzle).toMatch(/^[.1-9]{81}$/);
       expect(countSolutions(puzzle)).toBe(1);
     }
+  });
+});
+
+describe("getDailyPuzzleFor", () => {
+  it("serves the frozen board for a date the table covers", async () => {
+    const { puzzle, date } = await getDailyPuzzleFor("2026-07-27");
+    expect(puzzle).toBe((dailies as Record<string, string>)["2026-07-27"]);
+    expect(date).toBe("2026-07-27");
+  });
+
+  it("falls back to the generator for a date outside the table", async () => {
+    // Dates before the table starts (and after it ends) must still
+    // produce a playable board rather than an empty screen.
+    const { puzzle } = await getDailyPuzzleFor("2026-01-01");
+    expect(puzzle).toBe(getDailyPuzzle("2026-01-01").puzzle);
   });
 });
