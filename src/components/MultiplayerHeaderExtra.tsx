@@ -4,9 +4,13 @@ type MultiplayerHeaderExtraProps = {
   gameOver: { winnerId: string; winnerName: string } | null;
   iFinished: boolean;
   showOpponentProgress: boolean;
-  opponentProgress: { completionPercent: number } | null;
+  opponentProgress: {
+    cellsRemaining: number;
+    completionPercent: number;
+  } | null;
   opponentDisconnected: boolean;
   myPercent: number;
+  myCellsRemaining: number;
 };
 
 export function MultiplayerHeaderExtra({
@@ -16,6 +20,7 @@ export function MultiplayerHeaderExtra({
   opponentProgress,
   opponentDisconnected,
   myPercent,
+  myCellsRemaining,
 }: MultiplayerHeaderExtraProps) {
   if (gameOver && !iFinished) {
     return (
@@ -28,10 +33,16 @@ export function MultiplayerHeaderExtra({
         </div>
         {showOpponentProgress && opponentProgress && (
           <div className="flex flex-col gap-1.5">
-            <ProgressBar label="You" percent={myPercent} color="bg-accent" />
+            <ProgressBar
+              label="You"
+              percent={myPercent}
+              remaining={myCellsRemaining}
+              color="bg-accent"
+            />
             <ProgressBar
               label="Opponent"
               percent={opponentProgress.completionPercent}
+              remaining={opponentProgress.cellsRemaining}
               color="bg-opponent"
             />
           </div>
@@ -43,12 +54,18 @@ export function MultiplayerHeaderExtra({
   if (showOpponentProgress && opponentProgress) {
     return (
       <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
-        <ProgressBar label="You" percent={myPercent} color="bg-accent" />
+        <ProgressBar
+          label="You"
+          percent={myPercent}
+          remaining={myCellsRemaining}
+          color="bg-accent"
+        />
         <ProgressBar
           label={
             opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
           }
           percent={opponentProgress.completionPercent}
+          remaining={opponentProgress.cellsRemaining}
           color="bg-opponent"
         />
       </div>

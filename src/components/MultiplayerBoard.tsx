@@ -281,6 +281,7 @@ export function MultiplayerBoard({
           opponentProgress={opponentProgress}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
+          myCellsRemaining={game.cellsRemaining}
         />
       }
       footer={
