@@ -10,6 +10,7 @@ import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type { NumPadPosition } from "../lib/types.ts";
+import { Brand } from "./Brand.tsx";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 import { SoundToggle } from "./SoundToggle.tsx";
@@ -56,9 +57,15 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="game-screen flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
+      <div className="game-brand-row">
+        <button type="button" onClick={onBack} aria-label="Home">
+          <Brand />
+        </button>
+        <span className="eyebrow">A LITTLE SPACE TO THINK</span>
+      </div>
       {title && (
         <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
       )}
@@ -92,7 +99,7 @@ export function GameLayout({
           board is always a perpendicular gesture. */}
       <div
         className={`
-          flex gap-3 w-full justify-center flex-1
+          game-area flex gap-3 w-full justify-center flex-1
           ${position === "left" ? "flex-row items-end lg:items-center" : ""}
           ${position === "right" ? "flex-row-reverse items-end lg:items-center" : ""}
           ${position === "bottom" ? "flex-col items-center lg:flex-row lg:items-center lg:justify-center lg:gap-10" : ""}

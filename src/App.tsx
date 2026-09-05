@@ -157,22 +157,24 @@ function App() {
   switch (screen.name) {
     case "landing":
       return (
-        <div className="screen relative">
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
-            <SoundToggle
-              enabled={soundOn}
-              onToggle={() => {
-                const next = !soundOn;
-                setSoundOn(next);
-                setSoundEnabled(next);
-              }}
-            />
-            <DarkModeToggle
-              isDark={darkMode.isDark}
-              onToggle={darkMode.toggle}
-            />
-          </div>
+        <div className="home-screen">
           <Landing
+            settings={
+              <>
+                <SoundToggle
+                  enabled={soundOn}
+                  onToggle={() => {
+                    const next = !soundOn;
+                    setSoundOn(next);
+                    setSoundEnabled(next);
+                  }}
+                />
+                <DarkModeToggle
+                  isDark={darkMode.isDark}
+                  onToggle={darkMode.toggle}
+                />
+              </>
+            }
             onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
             onDaily={() => navigate({ name: "daily" })}
             onCreate={() => navigate({ name: "difficulty", mode: "create" })}

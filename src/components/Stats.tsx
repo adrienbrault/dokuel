@@ -41,7 +41,7 @@ export function Stats({ onBack }: StatsProps) {
 
   return (
     <div className="screen">
-      <div className="screen-content gap-8">
+      <div className="screen-content stats-content gap-8">
         <div className="flex flex-col items-center gap-1">
           <h2 className="heading">Stats</h2>
           <p className="text-sm text-text-muted">
