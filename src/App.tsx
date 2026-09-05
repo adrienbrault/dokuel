@@ -4,6 +4,7 @@ import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
 import { JoinScreen } from "./components/JoinScreen.tsx";
 import { Landing } from "./components/Landing.tsx";
+import { NotFoundScreen } from "./components/NotFoundScreen.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
@@ -287,33 +288,11 @@ function App() {
 
     case "notFound":
       return (
-        <div className="screen">
-          <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
-            <h1 className="heading">Page not found</h1>
-            <p className="caption max-w-sm">
-              Nothing lives at{" "}
-              <span className="text-mono break-all">{screen.path}</span>. If a
-              friend sent you an invite, double-check the link or enter the room
-              code by hand.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                className="btn btn-lg btn-primary"
-                onClick={() => navigate({ name: "landing" })}
-              >
-                Go to Dokuel
-              </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => navigate({ name: "join" })}
-              >
-                Enter a room code
-              </button>
-            </div>
-          </div>
-        </div>
+        <NotFoundScreen
+          path={screen.path}
+          onHome={() => navigate({ name: "landing" })}
+          onJoin={() => navigate({ name: "join" })}
+        />
       );
   }
 }
