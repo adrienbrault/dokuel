@@ -15,6 +15,7 @@ import {
 import { getLifetimeGamesPlayed } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { BackupControls } from "./BackupControls.tsx";
+import { RivalryHistory } from "./RivalryHistory.tsx";
 import { SoloStats } from "./SoloStats.tsx";
 
 type StatsProps = {
@@ -64,6 +65,7 @@ export function Stats({ onBack }: StatsProps) {
         </div>
 
         <SoloStats key={backupRevision} />
+        <RivalryHistory />
 
         <BackupControls
           onRestored={() => setBackupRevision((revision) => revision + 1)}
