@@ -28,6 +28,7 @@ export function GameControls({
     <div className="flex items-center justify-center gap-2">
       <ControlButton
         label="Undo"
+        hideLabel
         onClick={onUndo}
         disabled={!historyLength || historyLength === 0}
       >
@@ -35,6 +36,7 @@ export function GameControls({
       </ControlButton>
       <ControlButton
         label="Redo"
+        hideLabel
         onClick={onRedo}
         disabled={!redoLength || redoLength === 0}
       >
@@ -64,6 +66,7 @@ export function GameControls({
 function ControlButton({
   label,
   ariaLabel,
+  hideLabel,
   onClick,
   disabled,
   children,
@@ -71,6 +74,12 @@ function ControlButton({
   label: string;
   /** Spoken name when the visible label is too terse to stand alone. */
   ariaLabel?: string | undefined;
+  /**
+   * Drop the visible text at every width. Undo and Redo carry it: the
+   * paired arrows read on their own, and five labelled controls do not
+   * fit a 320px phone.
+   */
+  hideLabel?: boolean | undefined;
   onClick: () => void;
   disabled?: boolean | undefined;
   children: ReactNode;
@@ -79,7 +88,7 @@ function ControlButton({
     <button
       type="button"
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
+      className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl border border-border-default bg-surface select-none touch-manipulation transition-colors ${
         disabled
           ? "text-text-disabled opacity-50 cursor-default"
           : "text-text-secondary hover:bg-surface-hover press-spring-soft"
@@ -88,7 +97,13 @@ function ControlButton({
       aria-label={ariaLabel ?? label}
     >
       <span aria-hidden="true">{children}</span>
-      <span className="text-xs font-semibold leading-none">{label}</span>
+      {!hideLabel && (
+        // Phones show icons only: the five controls would otherwise
+        // run off a 320px screen.
+        <span className="hidden sm:inline text-xs font-semibold leading-none">
+          {label}
+        </span>
+      )}
     </button>
   );
 }
