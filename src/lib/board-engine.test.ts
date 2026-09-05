@@ -271,3 +271,105 @@ describe("PLACE_NUMBER overwrite protection", () => {
     expect(state.history).toHaveLength(1);
   });
 });
+
+describe("REDO action", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("re-applies the placement an undo reverted", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.value).toBeNull();
+
+    state = reducer(state, { type: "REDO" });
+
+    expect(state.board[0]![2]!.value).toBe(4);
+    expect(state.history).toHaveLength(1);
+    expect(state.redo).toHaveLength(0);
+  });
+
+  it("restores the peer notes the redone placement had cleared", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 3, value: 4 });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: true,
+    });
+    expect(state.board[0]![3]!.notes.has(4)).toBe(false);
+
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![3]!.notes.has(4)).toBe(true);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![3]!.notes.has(4)).toBe(false);
+  });
+
+  it("replays an erase", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    state = reducer(state, { type: "ERASE" });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.value).toBe(4);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.value).toBeNull();
+  });
+
+  it("drops the redo stack once the player acts again", () => {
+    // The undone future no longer follows from the board in front of
+    // the player, so replaying it would splice in an unrelated edit.
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "SELECT_CELL", row: 0, col: 2 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+    });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.redo).toHaveLength(1);
+
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 9,
+      autoEliminateNotes: false,
+    });
+    expect(state.redo).toHaveLength(0);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.value).toBe(9);
+  });
+
+  it("is inert on a completed board", () => {
+    // Undo is blocked once the game is won; redo has to hold the same
+    // line or a won board could be edited out from under the result.
+    const solved =
+      "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+    let state = initState({ puzzle: `${solved.slice(0, 80)}.` });
+    state = reducer(state, { type: "SELECT_CELL", row: 8, col: 8 });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 9,
+      autoEliminateNotes: false,
+    });
+    expect(state.status).toBe("completed");
+
+    const before = state;
+    state = reducer(state, { type: "UNDO" });
+    expect(state).toBe(before);
+    state = reducer(state, { type: "REDO" });
+    expect(state).toBe(before);
+  });
+});

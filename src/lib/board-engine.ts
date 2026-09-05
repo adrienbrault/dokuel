@@ -46,6 +46,8 @@ export type State = {
   selectedCells: Set<number>;
   notesMode: boolean;
   history: MoveAction[];
+  /** Actions undone since the last player action, newest last. */
+  redo: MoveAction[];
   hintsUsed: number;
   activeHint: ActiveHint | null;
 };
@@ -63,6 +65,7 @@ export type Action =
   | { type: "PLACE_NOTE_AT"; row: number; col: number; value: number }
   | { type: "ERASE" }
   | { type: "UNDO" }
+  | { type: "REDO" }
   | { type: "HINT" }
   | { type: "DISMISS_HINT" }
   | { type: "TOGGLE_NOTES" }
@@ -350,51 +353,47 @@ function handleErase(state: State): State {
   };
 }
 
-function handleUndo(state: State): State {
-  if (state.history.length === 0 || state.status === "completed") return state;
-  const history = state.history.slice(0, -1);
-  const lastAction = state.history[state.history.length - 1]!;
-  const editor = editBoard(state.board);
-
-  switch (lastAction.type) {
+/** Roll one action back: the exact inverse of {@link applyMove}. */
+function revertMove(editor: BoardEditor, action: MoveAction): void {
+  switch (action.type) {
     case "place": {
-      const { row, col } = lastAction.position;
+      const { row, col } = action.position;
       const target = editor.edit(row, col);
-      target.value = lastAction.previousValue;
-      target.notes = new Set(lastAction.previousNotes);
-      for (const cleared of lastAction.clearedNotes) {
+      target.value = action.previousValue;
+      target.notes = new Set(action.previousNotes);
+      for (const cleared of action.clearedNotes) {
         editor.edit(cleared.row, cleared.col).notes.add(cleared.note);
       }
       break;
     }
     case "erase": {
-      const { row, col } = lastAction.position;
+      const { row, col } = action.position;
       const target = editor.edit(row, col);
-      target.value = lastAction.previousValue;
-      target.notes = new Set(lastAction.previousNotes);
+      target.value = action.previousValue;
+      target.notes = new Set(action.previousNotes);
       break;
     }
     case "toggleNote": {
-      const { row, col } = lastAction.position;
+      const { row, col } = action.position;
       const notes = editor.edit(row, col).notes;
-      if (notes.has(lastAction.note)) {
-        notes.delete(lastAction.note);
+      if (notes.has(action.note)) {
+        notes.delete(action.note);
       } else {
-        notes.add(lastAction.note);
+        notes.add(action.note);
       }
       break;
     }
     case "batchToggleNote": {
-      for (const pos of lastAction.added) {
-        editor.edit(pos.row, pos.col).notes.delete(lastAction.note);
+      for (const pos of action.added) {
+        editor.edit(pos.row, pos.col).notes.delete(action.note);
       }
-      for (const pos of lastAction.removed) {
-        editor.edit(pos.row, pos.col).notes.add(lastAction.note);
+      for (const pos of action.removed) {
+        editor.edit(pos.row, pos.col).notes.add(action.note);
       }
       break;
     }
     case "batchErase": {
-      for (const entry of lastAction.cells) {
+      for (const entry of action.cells) {
         const { row, col } = entry.position;
         const target = editor.edit(row, col);
         target.value = entry.previousValue;
@@ -403,11 +402,92 @@ function handleUndo(state: State): State {
       break;
     }
   }
+}
+
+/** Replay one action forward: what REDO needs, and the exact inverse
+ * of {@link revertMove}. Every MoveAction carries enough of its own
+ * before/after state to be replayed without re-deriving anything. */
+function applyMove(editor: BoardEditor, action: MoveAction): void {
+  switch (action.type) {
+    case "place": {
+      const { row, col } = action.position;
+      const target = editor.edit(row, col);
+      target.value = action.value;
+      target.notes = new Set();
+      for (const cleared of action.clearedNotes) {
+        editor.edit(cleared.row, cleared.col).notes.delete(cleared.note);
+      }
+      break;
+    }
+    case "erase": {
+      const { row, col } = action.position;
+      const target = editor.edit(row, col);
+      target.value = null;
+      target.notes = new Set();
+      break;
+    }
+    case "toggleNote": {
+      const { row, col } = action.position;
+      const notes = editor.edit(row, col).notes;
+      if (notes.has(action.note)) {
+        notes.delete(action.note);
+      } else {
+        notes.add(action.note);
+      }
+      break;
+    }
+    case "batchToggleNote": {
+      for (const pos of action.added) {
+        editor.edit(pos.row, pos.col).notes.add(action.note);
+      }
+      for (const pos of action.removed) {
+        editor.edit(pos.row, pos.col).notes.delete(action.note);
+      }
+      break;
+    }
+    case "batchErase": {
+      for (const entry of action.cells) {
+        const { row, col } = entry.position;
+        const target = editor.edit(row, col);
+        target.value = null;
+        target.notes = new Set();
+      }
+      break;
+    }
+  }
+}
+
+function handleUndo(state: State): State {
+  if (state.history.length === 0 || state.status === "completed") return state;
+  const lastAction = state.history[state.history.length - 1]!;
+  const editor = editBoard(state.board);
+  revertMove(editor, lastAction);
 
   return {
     ...state,
     board: editor.board,
-    history,
+    history: state.history.slice(0, -1),
+    redo: pushHistory(state.redo, lastAction),
+  };
+}
+
+function handleRedo(state: State): State {
+  if (state.redo.length === 0 || state.status === "completed") return state;
+  const action = state.redo[state.redo.length - 1]!;
+  const editor = editBoard(state.board);
+  applyMove(editor, action);
+  const board = editor.board;
+  // Only a placement can finish the board, so the completion check
+  // rides along with that one case instead of every replay.
+  const complete =
+    action.type === "place" && isBoardComplete(board, getConflicts(board));
+
+  return {
+    ...state,
+    board,
+    status: complete ? "completed" : state.status,
+    history: pushHistory(state.history, action),
+    redo: state.redo.slice(0, -1),
   };
 }
 
@@ -473,6 +553,9 @@ function dispatchAction(state: State, action: Action): State {
     case "UNDO":
       return handleUndo(state);
 
+    case "REDO":
+      return handleRedo(state);
+
     case "TOGGLE_NOTES":
       return { ...state, notesMode: !state.notesMode };
 
@@ -498,7 +581,17 @@ function dispatchAction(state: State, action: Action): State {
 // HINT installs a new hint, TOGGLE_NOTES is unrelated and can be
 // toggled while a hint banner is showing.
 export function reducer(state: State, action: Action): State {
-  const next = dispatchAction(state, action);
+  let next = dispatchAction(state, action);
+  // Any fresh player action invalidates the redo stack: the future it
+  // held no longer follows from the board in front of the player.
+  if (
+    action.type !== "UNDO" &&
+    action.type !== "REDO" &&
+    next.history !== state.history &&
+    next.redo.length > 0
+  ) {
+    next = { ...next, redo: [] };
+  }
   if (action.type === "HINT" || action.type === "TOGGLE_NOTES") return next;
   if (next.activeHint === null) return next;
   return { ...next, activeHint: null };
@@ -584,6 +677,7 @@ export function initState(args: {
     selectedCells: new Set(),
     notesMode: false,
     history: [],
+    redo: [],
     hintsUsed: args.savedBoard?.hintsUsed ?? 0,
     activeHint: null,
   };
