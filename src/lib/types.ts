@@ -79,13 +79,38 @@ export type HintTechnique =
   | "mistake"
   | "reveal";
 
-export type ActiveHint = {
+/** A hint that names a digit the player can write in. */
+export type PlacementHint = {
+  kind: "placement";
   position: Position;
   value: number;
   technique: HintTechnique;
   explanation: string;
+  /** Cells that prove the deduction, highlighted behind the banner. */
   relatedCells: Position[];
 };
+
+/**
+ * A hint that removes candidates instead of placing a digit. The board
+ * often has no placement available, only an elimination that opens one
+ * up; saying so is the difference between teaching a technique and
+ * reading the answer out of the solution.
+ */
+export type EliminationHint = {
+  kind: "elimination";
+  /** The cell the hint selects: the first one losing a candidate. */
+  position: Position;
+  technique: HintTechnique;
+  explanation: string;
+  /** The digits that come out. */
+  digits: number[];
+  /** The cells they come out of. */
+  eliminatedCells: Position[];
+  /** Cells that prove the elimination. */
+  relatedCells: Position[];
+};
+
+export type ActiveHint = PlacementHint | EliminationHint;
 
 export type GameStatus = "idle" | "playing" | "completed";
 

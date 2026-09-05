@@ -522,7 +522,9 @@ describe("useSudoku", () => {
 
       expect(result.current.activeHint).not.toBeNull();
       expect(result.current.activeHint!.position).toEqual({ row: 0, col: 0 });
-      expect(result.current.activeHint!.value).toBe(5);
+      const hint = result.current.activeHint!;
+      expect(hint.kind).toBe("placement");
+      expect(hint.kind === "placement" && hint.value).toBe(5);
     });
 
     it("adds nothing to undo history", () => {

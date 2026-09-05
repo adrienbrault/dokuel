@@ -2,6 +2,15 @@
 import { describe, expect, it } from "vitest";
 import { findHint } from "./hint-engine.ts";
 import { parsePuzzle, solvePuzzle } from "./sudoku.ts";
+import type { ActiveHint, PlacementHint } from "./types.ts";
+
+/** Narrow a hint to the placement it is expected to be. */
+function placed(hint: ActiveHint | null): PlacementHint {
+  if (hint?.kind !== "placement") {
+    throw new Error(`expected a placement hint, got ${hint?.kind ?? "none"}`);
+  }
+  return hint;
+}
 
 describe("findHint", () => {
   describe("mistake redirection", () => {
@@ -47,7 +56,7 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       if (hint!.technique !== "mistake") {
         const { row, col } = hint!.position;
-        expect(hint!.value).toBe(Number(solved[row * 9 + col]));
+        expect(placed(hint).value).toBe(Number(solved[row * 9 + col]));
       }
     });
   });
@@ -74,7 +83,7 @@ describe("findHint", () => {
 
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("reveal");
-      expect(hint!.value).toBe(5);
+      expect(placed(hint).value).toBe(5);
     });
   });
 
@@ -106,7 +115,7 @@ describe("findHint", () => {
       const hint = findHint(board, solved);
       expect(hint).not.toBeNull();
       expect(hint!.position).toEqual({ row: 0, col: 0 });
-      expect(hint!.value).toBe(5);
+      expect(placed(hint).value).toBe(5);
       expect(hint!.technique).toBe("naked-single");
       expect(hint!.explanation).toContain("5");
     });
@@ -240,7 +249,7 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("locked-candidates");
       expect(hint!.position).toEqual({ row: 6, col: 5 });
-      expect(hint!.value).toBe(6);
+      expect(placed(hint).value).toBe(6);
       expect(hint!.explanation).toContain("3");
       expect(hint!.explanation).toContain("6");
       expect(hint!.relatedCells.length).toBeGreaterThan(0);
@@ -253,7 +262,7 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("x-wing");
       expect(hint!.position).toEqual({ row: 5, col: 7 });
-      expect(hint!.value).toBe(4);
+      expect(placed(hint).value).toBe(4);
     });
 
     it("teaches a swordfish where the old ladder revealed", () => {
@@ -265,7 +274,7 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("swordfish");
       expect(hint!.position).toEqual({ row: 1, col: 6 });
-      expect(hint!.value).toBe(8);
+      expect(placed(hint).value).toBe(8);
       expect(hint!.explanation).toContain("8");
     });
 
@@ -281,7 +290,7 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("xy-wing");
       expect(hint!.position).toEqual({ row: 3, col: 3 });
-      expect(hint!.value).toBe(5);
+      expect(placed(hint).value).toBe(5);
       expect(hint!.explanation).toContain("XY-wing");
       expect(hint!.explanation).toContain("eliminations deep");
     });
@@ -299,7 +308,7 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("xy-wing");
       expect(hint!.position).toEqual({ row: 1, col: 0 });
-      expect(hint!.value).toBe(5);
+      expect(placed(hint).value).toBe(5);
       expect(hint!.explanation).toContain("pivot cell can only be 4 or 5");
       expect(hint!.explanation).toContain("If it's 4, the 4/2 cell must be 2");
       expect(hint!.explanation).toContain("if it's 5, the 5/2 cell must be 2");
@@ -314,7 +323,7 @@ describe("findHint", () => {
       expect(hint).not.toBeNull();
       expect(hint!.technique).toBe("naked-quad");
       expect(hint!.position).toEqual({ row: 3, col: 0 });
-      expect(hint!.value).toBe(9);
+      expect(placed(hint).value).toBe(9);
     });
   });
 
@@ -347,8 +356,8 @@ describe("findHint", () => {
       const board = parsePuzzle(puzzle);
       const hint = findHint(board, solution);
       expect(hint).not.toBeNull();
-      expect(hint!.value).toBeGreaterThanOrEqual(1);
-      expect(hint!.value).toBeLessThanOrEqual(9);
+      expect(placed(hint).value).toBeGreaterThanOrEqual(1);
+      expect(placed(hint).value).toBeLessThanOrEqual(9);
     });
   });
 

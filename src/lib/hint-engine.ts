@@ -1,6 +1,6 @@
 import { getErrors } from "./sudoku.ts";
 import { findTechniqueHint } from "./technique-hint.ts";
-import type { ActiveHint, Board, Position } from "./types.ts";
+import type { ActiveHint, Board, PlacementHint, Position } from "./types.ts";
 
 // Alias, not a parallel definition: board-engine stores findHint's
 // result in an ActiveHint field, and two structurally-identical types
@@ -58,12 +58,13 @@ function nakedSingleAt(
   board: Board,
   row: number,
   col: number,
-): HintExplanation | null {
+): PlacementHint | null {
   if (board[row]![col]!.value !== null) return null;
   const candidates = candidatesAt(board, row, col);
   if (candidates.size !== 1) return null;
   const value = [...candidates][0]!;
   return {
+    kind: "placement",
     position: { row, col },
     value,
     technique: "naked-single",
@@ -72,7 +73,7 @@ function nakedSingleAt(
   };
 }
 
-function findNakedSingle(board: Board): HintExplanation | null {
+function findNakedSingle(board: Board): PlacementHint | null {
   for (let row = 0; row < 9; row++) {
     for (let col = 0; col < 9; col++) {
       const hint = nakedSingleAt(board, row, col);
@@ -146,7 +147,7 @@ function findHiddenSingleInGroup(
   board: Board,
   type: "row" | "col" | "box",
   index: number,
-): HintExplanation | null {
+): PlacementHint | null {
   const groupCells = cellsOfGroup(type, index);
   const emptyCells = groupCells
     .filter(({ row, col }) => board[row]![col]!.value === null)
@@ -187,6 +188,7 @@ function findHiddenSingleInGroup(
       }
 
       return {
+        kind: "placement",
         position: { row: cell.row, col: cell.col },
         value: d,
         technique: "hidden-single",
@@ -198,7 +200,7 @@ function findHiddenSingleInGroup(
   return null;
 }
 
-function findHiddenSingle(board: Board): HintExplanation | null {
+function findHiddenSingle(board: Board): PlacementHint | null {
   for (let row = 0; row < 9; row++) {
     const result = findHiddenSingleInGroup(board, "row", row);
     if (result) return result;
@@ -240,6 +242,7 @@ export function findHint(
     const col = key % 9;
     const wrongValue = board[row]![col]!.value;
     return {
+      kind: "placement",
       position: { row, col },
       value: Number(solution[key]),
       technique: "mistake",
@@ -291,6 +294,7 @@ export function findHint(
   const candidates = candidatesAt(board, targetRow, targetCol);
 
   return {
+    kind: "placement",
     position: { row: targetRow, col: targetCol },
     value,
     technique: "reveal",

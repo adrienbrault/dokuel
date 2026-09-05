@@ -160,6 +160,7 @@ function buildTechniqueHint(unlock: UnlockingPlacement): HintExplanation {
     ...elimination.removed.map((r) => r.cell),
   ];
   return {
+    kind: "placement",
     position: toPosition(single.cell),
     value: single.digit,
     technique: TECHNIQUE_OF_KIND[elimination.kind],
