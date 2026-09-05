@@ -79,6 +79,7 @@ export function useSudoku(
     dispatch({ type: "ERASE" });
   }, []);
   const undo = useCallback(() => dispatch({ type: "UNDO" }), []);
+  const redo = useCallback(() => dispatch({ type: "REDO" }), []);
 
   const toggleNotesMode = useCallback(() => {
     gameFeedback.onToggleNotes();
@@ -115,6 +116,7 @@ export function useSudoku(
     remainingCounts,
     cellsRemaining,
     historyLength: state.history.length,
+    redoLength: state.redo.length,
     hintsUsed: state.hintsUsed,
     cellKey,
     selectCell,
@@ -124,6 +126,7 @@ export function useSudoku(
     placeNoteAt,
     erase,
     undo,
+    redo,
     activeHint: state.activeHint,
     toggleNotesMode,
     hint,

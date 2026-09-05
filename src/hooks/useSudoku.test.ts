@@ -119,6 +119,24 @@ describe("useSudoku", () => {
     expect(result.current.board[pos.row]![pos.col]!.value).toBeNull();
   });
 
+  it("redo replays the move undo reverted, and reports what is left", () => {
+    const { result } = setupHook();
+
+    const pos = findEmptyCell(result.current.board);
+    if (!pos) throw new Error("No empty cell found");
+
+    act(() => result.current.selectCell(pos.row, pos.col));
+    act(() => result.current.placeNumber(5));
+    expect(result.current.redoLength).toBe(0);
+
+    act(() => result.current.undo());
+    expect(result.current.redoLength).toBe(1);
+
+    act(() => result.current.redo());
+    expect(result.current.board[pos.row]![pos.col]!.value).toBe(5);
+    expect(result.current.redoLength).toBe(0);
+  });
+
   it("erase clears a non-given cell", () => {
     const { result } = setupHook();
 
