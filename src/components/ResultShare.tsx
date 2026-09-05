@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { challengePath, type FriendChallenge } from "../lib/challenge.ts";
 import { ASSIST_LEVEL_LABELS, DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
+import {
+  compareFriendReceipt,
+  type FriendReceipt,
+  friendReceiptPath,
+} from "../lib/friend-receipt.ts";
+import { trackProductEvent } from "../lib/product-events.ts";
 import type { Difficulty } from "../lib/types.ts";
 
 export function buildShareText({
@@ -12,6 +18,7 @@ export function buildShareText({
   streakInfo,
   isDaily,
   shareChallenge,
+  shareReceipt,
 }: {
   difficulty?: Difficulty | undefined;
   time: string;
@@ -20,7 +27,20 @@ export function buildShareText({
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
   shareChallenge?: FriendChallenge | undefined;
+  shareReceipt?: FriendReceipt | undefined;
 }): string {
+  if (shareReceipt) {
+    const comparison = compareFriendReceipt(shareReceipt);
+    const outcome =
+      comparison.outcome === "challenger"
+        ? `${shareReceipt.challenger.name} finished first.`
+        : comparison.outcome === "friend"
+          ? `${shareReceipt.friend.name} finished first.`
+          : comparison.outcome === "tie"
+            ? "The finish was tied."
+            : "Practice result — extra help was used.";
+    return `Dokuel friend result\n${shareReceipt.challenger.name}: ${formatTime(shareReceipt.challenger.timeSeconds)} · ${shareReceipt.friend.name}: ${formatTime(shareReceipt.friend.timeSeconds)}\n${outcome}\n${window.location.origin}${friendReceiptPath(shareReceipt)}`;
+  }
   if (shareChallenge) {
     const hints = `${shareChallenge.hintsUsed} hint${shareChallenge.hintsUsed === 1 ? "" : "s"}`;
     return `Beat my ${DIFFICULTY_LABELS[shareChallenge.difficulty]} Sudoku time: ${formatTime(shareChallenge.timeSeconds)}\n${ASSIST_LEVEL_LABELS[shareChallenge.assistLevel]} assistance · ${hints}\n${window.location.origin}${challengePath(shareChallenge)}`;
@@ -52,9 +72,18 @@ export function ResultShare(props: Parameters<typeof buildShareText>[0]) {
   const text = buildShareText(props);
   async function share() {
     setFailed(false);
-    if (props.shareChallenge && navigator.share) {
+    const shareKind = props.shareReceipt
+      ? "receipt"
+      : props.shareChallenge
+        ? "challenge"
+        : null;
+    if (shareKind && navigator.share) {
       try {
         await navigator.share({ title: "Dokuel friend challenge", text });
+        trackProductEvent(
+          shareKind === "receipt" ? "receipt_share" : "invite_share",
+          "friend",
+        );
         return;
       } catch (error) {
         if (
@@ -68,6 +97,12 @@ export function ResultShare(props: Parameters<typeof buildShareText>[0]) {
     }
     try {
       await navigator.clipboard.writeText(text);
+      if (shareKind) {
+        trackProductEvent(
+          shareKind === "receipt" ? "receipt_share" : "invite_share",
+          "friend",
+        );
+      }
       setCopied(true);
       if (timeout.current) clearTimeout(timeout.current);
       timeout.current = setTimeout(() => setCopied(false), 2000);
@@ -79,14 +114,16 @@ export function ResultShare(props: Parameters<typeof buildShareText>[0]) {
     <>
       <button
         type="button"
-        className={`btn w-full min-h-11 py-2 ${props.shareChallenge ? "btn-primary" : "btn-ghost"}`}
+        className={`btn w-full min-h-11 py-2 ${props.shareChallenge || props.shareReceipt ? "btn-primary" : "btn-ghost"}`}
         onClick={share}
       >
         {copied
           ? "Copied!"
-          : props.shareChallenge
-            ? "Challenge a friend"
-            : "Share Result"}
+          : props.shareReceipt
+            ? "Send result to friend"
+            : props.shareChallenge
+              ? "Challenge a friend"
+              : "Share Result"}
       </button>
       {failed && (
         <div className="w-full">
