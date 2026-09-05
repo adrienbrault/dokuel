@@ -97,6 +97,31 @@ test("the daily challenge regenerates the same board after storage is cleared", 
   expect(await readBoard(page)).toBe(firstBoard);
 });
 
+test("an archive row opens that date's daily and keeps it on refresh", async ({
+  page,
+}) => {
+  await page.goto("/daily/archive");
+  await page.getByRole("heading", { name: "Past Dailies" }).waitFor();
+
+  // Second row: the day before today, safely inside the frozen table.
+  const row = page.locator("section button").nth(1);
+  const label = (await row.textContent()) ?? "";
+  await row.click();
+
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+  const url = new URL(page.url());
+  expect(url.pathname).toMatch(/^\/daily\/\d{4}-\d{2}-\d{2}$/);
+  const board = await readBoard(page);
+  expect(label).not.toBe("");
+
+  // The dated route must survive a refresh rather than bouncing back
+  // to today's puzzle.
+  await page.reload();
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+  expect(new URL(page.url()).pathname).toBe(url.pathname);
+  expect(await readBoard(page)).toBe(board);
+});
+
 test("tapping a digit notes a drag-selected range, then hands off to highlights", async ({
   page,
 }) => {
