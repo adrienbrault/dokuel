@@ -9,6 +9,9 @@ export default defineConfig({
     // A spy left installed by a failing test must not cascade into the
     // next test's failure — restore all mocks between tests.
     restoreMocks: true,
+    // Instrumented board interactions and puzzle generation can exceed five
+    // seconds on shared CI CPUs. Keep local feedback strict and assertions intact.
+    testTimeout: process.env.CI ? 15_000 : 5_000,
     coverage: {
       provider: "v8",
       include: ["src/lib/**", "src/hooks/**"],
