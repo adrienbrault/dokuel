@@ -95,6 +95,27 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.opponentMask).toBe(mask);
   });
 
+  it("surfaces the opponent's reaction from presence", async () => {
+    const { result } = renderRoom({
+      roomId: "room-reaction",
+      difficulty: "easy",
+    });
+    await flushSync();
+
+    act(() => {
+      connections.last?.emitRemotePeer({
+        user: { id: "p2", name: "Bob" },
+        signal: { reaction: { emoji: "🔥", at: 5, nonce: "n1" } },
+      });
+    });
+
+    expect(result.current.opponentReaction).toEqual({
+      emoji: "🔥",
+      at: 5,
+      nonce: "n1",
+    });
+  });
+
   it("opens a created room on the creator's own assist level", async () => {
     // Creating a game goes straight to the lobby now, so the level the
     // player already set for themselves is what the room starts on.

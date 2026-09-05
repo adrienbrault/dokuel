@@ -176,6 +176,10 @@ export function useYjsMultiplayer({
     sessionRef.current?.publishMask(mask);
   }, []);
 
+  const sendReaction = useCallback((emoji: string) => {
+    sessionRef.current?.sendReaction(emoji);
+  }, []);
+
   const sendComplete = useCallback((board: string) => {
     roomRef.current?.complete(board);
   }, []);
@@ -222,7 +226,9 @@ export function useYjsMultiplayer({
     connected,
     ...projection,
     opponentMask: opponentSignal?.mask ?? null,
+    opponentReaction: opponentSignal?.reaction ?? null,
     sendMask,
+    sendReaction,
     sendStartGame,
     sendProgress,
     sendComplete,

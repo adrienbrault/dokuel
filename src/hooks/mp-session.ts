@@ -1,3 +1,4 @@
+import { generateId } from "../lib/id.ts";
 import { throttleTrailing } from "../lib/throttle.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import type { Connection, PresenceSignal } from "./mp-connection.ts";
@@ -21,6 +22,12 @@ import { watchTabLifecycle } from "./mp-tab-lifecycle.ts";
  * turn into one broadcast per cell.
  */
 const MASK_PUBLISH_INTERVAL_MS = 250;
+
+/**
+ * The floor between two reactions. Four emoji a thumb apart is a spam
+ * machine otherwise, and nothing about a race is improved by one.
+ */
+const REACTION_INTERVAL_MS = 1_000;
 
 export type SessionConfig = {
   connection: Connection;
@@ -54,6 +61,12 @@ export type Session = {
    * presence broadcast per keystroke.
    */
   publishMask(mask: string): void;
+  /**
+   * Throw an emoji at the opponent. Silently refused inside the
+   * cooldown - a rate limit the player never has to think about beats
+   * a disabled button that flickers.
+   */
+  sendReaction(emoji: string): void;
   /** Terminal: drops every listener and timer, then closes both sides. */
   close(): void;
 };
@@ -112,6 +125,19 @@ export function startSession({
     MASK_PUBLISH_INTERVAL_MS,
   );
 
+  // Never on the clock's zero: that would be a reaction sent at page
+  // load, swallowing the player's first real one.
+  let lastReactionAt = Number.NEGATIVE_INFINITY;
+  const sendReaction = (emoji: string) => {
+    const at = now();
+    if (at - lastReactionAt < REACTION_INTERVAL_MS) return;
+    lastReactionAt = at;
+    // The nonce is what makes a repeat visible: presence is
+    // last-write-wins state, not a message queue, so 🔥 twice in a row
+    // is only a change if something in the value changed.
+    connection.signal({ reaction: { emoji, at, nonce: generateId() } });
+  };
+
   const stopTabLifecycle = watchTabLifecycle({
     connection,
     room,
@@ -166,5 +192,5 @@ export function startSession({
     connection.close();
   };
 
-  return { room, publishMask, close };
+  return { room, publishMask, sendReaction, close };
 }
