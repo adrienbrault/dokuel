@@ -40,6 +40,10 @@ function App() {
         window.history.pushState(null, "", path);
       }
       setScreen(newScreen);
+      // pushState keeps the previous page's scroll offset, so a screen
+      // opened from a link near the bottom (the archive, stats) would
+      // open scrolled past its own heading.
+      window.scrollTo?.(0, 0);
     },
     [],
   );
