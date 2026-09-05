@@ -63,6 +63,10 @@ describe("pathToScreen", () => {
     });
   });
 
+  it("opens the archive listing at /daily/archive", () => {
+    expect(pathToScreen("/daily/archive")).toEqual({ name: "dailyArchive" });
+  });
+
   it("falls back to today's daily for a date with no daily", () => {
     // Hand-edited or stale links must land somewhere playable rather
     // than on a board generated for a day nobody ever saw.
@@ -119,6 +123,10 @@ describe("screenToPath", () => {
     expect(screenToPath(screen)).toBe(
       "/solo/medium/abc123?t=252&by=Swift+Panda",
     );
+  });
+
+  it("round-trips the archive listing", () => {
+    expect(screenToPath({ name: "dailyArchive" })).toBe("/daily/archive");
   });
 
   it("round-trips an archived daily date", () => {

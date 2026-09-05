@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { formatShortDate, formatTime } from "./format.ts";
+import { formatMonthLabel, formatShortDate, formatTime } from "./format.ts";
 
 describe("formatTime", () => {
   it("formats zero seconds", () => {
@@ -35,5 +35,12 @@ describe("formatShortDate", () => {
 
   it("strips leading zeros from day", () => {
     expect(formatShortDate("2026-12-01")).toBe("Dec 1");
+  });
+});
+
+describe("formatMonthLabel", () => {
+  it("names the month and its year", () => {
+    expect(formatMonthLabel("2026-09")).toBe("September 2026");
+    expect(formatMonthLabel("2027-01")).toBe("January 2027");
   });
 });

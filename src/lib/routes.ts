@@ -24,6 +24,7 @@ export type Screen =
       challenge?: SoloChallenge | undefined;
     }
   | { name: "daily"; date?: string | undefined }
+  | { name: "dailyArchive" }
   | {
       name: "multiplayer";
       roomId: string;
@@ -53,6 +54,8 @@ export function screenToPath(screen: Screen): string {
       return `/solo/${screen.difficulty}/${screen.gameKey}${challengeQuery(screen.challenge)}`;
     case "daily":
       return screen.date ? `/daily/${screen.date}` : "/daily";
+    case "dailyArchive":
+      return "/daily/archive";
     case "join":
       return "/join";
     case "stats":
@@ -75,6 +78,7 @@ export function pathToScreen(pathname: string, search = ""): Screen {
   // to today rather than a board nobody ever saw.
   if (path.startsWith("daily/")) {
     const date = path.slice(6);
+    if (date === "archive") return { name: "dailyArchive" };
     return isPlayableDailyDate(date)
       ? { name: "daily", date }
       : { name: "daily" };

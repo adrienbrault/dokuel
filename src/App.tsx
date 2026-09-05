@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { DailyArchive } from "./components/DailyArchive.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
@@ -156,6 +157,14 @@ function App() {
           key={screen.date ?? "today"}
           date={screen.date}
           onBack={() => navigate({ name: "landing" })}
+        />
+      );
+
+    case "dailyArchive":
+      return (
+        <DailyArchive
+          onBack={() => navigate({ name: "landing" })}
+          onPlay={(date) => navigate({ name: "daily", date })}
         />
       );
 
