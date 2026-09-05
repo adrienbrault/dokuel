@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
-import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
-import { watchTabLifecycle } from "./mp-tab-lifecycle.ts";
+import { INITIAL_PROJECTION, type Room } from "./mp-room.ts";
+import { startSession } from "./mp-session.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 
 /**
@@ -86,97 +86,23 @@ export function useYjsMultiplayer({
     // async because the relay credentials must be resolved before the
     // peer connection exists.
     const start = (connection: Connection): (() => void) => {
-      const doc = connection.doc;
-      const room = createRoom({
-        doc,
+      const session = startSession({
+        connection,
         roomId,
         playerId,
         playerName: () => playerNameRef.current,
         initialDifficulty: initialDifficultyRef.current,
         initialAssistLevel: initialAssistLevelRef.current,
         now,
+        isCancelled: () => cancelled,
+        onConnected: setConnected,
+        onProjection: setProjection,
       });
-      roomRef.current = room;
+      roomRef.current = session.room;
       connectionRef.current = connection;
 
-      const unsubscribeRoom = room.subscribe(() => {
-        setProjection(room.snapshot());
-      });
-
-      const updatePresence = () => {
-        room.apply({
-          type: "presence-changed",
-          hasOtherPeer: connection.hasOtherPeer(playerId),
-          tabHidden: document.hidden,
-        });
-      };
-
-      // Track connection status via the transport
-      const unsubscribeStatus = connection.onStatus((isConnected) => {
-        setConnected(isConnected);
-        room.apply({
-          type: "connectivity-changed",
-          connected: isConnected,
-          now: now(),
-        });
-      });
-
-      const unsubscribePresence = connection.onPresenceChange(updatePresence);
-
-      setConnected(connection.connected);
-
-      const stopTabLifecycle = watchTabLifecycle({
-        connection,
-        room,
-        now,
-        reannounce: () =>
-          connection.announce({ id: playerId, name: playerNameRef.current }),
-        refreshPresence: updatePresence,
-      });
-
-      // Nothing may be written before local persistence has loaded:
-      // the Room's setup writes would seed clock-0 ops that race the
-      // restore, and under iOS Safari's flaky IDB flushes the doc can
-      // resolve back to an empty lobby over several reloads, wiping the
-      // game in progress.
-      let hydrateTimer: ReturnType<typeof setTimeout> | null = null;
-      // The Room says when it wants a tick; owning the timer is all we
-      // do about it. Re-armed after every tick rather than scheduled
-      // once: a timer that fires early leaves the deadline standing,
-      // and a deadline nothing wakes up for is a room the player never
-      // takes a seat in.
-      const armWake = () => {
-        const wakeAt = room.nextWakeAt();
-        if (wakeAt === null) return;
-        hydrateTimer = setTimeout(
-          () => {
-            hydrateTimer = null;
-            room.apply({ type: "tick", now: now() });
-            armWake();
-          },
-          Math.max(0, wakeAt - now()),
-        );
-      };
-      void connection.whenSynced.then(() => {
-        if (cancelled) return;
-        connection.announce({ id: playerId, name: playerNameRef.current });
-        room.apply({ type: "local-sync-complete", now: now() });
-        armWake();
-      });
-
       return () => {
-        stopTabLifecycle();
-        if (hydrateTimer !== null) {
-          clearTimeout(hydrateTimer);
-          hydrateTimer = null;
-        }
-        unsubscribeStatus();
-        unsubscribePresence();
-        unsubscribeRoom();
-        // The Room observes the doc the Connection owns — it has to let
-        // go before close() destroys it.
-        room.close();
-        connection.close();
+        session.close();
         roomRef.current = null;
         connectionRef.current = null;
       };
