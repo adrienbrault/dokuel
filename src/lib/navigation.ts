@@ -5,10 +5,24 @@ import {
   parseChallenge,
 } from "./challenge.ts";
 import { isCalendarDate } from "./date.ts";
+import {
+  type FriendReceipt,
+  type FriendRoundMode,
+  friendReceiptPath,
+  parseFriendReceipt,
+  type ReceiptSide,
+} from "./friend-receipt.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
 
 export type Screen =
   | { name: "challenge"; challenge: FriendChallenge }
+  | { name: "receipt"; receipt: FriendReceipt }
+  | {
+      name: "friendRound";
+      receipt: FriendReceipt;
+      side: ReceiptSide;
+      mode: FriendRoundMode;
+    }
   | { name: "landing" }
   | { name: "difficulty"; mode: "solo" | "create" }
   | {
@@ -47,6 +61,10 @@ export function screenToPath(screen: Screen): string {
       return `/solo/${screen.difficulty}/${screen.gameKey}`;
     case "challenge":
       return challengePath(screen.challenge);
+    case "receipt":
+      return friendReceiptPath(screen.receipt);
+    case "friendRound":
+      return `${friendReceiptPath(screen.receipt).replace("/receipt/", "/friend-round/")}/${screen.side}/${screen.mode}`;
     case "daily":
       return screen.date ? `/daily/${screen.date}` : "/daily";
     case "join":
@@ -79,6 +97,34 @@ export function pathToScreen(pathname: string): Screen {
     return challenge
       ? { name: "challenge", challenge }
       : { name: "notFound", path: pathname };
+  }
+
+  if (path.startsWith("receipt/")) {
+    const receipt = parseFriendReceipt(path.slice("receipt/".length));
+    return receipt
+      ? { name: "receipt", receipt }
+      : { name: "notFound", path: pathname };
+  }
+
+  if (path.startsWith("friend-round/")) {
+    const parts = path.slice("friend-round/".length).split("/");
+    const payload = parts[0] ?? "";
+    const side = parts[1];
+    const mode = parts[2];
+    const receipt = parts.length === 3 ? parseFriendReceipt(payload) : null;
+    if (
+      receipt &&
+      (side === "challenger" || side === "friend") &&
+      (mode === "again" || mode === "bestOfThree")
+    ) {
+      return {
+        name: "friendRound",
+        receipt,
+        side,
+        mode,
+      };
+    }
+    return { name: "notFound", path: pathname };
   }
 
   if (path.startsWith("solo/")) {

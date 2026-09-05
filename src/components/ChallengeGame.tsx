@@ -1,19 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { challengeGameKey, type FriendChallenge } from "../lib/challenge.ts";
 import { ASSIST_LEVEL_LABELS, DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import { loadGame } from "../lib/game-storage.ts";
+import { trackProductEvent } from "../lib/product-events.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
 export function ChallengeGame({
   challenge,
   onBack,
+  onLiveChallenge,
 }: {
   challenge: FriendChallenge;
   onBack: () => void;
+  onLiveChallenge?: (() => void) | undefined;
 }) {
   const [started, setStarted] = useState(false);
   const gameKey = challengeGameKey(challenge);
+  useEffect(() => {
+    trackProductEvent("challenge_open", "friend");
+  }, []);
   if (started)
     return (
       <SoloGame
@@ -29,7 +35,7 @@ export function ChallengeGame({
   return (
     <div className="screen">
       <div className="screen-content gap-6 py-8 text-center">
-        <p className="label">A friend challenged you</p>
+        <p className="label">Time challenge · asynchronous</p>
         <h1 className="heading-xl">Beat {formatTime(challenge.timeSeconds)}</h1>
         <p className="caption">
           The exact same {DIFFICULTY_LABELS[challenge.difficulty].toLowerCase()}{" "}
@@ -56,6 +62,15 @@ export function ChallengeGame({
         >
           {loadGame(gameKey) ? "Continue challenge" : "Start challenge"}
         </button>
+        {onLiveChallenge && (
+          <button
+            type="button"
+            className="btn btn-secondary w-full"
+            onClick={onLiveChallenge}
+          >
+            Play live instead
+          </button>
+        )}
         <button type="button" className="btn-ghost min-h-11" onClick={onBack}>
           Back to home
         </button>

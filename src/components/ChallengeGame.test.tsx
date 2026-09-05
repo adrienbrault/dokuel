@@ -29,4 +29,30 @@ it("shows the target before starting and compares a completed puzzle under fixed
   fireEvent.keyDown(window, { key: "5" });
   act(() => vi.advanceTimersByTime(500));
   expect(screen.getByText(/You beat the target by/)).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Send result to friend" }),
+  ).toBeTruthy();
+});
+
+it("labels the asynchronous mode and offers a live room", () => {
+  const onLiveChallenge = vi.fn();
+  const challenge = {
+    version: 1 as const,
+    puzzle:
+      ".34678912672195348198342567859761423426853791713924856961537284287419635345286179",
+    difficulty: "easy" as const,
+    assistLevel: "standard" as const,
+    timeSeconds: 222,
+    hintsUsed: 0,
+  };
+  render(
+    <ChallengeGame
+      challenge={challenge}
+      onBack={vi.fn()}
+      onLiveChallenge={onLiveChallenge}
+    />,
+  );
+  expect(screen.getByText(/Time challenge · asynchronous/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Play live instead" }));
+  expect(onLiveChallenge).toHaveBeenCalledOnce();
 });

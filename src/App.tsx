@@ -3,6 +3,8 @@ import { ChallengeGame } from "./components/ChallengeGame.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
+import { FriendReceiptView } from "./components/FriendReceiptView.tsx";
+import { FriendRoundSetup } from "./components/FriendRoundSetup.tsx";
 import { JoinScreen } from "./components/JoinScreen.tsx";
 import { Landing } from "./components/Landing.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
@@ -173,6 +175,47 @@ function App() {
           key={challengePath(screen.challenge)}
           challenge={screen.challenge}
           onBack={() => navigate({ name: "landing" })}
+          onLiveChallenge={() =>
+            navigate({ name: "difficulty", mode: "create" })
+          }
+        />
+      );
+
+    case "receipt":
+      return (
+        <FriendReceiptView
+          receipt={screen.receipt}
+          onBack={() => navigate({ name: "landing" })}
+          onChallengeAgain={(side) =>
+            navigate({
+              name: "friendRound",
+              receipt: screen.receipt,
+              side,
+              mode: "again",
+            })
+          }
+          onBestOfThree={(side) =>
+            navigate({
+              name: "friendRound",
+              receipt: screen.receipt,
+              side,
+              mode: "bestOfThree",
+            })
+          }
+          onLiveChallenge={() =>
+            navigate({ name: "difficulty", mode: "create" })
+          }
+        />
+      );
+
+    case "friendRound":
+      return (
+        <FriendRoundSetup
+          key={`${screen.receipt.matchId}:${screen.side}:${screen.mode}`}
+          receipt={screen.receipt}
+          side={screen.side}
+          mode={screen.mode}
+          onBack={() => navigate({ name: "receipt", receipt: screen.receipt })}
         />
       );
 
