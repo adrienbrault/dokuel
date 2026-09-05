@@ -584,6 +584,23 @@ test.describe("multiplayer session", () => {
     await expect(guest.getByRole("grid").getByRole("button")).toHaveCount(81);
     await expect.poll(() => readBoard(page)).not.toBe(beforeRequest);
     expect(await readBoard(page)).toBe(await readBoard(guest));
+    const rematchPuzzle = await readBoard(page);
+    const rematchSolution = solvePuzzle(rematchPuzzle);
+    if (!rematchSolution) throw new Error("Rematch is unsolvable");
+    const rematchEmpties = [...rematchPuzzle].flatMap((cell, index) =>
+      cell === "." ? [index] : [],
+    );
+    await fillCells(page, rematchSolution, rematchEmpties);
+    await page.getByRole("dialog").getByText("You Won!").waitFor();
+    await fillCells(guest, rematchSolution, rematchEmpties);
+    await guest.getByRole("dialog").getByText("Puzzle Complete!").waitFor();
+    const comparison = page.getByRole("region", { name: "Race results" });
+    await expect(comparison.getByRole("listitem")).toHaveCount(2);
+    await expect(comparison.getByRole("status")).toContainText("ahead");
+    await page.screenshot({
+      path: screenshotPath("multiplayer-both-finished", project),
+      fullPage: true,
+    });
     await guest.close();
   });
 });
