@@ -10,6 +10,7 @@ import type { HintExplanation } from "./hint-engine.ts";
 import {
   findElimination,
   findUnlockingPlacement,
+  type RemovalPredicate,
   type UnlockingPlacement,
 } from "./techniques.ts";
 import type {
@@ -177,9 +178,9 @@ function describeRemovals(removed: { cell: number; digit: number }[]): string {
  */
 export function findEliminationHint(
   board: Board,
-  prefers?: (removed: { cell: number; digit: number }[]) => boolean,
+  preferences: RemovalPredicate[] = [],
 ): EliminationHint | null {
-  const elimination = findElimination(boardValues(board), prefers);
+  const elimination = findElimination(boardValues(board), preferences);
   if (!elimination) return null;
   const cells = [...new Set(elimination.removed.map((r) => r.cell))];
   return {

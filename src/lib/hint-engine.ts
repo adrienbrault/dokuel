@@ -7,6 +7,7 @@ import {
 } from "./singles.ts";
 import { getErrors } from "./sudoku.ts";
 import { findEliminationHint, findTechniqueHint } from "./technique-hint.ts";
+import type { RemovalPredicate } from "./techniques.ts";
 import type { ActiveHint, Board, EliminationHint, Position } from "./types.ts";
 
 // Alias, not a parallel definition: board-engine stores findHint's
@@ -74,6 +75,31 @@ function findImpossibleNote(board: Board): EliminationHint | null {
 }
 
 /**
+ * Rank eliminations by how visible they are to this player: first the
+ * ones rubbing a note out of the cell they are looking at, then the
+ * ones touching any note at all. Candidates themselves still come from
+ * placed values only, since the notes may be incomplete or wrong.
+ */
+function notePreferences(
+  board: Board,
+  selectedCell?: Position | null,
+): RemovalPredicate[] {
+  const pencilled = (cell: number, digit: number) =>
+    board[Math.floor(cell / 9)]![cell % 9]!.notes.has(digit);
+  const preferences: RemovalPredicate[] = [];
+  if (selectedCell) {
+    const key = selectedCell.row * 9 + selectedCell.col;
+    preferences.push((removed) =>
+      removed.some((r) => r.cell === key && pencilled(r.cell, r.digit)),
+    );
+  }
+  preferences.push((removed) =>
+    removed.some((r) => pencilled(r.cell, r.digit)),
+  );
+  return preferences;
+}
+
+/**
  * Find the best hint for the current board state.
  * Tries techniques in order of simplicity:
  * 1. Naked single (only one candidate possible)
@@ -133,7 +159,15 @@ export function findHint(
   // Nothing places, but a technique can still take candidates off the
   // board. That erasure is the move a player makes next, and teaching
   // it beats reading the answer out of the solution.
-  const eliminationHint = findEliminationHint(board);
+  //
+  // Which erasure, when several apply: the one the player can act on.
+  // Rubbing out a candidate they never pencilled is invisible work, so
+  // the search prefers removals that hit their own notes, and among
+  // those the notes in the cell they are looking at.
+  const eliminationHint = findEliminationHint(
+    board,
+    notePreferences(board, selectedCell),
+  );
   if (eliminationHint) return eliminationHint;
 
   // Fallback: use solution to find the target cell and explain what's possible

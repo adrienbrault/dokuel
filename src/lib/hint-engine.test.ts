@@ -390,6 +390,38 @@ describe("findHint", () => {
       expect(hint!.explanation).toContain("box 1");
       expect(hint!.explanation).toContain("r3c5");
     });
+
+    it("prefers an elimination that rubs out a digit the player pencilled", () => {
+      // Locked candidates on 4 is the cheaper find, but the player has
+      // no 4 pencilled anywhere: rubbing it out is invisible work. The
+      // naked pair takes a note they can actually see.
+      const board = parsePuzzle(ELIMINATION_ONLY);
+      board[6]![6]!.notes = new Set([1]);
+
+      const hint = findHint(board, solvePuzzle(ELIMINATION_ONLY)!);
+
+      expect(hint!.technique).toBe("naked-pair");
+      if (hint!.kind !== "elimination") throw new Error("expected elimination");
+      expect(hint!.digits).toEqual([1]);
+      expect(hint!.eliminatedCells).toEqual([{ row: 6, col: 6 }]);
+    });
+
+    it("prefers an elimination that touches the selected cell's notes", () => {
+      // Both eliminations now hit a pencilled digit, so the tie breaks
+      // toward the cell the player is looking at.
+      const board = parsePuzzle(ELIMINATION_ONLY);
+      board[2]![4]!.notes = new Set([4]);
+      board[6]![6]!.notes = new Set([1]);
+
+      const hint = findHint(board, solvePuzzle(ELIMINATION_ONLY)!, {
+        row: 6,
+        col: 6,
+      });
+
+      expect(hint!.technique).toBe("naked-pair");
+      if (hint!.kind !== "elimination") throw new Error("expected elimination");
+      expect(hint!.eliminatedCells).toEqual([{ row: 6, col: 6 }]);
+    });
   });
 
   describe("fallback", () => {
