@@ -214,6 +214,10 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 - URL reflects current screen state (solo, daily, join) for bookmarking and refresh
 - Installable: web app manifest + home-screen icons; invite links unfurl
   with a rich preview card (og:image)
+- Offline: a service worker precaches the app shell, so an installed
+  Dokuel opens with no network and solo play and the daily puzzle (both
+  fully local) keep working. Multiplayer still needs a connection: the
+  signaling worker and WebRTC traffic are never cached
 
 ### Color Palette
 - Warm neutral backgrounds (cream light theme, deep charcoal dark theme)
@@ -239,9 +243,6 @@ Speced or desired, deliberately not built yet:
   player offers their filled cells; on accept they become given cells on
   BOTH boards (notes not shared). One-sentence pitch: "Share your filled
   cells as hints for both players."
-- **Service worker / offline play** — the manifest already makes the app
-  installable; offline caching needs careful interplay with live WebRTC
-  rooms before it ships
 - **Technique-graded easy** — medium, hard, and expert are graded by
   the techniques they require (see Difficulty Selection); easy still
   relies on its clue band alone, which in practice already yields

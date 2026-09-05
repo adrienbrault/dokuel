@@ -41,6 +41,7 @@ The frontend deploys automatically on push to `main`. Multiplayer uses WebRTC pe
 - **Build**: `bun install && bun run build` → `dist/`
 - **URL**: https://dokuel.com (custom domain), https://sudoku-4cc.pages.dev (default)
 - Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
+- **Service worker**: `vite-plugin-pwa` (generateSW) precaches the built shell at build time, so solo play and the daily puzzle work offline; deep links fall back to the precached `/index.html`. Registered from `src/main.tsx` via `virtual:pwa-register`, `registerType: "autoUpdate"`, so a new deploy activates on the next load. Signaling and TURN are cross-origin and deliberately never cached; `public/_headers` serves `sw.js` with `Cache-Control: no-cache` so a worker cannot get stuck.
 
 ### Signaling Server (Cloudflare Worker)
 - **Project**: `dokuel-signaling` Worker with Durable Objects
