@@ -91,6 +91,7 @@
       "src/**",
       "signaling/src/**",
       "signaling/tests/**",
+      "functions/**",
       "scripts/**",
       "e2e/**",
       "!e2e/results",
