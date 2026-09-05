@@ -111,6 +111,19 @@ describe("generatePuzzle", () => {
     }
   });
 
+  it("keeps the technique bar in mind when every hard attempt misses", () => {
+    // An exhausted run has to ship something. Ranking a chain-free
+    // singles-only board above one that actually demanded triples or
+    // better hands the player a trivial board labelled "hard" - the
+    // exact bug the grade bar exists to prevent.
+    const puzzle = generatePuzzle("hard", seededRandom(1), {
+      attempts: 8,
+      accepts: () => false,
+    });
+
+    expect(gradePuzzle(puzzle).tier).toBeGreaterThanOrEqual(3);
+  });
+
   it("still ships a valid board when the grade bar is unreachable", () => {
     // A constant rng makes every dig identical, so the graded loop can
     // never meet its bar — generation must fall back to the best board

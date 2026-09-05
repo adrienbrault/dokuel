@@ -81,10 +81,13 @@ const GRADED_DIGS: Record<Exclude<Difficulty, "easy">, GradedDigSpec> = {
     // The chain-free guarantee: solvable start to finish on the
     // ladder, demanding at least triples/X-wing along the way.
     accepts: (grade) => grade.tier >= 3 && grade.stuckCells === 0,
-    // Fallback prefers chain-free boards, then the higher tier, then
-    // the shallower stuck depth.
+    // Fallback prefers boards that actually demanded triples or better,
+    // then the shallowest stuck depth. A chain-free board the singles
+    // solve on their own is the worse miss: it is a trivial board
+    // wearing a "hard" label, while a board that got most of the way up
+    // the ladder and stalled on a handful of cells is at least hard.
     fallbackScore: (grade) =>
-      (grade.stuckCells === 0 ? 1000 : 0) + grade.tier * 100 - grade.stuckCells,
+      (grade.tier >= 3 ? 10000 : 0) - grade.stuckCells * 10 + grade.tier,
   },
   expert: {
     // Minimal puzzles: dig to exhaustion, every remaining clue necessary.
@@ -96,6 +99,19 @@ const GRADED_DIGS: Record<Exclude<Difficulty, "easy">, GradedDigSpec> = {
     // The higher tier, then the deeper stuck.
     fallbackScore: (grade) => grade.tier * 100 + grade.stuckCells,
   },
+};
+
+/**
+ * Overrides for the graded dig loop. Generation is a search whose
+ * interesting behaviour is what it ships when the search fails, and
+ * that path is unreachable from outside without shortening the budget
+ * or moving the bar.
+ */
+export type GenerationLimits = {
+  /** Cap on dig-and-grade attempts before the fallback ships. */
+  attempts?: number | undefined;
+  /** What counts as an acceptable grade. */
+  accepts?: ((grade: PuzzleGrade) => boolean) | undefined;
 };
 
 function generateGradedPuzzle(
@@ -129,9 +145,18 @@ function generateGradedPuzzle(
 export function generatePuzzleWithSolution(
   difficulty: Difficulty,
   rng: Rng = Math.random,
+  limits: GenerationLimits = {},
 ): { puzzle: string; solution: string } {
   if (difficulty !== "easy") {
-    return generateGradedPuzzle(GRADED_DIGS[difficulty], rng);
+    const spec = GRADED_DIGS[difficulty];
+    return generateGradedPuzzle(
+      {
+        ...spec,
+        attempts: limits.attempts ?? spec.attempts,
+        accepts: limits.accepts ?? spec.accepts,
+      },
+      rng,
+    );
   }
 
   const { min, max } = DIFFICULTY_CLUES.easy;
@@ -155,8 +180,9 @@ export function generatePuzzleWithSolution(
 export function generatePuzzle(
   difficulty: Difficulty,
   rng: Rng = Math.random,
+  limits: GenerationLimits = {},
 ): string {
-  return generatePuzzleWithSolution(difficulty, rng).puzzle;
+  return generatePuzzleWithSolution(difficulty, rng, limits).puzzle;
 }
 
 /**
