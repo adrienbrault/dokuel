@@ -183,6 +183,32 @@ const TECHNIQUES: ((s: CandidateState) => Elimination | null)[] = [
 ];
 
 /**
+ * The cheapest technique that takes any candidate off the board, even
+ * when the removal exposes no placement. This is the move a player
+ * makes when nothing can be written in yet, and the hint the ladder
+ * owes them before it resorts to reading the solution.
+ *
+ * `prefers` steers the choice among competing techniques: the first
+ * one whose removals it accepts wins, and the cheapest applicable
+ * technique is the fallback.
+ */
+export function findElimination(
+  puzzle: string,
+  prefers?: (removed: { cell: number; digit: number }[]) => boolean,
+): Elimination | null {
+  const s = initCandidates(puzzle);
+  if (!s) return null;
+  let cheapest: Elimination | null = null;
+  for (const technique of TECHNIQUES) {
+    const elimination = technique(cloneCandidates(s));
+    if (!elimination) continue;
+    if (!prefers || prefers(elimination.removed)) return elimination;
+    cheapest ??= elimination;
+  }
+  return cheapest;
+}
+
+/**
  * On a board whose singles have run dry, find the elimination that
  * makes the next placement visible. Prefers an elimination that
  * unlocks a single immediately — its explanation stands on the visible

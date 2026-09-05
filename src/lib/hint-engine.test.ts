@@ -362,6 +362,36 @@ describe("findHint", () => {
     });
   });
 
+  describe("technique elimination", () => {
+    // An expert board played to the point where singles are gone and
+    // no elimination unlocks one either. The old ladder gave up here
+    // and read the answer out of the solution.
+    const ELIMINATION_ONLY =
+      ".....7..4392...715.7....86.1..7..58.7....5.3..5..2...72.5.6..796.8579...917432658";
+
+    it("teaches the elimination instead of revealing", () => {
+      const board = parsePuzzle(ELIMINATION_ONLY);
+
+      const hint = findHint(board, solvePuzzle(ELIMINATION_ONLY)!);
+
+      expect(hint).not.toBeNull();
+      expect(hint!.technique).toBe("locked-candidates");
+      if (hint!.kind !== "elimination") throw new Error("expected elimination");
+      expect(hint!.digits).toEqual([4]);
+      expect(hint!.eliminatedCells).toEqual([
+        { row: 2, col: 4 },
+        { row: 2, col: 5 },
+      ]);
+      // The two cells that confine the 4 to row 3 of its box prove it.
+      expect(hint!.relatedCells).toEqual([
+        { row: 2, col: 0 },
+        { row: 2, col: 2 },
+      ]);
+      expect(hint!.explanation).toContain("box 1");
+      expect(hint!.explanation).toContain("r3c5");
+    });
+  });
+
   describe("fallback", () => {
     it("returns a hint from solution when no simple technique applies", () => {
       // A board with many empty cells where techniques are complex

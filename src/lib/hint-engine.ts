@@ -6,7 +6,7 @@ import {
   nakedSingleAt,
 } from "./singles.ts";
 import { getErrors } from "./sudoku.ts";
-import { findTechniqueHint } from "./technique-hint.ts";
+import { findEliminationHint, findTechniqueHint } from "./technique-hint.ts";
 import type { ActiveHint, Board, EliminationHint, Position } from "./types.ts";
 
 // Alias, not a parallel definition: board-engine stores findHint's
@@ -129,6 +129,12 @@ export function findHint(
   // whose removals make the next placement visible, and teach that.
   const techniqueHint = findTechniqueHint(board);
   if (techniqueHint) return techniqueHint;
+
+  // Nothing places, but a technique can still take candidates off the
+  // board. That erasure is the move a player makes next, and teaching
+  // it beats reading the answer out of the solution.
+  const eliminationHint = findEliminationHint(board);
+  if (eliminationHint) return eliminationHint;
 
   // Fallback: use solution to find the target cell and explain what's possible
   let targetRow = -1;
