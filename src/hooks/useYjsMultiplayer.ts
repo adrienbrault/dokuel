@@ -3,6 +3,7 @@ import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
 import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
+import { watchTabLifecycle } from "./mp-tab-lifecycle.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 
 /**
@@ -115,49 +116,14 @@ export function useYjsMultiplayer({
 
       setConnected(connection.connected);
 
-      const persistSnapshot = () => {
-        room.persistSnapshot();
-      };
-
-      // Release WebRTC peer connections + signaling sockets while the
-      // tab is backgrounded: iOS Safari kills tabs under memory pressure
-      // and RTCPeerConnections are the dominant cost here. Y.Doc and
-      // persistence stay alive across the cycle.
-      const HIDE_DEBOUNCE_MS = 15_000;
-      let hideTimer: ReturnType<typeof setTimeout> | null = null;
-      const handleVisibility = () => {
-        if (document.hidden) {
-          persistSnapshot();
-          if (hideTimer === null) {
-            hideTimer = setTimeout(() => {
-              connection.disconnect();
-              room.apply({
-                type: "connectivity-changed",
-                connected: false,
-                now: now(),
-              });
-              hideTimer = null;
-            }, HIDE_DEBOUNCE_MS);
-          }
-        } else {
-          if (hideTimer !== null) {
-            clearTimeout(hideTimer);
-            hideTimer = null;
-          }
-          if (!connection.connected) {
-            connection.connect();
-            connection.announce({ id: playerId, name: playerNameRef.current });
-          }
-        }
-        room.apply({
-          type: "visibility-changed",
-          hidden: document.hidden,
-          now: now(),
-        });
-        updatePresence();
-      };
-      document.addEventListener("visibilitychange", handleVisibility);
-      window.addEventListener("pagehide", persistSnapshot);
+      const stopTabLifecycle = watchTabLifecycle({
+        connection,
+        room,
+        now,
+        reannounce: () =>
+          connection.announce({ id: playerId, name: playerNameRef.current }),
+        refreshPresence: updatePresence,
+      });
 
       // Nothing may be written before local persistence has loaded:
       // the Room's setup writes would seed clock-0 ops that race the
@@ -190,12 +156,7 @@ export function useYjsMultiplayer({
       });
 
       return () => {
-        document.removeEventListener("visibilitychange", handleVisibility);
-        window.removeEventListener("pagehide", persistSnapshot);
-        if (hideTimer !== null) {
-          clearTimeout(hideTimer);
-          hideTimer = null;
-        }
+        stopTabLifecycle();
         if (hydrateTimer !== null) {
           clearTimeout(hydrateTimer);
           hydrateTimer = null;
