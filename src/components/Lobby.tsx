@@ -1,6 +1,7 @@
 import { Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
+import { trackProductEvent } from "../lib/product-events.ts";
 import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
@@ -64,6 +65,7 @@ export function Lobby({
     if (navigator.share) {
       try {
         await navigator.share({ url: gameUrl });
+        trackProductEvent("invite_share", "live");
         return;
       } catch {
         // User cancelled or share failed, fall through to clipboard
@@ -71,6 +73,7 @@ export function Lobby({
     }
     try {
       await navigator.clipboard.writeText(gameUrl);
+      trackProductEvent("invite_share", "live");
     } catch {
       // Copy failed (permissions, lost activation) — don't claim it
       // worked, and don't surface an unhandled rejection.
@@ -90,6 +93,7 @@ export function Lobby({
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(roomState.roomId);
+              trackProductEvent("invite_share", "live");
             } catch {
               return;
             }
