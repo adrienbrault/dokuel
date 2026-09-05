@@ -1,13 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { type FriendReceipt, friendReceiptPath } from "./friend-receipt.ts";
-import { trackProductEvent } from "./product-events.ts";
 import {
   type RivalryRecord,
   readRivalryHistory,
   recordRivalry,
 } from "./rivalry.ts";
-
-vi.mock("./product-events.ts", () => ({ trackProductEvent: vi.fn() }));
 
 const receipt: FriendReceipt = {
   version: 1,
@@ -38,7 +35,6 @@ const receipt: FriendReceipt = {
 describe("friend rivalry history", () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.mocked(trackProductEvent).mockClear();
   });
 
   it("retains a receipt once and ignores repeated opens of the same match", () => {
@@ -65,30 +61,5 @@ describe("friend rivalry history", () => {
     expect(readRivalryHistory()).toHaveLength(1);
     expect(readRivalryHistory()[0]?.receipt.matchId).toBe(receipt.matchId);
     expect(friendReceiptPath(receipt)).toContain("/receipt/");
-  });
-
-  it("measures a new receipt only when the named pair returns", () => {
-    expect(recordRivalry(receipt, 1)).toBe(true);
-    expect(vi.mocked(trackProductEvent)).not.toHaveBeenCalled();
-
-    expect(
-      recordRivalry(
-        {
-          ...receipt,
-          matchId: "match-history-2",
-          challenger: { ...receipt.challenger, timeSeconds: 170 },
-        },
-        2,
-      ),
-    ).toBe(true);
-    expect(trackProductEvent).toHaveBeenCalledExactlyOnceWith(
-      "repeat_pair",
-      "friend",
-    );
-
-    expect(recordRivalry({ ...receipt, matchId: "match-history-3" }, 3)).toBe(
-      true,
-    );
-    expect(trackProductEvent).toHaveBeenCalledTimes(2);
   });
 });

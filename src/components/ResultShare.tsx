@@ -7,7 +7,6 @@ import {
   type FriendReceipt,
   friendReceiptPath,
 } from "../lib/friend-receipt.ts";
-import { trackProductEvent } from "../lib/product-events.ts";
 import type { Difficulty } from "../lib/types.ts";
 
 export function buildShareText({
@@ -80,10 +79,6 @@ export function ResultShare(props: Parameters<typeof buildShareText>[0]) {
     if (shareKind && navigator.share) {
       try {
         await navigator.share({ title: "Dokuel friend challenge", text });
-        trackProductEvent(
-          shareKind === "receipt" ? "receipt_share" : "invite_share",
-          "friend",
-        );
         return;
       } catch (error) {
         if (
@@ -97,12 +92,6 @@ export function ResultShare(props: Parameters<typeof buildShareText>[0]) {
     }
     try {
       await navigator.clipboard.writeText(text);
-      if (shareKind) {
-        trackProductEvent(
-          shareKind === "receipt" ? "receipt_share" : "invite_share",
-          "friend",
-        );
-      }
       setCopied(true);
       if (timeout.current) clearTimeout(timeout.current);
       timeout.current = setTimeout(() => setCopied(false), 2000);

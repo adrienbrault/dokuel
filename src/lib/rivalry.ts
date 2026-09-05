@@ -3,7 +3,6 @@ import {
   friendReceiptPath,
   parseFriendReceipt,
 } from "./friend-receipt.ts";
-import { trackProductEvent } from "./product-events.ts";
 import { readJson, writeJson } from "./storage.ts";
 
 export type RivalryRecord = {
@@ -46,25 +45,11 @@ export function recordRivalry(
   if (history.some((record) => record.receipt.matchId === canonical.matchId)) {
     return false;
   }
-  const repeatedPair = history.some((record) =>
-    samePair(record.receipt, canonical),
-  );
   const next: RivalryRecord[] = [
     { version: 1 as const, recordedAt, receipt: canonical },
     ...history,
   ].slice(0, MAX_RIVALRY_RECORDS);
-  const persisted = writeJson(HISTORY_KEY, next);
-  if (persisted && repeatedPair) trackProductEvent("repeat_pair", "friend");
-  return persisted;
-}
-
-function samePair(first: FriendReceipt, second: FriendReceipt): boolean {
-  return (
-    (first.challenger.name === second.challenger.name &&
-      first.friend.name === second.friend.name) ||
-    (first.challenger.name === second.friend.name &&
-      first.friend.name === second.challenger.name)
-  );
+  return writeJson(HISTORY_KEY, next);
 }
 
 function parseRecord(value: unknown): RivalryRecord | null {

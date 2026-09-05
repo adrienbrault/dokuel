@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import {
@@ -6,7 +6,6 @@ import {
   type FriendReceipt,
   type ReceiptSide,
 } from "../lib/friend-receipt.ts";
-import { trackProductEvent } from "../lib/product-events.ts";
 import { recordRivalry } from "../lib/rivalry.ts";
 
 type FriendReceiptViewProps = {
@@ -26,7 +25,6 @@ export function FriendReceiptView({
 }: FriendReceiptViewProps) {
   const comparison = compareFriendReceipt(receipt);
   const [selectedSide, setSelectedSide] = useState<ReceiptSide | null>(null);
-  const trackedReceipt = useRef<string | null>(null);
   const canStartSeries = comparison.outcome !== "practice" && !receipt.series;
   const canContinueSeries =
     receipt.series !== undefined &&
@@ -35,9 +33,6 @@ export function FriendReceiptView({
     receipt.series.friendWins < 2;
   useEffect(() => {
     recordRivalry(receipt);
-    if (trackedReceipt.current === receipt.matchId) return;
-    trackedReceipt.current = receipt.matchId;
-    trackProductEvent("receipt_open", "friend");
   }, [receipt]);
 
   const handleRepeat = (action: ((side: ReceiptSide) => void) | undefined) => {

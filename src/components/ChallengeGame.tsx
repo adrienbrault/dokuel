@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { challengeGameKey, type FriendChallenge } from "../lib/challenge.ts";
 import { ASSIST_LEVEL_LABELS, DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { formatTime } from "../lib/format.ts";
 import { loadGame } from "../lib/game-storage.ts";
-import { trackProductEvent } from "../lib/product-events.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
 export function ChallengeGame({
@@ -17,9 +16,6 @@ export function ChallengeGame({
 }) {
   const [started, setStarted] = useState(false);
   const gameKey = challengeGameKey(challenge);
-  useEffect(() => {
-    trackProductEvent("challenge_open", "friend");
-  }, []);
   if (started)
     return (
       <SoloGame

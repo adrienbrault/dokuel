@@ -23,7 +23,7 @@ browser, network, device, or human usability behavior.
    support a best-of-three series without requiring accounts.
 5. **Shared start and finish:** both players ready, shared countdown and puzzle
    reveal, understandable agreed rules, both results and second-finisher
-   completion. Measure duration/abandonment before deciding a quick-duel design.
+   completion. Observe play sessions before deciding a quick-duel design.
 6. **Learning:** progressive nudge, pattern, elimination, and reveal steps;
    explain intermediate deductions; offer a focused follow-up exercise and
    technique progress independent of speed.
@@ -39,12 +39,11 @@ browser, network, device, or human usability behavior.
     forced relay coverage, interrupted connectivity, WebKit, physical iOS
     background/restore evidence where access is available; connection-stage
     diagnostics and TURN-issuance rate limits.
-11. **Product measurement and experiments:** anonymous funnel and repeat-pair
-    metrics with a clear privacy choice; usable challenge/comparison sharing
-    previews; concrete research and demand experiments for quick duels,
-    cosmetics, puzzle collections, and learning content. Real user feedback
-    must be gathered rather than invented; automatic result delivery remains
-    a follow-up contingent on receipt usage.
+11. **Sharing previews and research:** usable challenge/comparison sharing
+    previews and concrete research and demand experiments for quick duels,
+    cosmetics, puzzle collections, and learning content. Product analytics,
+    event collection, and the preferences panel were removed at user request.
+    Real user feedback must be gathered rather than invented.
 
 ## Coordination
 
@@ -52,7 +51,7 @@ browser, network, device, or human usability behavior.
 - First wave: durable results, elapsed clock, room recovery in separate files.
 - Root begins accessibility while the first wave runs.
 - Follow-up waves cover social play, learning, offline recovery, operational
-  testing, and measurement after their domain dependencies stabilize.
+  testing after their domain dependencies stabilize.
 - Each behavioral change follows a failing test, implementation, and relevant
   verification. Commits remain focused and use conventional messages.
 
@@ -72,12 +71,12 @@ Implementation and verification recorded during the review:
 | Return later | Dated daily resume passed on all four viewports. Real server-loss offline reload/new-puzzle behavior passed in Chromium viewports and WebKit. Download → preview → explicit restore passed on all four viewports. Save/result retry tests cover partial daily-streak failures, retained autosaves, and idempotent repair. |
 | Architecture | Elapsed clock, result envelope, snapshot codec, identity-safe multiplayer autosave, and solo result/control components own their policies; separate SoloGame/MultiplayerBoard remain. See ADR-0002. |
 | Network/operations | Real Worker signaling between separate storage contexts passed in Chromium. Forced native TURN relay and peer interruption/reload passed in Chromium and WebKit (2/2 after diagnostics). TURN issuance is origin-gated, rate-limited, and bounded by an upstream timeout. Connection-stage diagnostics stay local. |
-| Measurement/research | Default-off consent UI, strict anonymous collector, coarse mode/duration events, local repeat-comparison history, server-rendered share previews and a concrete observation/experiment protocol. No production events or human results have been claimed. |
+| Research and sharing | Server-rendered share previews and a concrete observation/experiment protocol. No human results have been claimed. |
 
 Browser commands use a fresh Vite production build. The review ran the complete
-responsive screenshot suite (92/92) and new backup/privacy/practice/offline flows
-(16/16). Images were inspected at `e2e/screenshots/privacy-choice--iPhone-SE.png`,
-`backup-preview--iPhone-SE.png`, `technique-practice--WebKit.png`, the shared
+responsive screenshot suite (92/92) and new backup/practice/offline flows.
+Images were inspected at `e2e/screenshots/backup-preview--iPhone-SE.png`,
+`technique-practice--WebKit.png`, the shared
 countdown, dated-daily, larger-text, and source-history screenshots. Backup
 touch targets were increased to 44px after image review. Final friend comparison
 and both-finisher result images were also inspected on iPhone SE.
@@ -113,6 +112,3 @@ challenge/receipt paths. Hosted messaging previews still need a deployed check.
 - A physical iPhone, VoiceOver session, real messaging client, and recruited
   human pairs were not available to the automated run. The exact protocol and
   remaining observations are in `docs/product-experiments.md`.
-- The Worker analytics/rate-limit bindings and Pages middleware are implemented
-  locally; deploying them and collecting opted-in usage are separate external
-  actions. Aggregate counts do not identify unique users or establish causality.

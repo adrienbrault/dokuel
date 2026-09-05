@@ -11,7 +11,6 @@ import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
-import { useProductMeasurement } from "./hooks/useProductMeasurement.ts";
 import { challengePath } from "./lib/challenge.ts";
 import { generateId } from "./lib/id.ts";
 import { pathToScreen, type Screen, screenToPath } from "./lib/navigation.ts";
@@ -32,7 +31,6 @@ function App() {
   const [screen, setScreen] = useState<Screen>(() =>
     pathToScreen(window.location.pathname),
   );
-  useProductMeasurement(screen);
 
   const navigate = useCallback(
     (newScreen: Screen, { replace = false } = {}) => {

@@ -4,7 +4,6 @@ import {
   recordDailyCompletionWithStatus,
 } from "./daily-streak.ts";
 import { deleteGame } from "./game-storage.ts";
-import { trackProductEvent } from "./product-events.ts";
 import { recordResult } from "./result-store.ts";
 import type { GameOrigin } from "./result-store-types.ts";
 import { getStatsForDifficulty } from "./stats.ts";
@@ -45,7 +44,7 @@ export type GameCompletionResult = {
  * deletes the in-progress autosave, appends to per-difficulty stats,
  * and (for daily challenges) increments the streak. Single
  * integration point for any future completion-time effects
- * (achievements, share artifacts, sound, telemetry).
+ * (achievements, share artifacts, sound).
  */
 export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
   const origin = ctx.origin ?? (ctx.dailyDate ? "daily" : "generated");
@@ -67,7 +66,6 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
     },
   });
   const recordedOrigin = recorded.record.origin ?? origin;
-  trackCompletionEvent(recorded, recordedOrigin);
   const daily = recordDailyStreak(ctx.dailyDate);
   const persisted = isCompletionPersisted(recorded.persisted, daily);
   const result: GameCompletionResult = {
@@ -114,18 +112,4 @@ function isNewPersonalBest(
     hintsUsed === 0 &&
     (priorBest === null || timeSeconds < priorBest)
   );
-}
-
-function trackCompletionEvent(
-  recorded: ReturnType<typeof recordResult>,
-  origin: GameOrigin,
-): void {
-  if (recorded.duplicate || !recorded.persisted) return;
-  trackProductEvent("game_complete", productMode(origin), recorded.record.time);
-}
-
-function productMode(origin: GameOrigin): "solo" | "daily" | "friend" {
-  if (origin === "daily") return "daily";
-  if (origin === "friend") return "friend";
-  return "solo";
 }

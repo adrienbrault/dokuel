@@ -41,27 +41,6 @@ test("backup download restores a saved board only after preview confirmation", a
   ).not.toBeNull();
 });
 
-test("privacy preferences stay optional and show their exact scope", async ({
-  page,
-}, testInfo) => {
-  await page.goto("/");
-  await page.getByText("Privacy & help shape Dokuel", { exact: true }).click();
-  const consent = page.getByRole("switch", { name: "Share anonymous usage" });
-  await expect(consent).toHaveAttribute("aria-checked", "false");
-  await page.getByRole("button", { name: "Short duels" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Enable anonymous usage",
-  );
-  await consent.click();
-  await expect(consent).toHaveAttribute("aria-checked", "true");
-  await consent.click();
-  await expect(consent).toHaveAttribute("aria-checked", "false");
-  await page.screenshot({
-    path: `e2e/screenshots/privacy-choice--${testInfo.project.name.replaceAll(" ", "-")}.png`,
-    fullPage: true,
-  });
-});
-
 test("progressive hints lead to an accessible exercise on a new board", async ({
   page,
 }, testInfo) => {

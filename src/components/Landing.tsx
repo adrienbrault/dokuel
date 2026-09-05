@@ -26,7 +26,6 @@ import {
 import { getStats } from "../lib/stats.ts";
 
 import { InputGuide } from "./InputGuide.tsx";
-import { ProductPreferences } from "./ProductPreferences.tsx";
 
 type LandingProps = {
   onSolo: () => void;
@@ -159,7 +158,6 @@ export function Landing({
       </div>
 
       <InputGuide />
-      <ProductPreferences />
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"

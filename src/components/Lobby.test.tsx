@@ -4,10 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 
-vi.mock("../lib/product-events.ts", () => ({ trackProductEvent: vi.fn() }));
-
-import { trackProductEvent } from "../lib/product-events.ts";
-
 const BASE_STATE: RoomState = {
   roomId: "abc123",
   status: "lobby",
@@ -166,7 +162,6 @@ describe("Lobby", () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       "https://dokuel.com/abc123",
     );
-    expect(trackProductEvent).toHaveBeenCalledWith("invite_share", "live");
   });
 
   it("displays the room difficulty so joiners see it", () => {

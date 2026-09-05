@@ -1,44 +1,8 @@
 # Product experiments
 
 These are proposed experiments, not findings. No interviews, willingness-to-pay
-results, physical iPhone observations, or production funnel measurements have
-been collected by this implementation.
-
-## Measure the existing loop first
-
-The home screen's **Privacy & help shape Dokuel** panel defaults usage sharing
-off. Opted-in events contain version, event name, mode, and whole minutes capped
-at 240. There are no names, puzzle strings, room codes, URLs, cookies, stable
-user IDs, or pair IDs in the payload. Requests use no credentials or referrer.
-Cloudflare still receives the network address; the event dataset does not store
-it. An IP-based ephemeral rate limiter protects ingestion. No events are queued
-for later consent, and opting out immediately stops future sends.
-
-After deploying the Worker, inspect `dokuel_product_events` through Analytics
-Engine SQL. `blob1` is event, `blob2` is mode, `double1` is event count,
-`double2` is whole minutes. Account for sampling:
-
-```sql
-SELECT blob1 AS event, blob2 AS mode,
-       SUM(_sample_interval * double1) AS events,
-       SUM(_sample_interval * double2) / SUM(_sample_interval) AS mean_minutes
-FROM dokuel_product_events
-WHERE timestamp > NOW() - INTERVAL '14' DAY
-GROUP BY event, mode
-```
-
-Compare invite shares → challenge opens → starts → completions → receipt shares
-→ receipt opens. These are **aggregate counts**, not linked unique-person
-conversion rates. Reloads, resumed attempts, blocked requests, cross-device
-consent, and consent bias affect the denominator. A gap between starts and
-completions does not prove abandonment. Repeat-pair events are calculated from
-local rivalry history and send only the fact of repetition. They cannot dedupe
-two players' reports or follow people across devices. Use human observation to
-interpret these signals before adding identity or attribution machinery.
-
-Automatic result delivery should follow demonstrated receipt usage, because it
-would introduce storage, delivery, and possibly identity requirements. First
-observe whether friends actually ask for their comparisons without prompting.
+results or physical iPhone observations have been collected by this
+implementation.
 
 ## Observe five pairs and three solo learners
 
@@ -63,14 +27,13 @@ Do not record room codes, full share URLs, or participant names in the repo.
 
 ## Small demand experiments
 
-The home panel labels four ideas as under consideration. An interest click is
-weak evidence of preference, not payment intent. Count repeat clicks only once
-per visible panel session. Do not represent an unavailable item as purchasable.
+Explore these ideas through conversations and prototypes. Record preferences
+with participant consent, and do not represent an unavailable item as purchasable.
 
 | Idea | Smallest next experiment | Decision evidence |
 | --- | --- | --- |
 | Short duels | Let five pairs try a separate 3–5 minute puzzle session beside a full duel. | Prefer it only if pairs finish more often and voluntarily choose another round; record whether shorter play weakens the Sudoku experience. |
-| Board themes | Show three accessible theme mockups with the same contrast and targets. Ask people to choose at an explicit proposed price. | Proceed to a real offer only after several independent players request the same theme and accept its displayed price; an interest click alone is insufficient. |
+| Board themes | Show three accessible theme mockups with the same contrast and targets. Ask people to choose at an explicit proposed price. | Proceed to a real offer only after several independent players request the same theme and accept its displayed price. |
 | Puzzle collections | Offer a clearly described ten-puzzle themed sample with progress tracking. | Check return visits and completion over a week, then ask whether the remaining collection is worth the proposed price. |
 | Guided lessons | Run three lessons based on techniques players actually missed. | Measure solving an unseen exercise without help and voluntary return to the next lesson before producing a large curriculum. |
 
@@ -92,5 +55,3 @@ testing optional purchases. No checkout, subscription, or outreach ships here.
 
 Automated WebKit and font-size checks complement these observations; they do
 not substitute for a physical device, assistive technology, or real people.
-
-Sources: [Analytics Engine bindings and queries](https://developers.cloudflare.com/workers/examples/analytics-engine/).

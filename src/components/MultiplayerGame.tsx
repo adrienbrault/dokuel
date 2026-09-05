@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
-import { useLiveMeasurement } from "../hooks/useLiveMeasurement.ts";
 import { useSharedCountdown } from "../hooks/useSharedCountdown.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { ASSIST_LEVEL_LABELS, DIFFICULTY_LABELS } from "../lib/constants.ts";
@@ -28,7 +27,6 @@ export function MultiplayerGame({
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const countdown = useSharedCountdown(mp.roomState?.startedAt);
-  useLiveMeasurement(roomId, playerId, mp.roomState, countdown);
   const [toast, setToast] = useState<string | null>(null);
   // Arms after the disconnect has persisted for a beat; combined with
   // the live value below so the banner hides instantly on return.
