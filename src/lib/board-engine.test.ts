@@ -328,6 +328,48 @@ describe("REDO action", () => {
     expect(state.board[0]![2]!.value).toBeNull();
   });
 
+  it("replays a note toggle and a fill-notes sweep", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 9 });
+    state = reducer(state, { type: "FILL_NOTES" });
+    state = reducer(state, { type: "UNDO" });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![2]!.notes.size).toBe(0);
+
+    state = reducer(state, { type: "REDO" });
+    expect([...state.board[0]![2]!.notes]).toEqual([9]);
+
+    state = reducer(state, { type: "REDO" });
+    expect([...state.board[0]![2]!.notes].sort()).toEqual([1, 2, 4]);
+  });
+
+  it("replays a batch note toggle and a batch erase", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, {
+      type: "SET_SELECTED_CELLS",
+      cells: new Set([2, 3]),
+      primary: { row: 0, col: 2 },
+    });
+    state = reducer(state, {
+      type: "PLACE_NUMBER",
+      value: 4,
+      autoEliminateNotes: false,
+      asNote: true,
+    });
+    state = reducer(state, { type: "ERASE" });
+    state = reducer(state, { type: "UNDO" });
+    state = reducer(state, { type: "UNDO" });
+    expect(state.board[0]![3]!.notes.size).toBe(0);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.notes.has(4)).toBe(true);
+    expect(state.board[0]![3]!.notes.has(4)).toBe(true);
+
+    state = reducer(state, { type: "REDO" });
+    expect(state.board[0]![2]!.notes.size).toBe(0);
+    expect(state.board[0]![3]!.notes.size).toBe(0);
+  });
+
   it("drops the redo stack once the player acts again", () => {
     // The undone future no longer follows from the board in front of
     // the player, so replaying it would splice in an unrelated edit.
