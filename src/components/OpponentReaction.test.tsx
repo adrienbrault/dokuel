@@ -48,4 +48,22 @@ describe("OpponentReaction", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("🔥");
   });
+
+  it("ignores a fresh copy of a reaction it has already shown", () => {
+    // Awareness hands back a new object on every remote update, and
+    // the opponent's silhouette updates several times a second. The
+    // same nonce arriving in a new wrapper is not a new reaction.
+    const { rerender } = render(
+      <OpponentReaction reaction={{ emoji: "🔥", at: 1, nonce: "n1" }} />,
+    );
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    rerender(
+      <OpponentReaction reaction={{ emoji: "🔥", at: 1, nonce: "n1" }} />,
+    );
+
+    expect(screen.queryByRole("status")).toBeNull();
+  });
 });

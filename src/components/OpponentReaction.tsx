@@ -7,8 +7,8 @@ const VISIBLE_MS = 2_000;
 type OpponentReactionProps = {
   /**
    * The opponent's standing reaction, or null while they have not sent
-   * one. Its identity only changes when they send a new one, so the
-   * effect below fires once per reaction rather than once per render.
+   * one. Only its nonce identifies a new send: awareness rebuilds the
+   * object on every remote update, silhouette updates included.
    */
   reaction: Reaction | null;
 };
@@ -22,14 +22,18 @@ type OpponentReactionProps = {
  */
 export function OpponentReaction({ reaction }: OpponentReactionProps) {
   const [shown, setShown] = useState<Reaction | null>(null);
+  const nonce = reaction?.nonce ?? null;
 
+  // Keyed on the nonce, not the object: the same reaction arriving in a
+  // fresh wrapper must not buzz the phone again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reaction is read only when its nonce changes
   useEffect(() => {
     if (!reaction) return;
     setShown(reaction);
     haptics.light();
     const id = setTimeout(() => setShown(null), VISIBLE_MS);
     return () => clearTimeout(id);
-  }, [reaction]);
+  }, [nonce]);
 
   if (!shown) return null;
 
