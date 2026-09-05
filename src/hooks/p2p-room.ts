@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
+import { generatePuzzleWithSolution, solvePuzzle } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -382,6 +382,22 @@ export function getPlayers(room: P2PRoom): Player[] {
  * The caller decides when to invoke; typically only when the room has
  * no started game in Yjs but a recent snapshot exists.
  */
+/**
+ * The solution a restored room verifies win claims against. Snapshots
+ * predating the solution field carry a puzzle and nothing to check a
+ * completion against, and a claim with no solution is "unverifiable" -
+ * which room.complete() refuses, silently and forever, leaving a game
+ * that can never be won. Solving the puzzle back out costs one solver
+ * run and gives the room its verdict back.
+ */
+function restoredSolution(snap: MpSnapshot): string | null {
+  // typeof, not != null: the oldest snapshots have no solution key at
+  // all, and undefined must take the derive path rather than be
+  // written back into the room as a missing solution.
+  if (typeof snap.solution === "string") return snap.solution;
+  return typeof snap.puzzle === "string" ? solvePuzzle(snap.puzzle) : null;
+}
+
 export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
   const roomMap = room.doc.getMap("room");
   const playersMap = room.doc.getMap("players");
@@ -390,7 +406,7 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
     if (!roomMap.has("gameNumber")) roomMap.set("gameNumber", snap.gameNumber);
     if (!roomMap.has("puzzle")) roomMap.set("puzzle", snap.puzzle);
     if (!roomMap.has("solution"))
-      roomMap.set("solution", snap.solution ?? null);
+      roomMap.set("solution", restoredSolution(snap));
     if (!roomMap.has("difficulty")) roomMap.set("difficulty", snap.difficulty);
     if (!roomMap.has("assistLevel"))
       roomMap.set("assistLevel", snap.assistLevel);

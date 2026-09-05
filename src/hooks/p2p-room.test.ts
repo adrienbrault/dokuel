@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import { generatePuzzleWithSolution, solvePuzzle } from "../lib/sudoku.ts";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 import {
   claimWinner,
@@ -676,6 +677,18 @@ describe("p2p-room", () => {
       expect(room.doc.getMap("room").get("puzzle")).toBe(beforePuzzle);
       expect(room.doc.getMap("room").get("gameNumber")).toBe(beforeGameNumber);
       expect(room.doc.getMap("room").get("difficulty")).toBe("easy");
+    });
+
+    it("derives a solution for a snapshot that predates the field", () => {
+      // A room restored with a puzzle but no solution can never be
+      // won: every completion claim comes back "unverifiable", so
+      // room.complete() refuses it forever and the game has no end.
+      const room: P2PRoom = { doc: new Y.Doc(), roomId: "test-room" };
+      const { puzzle } = generatePuzzleWithSolution("easy");
+
+      hydrateRoomFromSnapshot(room, makeSnap({ puzzle, solution: null }));
+
+      expect(getRoomState(room)?.solution).toBe(solvePuzzle(puzzle));
     });
 
     it("skips players already present in the room", () => {
