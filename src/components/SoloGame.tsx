@@ -220,6 +220,7 @@ export function SoloGame({
             onErase={game.erase}
             onUndo={game.undo}
             onRedo={game.redo}
+            onFillNotes={assistLevel === "paper" ? undefined : game.fillNotes}
             historyLength={game.historyLength}
             redoLength={game.redoLength}
             onHint={game.hint}

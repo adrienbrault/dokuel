@@ -19,6 +19,33 @@ describe("GameControls", () => {
     expect(onRedo).toHaveBeenCalled();
   });
 
+  it("fills the notes through the notes button", async () => {
+    const onFillNotes = vi.fn();
+    render(
+      <GameControls
+        onErase={vi.fn()}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+        onFillNotes={onFillNotes}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Fill notes" }));
+    expect(onFillNotes).toHaveBeenCalled();
+  });
+
+  it("hides the notes button when filling is not offered", () => {
+    // Paper assist means no help at all, so the caller withholds the
+    // callback and the control disappears rather than sitting dead.
+    render(
+      <GameControls onErase={vi.fn()} onUndo={vi.fn()} onRedo={vi.fn()} />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Fill notes" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("disables redo while there is nothing to replay", () => {
     render(
       <GameControls
