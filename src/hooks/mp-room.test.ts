@@ -588,6 +588,36 @@ describe("hydration", () => {
     expect(room.snapshot().roomState?.difficulty).toBe("medium");
   });
 
+  it("still credits the opponent's solved win after a hydrated reload", () => {
+    // The loser refreshes with the peer already gone and IndexedDB
+    // stale, so the room is rebuilt from the snapshot. A snapshot that
+    // drops the winner's board reduces a verified solve to a forfeit
+    // claim, and this client - continuously present - is right to
+    // reject a forfeit. The game then never ended for them at all.
+    const solvedBoard = "1".repeat(81);
+    localStorage.setItem(
+      `dokuel_mp_snap_${ROOM_ID}`,
+      JSON.stringify({
+        ...SNAPSHOT,
+        solution: solvedBoard,
+        status: "finished",
+        winnerId: "p2",
+        winnerName: "Bob",
+        winnerBoard: solvedBoard,
+        savedAt: Date.now(),
+      }),
+    );
+    const { room } = setup(null);
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    room.apply({ type: "tick", now: room.nextWakeAt() ?? 0 });
+
+    expect(room.snapshot().gameOver).toEqual({
+      winnerId: "p2",
+      winnerName: "Bob",
+    });
+  });
+
   it("does not hold setup back when the doc already has a started game", () => {
     seedSnapshot();
     const { p2p, room } = setup(null);

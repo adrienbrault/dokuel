@@ -397,6 +397,10 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
     if (!roomMap.has("hostId")) roomMap.set("hostId", snap.hostId);
     if (!roomMap.has("winnerId")) roomMap.set("winnerId", snap.winnerId);
     if (!roomMap.has("winnerName")) roomMap.set("winnerName", snap.winnerName);
+    // Legacy snapshots have no board at all; ?? null keeps them the
+    // forfeit claims they have always been rather than "" (forged).
+    if (!roomMap.has("winnerBoard"))
+      roomMap.set("winnerBoard", snap.winnerBoard ?? null);
     snap.players.forEach((p, joinOrder) => {
       if (playersMap.has(p.id)) return;
       const pm = new Y.Map<unknown>();

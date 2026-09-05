@@ -24,6 +24,15 @@ export type MpSnapshot = {
   players: Player[];
   winnerId: string | null;
   winnerName: string | null;
+  /**
+   * The winner's completed board, the only thing that makes a win claim
+   * worth anything: without it a restored solved win reads as a forfeit
+   * claim, which a client that never went away rejects - and the game
+   * silently never ends for them. Absent in snapshots written before
+   * this field existed, which read back as a forfeit exactly as they
+   * did then.
+   */
+  winnerBoard: string | null;
   savedAt: number;
 };
 
@@ -52,6 +61,7 @@ export function saveSnapshot(roomId: string, state: RoomState): void {
     players: state.players,
     winnerId: state.winnerId,
     winnerName: state.winnerName,
+    winnerBoard: state.winnerBoard,
     savedAt: Date.now(),
   };
   try {

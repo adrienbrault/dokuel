@@ -630,6 +630,7 @@ describe("p2p-room", () => {
         ],
         winnerId: null,
         winnerName: null,
+        winnerBoard: null,
         savedAt: Date.now(),
         ...overrides,
       };
