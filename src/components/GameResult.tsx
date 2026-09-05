@@ -196,7 +196,7 @@ export function GameResult({
         aria-labelledby="game-result-title"
         onKeyDown={trapTab}
         ref={panelRef}
-        className="modal-panel gap-5 max-w-sm sm:max-w-md w-full relative"
+        className="modal-panel gap-5 short:gap-3 short:p-5 max-w-sm sm:max-w-md w-full relative"
       >
         <div className="flex flex-col items-center gap-2.5">
           <span
@@ -218,7 +218,7 @@ export function GameResult({
           )}
         </div>
         <div className="flex flex-col items-center gap-1.5 w-full rounded-2xl bg-bg-inset py-4">
-          <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
+          <span className="text-5xl short:text-4xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
             {time}
           </span>
           {isNewPB && !isMultiplayer && (
