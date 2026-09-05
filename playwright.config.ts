@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const isCI = !!process.env.CI;
+// Parallel worktrees (agents, side-by-side branches) each need their own
+// preview server, so the port is overridable instead of pinned.
+const port = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -16,14 +19,14 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 5_000 },
   use: {
-    baseURL: "http://localhost:4173",
+    baseURL: `http://localhost:${port}`,
     actionTimeout: 5_000,
     navigationTimeout: 10_000,
     trace: isCI ? "on-first-retry" : "off",
   },
   webServer: {
-    command: "bunx vite preview --port 4173 --strictPort",
-    port: 4173,
+    command: `bunx vite preview --port ${port} --strictPort`,
+    port,
     // Locally a running preview server is a convenience; on CI reusing
     // a stray server would test stale output.
     reuseExistingServer: !isCI,
