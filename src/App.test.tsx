@@ -64,6 +64,27 @@ describe("pathToScreen", () => {
     });
   });
 
+  it("reads a beat-my-time challenge off a solo link", () => {
+    expect(
+      pathToScreen("/solo/medium/abc123", "?t=252&by=Swift+Panda"),
+    ).toMatchObject({
+      name: "solo",
+      gameKey: "abc123",
+      challenge: { time: 252, by: "Swift Panda" },
+    });
+  });
+
+  it("opens the board anyway when the challenge params are malformed", () => {
+    // A link mangled by a chat client must still play, just without
+    // the challenge framing.
+    expect(pathToScreen("/solo/medium/abc123", "?t=nope&by=Ann")).toEqual({
+      name: "solo",
+      difficulty: "medium",
+      gameKey: "abc123",
+      assistLevel: "standard",
+    });
+  });
+
   it("falls back to landing for malformed solo paths", () => {
     expect(pathToScreen("/solo/nope/abc")).toEqual({ name: "landing" });
     expect(pathToScreen("/solo/easy/")).toEqual({ name: "landing" });
@@ -73,6 +94,16 @@ describe("pathToScreen", () => {
 describe("screenToPath", () => {
   it("keeps the offending path for the not-found screen", () => {
     expect(screenToPath({ name: "notFound", path: "/statss" })).toBe("/statss");
+  });
+
+  it("round-trips a solo challenge so refreshing keeps it", () => {
+    // App canonicalizes the address bar on mount by rewriting it to
+    // screenToPath(screen); dropping the query there would strip the
+    // challenge from every link the moment it opened.
+    const screen = pathToScreen("/solo/medium/abc123", "?t=252&by=Swift+Panda");
+    expect(screenToPath(screen)).toBe(
+      "/solo/medium/abc123?t=252&by=Swift+Panda",
+    );
   });
 
   it("round-trips a multiplayer room", () => {

@@ -9,6 +9,11 @@ import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { MAX_ROOM_KEY_LENGTH } from "./hooks/mp-connection.ts";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
+import {
+  challengeQuery,
+  parseChallenge,
+  type SoloChallenge,
+} from "./lib/challenge.ts";
 import { generateId } from "./lib/id.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
@@ -32,6 +37,8 @@ type Screen =
       difficulty: Difficulty;
       gameKey: string;
       assistLevel: AssistLevel;
+      /** A friend's time to beat, carried by the link that opened it. */
+      challenge?: SoloChallenge | undefined;
     }
   | { name: "daily" }
   | {
@@ -60,7 +67,7 @@ export function screenToPath(screen: Screen): string {
     case "difficulty":
       return "/";
     case "solo":
-      return `/solo/${screen.difficulty}/${screen.gameKey}`;
+      return `/solo/${screen.difficulty}/${screen.gameKey}${challengeQuery(screen.challenge)}`;
     case "daily":
       return "/daily";
     case "join":
@@ -74,7 +81,7 @@ export function screenToPath(screen: Screen): string {
   }
 }
 
-export function pathToScreen(pathname: string): Screen {
+export function pathToScreen(pathname: string, search = ""): Screen {
   const path = pathname.replace(/^\/+|\/+$/g, "");
 
   if (path === "") return { name: "landing" };
@@ -87,11 +94,13 @@ export function pathToScreen(pathname: string): Screen {
     const difficulty = parts[0] ?? "";
     const gameKey = parts[1] ?? "";
     if (VALID_DIFFICULTIES.has(difficulty) && gameKey) {
+      const challenge = parseChallenge(search);
       return {
         name: "solo",
         difficulty: difficulty as Difficulty,
         gameKey,
         assistLevel: "standard",
+        ...(challenge ? { challenge } : {}),
       };
     }
     return { name: "landing" };
@@ -116,7 +125,7 @@ export function pathToScreen(pathname: string): Screen {
 
 function App() {
   const [screen, setScreen] = useState<Screen>(() =>
-    pathToScreen(window.location.pathname),
+    pathToScreen(window.location.pathname, window.location.search),
   );
 
   const navigate = useCallback(
@@ -134,7 +143,7 @@ function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setScreen(pathToScreen(window.location.pathname));
+      setScreen(pathToScreen(window.location.pathname, window.location.search));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -146,7 +155,7 @@ function App() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only by design — navigate() already writes canonical paths
   useEffect(() => {
     const canonical = screenToPath(screen);
-    if (canonical !== window.location.pathname) {
+    if (canonical !== window.location.pathname + window.location.search) {
       window.history.replaceState(null, "", canonical);
     }
   }, []);
