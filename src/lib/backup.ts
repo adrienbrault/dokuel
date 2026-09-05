@@ -11,6 +11,12 @@ import {
   validateLearningProgress,
 } from "./learning-progress-backup.ts";
 import {
+  exportMultiplayerStats,
+  importMultiplayerStats,
+  type MultiplayerStatsBackup,
+  validateMultiplayerStatsBackup,
+} from "./multiplayer-stats.ts";
+import {
   exportSavedGames,
   replaceSavedGames,
   type SavedGameBackupEntry,
@@ -27,6 +33,7 @@ const RESULT_KEY = "sudoku_result_store";
 const STREAK_KEY = "sudoku_daily_streak";
 const LIFETIME_STREAK_KEY = "sudoku_daily_streak_lifetime";
 const SAVE_PREFIX = "sudoku_save_";
+const MULTIPLAYER_KEY = "sudoku_multiplayer_stats";
 
 export type ProgressBackup = {
   version: 1;
@@ -34,6 +41,8 @@ export type ProgressBackup = {
   resultStore: ResultStore;
   dailyStreak: DailyStreakBackup;
   learningProgress: TechniqueProgressMap;
+  /** Optional for v1 imports created before multiplayer backups existed. */
+  multiplayerStats?: MultiplayerStatsBackup;
 };
 
 export type BackupPreview = {
@@ -43,6 +52,8 @@ export type BackupPreview = {
   currentStreak: number;
   longestStreak: number;
   learningAttempts: number;
+  multiplayerResultCount: number;
+  multiplayerGamesPlayed: number;
 };
 
 export function exportBackup(): ProgressBackup {
@@ -52,6 +63,7 @@ export function exportBackup(): ProgressBackup {
     resultStore: exportResultStore(),
     dailyStreak: exportDailyStreak(),
     learningProgress: exportLearningProgress(),
+    multiplayerStats: exportMultiplayerStats(),
   };
 }
 
@@ -70,6 +82,7 @@ export function validateBackup(value: unknown): ProgressBackup | null {
       "resultStore",
       "dailyStreak",
       "learningProgress",
+      "multiplayerStats",
     ])
   ) {
     return null;
@@ -78,7 +91,17 @@ export function validateBackup(value: unknown): ProgressBackup | null {
   const resultStore = validateResultStore(parsed.resultStore);
   const dailyStreak = validateDailyStreakBackup(parsed.dailyStreak);
   const learningProgress = validateLearningProgress(parsed.learningProgress);
-  if (!savedGames || !resultStore || !dailyStreak || !learningProgress) {
+  const multiplayerStats =
+    parsed.multiplayerStats === undefined
+      ? undefined
+      : validateMultiplayerStatsBackup(parsed.multiplayerStats);
+  if (
+    !savedGames ||
+    !resultStore ||
+    !dailyStreak ||
+    !learningProgress ||
+    (parsed.multiplayerStats !== undefined && !multiplayerStats)
+  ) {
     return null;
   }
   return {
@@ -87,6 +110,7 @@ export function validateBackup(value: unknown): ProgressBackup | null {
     resultStore,
     dailyStreak,
     learningProgress,
+    ...(multiplayerStats ? { multiplayerStats } : {}),
   };
 }
 
@@ -105,6 +129,13 @@ export function previewBackup(value: unknown): BackupPreview | null {
       (total, progress) => total + progress.attempts,
       0,
     ),
+    multiplayerResultCount: backup.multiplayerStats?.recent.length ?? 0,
+    multiplayerGamesPlayed: backup.multiplayerStats
+      ? Object.values(backup.multiplayerStats.lifetime.buckets).reduce(
+          (total, bucket) => total + bucket.gamesPlayed,
+          0,
+        )
+      : 0,
   };
 }
 
@@ -117,26 +148,64 @@ export function importBackup(value: unknown): boolean {
   let savesChanged = false;
   let resultsChanged = false;
   let streakChanged = false;
+  let multiplayerChanged = false;
   try {
     if (!replaceSavedGames(backup.savedGames)) return false;
     savesChanged = true;
     if (!importResultStore(backup.resultStore)) {
-      restoreChanged(snapshot, savesChanged, resultsChanged, streakChanged);
+      restoreChanged(
+        snapshot,
+        savesChanged,
+        resultsChanged,
+        streakChanged,
+        multiplayerChanged,
+      );
       return false;
     }
     resultsChanged = true;
     if (!importDailyStreak(backup.dailyStreak)) {
-      restoreChanged(snapshot, savesChanged, resultsChanged, streakChanged);
+      restoreChanged(
+        snapshot,
+        savesChanged,
+        resultsChanged,
+        streakChanged,
+        multiplayerChanged,
+      );
       return false;
     }
     streakChanged = true;
+    if (backup.multiplayerStats) {
+      if (!importMultiplayerStats(backup.multiplayerStats)) {
+        restoreChanged(
+          snapshot,
+          savesChanged,
+          resultsChanged,
+          streakChanged,
+          multiplayerChanged,
+        );
+        return false;
+      }
+      multiplayerChanged = true;
+    }
     if (!importLearningProgress(backup.learningProgress)) {
-      restoreChanged(snapshot, savesChanged, resultsChanged, streakChanged);
+      restoreChanged(
+        snapshot,
+        savesChanged,
+        resultsChanged,
+        streakChanged,
+        multiplayerChanged,
+      );
       return false;
     }
     return true;
   } catch {
-    restoreChanged(snapshot, savesChanged, resultsChanged, streakChanged);
+    restoreChanged(
+      snapshot,
+      savesChanged,
+      resultsChanged,
+      streakChanged,
+      multiplayerChanged,
+    );
     return false;
   }
 }
@@ -163,6 +232,7 @@ function restoreChanged(
   savesChanged: boolean,
   resultsChanged: boolean,
   streakChanged: boolean,
+  multiplayerChanged: boolean,
 ): void {
   const keys = savesChanged ? saveKeys(snapshot) : new Set<string>();
   if (resultsChanged) keys.add(RESULT_KEY);
@@ -170,6 +240,7 @@ function restoreChanged(
     keys.add(STREAK_KEY);
     keys.add(LIFETIME_STREAK_KEY);
   }
+  if (multiplayerChanged) keys.add(MULTIPLAYER_KEY);
   for (const key of keys) restoreKey(key, snapshot.get(key) ?? null);
 }
 

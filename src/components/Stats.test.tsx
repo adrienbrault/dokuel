@@ -1,5 +1,12 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { exportBackupJson } from "../lib/backup.ts";
 import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { Stats } from "./Stats.tsx";
@@ -15,6 +22,34 @@ describe("Stats page — solo section", () => {
     expect(
       within(backup).getByLabelText(/import progress/i),
     ).toBeInTheDocument();
+  });
+
+  it("refreshes lifetime totals after restoring a backup", async () => {
+    saveGameResult("easy", "standard", 60, true);
+    const raw = exportBackupJson();
+    localStorage.clear();
+    render(<Stats onBack={vi.fn()} />);
+    expect(screen.getByText("0 games played")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/import progress/i), {
+      target: {
+        files: [
+          new File([raw], "dokuel-progress.json", {
+            type: "application/json",
+          }),
+        ],
+      },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText(/1 saved game|0 saved games/i),
+      ).toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /replace local progress/i }),
+    );
+
+    expect(screen.getByText("1 game played")).toBeInTheDocument();
   });
 
   it("shows lifetime totals after recent records are evicted", () => {
@@ -136,6 +171,48 @@ describe("Stats page — multiplayer section", () => {
     expect(within(section).getAllByText("50%").length).toBeGreaterThanOrEqual(
       1,
     );
+  });
+
+  it("refreshes multiplayer lifetime totals after restoring a backup", async () => {
+    saveMultiplayerGameResult({
+      difficulty: "medium",
+      assistLevel: "standard",
+      time: 300,
+      date: "2026-05-19",
+      timestamp: 1,
+      won: true,
+      opponentName: "Brave Otter",
+      roomId: "room-backup",
+      gameNumber: 1,
+    });
+    const raw = exportBackupJson();
+    localStorage.clear();
+    render(<Stats onBack={vi.fn()} />);
+    expect(
+      within(screen.getByRole("region", { name: /multiplayer/i })).getByText(
+        /no multiplayer games yet/i,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/import progress/i), {
+      target: {
+        files: [
+          new File([raw], "dokuel-progress.json", {
+            type: "application/json",
+          }),
+        ],
+      },
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/1 multiplayer result/i)).toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /replace local progress/i }),
+    );
+
+    const section = screen.getByRole("region", { name: /multiplayer/i });
+    const playedLabel = within(section).getAllByText(/^Played$/i)[0];
+    expect(playedLabel?.parentElement?.textContent).toMatch(/1Played/);
   });
 
   it("lists recent matches with opponent name, time, and outcome", () => {

@@ -112,6 +112,14 @@ export function BackupControls({ onRestored }: BackupControlsProps) {
               {formatCount(pending.preview.resultCount, "result")} ·{" "}
               {formatCount(pending.preview.lifetimeGamesPlayed, "lifetime win")}
             </p>
+            {pending.preview.multiplayerResultCount > 0 && (
+              <p className="text-sm text-text-primary">
+                {formatCount(
+                  pending.preview.multiplayerResultCount,
+                  "multiplayer result",
+                )}
+              </p>
+            )}
             <p className="caption">
               This replaces your portable local progress. Multiplayer room data
               stays on this device.

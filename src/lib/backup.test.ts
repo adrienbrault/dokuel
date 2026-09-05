@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { exportBackup, importBackup, previewBackup } from "./backup.ts";
+import {
+  exportBackup,
+  importBackup,
+  previewBackup,
+  validateBackup,
+} from "./backup.ts";
 import { getDailyStreak, recordDailyCompletion } from "./daily-streak.ts";
 import { loadGame, type SavedGame, saveGame } from "./game-storage.ts";
 import {
   getTechniqueProgress,
   recordTechniquePractice,
 } from "./learning-progress.ts";
+import {
+  getMultiplayerStats,
+  getMultiplayerSummary,
+  saveMultiplayerGameResult,
+} from "./multiplayer-stats.ts";
 import { recordResult } from "./result-store.ts";
 
 const VALID_GAME: SavedGame = {
@@ -98,6 +108,113 @@ describe("progress backup", () => {
     expect(loadGame("keep")).toEqual(VALID_GAME);
   });
 
+  it("rejects malformed files and nested modules before replacing progress", () => {
+    saveGame("keep", VALID_GAME);
+    const backup = exportBackup();
+    const invalidBackups: unknown[] = [
+      "not json",
+      null,
+      42,
+      {},
+      { ...backup, version: 2 },
+      { ...backup, savedGames: null },
+      { ...backup, resultStore: null },
+      { ...backup, resultStore: { ...backup.resultStore, recent: null } },
+      {
+        ...backup,
+        dailyStreak: { ...backup.dailyStreak, lifetime: null },
+      },
+      {
+        ...backup,
+        learningProgress: {
+          ...backup.learningProgress,
+          "naked-single": { attempts: -1, solved: 0 },
+        },
+      },
+      {
+        ...backup,
+        multiplayerStats: {
+          version: 2,
+          recent: [],
+          lifetime: { version: 1, buckets: {} },
+        },
+      },
+    ];
+    for (const invalid of [
+      ...invalidBackups,
+      { ...backup, resultStore: undefined },
+      JSON.stringify({ ...backup, dailyStreak: null }),
+    ]) {
+      expect(validateBackup(invalid)).toBeNull();
+      expect(previewBackup(invalid)).toBeNull();
+      expect(importBackup(invalid)).toBe(false);
+    }
+
+    expect(loadGame("keep")).toEqual(VALID_GAME);
+    expect(exportBackup()).toEqual(backup);
+  });
+
+  it("backs up multiplayer results without room identity and restores them locally", () => {
+    saveMultiplayerGameResult({
+      difficulty: "hard",
+      assistLevel: "standard",
+      time: 95,
+      date: "2026-03-08",
+      timestamp: 1_000,
+      won: true,
+      opponentName: "Brave Otter",
+      roomId: "private-room",
+      gameNumber: 4,
+    });
+
+    const backup = exportBackup();
+    expect(backup.multiplayerStats?.recent).toEqual([
+      expect.objectContaining({
+        difficulty: "hard",
+        opponentName: "Brave Otter",
+        time: 95,
+      }),
+    ]);
+    expect(backup.multiplayerStats?.recent[0]).not.toHaveProperty("roomId");
+    expect(backup.multiplayerStats?.recent[0]).not.toHaveProperty("gameNumber");
+    expect(JSON.stringify(backup)).not.toContain("private-room");
+    expect(previewBackup(backup)).toMatchObject({
+      multiplayerResultCount: 1,
+      multiplayerGamesPlayed: 1,
+    });
+
+    localStorage.clear();
+    expect(importBackup(backup)).toBe(true);
+    expect(getMultiplayerSummary()).toMatchObject({
+      played: 1,
+      wins: 1,
+    });
+    expect(getMultiplayerStats()[0]).toMatchObject({
+      opponentName: "Brave Otter",
+      difficulty: "hard",
+    });
+    expect(getMultiplayerStats()[0]?.roomId).not.toBe("private-room");
+  });
+
+  it("keeps multiplayer results when importing an older v1 backup", () => {
+    saveMultiplayerGameResult({
+      difficulty: "easy",
+      assistLevel: "paper",
+      time: 120,
+      date: "2026-03-08",
+      timestamp: 2_000,
+      won: false,
+      opponentName: "Clever Fox",
+      roomId: "keep-room",
+      gameNumber: 1,
+    });
+    const backup = exportBackup();
+    delete backup.multiplayerStats;
+
+    expect(importBackup(backup)).toBe(true);
+    expect(getMultiplayerSummary()).toMatchObject({ played: 1, wins: 0 });
+  });
+
   it("rolls back saved games when a later bundle write fails", () => {
     saveGame("keep", VALID_GAME);
     const before = exportBackup();
@@ -171,5 +288,51 @@ describe("progress backup", () => {
       attempts: 1,
       solved: 1,
     });
+  });
+
+  it("restores multiplayer results when a later bundle write fails", () => {
+    saveMultiplayerGameResult({
+      difficulty: "easy",
+      assistLevel: "standard",
+      time: 120,
+      date: "2026-03-08",
+      timestamp: 1_000,
+      won: true,
+      opponentName: "First Fox",
+      roomId: "first-room",
+      gameNumber: 1,
+    });
+    const before = exportBackup();
+
+    saveMultiplayerGameResult({
+      difficulty: "easy",
+      assistLevel: "standard",
+      time: 90,
+      date: "2026-03-09",
+      timestamp: 2_000,
+      won: true,
+      opponentName: "Second Fox",
+      roomId: "second-room",
+      gameNumber: 2,
+    });
+    const incoming = exportBackup();
+    expect(importBackup(before)).toBe(true);
+
+    const originalSetItem = Storage.prototype.setItem;
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key, value) {
+        if (key === "sudoku_learning_progress") throw new Error("quota");
+        return originalSetItem.call(this, key, value);
+      });
+    try {
+      expect(importBackup(incoming)).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(getMultiplayerSummary()).toMatchObject({ played: 1, wins: 1 });
+    expect(getMultiplayerStats()).toHaveLength(1);
+    expect(getMultiplayerStats()[0]?.opponentName).toBe("First Fox");
   });
 });

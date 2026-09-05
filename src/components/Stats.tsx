@@ -28,13 +28,10 @@ export function Stats({ onBack }: StatsProps) {
   const [backupRevision, setBackupRevision] = useState(0);
   const streak = getDailyStreak();
   const totalSoloWins = getLifetimeGamesPlayed();
-  const mpSummary = useMemo(() => getMultiplayerSummary(), []);
-  const mpRecent = useMemo(() => {
-    const all = getMultiplayerStats();
-    return [...all]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, RECENT_MATCHES_LIMIT);
-  }, []);
+  const mpSummary = getMultiplayerSummary();
+  const mpRecent = getMultiplayerStats()
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, RECENT_MATCHES_LIMIT);
   const totalGames = totalSoloWins + mpSummary.played;
 
   return (
