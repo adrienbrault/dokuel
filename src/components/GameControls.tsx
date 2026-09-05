@@ -1,17 +1,21 @@
-import { Eraser, Lightbulb, Undo2 } from "lucide-react";
+import { Eraser, Lightbulb, Redo2, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 type GameControlsProps = {
   onErase: () => void;
   onUndo: () => void;
+  onRedo: () => void;
   historyLength?: number | undefined;
+  redoLength?: number | undefined;
   onHint?: (() => void) | undefined;
 };
 
 export function GameControls({
   onErase,
   onUndo,
+  onRedo,
   historyLength,
+  redoLength,
   onHint,
 }: GameControlsProps) {
   return (
@@ -22,6 +26,13 @@ export function GameControls({
         disabled={!historyLength || historyLength === 0}
       >
         <Undo2 size={17} strokeWidth={2.25} aria-hidden="true" />
+      </ControlButton>
+      <ControlButton
+        label="Redo"
+        onClick={onRedo}
+        disabled={!redoLength || redoLength === 0}
+      >
+        <Redo2 size={17} strokeWidth={2.25} aria-hidden="true" />
       </ControlButton>
       <ControlButton label="Erase" onClick={onErase}>
         <Eraser size={17} strokeWidth={2.25} aria-hidden="true" />

@@ -263,7 +263,9 @@ export function MultiplayerBoard({
         <GameControls
           onErase={game.erase}
           onUndo={game.undo}
+          onRedo={game.redo}
           historyLength={game.historyLength}
+          redoLength={game.redoLength}
         />
       }
       settingsExtra={

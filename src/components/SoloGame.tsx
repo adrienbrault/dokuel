@@ -219,7 +219,9 @@ export function SoloGame({
           <GameControls
             onErase={game.erase}
             onUndo={game.undo}
+            onRedo={game.redo}
             historyLength={game.historyLength}
+            redoLength={game.redoLength}
             onHint={game.hint}
           />
         </>
