@@ -32,9 +32,11 @@ function baseProps() {
     difficulty: "easy" as const,
     opponentName: "Brave Otter",
     opponentProgress: null,
+    opponentMask: null,
     opponentDisconnected: false,
     gameOver: null,
     onProgress: vi.fn(),
+    onMask: vi.fn(),
     onComplete: vi.fn(),
     onRematch: vi.fn(),
     onBack: vi.fn(),
@@ -398,6 +400,38 @@ describe("MultiplayerBoard local autosave", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("MultiplayerBoard opponent silhouette", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("publishes where this board is filled, never what is in it", () => {
+    const props = baseProps();
+
+    render(<MultiplayerBoard {...props} />);
+
+    const mask = props.onMask.mock.calls.at(-1)?.[0] as string;
+    expect(mask).toBe(`000${"1".repeat(78)}`);
+  });
+
+  it("republishes the silhouette after a digit is placed", () => {
+    const props = baseProps();
+    render(<MultiplayerBoard {...props} />);
+    const before = props.onMask.mock.calls.at(-1)?.[0] as string;
+
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    fireEvent.click(
+      screen
+        .getByRole("group", { name: "Number pad" })
+        .querySelectorAll("button")[4] as HTMLElement,
+    );
+
+    const after = props.onMask.mock.calls.at(-1)?.[0] as string;
+    expect(before[0]).toBe("0");
+    expect(after[0]).toBe("1");
   });
 });
 

@@ -5,7 +5,7 @@ import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
-import { serializeBoard } from "../lib/board-engine.ts";
+import { filledMask, serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
 import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
@@ -49,9 +49,13 @@ export type MultiplayerBoardProps = {
     cellsRemaining: number;
     completionPercent: number;
   } | null;
+  /** The opponent's board silhouette, published over presence. */
+  opponentMask: string | null;
   opponentDisconnected: boolean;
   gameOver: { winnerId: string; winnerName: string } | null;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
+  /** Publish our own silhouette. Throttled downstream, so call it freely. */
+  onMask: (mask: string) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
   onBack: () => void;
@@ -67,9 +71,11 @@ export function MultiplayerBoard({
   assistLevel = "standard",
   opponentName,
   opponentProgress,
+  opponentMask,
   opponentDisconnected,
   gameOver,
   onProgress,
+  onMask,
   onComplete,
   onRematch,
   onBack,
@@ -136,6 +142,13 @@ export function MultiplayerBoard({
       onProgress(game.cellsRemaining, percent);
     }
   }, [game.cellsRemaining, onProgress, puzzle]);
+
+  // Publish the silhouette on every board change. Which cells are
+  // filled is race information, not game state: it rides presence, so
+  // it costs nothing to send often and vanishes with the player.
+  useEffect(() => {
+    onMask(filledMask(game.board as Cell[][]));
+  }, [game.board, onMask]);
 
   // Check completion — the claim ships the actual filled board so the
   // opponent's client can verify it against the room's solution.
@@ -279,9 +292,11 @@ export function MultiplayerBoard({
           iFinished={iFinished}
           showOpponentProgress={showOpponentProgress}
           opponentProgress={opponentProgress}
+          opponentMask={opponentMask}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
           myCellsRemaining={game.cellsRemaining}
+          puzzle={puzzle}
         />
       }
       footer={

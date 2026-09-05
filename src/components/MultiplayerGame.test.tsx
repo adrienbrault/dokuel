@@ -53,6 +53,8 @@ function makeMp() {
     error: null,
     sendStartGame: vi.fn(),
     sendProgress: vi.fn(),
+    sendMask: vi.fn(),
+    opponentMask: null as string | null,
     sendComplete: vi.fn(),
     claimForfeitWin: vi.fn(),
     sendRematch: vi.fn(),

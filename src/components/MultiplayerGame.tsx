@@ -97,9 +97,11 @@ export function MultiplayerGame({
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
           opponentName={opponent?.name ?? ""}
           opponentProgress={mp.opponentProgress}
+          opponentMask={mp.opponentMask}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
           onProgress={mp.sendProgress}
+          onMask={mp.sendMask}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
           onBack={onBack}

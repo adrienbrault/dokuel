@@ -17,8 +17,8 @@ export function ProgressBar({
   color,
 }: ProgressBarProps) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-text-secondary w-20 shrink-0 truncate">
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-text-secondary w-16 shrink-0 truncate">
         {label}
       </span>
       <div className="flex-1 min-w-0 h-2 rounded-full bg-bg-raised overflow-hidden">

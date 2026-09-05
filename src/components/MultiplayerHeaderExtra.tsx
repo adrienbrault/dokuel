@@ -1,3 +1,4 @@
+import { OpponentSilhouette } from "./OpponentSilhouette.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
 
 type MultiplayerHeaderExtraProps = {
@@ -8,9 +9,13 @@ type MultiplayerHeaderExtraProps = {
     cellsRemaining: number;
     completionPercent: number;
   } | null;
+  /** The opponent's silhouette, from presence. Null until they publish one. */
+  opponentMask: string | null;
   opponentDisconnected: boolean;
   myPercent: number;
   myCellsRemaining: number;
+  /** The shared puzzle, so the silhouette can discount the givens. */
+  puzzle: string;
 };
 
 export function MultiplayerHeaderExtra({
@@ -18,9 +23,11 @@ export function MultiplayerHeaderExtra({
   iFinished,
   showOpponentProgress,
   opponentProgress,
+  opponentMask,
   opponentDisconnected,
   myPercent,
   myCellsRemaining,
+  puzzle,
 }: MultiplayerHeaderExtraProps) {
   if (gameOver && !iFinished) {
     return (
@@ -32,20 +39,14 @@ export function MultiplayerHeaderExtra({
           finished first — keep going to complete your puzzle.
         </div>
         {showOpponentProgress && opponentProgress && (
-          <div className="flex flex-col gap-1.5">
-            <ProgressBar
-              label="You"
-              percent={myPercent}
-              remaining={myCellsRemaining}
-              color="bg-accent"
-            />
-            <ProgressBar
-              label="Opponent"
-              percent={opponentProgress.completionPercent}
-              remaining={opponentProgress.cellsRemaining}
-              color="bg-opponent"
-            />
-          </div>
+          <RaceRow
+            myPercent={myPercent}
+            myCellsRemaining={myCellsRemaining}
+            opponentLabel="Opponent"
+            opponentProgress={opponentProgress}
+            opponentMask={opponentMask}
+            puzzle={puzzle}
+          />
         )}
       </div>
     );
@@ -53,7 +54,47 @@ export function MultiplayerHeaderExtra({
 
   if (showOpponentProgress && opponentProgress) {
     return (
-      <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
+      <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3">
+        <RaceRow
+          myPercent={myPercent}
+          myCellsRemaining={myCellsRemaining}
+          opponentLabel={
+            opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
+          }
+          opponentProgress={opponentProgress}
+          opponentMask={opponentMask}
+          puzzle={puzzle}
+        />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/**
+ * Both bars plus the opponent's grid, side by side. The silhouette is
+ * sized to the stacked bars beside it, so the race readout costs the
+ * header no extra height on the smallest phone.
+ */
+function RaceRow({
+  myPercent,
+  myCellsRemaining,
+  opponentLabel,
+  opponentProgress,
+  opponentMask,
+  puzzle,
+}: {
+  myPercent: number;
+  myCellsRemaining: number;
+  opponentLabel: string;
+  opponentProgress: { cellsRemaining: number; completionPercent: number };
+  opponentMask: string | null;
+  puzzle: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <ProgressBar
           label="You"
           percent={myPercent}
@@ -61,16 +102,13 @@ export function MultiplayerHeaderExtra({
           color="bg-accent"
         />
         <ProgressBar
-          label={
-            opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
-          }
+          label={opponentLabel}
           percent={opponentProgress.completionPercent}
           remaining={opponentProgress.cellsRemaining}
           color="bg-opponent"
         />
       </div>
-    );
-  }
-
-  return null;
+      <OpponentSilhouette mask={opponentMask ?? ""} puzzle={puzzle} />
+    </div>
+  );
 }
