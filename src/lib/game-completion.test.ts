@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getDailyResult } from "./daily-results.ts";
 import { isDailyCompleted } from "./daily-streak.ts";
+import { todayLocalISO } from "./date.ts";
 import { completeGame } from "./game-completion.ts";
 import { loadGame, saveGame } from "./game-storage.ts";
 import { getStatsForDifficulty } from "./stats.ts";
@@ -97,6 +99,20 @@ describe("completeGame", () => {
     expect(result.streak!.currentStreak).toBe(1);
     expect(result.streak!.lastCompletedDate).toBe(date);
     expect(isDailyCompleted(date)).toBe(true);
+  });
+
+  it("records a result for today's daily as well as the streak", () => {
+    const date = todayLocalISO();
+
+    completeGame({
+      difficulty: "medium",
+      assistLevel: "standard",
+      timeSeconds: 250,
+      hintsUsed: 0,
+      dailyDate: date,
+    });
+
+    expect(getDailyResult(date)?.time).toBe(250);
   });
 
   it("is safe to call without a gameKey (no autosave to delete)", () => {

@@ -1,3 +1,4 @@
+import { recordDailyResult } from "./daily-results.ts";
 import { type DailyStreak, recordDailyCompletion } from "./daily-streak.ts";
 import { deleteGame } from "./game-storage.ts";
 import { saveGameResult } from "./stats.ts";
@@ -40,6 +41,7 @@ export function completeGame(ctx: GameCompletionContext): GameCompletionResult {
     ctx.hintsUsed,
   );
   if (ctx.dailyDate) {
+    recordDailyResult(ctx.dailyDate, ctx.timeSeconds);
     return { streak: recordDailyCompletion(ctx.dailyDate) };
   }
   return {};
