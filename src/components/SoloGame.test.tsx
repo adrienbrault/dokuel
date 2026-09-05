@@ -219,3 +219,35 @@ describe("SoloGame numpad selection", () => {
     expect(three.className).not.toContain("bg-accent");
   });
 });
+
+describe("SoloGame challenge banner", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("names the challenger and the time to beat while playing", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={PUZZLE}
+        challenge={{ time: 252, by: "Swift Panda" }}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Swift Panda solved this in 04:12. Beat it!"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no banner when the link carried no challenge", () => {
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    expect(screen.queryByText(/Beat it!/)).not.toBeInTheDocument();
+  });
+});

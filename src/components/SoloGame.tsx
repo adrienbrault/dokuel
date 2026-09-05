@@ -4,6 +4,7 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
+import type { SoloChallenge } from "../lib/challenge.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
@@ -11,6 +12,7 @@ import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
+import { ChallengeBanner } from "./ChallengeBanner.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
@@ -31,6 +33,8 @@ type SoloGameProps = {
   dailyDate?: string | undefined;
   /** Marks the daily challenge for share text — not sniffed from the title. */
   isDaily?: boolean | undefined;
+  /** A friend's time to beat, carried by the link that opened this board. */
+  challenge?: SoloChallenge | undefined;
   onBack: () => void;
   onRematch?: (() => void) | undefined;
   onComplete?:
@@ -47,6 +51,7 @@ export function SoloGame({
   title,
   dailyDate,
   isDaily = false,
+  challenge,
   onBack,
   onRematch,
   onComplete,
@@ -212,6 +217,9 @@ export function SoloGame({
       }
       controls={
         <>
+          {challenge && game.status !== "completed" && (
+            <ChallengeBanner challenge={challenge} />
+          )}
           {game.activeHint && (
             <HintBanner hint={game.activeHint} onDismiss={game.dismissHint} />
           )}
