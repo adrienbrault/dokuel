@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { buildChallengeShareText } from "../lib/challenge.ts";
+import {
+  buildChallengeShareText,
+  describeChallengeOutcome,
+  type SoloChallenge,
+} from "../lib/challenge.ts";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -20,6 +24,8 @@ type GameResultProps = {
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
+  /** The time this board was opened to beat, if the link carried one. */
+  challenge?: SoloChallenge | undefined;
   /** Link that replays this exact board against the player's time. */
   challengeUrl?: string | undefined;
   tip?: string | undefined;
@@ -58,6 +64,7 @@ export function buildShareText({
 export function GameResult({
   isWinner,
   time,
+  timeSeconds,
   difficulty,
   isMultiplayer,
   onRematch,
@@ -67,10 +74,15 @@ export function GameResult({
   hintsUsed,
   streakInfo,
   isDaily,
+  challenge,
   challengeUrl,
   tip,
   onDismissTip,
 }: GameResultProps) {
+  const outcome =
+    challenge && timeSeconds !== undefined
+      ? describeChallengeOutcome(challenge, timeSeconds)
+      : null;
   const [copied, setCopied] = useState<"result" | "challenge" | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -215,6 +227,21 @@ export function GameResult({
             </span>
           )}
         </div>
+
+        {outcome && (
+          <div className="flex flex-col items-center gap-0.5 w-full">
+            <span
+              className={`text-base font-bold text-center ${
+                outcome.beaten ? "text-accent" : "text-text-primary"
+              }`}
+            >
+              {outcome.headline}
+            </span>
+            {outcome.delta && (
+              <span className="caption text-xs">{outcome.delta}</span>
+            )}
+          </div>
+        )}
 
         {stats && !isMultiplayer && (
           <div className="grid grid-cols-3 gap-2.5 w-full text-center">

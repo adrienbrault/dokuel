@@ -3,6 +3,7 @@ import {
   buildChallengeShareText,
   buildChallengeUrl,
   challengeQuery,
+  describeChallengeOutcome,
   parseChallenge,
   type SoloChallenge,
 } from "./challenge.ts";
@@ -83,5 +84,33 @@ describe("buildChallengeShareText", () => {
     ).toBe(
       "I solved this Medium sudoku in 04:12. Beat my time!\nhttps://dokuel.com/solo/medium/abc123?t=252&by=Ann",
     );
+  });
+});
+
+describe("describeChallengeOutcome", () => {
+  const challenge = { time: 252, by: "Swift Panda" };
+
+  it("celebrates a faster finish and states the margin", () => {
+    expect(describeChallengeOutcome(challenge, 205)).toEqual({
+      beaten: true,
+      headline: "You beat Swift Panda's 04:12!",
+      delta: "00:47 faster",
+    });
+  });
+
+  it("reports a slower finish and how far behind it landed", () => {
+    expect(describeChallengeOutcome(challenge, 300)).toEqual({
+      beaten: false,
+      headline: "Swift Panda was faster: 04:12",
+      delta: "00:48 behind",
+    });
+  });
+
+  it("calls an identical time a dead heat", () => {
+    expect(describeChallengeOutcome(challenge, 252)).toEqual({
+      beaten: false,
+      headline: "Dead heat with Swift Panda at 04:12",
+      delta: "",
+    });
   });
 });

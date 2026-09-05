@@ -1,4 +1,5 @@
 import { DIFFICULTY_LABELS } from "./constants.ts";
+import { formatTime } from "./format.ts";
 import type { Difficulty } from "./types.ts";
 
 /**
@@ -91,4 +92,42 @@ export function buildChallengeShareText({
   url: string;
 }): string {
   return `I solved this ${DIFFICULTY_LABELS[difficulty]} sudoku in ${time}. Beat my time!\n${url}`;
+}
+
+export type ChallengeOutcome = {
+  /** True only when the player finished strictly faster. */
+  beaten: boolean;
+  headline: string;
+  /** The margin, or "" for a dead heat. */
+  delta: string;
+};
+
+/**
+ * How this finish reads against the challenge it answers. Kept out of
+ * the dialog so the wording is pinned by tests rather than by markup.
+ */
+export function describeChallengeOutcome(
+  challenge: SoloChallenge,
+  timeSeconds: number,
+): ChallengeOutcome {
+  const theirs = formatTime(challenge.time);
+  if (timeSeconds < challenge.time) {
+    return {
+      beaten: true,
+      headline: `You beat ${challenge.by}'s ${theirs}!`,
+      delta: `${formatTime(challenge.time - timeSeconds)} faster`,
+    };
+  }
+  if (timeSeconds > challenge.time) {
+    return {
+      beaten: false,
+      headline: `${challenge.by} was faster: ${theirs}`,
+      delta: `${formatTime(timeSeconds - challenge.time)} behind`,
+    };
+  }
+  return {
+    beaten: false,
+    headline: `Dead heat with ${challenge.by} at ${theirs}`,
+    delta: "",
+  };
 }

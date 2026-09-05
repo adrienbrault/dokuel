@@ -276,3 +276,41 @@ describe("GameResult challenge link", () => {
     );
   });
 });
+
+describe("GameResult challenge comparison", () => {
+  it("leads with the comparison when the player wins the race", () => {
+    render(
+      <GameResult
+        isWinner={true}
+        time="03:25"
+        timeSeconds={205}
+        difficulty="medium"
+        challenge={{ time: 252, by: "Swift Panda" }}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("You beat Swift Panda's 04:12!"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("00:47 faster")).toBeInTheDocument();
+  });
+
+  it("says who was faster when the challenge stands", () => {
+    render(
+      <GameResult
+        isWinner={true}
+        time="05:00"
+        timeSeconds={300}
+        difficulty="medium"
+        challenge={{ time: 252, by: "Swift Panda" }}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Swift Panda was faster: 04:12"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("00:48 behind")).toBeInTheDocument();
+  });
+});

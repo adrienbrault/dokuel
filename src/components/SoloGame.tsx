@@ -255,6 +255,7 @@ export function SoloGame({
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
             isDaily={isDaily}
+            challenge={challenge}
             challengeUrl={
               // Daily boards are the same for everyone, so a seeded
               // link would only re-send today's puzzle; the challenge
