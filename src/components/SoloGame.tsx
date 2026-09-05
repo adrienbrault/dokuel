@@ -4,9 +4,10 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
-import type { SoloChallenge } from "../lib/challenge.ts";
+import { buildChallengeUrl, type SoloChallenge } from "../lib/challenge.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
+import { getPlayerName } from "../lib/player-identity.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Difficulty } from "../lib/types.ts";
@@ -254,6 +255,19 @@ export function SoloGame({
             hintsUsed={game.hintsUsed}
             streakInfo={streakInfo}
             isDaily={isDaily}
+            challengeUrl={
+              // Daily boards are the same for everyone, so a seeded
+              // link would only re-send today's puzzle; the challenge
+              // loop is for solo boards a friend cannot already play.
+              !isDaily && gameKey
+                ? buildChallengeUrl({
+                    difficulty,
+                    gameKey,
+                    timeSeconds: timerSecondsRef.current,
+                    by: getPlayerName(),
+                  })
+                : undefined
+            }
             tip={
               !tipDismissed && position === "bottom"
                 ? "Tip: Move the numpad to the side for faster two-finger play! Open settings (gear icon) to try it."

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildShareText, GameResult } from "./GameResult.tsx";
 
 describe("GameResult", () => {
@@ -200,5 +200,79 @@ describe("GameResult", () => {
 
     await userEvent.click(screen.getByText("New Game"));
     expect(onNewGame).toHaveBeenCalledOnce();
+  });
+});
+
+describe("GameResult challenge link", () => {
+  const CHALLENGE_URL = "https://dokuel.com/solo/medium/abc123?t=252&by=Ann";
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "share");
+  });
+
+  it("offers no challenge action without a link", () => {
+    render(<GameResult isWinner={true} time="03:42" onNewGame={vi.fn()} />);
+
+    expect(
+      screen.queryByRole("button", { name: /challenge a friend/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hands the link to the native share sheet when there is one", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { share });
+
+    render(
+      <GameResult
+        isWinner={true}
+        time="04:12"
+        difficulty="medium"
+        challengeUrl={CHALLENGE_URL}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /challenge a friend/i }),
+    );
+
+    expect(share).toHaveBeenCalledWith({
+      text: `I solved this Medium sudoku in 04:12. Beat my time!\n${CHALLENGE_URL}`,
+    });
+  });
+
+  it("copies the link and confirms only once the write lands", async () => {
+    Reflect.deleteProperty(navigator, "share");
+    let resolveWrite: () => void = () => {};
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockReturnValue(
+          new Promise<void>((resolve) => {
+            resolveWrite = resolve;
+          }),
+        ),
+      },
+    });
+
+    render(
+      <GameResult
+        isWinner={true}
+        time="04:12"
+        difficulty="medium"
+        challengeUrl={CHALLENGE_URL}
+        onNewGame={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /challenge a friend/i }),
+    );
+    expect(screen.queryByText("Copied!")).not.toBeInTheDocument();
+
+    resolveWrite();
+    expect(await screen.findByText("Copied!")).toBeInTheDocument();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining(CHALLENGE_URL),
+    );
   });
 });

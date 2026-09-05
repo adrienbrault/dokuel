@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { buildChallengeShareText } from "../lib/challenge.ts";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -19,6 +20,8 @@ type GameResultProps = {
   hintsUsed?: number | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
   isDaily?: boolean | undefined;
+  /** Link that replays this exact board against the player's time. */
+  challengeUrl?: string | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
 };
@@ -64,10 +67,11 @@ export function GameResult({
   hintsUsed,
   streakInfo,
   isDaily,
+  challengeUrl,
   tip,
   onDismissTip,
 }: GameResultProps) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"result" | "challenge" | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -108,30 +112,54 @@ export function GameResult({
     }
   };
 
-  const handleShare = () => {
-    const text = buildShareText({
-      difficulty,
-      time,
-      isNewPB,
-      hintsUsed,
-      streakInfo,
-      isDaily,
-    });
-    // Only claim "Copied!" once the write actually landed — on iOS the
-    // promise rejects when transient activation is lost.
+  // Only claim "Copied!" once the write actually landed — on iOS the
+  // promise rejects when transient activation is lost.
+  const copyToClipboard = (text: string, action: "result" | "challenge") => {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        setCopied(true);
+        setCopied(action);
         if (copiedTimerRef.current !== null) {
           clearTimeout(copiedTimerRef.current);
         }
-        copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+        copiedTimerRef.current = setTimeout(() => setCopied(null), 2000);
       })
       .catch(() => {
         // Copy failed (permissions, lost activation) — leave the
         // button label unchanged so the player can try again.
       });
+  };
+
+  const handleShare = () => {
+    copyToClipboard(
+      buildShareText({
+        difficulty,
+        time,
+        isNewPB,
+        hintsUsed,
+        streakInfo,
+        isDaily,
+      }),
+      "result",
+    );
+  };
+
+  const handleChallenge = () => {
+    if (!challengeUrl || !difficulty) return;
+    const text = buildChallengeShareText({
+      difficulty,
+      time,
+      url: challengeUrl,
+    });
+    // The share sheet is the whole point on a phone: it drops the
+    // link straight into the thread the friend is already in.
+    if (typeof navigator.share === "function") {
+      navigator.share({ text }).catch(() => {
+        // Dismissed or unsupported payload — nothing to report.
+      });
+      return;
+    }
+    copyToClipboard(text, "challenge");
   };
 
   return (
@@ -225,13 +253,22 @@ export function GameResult({
           >
             New Game
           </button>
+          {challengeUrl && difficulty && (
+            <button
+              type="button"
+              className="btn btn-secondary w-full py-3 text-lg"
+              onClick={handleChallenge}
+            >
+              {copied === "challenge" ? "Copied!" : "Challenge a friend"}
+            </button>
+          )}
           {!isMultiplayer && (
             <button
               type="button"
               className="btn btn-ghost w-full py-2"
               onClick={handleShare}
             >
-              {copied ? "Copied!" : "Share Result"}
+              {copied === "result" ? "Copied!" : "Share Result"}
             </button>
           )}
         </div>

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildChallengeShareText,
+  buildChallengeUrl,
   challengeQuery,
   parseChallenge,
   type SoloChallenge,
@@ -41,5 +43,45 @@ describe("challengeQuery", () => {
 
   it("is empty when there is no challenge", () => {
     expect(challengeQuery(undefined)).toBe("");
+  });
+});
+
+describe("buildChallengeUrl", () => {
+  it("addresses the same seeded board and carries the time and name", () => {
+    expect(
+      buildChallengeUrl({
+        difficulty: "medium",
+        gameKey: "abc123",
+        timeSeconds: 252,
+        by: "Swift Panda",
+      }),
+    ).toBe("https://dokuel.com/solo/medium/abc123?t=252&by=Swift+Panda");
+  });
+
+  it("clamps a long name so the receiver still reads a challenge", () => {
+    const url = buildChallengeUrl({
+      difficulty: "easy",
+      gameKey: "abc123",
+      timeSeconds: 60,
+      by: "M".repeat(60),
+    });
+    expect(parseChallenge(new URL(url).search)).toEqual({
+      time: 60,
+      by: "M".repeat(40),
+    });
+  });
+});
+
+describe("buildChallengeShareText", () => {
+  it("states the difficulty, the time and the link", () => {
+    expect(
+      buildChallengeShareText({
+        difficulty: "medium",
+        time: "04:12",
+        url: "https://dokuel.com/solo/medium/abc123?t=252&by=Ann",
+      }),
+    ).toBe(
+      "I solved this Medium sudoku in 04:12. Beat my time!\nhttps://dokuel.com/solo/medium/abc123?t=252&by=Ann",
+    );
   });
 });
