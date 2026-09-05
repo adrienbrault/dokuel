@@ -1,5 +1,5 @@
 import { type DailyResult, getDailyResults } from "./daily-results.ts";
-import { todayLocalISO } from "./date.ts";
+import { DAY_MS, parseDateUTC, todayLocalISO, toISODateUTC } from "./date.ts";
 
 /**
  * The first daily anyone can play. It is also where the frozen board
@@ -8,28 +8,6 @@ import { todayLocalISO } from "./date.ts";
  * ever saw.
  */
 export const FIRST_DAILY_DATE = "2026-05-01";
-
-const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Milliseconds for an ISO date, or null when it is not a real day. */
-function parseDateUTC(date: string): number | null {
-  const match = ISO_DATE.exec(date);
-  if (!match) return null;
-  const [year, month, day] = [
-    Number(match[1]),
-    Number(match[2]),
-    Number(match[3]),
-  ];
-  const ms = Date.UTC(year, month - 1, day);
-  // Date.UTC happily rolls 2026-02-31 into March; a round-trip is the
-  // cheapest way to reject days that never existed.
-  return new Date(ms).toISOString().slice(0, 10) === date ? ms : null;
-}
-
-function toISO(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
-}
 
 /**
  * Whether a date has a daily to play: a real calendar day, no earlier
@@ -75,7 +53,7 @@ export function listDailyArchive({
   const results = getDailyResults();
   const months: ArchiveMonth[] = [];
   for (let ms = end, count = 0; ms >= first && count < limit; ms -= DAY_MS) {
-    const date = toISO(ms);
+    const date = toISODateUTC(ms);
     const month = date.slice(0, 7);
     if (months[months.length - 1]?.month !== month) {
       months.push({ month, entries: [] });

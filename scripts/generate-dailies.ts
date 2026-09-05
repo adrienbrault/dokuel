@@ -18,6 +18,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getDailyPuzzle } from "../src/lib/daily.ts";
+import { DAY_MS, parseDateUTC, toISODateUTC } from "../src/lib/date.ts";
 
 const OUT_PATH = join(import.meta.dirname, "..", "src", "lib", "dailies.json");
 
@@ -25,12 +26,12 @@ const OUT_PATH = join(import.meta.dirname, "..", "src", "lib", "dailies.json");
 const FIRST_DATE = "2026-05-01";
 const LAST_DATE = "2027-12-31";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function* dateRange(first: string, last: string): Generator<string> {
-  const end = Date.parse(`${last}T00:00:00Z`);
-  for (let t = Date.parse(`${first}T00:00:00Z`); t <= end; t += DAY_MS) {
-    yield new Date(t).toISOString().slice(0, 10);
+  const start = parseDateUTC(first);
+  const end = parseDateUTC(last);
+  if (start === null || end === null) throw new Error("invalid date range");
+  for (let t = start; t <= end; t += DAY_MS) {
+    yield toISODateUTC(t);
   }
 }
 
