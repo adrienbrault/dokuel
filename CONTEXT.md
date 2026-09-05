@@ -43,7 +43,13 @@ elimination strips a placed digit from its peers' notes.
 How many of a digit 1–9 are still unplaced. A digit at zero is complete.
 
 **Hint**:
-Selecting a deducible cell and explaining why. A hint never writes a value.
+Selecting a useful deduction and explaining why through nudge, pattern,
+elimination, and reveal stages. Some deductions remove candidates without
+placing a digit. A hint never writes a value.
+
+**Technique practice**:
+A focused deduction on a different board, with attempted and successful
+answers tracked separately from solving speed.
 
 **Daily**:
 The deterministic puzzle for a calendar date — the same board on any device.
@@ -59,6 +65,22 @@ result instead of a competitive comparison.
 
 **Game key**:
 The identity of one playable game; also the seed for a shareable solo puzzle.
+
+**Attempt**:
+One playthrough with a stable completion identity across saves and reloads.
+Starting a previously completed puzzle creates a replay attempt.
+
+**Puzzle origin**:
+Generated, daily, friend, imported, or replay. Records remain separate by
+origin and strongest assist level so unlike solves do not compete for a PB.
+
+**Result receipt**:
+A portable link containing both friends' results and their comparison. It
+can be returned through any messaging app without an account or delivery server.
+
+**Elapsed clock**:
+The duration policy for an attempt. Solo counts active play; a live race uses
+the shared wall-clock start and continues through disconnects and reloads.
 
 ### Input
 
@@ -154,7 +176,12 @@ _Avoid_: host/guest (host is narrower, see below)
 
 **Host**:
 The creator's standing claim in the room. Only gates who may change the
-difficulty in the lobby; either seated player may start.
+difficulty in the lobby; both seated players must agree before play starts.
+
+**Ready**:
+A player's agreement to the current puzzle rules. Changing difficulty or
+assist level clears readiness. Both ready players trigger a shared countdown;
+the board is revealed only when that countdown ends.
 
 **Seat**:
 A player's position in the room's agreed ordering. Every peer must agree on
@@ -191,7 +218,8 @@ alone leaves the unfinished board playable.
 **Snapshot**:
 The synchronous local mirror of a room's state kept for crash and reload
 recovery. Not the projected room state used for rendering — call that *room
-state*.
+state*. A versioned snapshot preserves start time, verified finishes, and
+rematch consent as well as the puzzle and players.
 
 **Hydration grace window**:
 The short wait before a snapshot is applied to an empty room or a stale unstarted lobby so live peer
