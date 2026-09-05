@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFakeConnections } from "./mp-connection.fake.ts";
 import type { Reaction } from "./mp-connection.ts";
 import { type Session, startSession } from "./mp-session.ts";
@@ -10,6 +10,10 @@ let connections: ReturnType<typeof createFakeConnections>;
 beforeEach(() => {
   localStorage.clear();
   connections = createFakeConnections();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 async function open(): Promise<{
@@ -88,5 +92,20 @@ describe("reactions", () => {
     session.publishMask("1".repeat(81));
 
     expect(published()?.emoji).toBe("👋");
+  });
+
+  it("withdraws the reaction once it has had its moment", async () => {
+    // Presence is state, not a message: a reaction left standing would
+    // replay, buzz included, to an opponent who reloads ten minutes
+    // later. The sender takes it back after it has been seen.
+    vi.useFakeTimers();
+    const { session, published } = await open();
+    session.sendReaction("🔥");
+    expect(published()?.emoji).toBe("🔥");
+
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(published()).toBeUndefined();
+    session.close();
   });
 });

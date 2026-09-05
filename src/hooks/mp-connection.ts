@@ -137,7 +137,8 @@ export type Reaction = { emoji: string; at: number; nonce: string };
 export type PresenceSignal = {
   /** 81 chars, "1" where that player's board holds a value. */
   mask?: string;
-  reaction?: Reaction;
+  /** Explicitly undefined withdraws a standing reaction. */
+  reaction?: Reaction | undefined;
 };
 
 /**

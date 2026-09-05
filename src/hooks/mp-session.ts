@@ -29,6 +29,15 @@ const MASK_PUBLISH_INTERVAL_MS = 250;
  */
 const REACTION_INTERVAL_MS = 1_000;
 
+/**
+ * How long a reaction stays published before the sender withdraws it.
+ * Presence is last-write-wins state, not a queue: left standing, the
+ * emoji would replay (buzz included) to an opponent who reloads or
+ * reconnects minutes later. Comfortably longer than the receiver shows
+ * it for, so a slow link still lands the whole moment.
+ */
+const REACTION_LINGER_MS = 5_000;
+
 export type SessionConfig = {
   connection: Connection;
   roomId: string;
@@ -128,6 +137,7 @@ export function startSession({
   // Never on the clock's zero: that would be a reaction sent at page
   // load, swallowing the player's first real one.
   let lastReactionAt = Number.NEGATIVE_INFINITY;
+  let withdrawTimer: ReturnType<typeof setTimeout> | null = null;
   const sendReaction = (emoji: string) => {
     const at = now();
     if (at - lastReactionAt < REACTION_INTERVAL_MS) return;
@@ -136,6 +146,11 @@ export function startSession({
     // last-write-wins state, not a message queue, so 🔥 twice in a row
     // is only a change if something in the value changed.
     connection.signal({ reaction: { emoji, at, nonce: generateId() } });
+    if (withdrawTimer !== null) clearTimeout(withdrawTimer);
+    withdrawTimer = setTimeout(() => {
+      withdrawTimer = null;
+      connection.signal({ reaction: undefined });
+    }, REACTION_LINGER_MS);
   };
 
   const stopTabLifecycle = watchTabLifecycle({
@@ -178,6 +193,10 @@ export function startSession({
 
   const close = () => {
     publishMask.cancel();
+    if (withdrawTimer !== null) {
+      clearTimeout(withdrawTimer);
+      withdrawTimer = null;
+    }
     stopTabLifecycle();
     if (hydrateTimer !== null) {
       clearTimeout(hydrateTimer);
