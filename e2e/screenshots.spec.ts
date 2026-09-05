@@ -505,6 +505,19 @@ test.describe("multiplayer session", () => {
       path: screenshotPath("multiplayer-progress-bars-dark", project),
     });
 
+    // A real reaction crosses the wire: sent from the host's picker,
+    // it lands as a floating emoji over the guest's opponent bar.
+    await page.getByRole("button", { name: "Send a reaction" }).click();
+    await page.getByRole("dialog", { name: "Reactions" }).waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-reactions", project),
+    });
+    await page.getByRole("button", { name: "Send 🔥" }).click();
+    await guest.getByRole("status").filter({ hasText: "🔥" }).waitFor();
+    await guest.screenshot({
+      path: screenshotPath("multiplayer-reaction-received-dark", project),
+    });
+
     // The settings popover carries the real opponent-bar toggle.
     await page.getByLabel("Settings").click();
     await page.getByRole("switch", { name: "Opponent bar" }).waitFor();
