@@ -11,7 +11,7 @@ export function ChallengeBanner({ challenge }: { challenge: SoloChallenge }) {
   return (
     <div className="card w-full max-w-lg flex items-center gap-2 px-3 py-1.5">
       <Timer size={14} className="shrink-0 text-accent" aria-hidden="true" />
-      <p className="caption truncate">
+      <p className="text-xs sm:text-sm text-text-secondary truncate">
         {`${challenge.by} solved this in ${formatTime(challenge.time)}. Beat it!`}
       </p>
     </div>
