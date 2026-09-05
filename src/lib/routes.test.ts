@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pathToScreen, screenToPath } from "./App.tsx";
+import { pathToScreen, screenToPath } from "./routes.ts";
 
 describe("pathToScreen", () => {
   it("maps the static screens", () => {
