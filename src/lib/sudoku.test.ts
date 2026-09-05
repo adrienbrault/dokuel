@@ -124,6 +124,19 @@ describe("generatePuzzle", () => {
     expect(gradePuzzle(puzzle).tier).toBeGreaterThanOrEqual(3);
   });
 
+  it("holds the clue cap even when every hard attempt misses", () => {
+    // The accept path checked the cap; the fallback did not, so an
+    // exhausted run could ship a board outside the clue band it is
+    // supposed to define. With this seed the best-ranked attempt is a
+    // 28-clue board and a legal one is sitting right next to it.
+    const puzzle = generatePuzzle("hard", seededRandom(310), {
+      attempts: 3,
+      accepts: () => false,
+    });
+
+    expect(puzzle.replace(/\./g, "").length).toBeLessThanOrEqual(27);
+  });
+
   it("still ships a valid board when the grade bar is unreachable", () => {
     // A constant rng makes every dig identical, so the graded loop can
     // never meet its bar — generation must fall back to the best board

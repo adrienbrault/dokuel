@@ -114,6 +114,10 @@ export type GenerationLimits = {
   accepts?: ((grade: PuzzleGrade) => boolean) | undefined;
 };
 
+// Dwarfs every fallbackScore below, so staying inside the clue band
+// outranks any grading difference between two missed attempts.
+const CAP_BONUS = 1_000_000;
+
 function generateGradedPuzzle(
   spec: GradedDigSpec,
   rng: Rng,
@@ -124,10 +128,14 @@ function generateGradedPuzzle(
     const solution = generateSolvedGrid(rng);
     const puzzle = digPuzzle(solution, spec.digTarget(rng), rng);
     const grade = gradePuzzle(puzzle);
-    if (spec.accepts(grade) && countClues(puzzle) <= spec.maxClues) {
+    const withinCap = countClues(puzzle) <= spec.maxClues;
+    if (spec.accepts(grade) && withinCap) {
       return { puzzle, solution };
     }
-    const score = spec.fallbackScore(grade);
+    // The clue band is part of what the difficulty means, so a board
+    // outside it loses to any board inside it however well it grades.
+    // Only a run where nothing fit ships an over-cap board at all.
+    const score = (withinCap ? CAP_BONUS : 0) + spec.fallbackScore(grade);
     if (score > bestScore) {
       best = { puzzle, solution };
       bestScore = score;
