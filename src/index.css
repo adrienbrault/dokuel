@@ -320,6 +320,13 @@ body {
 .animate-screen-enter {
   animation: screen-enter 0.2s ease-out;
 }
+/* Screens whose content outgrows the viewport (long listings). The
+   centred default pushes their heading off the top edge, where it
+   cannot be scrolled back into view. Defined after .screen so it wins
+   on order - a Tailwind utility would lose to the component class. */
+.screen-top {
+  align-items: flex-start;
+}
 
 @keyframes cell-reveal {
   from {

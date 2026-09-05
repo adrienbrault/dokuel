@@ -30,12 +30,12 @@ export function DailyArchive({
   const hasMore = oldest !== undefined && oldest > FIRST_DAILY_DATE;
 
   return (
-    <div className="screen">
+    <div className="screen screen-top">
       <div className="screen-content gap-6 py-10">
         <div className="flex flex-col items-center gap-1">
           <h2 className="heading">Past Dailies</h2>
           <p className="text-sm text-text-muted">
-            {solved} of {entries.length} solved
+            {solved} {solved === 1 ? "day" : "days"} solved
           </p>
         </div>
 
