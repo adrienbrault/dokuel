@@ -28,7 +28,12 @@ export function OpponentReaction({ reaction }: OpponentReactionProps) {
   // fresh wrapper must not buzz the phone again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: reaction is read only when its nonce changes
   useEffect(() => {
-    if (!reaction) return;
+    if (!reaction) {
+      // The cleanup above already dropped the hide timer, so this is
+      // the only thing left that can take the emoji down.
+      setShown(null);
+      return;
+    }
     setShown(reaction);
     haptics.light();
     const id = setTimeout(() => setShown(null), VISIBLE_MS);

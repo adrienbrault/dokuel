@@ -66,4 +66,16 @@ describe("OpponentReaction", () => {
 
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("clears the emoji when the opponent's presence goes away", () => {
+    // A peer drop inside the two-second window removes their awareness
+    // entry; the emoji must not stay pinned until their next reaction.
+    const { rerender } = render(
+      <OpponentReaction reaction={{ emoji: "🔥", at: 1, nonce: "n1" }} />,
+    );
+
+    rerender(<OpponentReaction reaction={null} />);
+
+    expect(screen.queryByRole("status")).toBeNull();
+  });
 });
