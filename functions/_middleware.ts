@@ -1,11 +1,19 @@
-import { getSharePreview, renderSharePreview } from "../src/lib/share-preview.ts";
+import {
+  getSharePreview,
+  renderSharePreview,
+} from "../src/lib/share-preview.ts";
 
-export async function onRequest(context: { request: Request; next(): Promise<Response> }): Promise<Response> {
+export async function onRequest(context: {
+  request: Request;
+  next(): Promise<Response>;
+}): Promise<Response> {
   const response = await context.next();
   const preview = getSharePreview(new URL(context.request.url).pathname);
-  if (!preview || !response.headers.get("content-type")?.includes("text/html")) return response;
+  if (!preview || !response.headers.get("content-type")?.includes("text/html"))
+    return response;
   const headers = new Headers(response.headers);
   headers.delete("content-length");
+  headers.delete("content-encoding");
   headers.delete("etag");
   headers.set("X-Robots-Tag", "noindex, nofollow");
   headers.set("Referrer-Policy", "no-referrer");
@@ -13,5 +21,8 @@ export async function onRequest(context: { request: Request; next(): Promise<Res
   const url = new URL(context.request.url);
   url.search = "";
   url.hash = "";
-  return new Response(renderSharePreview(await response.text(), preview, url.href), { status: response.status, headers });
+  return new Response(
+    renderSharePreview(await response.text(), preview, url.href),
+    { status: response.status, headers },
+  );
 }
