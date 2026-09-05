@@ -20,6 +20,7 @@ async function open(): Promise<{
   session: Session;
   tick(to: number): void;
   published(): Reaction | undefined;
+  publishedMask(): string | undefined;
 }> {
   const connection = await connections.open(ROOM_ID);
   let clock = 0;
@@ -47,8 +48,34 @@ async function open(): Promise<{
         | undefined;
       return state?.signal?.reaction;
     },
+    publishedMask() {
+      const state = connections.last?.awareness.getLocalState() as
+        | { signal?: { mask?: string } }
+        | undefined;
+      return state?.signal?.mask;
+    },
   };
 }
+
+describe("silhouette", () => {
+  it("republishes the last silhouette after the tab comes back", async () => {
+    // Releasing the transport for a backgrounded tab wipes our own
+    // presence entry, silhouette included. The board has not changed
+    // when the tab returns, so nothing downstream would resend it, and
+    // the opponent would stare at an empty grid until our next move.
+    const { session, publishedMask } = await open();
+    const mask = `${"1".repeat(40)}${"0".repeat(41)}`;
+    session.publishMask(mask);
+    expect(publishedMask()).toBe(mask);
+
+    connections.last?.disconnect();
+    expect(publishedMask()).toBeUndefined();
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(publishedMask()).toBe(mask);
+    session.close();
+  });
+});
 
 describe("reactions", () => {
   it("publishes the emoji over the ephemeral channel", async () => {

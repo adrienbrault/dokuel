@@ -129,10 +129,15 @@ export function startSession({
 
   onConnected(connection.connected);
 
-  const publishMask = throttleTrailing(
-    (mask: string) => connection.signal({ mask }),
-    MASK_PUBLISH_INTERVAL_MS,
-  );
+  // The last silhouette that went out, kept so a re-announce after a
+  // backgrounded tab can put it back: releasing the transport wipes our
+  // whole presence entry, and the board it describes has not changed,
+  // so nothing upstream would publish it again on its own.
+  let lastMask: string | null = null;
+  const publishMask = throttleTrailing((mask: string) => {
+    lastMask = mask;
+    connection.signal({ mask });
+  }, MASK_PUBLISH_INTERVAL_MS);
 
   // Never on the clock's zero: that would be a reaction sent at page
   // load, swallowing the player's first real one.
@@ -157,7 +162,10 @@ export function startSession({
     connection,
     room,
     now,
-    reannounce: () => connection.announce({ id: playerId, name: playerName() }),
+    reannounce: () => {
+      connection.announce({ id: playerId, name: playerName() });
+      if (lastMask !== null) connection.signal({ mask: lastMask });
+    },
     refreshPresence: updatePresence,
   });
 
