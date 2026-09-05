@@ -61,7 +61,8 @@ jobs:
           docker run --detach --rm --name dokuel-test-turn --network host \
             coturn/coturn:4.17.2-r0-alpine \
             -n --log-file=stdout --listening-port=3478 \
-            --min-port=49160 --max-port=49180 --external-ip=127.0.0.1 \
+            --min-port=49160 --max-port=49180 \
+            --listening-ip=127.0.0.1 --relay-ip=127.0.0.1 \
             --realm=dokuel-local-test --user=dokuel:test-only-password \
             --lt-cred-mech --fingerprint --no-tls --no-dtls --no-cli \
             --allow-loopback-peers
