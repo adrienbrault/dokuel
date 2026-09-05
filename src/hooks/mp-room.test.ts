@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyUpdate, Doc, encodeStateAsUpdate, Map as YMap } from "yjs";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
-import type { Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { createRoom } from "./mp-room.ts";
 import {
   claimWinner,
@@ -18,7 +18,10 @@ const ROOM_ID = "test-room";
 // never touches the clock reads "we have been present all along".
 const T0 = 10_000_000;
 
-function setup(initialDifficulty: Difficulty | null = null) {
+function setup(
+  initialDifficulty: Difficulty | null = null,
+  initialAssistLevel: AssistLevel = "standard",
+) {
   const doc = new Doc();
   const p2p = createRoomFromDoc(doc, ROOM_ID);
   let clock = T0;
@@ -28,6 +31,7 @@ function setup(initialDifficulty: Difficulty | null = null) {
     playerId: "p1",
     playerName: () => "Alice",
     initialDifficulty,
+    initialAssistLevel,
     now: () => clock,
   });
   return {
@@ -447,6 +451,16 @@ describe("setup", () => {
     expect(doc.getMap("room").get("difficulty")).toBe("expert");
     expect(doc.getMap("room").get("hostId")).toBe("p1");
     expect(room.snapshot().roomState?.players).toHaveLength(1);
+  });
+
+  it("opens the room on the assist level the creator brought", () => {
+    // The create flow hands the player's own assistance preference to
+    // the room instead of stopping at a picker on the way in.
+    const { doc, room } = setup("expert", "full");
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(doc.getMap("room").get("assistLevel")).toBe("full");
   });
 
   it("lets a joiner write nothing but its own seat", () => {

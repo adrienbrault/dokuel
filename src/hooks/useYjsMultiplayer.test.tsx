@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Doc, encodeStateAsUpdate } from "yjs";
-import type { Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Difficulty } from "../lib/types.ts";
 import { createFakeConnections } from "./mp-connection.fake.ts";
 import {
   claimWinner,
@@ -23,9 +23,11 @@ beforeEach(() => {
 function renderRoom({
   roomId,
   difficulty,
+  assistLevel = "standard",
 }: {
   roomId: string;
   difficulty: Difficulty | null;
+  assistLevel?: AssistLevel;
 }) {
   return renderHook(() =>
     useYjsMultiplayer({
@@ -33,6 +35,7 @@ function renderRoom({
       playerId: "p1",
       playerName: "Alice",
       difficulty,
+      assistLevel,
       openConnection: connections.open,
     }),
   );
@@ -56,6 +59,20 @@ function setTabHidden(hidden: boolean) {
 }
 
 describe("useYjsMultiplayer", () => {
+  it("opens a created room on the creator's own assist level", async () => {
+    // Creating a game goes straight to the lobby now, so the level the
+    // player already set for themselves is what the room starts on.
+    const { result } = renderRoom({
+      roomId: "room-assist",
+      difficulty: "easy",
+      assistLevel: "full",
+    });
+
+    await flushSync();
+
+    expect(result.current.roomState?.assistLevel).toBe("full");
+  });
+
   it("closes a connection that finishes opening after unmount", async () => {
     // Belt and braces behind the abort: an adapter that ignored the
     // signal and resolved anyway must still not leave a live transport

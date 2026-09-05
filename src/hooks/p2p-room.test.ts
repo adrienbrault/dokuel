@@ -43,6 +43,15 @@ describe("p2p-room", () => {
       expect(room.doc.getMap("room").get("hostId")).toBe("player1");
     });
 
+    it("seats the room on the assist level the creator brought", () => {
+      // The create flow no longer stops at a picker, so the level the
+      // player set for themselves is the one the room opens on.
+      const room = createTestRoom();
+      initializeRoom(room, "player1", "medium", "full");
+
+      expect(room.doc.getMap("room").get("assistLevel")).toBe("full");
+    });
+
     it("is a no-op when the room is already initialized", () => {
       const room = createTestRoom();
       initializeRoom(room, "player1", "medium");

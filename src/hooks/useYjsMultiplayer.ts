@@ -22,6 +22,12 @@ type UseYjsMultiplayerOptions = {
   playerName: string;
   difficulty: Difficulty | null;
   /**
+   * The assist level a room this client creates opens on, read from the
+   * player's own preference: the create flow no longer stops at a
+   * picker. Ignored entirely by a joiner.
+   */
+  assistLevel?: AssistLevel;
+  /**
    * Transport adapter. Defaults to the production WebRTC/IndexedDB one;
    * tests inject the in-memory adapter from ./mp-connection.fake.ts.
    */
@@ -33,6 +39,7 @@ export function useYjsMultiplayer({
   playerId,
   playerName,
   difficulty,
+  assistLevel = "standard",
   openConnection = openWebrtcConnection,
 }: UseYjsMultiplayerOptions) {
   const [connected, setConnected] = useState(false);
@@ -48,6 +55,7 @@ export function useYjsMultiplayer({
   // Captured at mount so the joiner does not stomp on the host's
   // Yjs difficulty when re-renders happen with a different prop value.
   const initialDifficultyRef = useRef(difficulty);
+  const initialAssistLevelRef = useRef(assistLevel);
   // Read through a ref for the same reason as playerName: swapping the
   // adapter mid-room is not a thing, and a caller passing an inline
   // factory must not tear the room down on every render.
@@ -85,6 +93,7 @@ export function useYjsMultiplayer({
         playerId,
         playerName: () => playerNameRef.current,
         initialDifficulty: initialDifficultyRef.current,
+        initialAssistLevel: initialAssistLevelRef.current,
         now,
       });
       roomRef.current = room;

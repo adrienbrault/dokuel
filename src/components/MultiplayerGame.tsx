@@ -10,6 +10,8 @@ type MultiplayerGameProps = {
   playerName: string;
   roomId: string;
   difficulty: import("../lib/types.ts").Difficulty | null;
+  /** The creator's own assistance preference; a joiner's is ignored. */
+  assistLevel?: import("../lib/types.ts").AssistLevel;
   onRename?: (name: string) => void;
   onBack: () => void;
 };
@@ -19,10 +21,17 @@ export function MultiplayerGame({
   playerName,
   roomId,
   difficulty,
+  assistLevel = "standard",
   onRename,
   onBack,
 }: MultiplayerGameProps) {
-  const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
+  const mp = useYjsMultiplayer({
+    roomId,
+    playerId,
+    playerName,
+    difficulty,
+    assistLevel,
+  });
   const [toast, setToast] = useState<string | null>(null);
   // Arms after the disconnect has persisted for a beat; combined with
   // the live value below so the banner hides instantly on return.

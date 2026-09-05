@@ -44,6 +44,10 @@ export function createRoomFromDoc(doc: Y.Doc, roomId: string): P2PRoom {
  * wrong peer. Scoping the write to the creator keeps `hostId` a
  * single-author field that no concurrent write ever fights with.
  *
+ * The difficulty and assist level come from the creator's own
+ * preferences: the create flow hands them straight to the lobby rather
+ * than through a picker, and both stay editable there.
+ *
  * No-op if the room is already initialized — either from local
  * IndexedDB persistence on a refresh, or from a remote update that
  * arrived first.
@@ -52,6 +56,7 @@ export function initializeRoom(
   room: P2PRoom,
   hostId: string,
   difficulty: Difficulty,
+  assistLevel: AssistLevel = "standard",
 ): void {
   const roomMap = room.doc.getMap("room");
   if (roomMap.has("status")) return;
@@ -59,7 +64,7 @@ export function initializeRoom(
   room.doc.transact(() => {
     roomMap.set("status", "lobby");
     roomMap.set("difficulty", difficulty);
-    roomMap.set("assistLevel", "standard");
+    roomMap.set("assistLevel", assistLevel);
     roomMap.set("hostId", hostId);
     roomMap.set("puzzle", null);
     roomMap.set("solution", null);

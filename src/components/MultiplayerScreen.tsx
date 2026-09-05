@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useAssistLevel } from "../hooks/useAssistLevel.ts";
 import { generateId } from "../lib/id.ts";
 import { generatePlayerName } from "../lib/name-generator.ts";
 import type { Difficulty } from "../lib/types.ts";
@@ -55,6 +56,10 @@ export function MultiplayerScreen({
 }) {
   const playerId = useMemo(getPlayerId, []);
   const [playerName, setName] = useState(getPlayerName);
+  // Only read when this client is the creator: the room it opens starts
+  // on the assistance the player already chose for themselves, and the
+  // lobby's own selector takes over from there.
+  const { level: assistLevel } = useAssistLevel();
 
   const handleRename = useCallback((name: string) => {
     setName(name);
@@ -68,6 +73,7 @@ export function MultiplayerScreen({
       playerName={playerName}
       onRename={handleRename}
       difficulty={difficulty}
+      assistLevel={assistLevel}
       onBack={onBack}
     />
   );
