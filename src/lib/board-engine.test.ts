@@ -454,6 +454,19 @@ describe("FILL_NOTES action", () => {
     expect(state.board[0]![0]!.notes.size).toBe(0);
   });
 
+  it("adds no history entry when the notes are already filled", () => {
+    // Pressing Notes twice must not cost the player an undo step that
+    // changes nothing on the board.
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "FILL_NOTES" });
+    const filled = state;
+
+    state = reducer(state, { type: "FILL_NOTES" });
+
+    expect(state).toBe(filled);
+    expect(state.history).toHaveLength(1);
+  });
+
   it("does not count as a hint", () => {
     let state = initState({ puzzle });
     state = reducer(state, { type: "FILL_NOTES" });
