@@ -11,7 +11,10 @@ export default defineConfig({
       // Solo play and the daily puzzle are entirely local (the daily
       // board is derived from the date), so precaching the built shell
       // makes an installed Dokuel playable with no network at all.
-      registerType: "autoUpdate",
+      // Prompt, not autoUpdate: autoUpdate reloads the page the moment
+      // a new worker activates, which mid-race drops the board and the
+      // peer. src/lib/register-sw.ts decides when a reload is safe.
+      registerType: "prompt",
       strategies: "generateSW",
       // index.html links the hand-written public/manifest.webmanifest;
       // let the plugin precache it instead of generating a second one.

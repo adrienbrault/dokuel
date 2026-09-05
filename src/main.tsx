@@ -7,7 +7,7 @@ import {
   sweepStaleRoomDatabases,
   sweepStaleSnapshots,
 } from "./hooks/mp-snapshot.ts";
-import { registerServiceWorker } from "./lib/register-sw.ts";
+import { onMenuScreen, registerServiceWorker } from "./lib/register-sw.ts";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");
@@ -28,7 +28,7 @@ setTimeout(() => {
 }, 10_000);
 
 // Precache the app shell so solo and daily play survive going offline.
-// autoUpdate means a new deploy takes over on the next load; the helper
-// no-ops where there is no ServiceWorker container (jsdom, older
-// browsers).
-registerServiceWorker(registerSW);
+// A new deploy takes over with a reload, but only from a menu screen;
+// found mid-game it waits for the next launch. The helper no-ops where
+// there is no ServiceWorker container (jsdom, older browsers).
+registerServiceWorker(registerSW, onMenuScreen);
