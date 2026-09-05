@@ -91,6 +91,7 @@ export function sceneLabel(scene: string): string {
     difficulty: "Difficulty picker",
     "difficulty-dark": "Difficulty picker (dark)",
     "daily-challenge": "Daily challenge",
+    "daily-archive": "Daily · past dailies",
     "join-game": "Join game",
     "multiplayer-lobby": "Multiplayer · lobby",
     "multiplayer-progress-bars": "Multiplayer · progress bars",

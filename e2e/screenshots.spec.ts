@@ -153,6 +153,33 @@ test("daily challenge", async ({ page }, testInfo) => {
   });
 });
 
+test("daily archive", async ({ page }, testInfo) => {
+  // Seed a handful of solved dates relative to the run's own "today",
+  // so the listing shows real times instead of an all-unplayed column.
+  await page.addInitScript(() => {
+    const now = new Date();
+    const results: Record<string, { time: number; completedAt: number }> = {};
+    for (const [i, offset] of [1, 2, 4, 5, 9].entries()) {
+      const day = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - offset,
+      );
+      const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      results[iso] = { time: 190 + i * 47, completedAt: day.getTime() };
+    }
+    localStorage.setItem("sudoku_daily_results", JSON.stringify(results));
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /past dailies/i }).click();
+  await page.getByRole("heading", { name: "Past Dailies" }).waitFor();
+
+  await page.screenshot({
+    path: screenshotPath("daily-archive", testInfo.project.name),
+  });
+});
+
 test("join game screen", async ({ page }, testInfo) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Join Game" }).click();
