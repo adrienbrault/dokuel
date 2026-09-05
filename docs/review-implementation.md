@@ -58,5 +58,61 @@ browser, network, device, or human usability behavior.
 
 ## Evidence
 
-Pending. Record commands, outcomes, screenshot paths, and any external
-verification still needed as each slice completes.
+Implementation and verification recorded during the review:
+
+| Area | Evidence |
+| --- | --- |
+| Lifetime records and streaks | Tests exceed 100 games in one bucket and 60 consecutive dailies; atomic solo result envelope, replay provenance, and idempotency are covered. Multiplayer lifetime aggregates, migration, post-eviction winner corrections, and portable result backups are covered. |
+| History | Source/assist buckets plus dated recent solves; browser source filtering passed on all four viewports. Saved friend comparisons can be reopened from Stats. |
+| Clock/recovery | Injectable checkpoint clock, fractional saves, active solo timing, wall-clock live timing, versioned room snapshots, verified finishes and rematch consent; focused domain and binding tests passed. |
+| Friend loop | Validated UTF-8 receipts, named comparison, rivalry storage and share actions. Fresh-target best-of-three setter/responder flow, reload, roles, and comparison links passed on all four viewports. Canonical whole-second times prevent contradictory tie labels. |
+| Shared race | Both-ready rule agreement, three-second shared countdown, puzzle reveal gate, both finish proofs, and result comparison. Two-tab progression, consented rematch, and both-finisher browser assertions passed on all four viewports. |
+| Learning | Four hint stages, standalone elimination, safe earlier deductions, and fresh-board exercises for all twelve logical techniques. Fixture/technique matching and pre-reveal leakage tests passed; browser practice passed on all four viewports and WebKit. |
+| Accessibility | One tab stop, focus-following row navigation, status announcements, 200% root text in landscape, and bounded guide layout. Eight targeted Chromium checks and WebKit keyboard/text checks passed. Physical VoiceOver and browser zoom remain manual checks. |
+| Return later | Dated daily resume passed on all four viewports. Real server-loss offline reload/new-puzzle behavior passed in Chromium viewports and WebKit. Download → preview → explicit restore passed on all four viewports. Save/result retry tests cover partial daily-streak failures, retained autosaves, and idempotent repair. |
+| Architecture | Elapsed clock, result envelope, snapshot codec, identity-safe multiplayer autosave, and solo result/control components own their policies; separate SoloGame/MultiplayerBoard remain. See ADR-0002. |
+| Network/operations | Real Worker signaling between separate storage contexts passed in Chromium. Forced native TURN relay and peer interruption/reload passed in Chromium and WebKit (2/2 after diagnostics). TURN issuance is origin-gated, rate-limited, and bounded by an upstream timeout. Connection-stage diagnostics stay local. |
+| Measurement/research | Default-off consent UI, strict anonymous collector, coarse mode/duration events, local repeat-comparison history, server-rendered share previews and a concrete observation/experiment protocol. No production events or human results have been claimed. |
+
+Browser commands use a fresh Vite production build. The review ran the complete
+responsive screenshot suite (92/92) and new backup/privacy/practice/offline flows
+(16/16). Images were inspected at `e2e/screenshots/privacy-choice--iPhone-SE.png`,
+`backup-preview--iPhone-SE.png`, `technique-practice--WebKit.png`, the shared
+countdown, dated-daily, larger-text, and source-history screenshots. Backup
+touch targets were increased to 44px after image review. Final friend comparison
+and both-finisher result images were also inspected on iPhone SE.
+
+Final local checks passed: 941 tests in 94 files; coverage 92.37% statements,
+86.42% branches, 96.79% functions, and 94.67% lines. Lint has existing warning
+diagnostics but no errors. App, build-tool, and Worker typechecks passed.
+The documented frozen Bun install and production build both passed.
+The final social browser suite passed 8/8 using Playwright's bundled Chromium.
+A separate system-Chrome run stalled during shutdown; the desktop case also
+passed independently before the bundled-runtime verification.
+
+The actual local Pages server returned HTTP 200 with challenge-specific title,
+canonical link, no-referrer and noindex metadata. The middleware is scoped to
+challenge/receipt paths. Hosted messaging previews still need a deployed check.
+
+## Explicit limits and deployment follow-up
+
+- The provided Cloudflare log fails in automatic `npm install` before the app
+  build. The documented Pages settings are `SKIP_DEPENDENCY_INSTALL=1`,
+  `BUN_VERSION=1.3.14`, and build command
+  `bun install --frozen-lockfile && bun run build`, output `dist`.
+  Production and Preview settings have **not** been changed in Cloudflare;
+  available Wrangler authentication had expired. A successful hosted retry has
+  not been observed.
+- Direct WebKit ICE exchanged host/reflexive candidates but did not establish a
+  local route on this macOS runner, even with a longer discovery window and a
+  local STUN service. CI uses direct Chromium plus forced-relay Chromium/WebKit.
+  This does not establish direct WebKit behavior on a physical network.
+- WebKit's `context.setOffline(true)` caused an internal navigation error.
+  A dedicated server-stop test passed with the same service worker and is now
+  the regression test; it verifies real network loss without that emulation API.
+- A physical iPhone, VoiceOver session, real messaging client, and recruited
+  human pairs were not available to the automated run. The exact protocol and
+  remaining observations are in `docs/product-experiments.md`.
+- The Worker analytics/rate-limit bindings and Pages middleware are implemented
+  locally; deploying them and collecting opted-in usage are separate external
+  actions. Aggregate counts do not identify unique users or establish causality.
