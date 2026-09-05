@@ -44,6 +44,7 @@ export function useRaceProgress({
   onComplete,
 }: RaceProgressOptions): number {
   const prevCellsRef = useRef(cellsRemaining);
+  const prevMaskRef = useRef<string | null>(null);
 
   const myPercent = useMemo(
     () => completionPercent(puzzle, cellsRemaining),
@@ -60,9 +61,14 @@ export function useRaceProgress({
 
   // Which cells are filled is race information, not game state. It
   // rides presence, so it costs nothing to send often and disappears
-  // with the player.
+  // with the player. Only when it actually changed, though: the board
+  // object is rebuilt for every note and selection, none of which move
+  // a single cell from empty to filled.
   useEffect(() => {
-    onMask(filledMask(board));
+    const mask = filledMask(board);
+    if (mask === prevMaskRef.current) return;
+    prevMaskRef.current = mask;
+    onMask(mask);
   }, [board, onMask]);
 
   // The claim ships the actual filled board so the opponent's client

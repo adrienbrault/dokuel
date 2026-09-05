@@ -435,6 +435,33 @@ describe("MultiplayerBoard opponent silhouette", () => {
     expect(before[0]).toBe("0");
     expect(after[0]).toBe("1");
   });
+
+  it("does not republish the silhouette for a pencil note", () => {
+    // A note changes the board object but not which cells are filled;
+    // pencilling candidates for half a minute must not turn into a
+    // stream of identical broadcasts.
+    vi.useFakeTimers();
+    try {
+      const props = baseProps();
+      render(<MultiplayerBoard {...props} />);
+      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+      const sends = props.onMask.mock.calls.length;
+
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      expect(
+        screen.getByLabelText(/Cell row 1 column 1, empty/).textContent,
+      ).toContain("5");
+      expect(props.onMask.mock.calls.length).toBe(sends);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("MultiplayerBoard error highlighting", () => {
