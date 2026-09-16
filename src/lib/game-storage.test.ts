@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteGame,
   listSavedGames,
@@ -90,6 +90,19 @@ describe("game-storage", () => {
 describe("listSavedGames", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("lists the most recently played game first", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("older", VALID_GAME);
+    vi.setSystemTime(new Date("2026-01-02T10:00:00Z"));
+    saveGame("newer", VALID_GAME);
+    expect(listSavedGames().map((g) => g.key)).toEqual(["newer", "older"]);
   });
 
   it("omits a board the player never touched", () => {
