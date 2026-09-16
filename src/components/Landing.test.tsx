@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { saveGame } from "../lib/game-storage.ts";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadGame, saveGame } from "../lib/game-storage.ts";
 import { Landing } from "./Landing.tsx";
 
 const PUZZLE = `1${".".repeat(80)}`;
@@ -34,6 +34,21 @@ function renderLanding() {
 describe("Landing — in-progress games", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("sweeps saves it will never offer on the way in", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveInProgressGame("mp_brave-otter-4f2a_1........");
+    vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+
+    renderLanding();
+
+    expect(loadGame("mp_brave-otter-4f2a_1........")).toBeNull();
   });
 
   it("keeps the menu short, folding older games behind a toggle", async () => {
