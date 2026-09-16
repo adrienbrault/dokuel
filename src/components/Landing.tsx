@@ -21,6 +21,7 @@ import {
   deleteGame,
   listSavedGames,
   loadGame,
+  pruneAbandonedSaves,
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
@@ -49,7 +50,13 @@ export function Landing({
   const today = useMemo(() => todayLocalISO(), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
-  const [savedGames, setSavedGames] = useState(() => listSavedGames());
+  // Sweep before listing: the saves this drops are the ones the list
+  // would skip anyway, so the player sees no difference — only their
+  // storage stops filling with boards nothing can reach.
+  const [savedGames, setSavedGames] = useState(() => {
+    pruneAbandonedSaves();
+    return listSavedGames();
+  });
   const [showAllSaved, setShowAllSaved] = useState(false);
   const visibleSavedGames = showAllSaved
     ? savedGames
