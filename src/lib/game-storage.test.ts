@@ -136,6 +136,33 @@ describe("pruneAbandonedSaves", () => {
     vi.useRealTimers();
   });
 
+  it("leaves the daily challenge and anything outside the store alone", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("daily-2026-01-01-medium", {
+      ...VALID_GAME,
+      values: VALID_PUZZLE,
+    });
+    localStorage.setItem("sudoku_stats", "[]");
+    vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("daily-2026-01-01-medium")).not.toBeNull();
+    expect(localStorage.getItem("sudoku_stats")).toBe("[]");
+  });
+
+  it("leaves a save it can't read in place", () => {
+    // Unreadable is not the same as abandoned, and a corrupt save
+    // carries no stamp to age it by. The error boundary's clear-all is
+    // the deliberate way out of that state.
+    localStorage.setItem("sudoku_save_broken", "{oops");
+
+    pruneAbandonedSaves();
+
+    expect(localStorage.getItem("sudoku_save_broken")).toBe("{oops");
+  });
+
   it("deletes a board abandoned before the first digit", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
