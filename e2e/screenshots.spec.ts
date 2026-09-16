@@ -4,6 +4,7 @@ import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
   fillCells,
   holdNumpadDigit,
+  inProgressSave,
   nearlyWonSave,
   preparePage,
   priorEasyStats,
@@ -549,6 +550,49 @@ test("solo game - settings popover open", async ({ page }, testInfo) => {
 
   await page.screenshot({
     path: screenshotPath("solo-settings-popover", testInfo.project.name),
+  });
+});
+
+test.describe("landing with games in progress", () => {
+  test.use({
+    storage: {
+      "sudoku_save_e2e-a": inProgressSave({
+        difficulty: "hard",
+        timer: 845,
+        blanks: 50,
+        filled: 19,
+        updatedAt: Date.parse("2026-05-19T20:00:00Z"),
+      }),
+      "sudoku_save_e2e-b": inProgressSave({
+        difficulty: "medium",
+        timer: 312,
+        blanks: 44,
+        filled: 30,
+        updatedAt: Date.parse("2026-05-18T20:00:00Z"),
+      }),
+      "sudoku_save_e2e-c": inProgressSave({
+        difficulty: "easy",
+        timer: 96,
+        blanks: 38,
+        filled: 5,
+        updatedAt: Date.parse("2026-05-17T20:00:00Z"),
+      }),
+      "sudoku_save_e2e-d": inProgressSave({
+        difficulty: "expert",
+        timer: 1503,
+        blanks: 56,
+        filled: 41,
+        updatedAt: Date.parse("2026-05-16T20:00:00Z"),
+      }),
+    },
+  });
+
+  test("landing - games in progress", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByText("Show 1 more in progress").waitFor();
+    await page.screenshot({
+      path: screenshotPath("landing-continue", testInfo.project.name),
+    });
   });
 });
 
