@@ -10,3 +10,14 @@ export function todayLocalISO(now: Date = new Date()): string {
   const d = String(now.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+/**
+ * The instant a stored YYYY-MM-DD date began, in the reader's own
+ * timezone — the inverse of todayLocalISO. Date.parse() would read the
+ * same string as UTC midnight, which west of UTC lands on the previous
+ * local afternoon and shuffles that day's games out of order.
+ */
+export function startOfLocalDay(isoDate: string): number {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1).getTime();
+}

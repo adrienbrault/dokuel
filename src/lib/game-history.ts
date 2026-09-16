@@ -1,3 +1,4 @@
+import { startOfLocalDay } from "./date.ts";
 import { getMultiplayerStats } from "./multiplayer-stats.ts";
 import { getStats } from "./stats.ts";
 import type { AssistLevel, Difficulty } from "./types.ts";
@@ -32,7 +33,7 @@ export function getGameHistory(): GameHistoryEntry[] {
     time: s.time,
     date: s.date,
     // Results predating the stamp only know their day.
-    timestamp: s.timestamp ?? Date.parse(s.date),
+    timestamp: s.timestamp ?? startOfLocalDay(s.date),
     won: s.won,
   }));
   const duels: GameHistoryEntry[] = getMultiplayerStats().map((r) => ({
