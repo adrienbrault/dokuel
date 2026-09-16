@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   deleteGame,
+  listSavedGames,
   loadGame,
   type SavedGame,
   saveGame,
@@ -83,5 +84,17 @@ describe("game-storage", () => {
       saveGame("k", { ...VALID_GAME, timer: Number.NaN });
       expect(loadGame("k")).toBeNull();
     });
+  });
+});
+
+describe("listSavedGames", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("omits multiplayer saves — a duel board can't be resumed solo", () => {
+    saveGame("solo-1", VALID_GAME);
+    saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
+    expect(listSavedGames().map((g) => g.key)).toEqual(["solo-1"]);
   });
 });
