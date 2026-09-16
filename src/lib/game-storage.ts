@@ -159,9 +159,10 @@ const ABANDONED_SAVE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Delete the saves the landing can never offer again: duel boards,
- * whose room is long gone. listSavedGames skips them, so without this
- * they accumulate with no way for the player to see or clear them,
- * and localStorage fills up behind their back.
+ * whose room is long gone, and boards abandoned before a single digit
+ * or note. listSavedGames skips both, so without this they accumulate
+ * with no way for the player to see or clear them, and localStorage
+ * fills up behind their back.
  *
  * Daily saves are left alone — the daily screen still resumes them.
  */
@@ -177,7 +178,9 @@ export function pruneAbandonedSaves(): void {
       const game = loadGame(key);
       if (!game) continue;
       if (game.updatedAt > cutoff) continue;
-      if (key.startsWith(MULTIPLAYER_KEY_PREFIX)) stale.push(key);
+      if (key.startsWith(MULTIPLAYER_KEY_PREFIX) || !hasProgress(game)) {
+        stale.push(key);
+      }
     }
     for (const key of stale) {
       deleteGame(key);
