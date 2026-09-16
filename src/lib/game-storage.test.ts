@@ -25,7 +25,9 @@ describe("game-storage", () => {
 
   it("round-trips a saved game", () => {
     saveGame("k", VALID_GAME);
-    expect(loadGame("k")).toEqual(VALID_GAME);
+    // toMatchObject: the store also stamps updatedAt, which callers
+    // hand back to nobody.
+    expect(loadGame("k")).toMatchObject(VALID_GAME);
   });
 
   it("returns null for a missing key", () => {

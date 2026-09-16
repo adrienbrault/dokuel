@@ -12,6 +12,10 @@ export type SavedGame = {
   hintsUsed: number;
 };
 
+/** A save as it sits in storage: the game plus the moment it was
+ *  written. saveGame stamps it; callers never supply it. */
+export type StoredGame = SavedGame & { updatedAt: number };
+
 const STORAGE_PREFIX = "sudoku_save_";
 
 /** Marks an autosave as belonging to a multiplayer room (see
@@ -20,7 +24,8 @@ export const MULTIPLAYER_KEY_PREFIX = "mp_";
 
 export function saveGame(key: string, data: SavedGame): void {
   try {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+    const stored: StoredGame = { ...data, updatedAt: Date.now() };
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(stored));
   } catch {
     // localStorage full or unavailable — silently ignore
   }
@@ -43,7 +48,7 @@ function isValidNotes(notes: unknown): notes is number[][] {
   );
 }
 
-export function loadGame(key: string): SavedGame | null {
+export function loadGame(key: string): StoredGame | null {
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + key);
     if (!raw) return null;
@@ -79,7 +84,15 @@ export function loadGame(key: string): SavedGame | null {
     ) {
       data.hintsUsed = 0;
     }
-    return data as SavedGame;
+    // Saves written before the stamp existed sort as oldest rather
+    // than as "just played" — the next autosave restamps them anyway.
+    if (
+      typeof data.updatedAt !== "number" ||
+      !Number.isFinite(data.updatedAt)
+    ) {
+      data.updatedAt = 0;
+    }
+    return data as StoredGame;
   } catch {
     return null;
   }
@@ -91,11 +104,13 @@ export type SavedGameSummary = {
   filledCells: number;
   givenCells: number;
   timer: number;
+  /** Epoch ms of the last autosave; drives most-recent-first order. */
+  updatedAt: number;
 };
 
 /** A save is worth resuming once the player has entered a digit or a
  *  note of their own; until then it only carries the given puzzle. */
-function hasProgress(game: SavedGame): boolean {
+function hasProgress(game: StoredGame): boolean {
   if (game.values !== game.puzzle) return true;
   return game.notes.some((cellNotes) => cellNotes.length > 0);
 }
@@ -128,12 +143,13 @@ export function listSavedGames(): SavedGameSummary[] {
         filledCells,
         givenCells,
         timer: game.timer,
+        updatedAt: game.updatedAt,
       });
     }
   } catch {
     // localStorage unavailable
   }
-  return results;
+  return results.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export function deleteGame(key: string): void {
