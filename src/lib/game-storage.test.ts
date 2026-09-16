@@ -97,6 +97,13 @@ describe("listSavedGames", () => {
     expect(listSavedGames()).toEqual([]);
   });
 
+  it("keeps a board whose only progress is pencil notes", () => {
+    const notes = Array.from({ length: 81 }, (): number[] => []);
+    notes[40] = [3, 7];
+    saveGame("noted", { ...VALID_GAME, values: VALID_PUZZLE, notes });
+    expect(listSavedGames().map((g) => g.key)).toEqual(["noted"]);
+  });
+
   it("omits multiplayer saves — a duel board can't be resumed solo", () => {
     saveGame("solo-1", VALID_GAME);
     saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
