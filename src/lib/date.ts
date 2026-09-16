@@ -18,6 +18,13 @@ export function todayLocalISO(now: Date = new Date()): string {
  * local afternoon and shuffles that day's games out of order.
  */
 export function startOfLocalDay(isoDate: string): number {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1).getTime();
+  const parts = isoDate.split("-");
+  const start = new Date(
+    Number(parts[0]),
+    Number(parts[1] ?? 1) - 1,
+    Number(parts[2] ?? 1),
+  );
+  // Stored dates are never validated on the way back in; the epoch is
+  // a poor answer but a usable sort key, and NaN is neither.
+  return Number.isNaN(start.getTime()) ? 0 : start.getTime();
 }
