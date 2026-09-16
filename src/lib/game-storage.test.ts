@@ -3,6 +3,7 @@ import {
   deleteGame,
   listSavedGames,
   loadGame,
+  pruneAbandonedSaves,
   type SavedGame,
   saveGame,
 } from "./game-storage.ts";
@@ -123,5 +124,26 @@ describe("listSavedGames", () => {
     saveGame("solo-1", VALID_GAME);
     saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
     expect(listSavedGames().map((g) => g.key)).toEqual(["solo-1"]);
+  });
+});
+
+describe("pruneAbandonedSaves", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("deletes a duel save the landing can no longer reach", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
+    vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("mp_brave-otter-4f2a_1........")).toBeNull();
   });
 });
