@@ -96,7 +96,8 @@ export type SavedGameSummary = {
 /** A save is worth resuming once the player has entered a digit or a
  *  note of their own; until then it only carries the given puzzle. */
 function hasProgress(game: SavedGame): boolean {
-  return game.values !== game.puzzle;
+  if (game.values !== game.puzzle) return true;
+  return game.notes.some((cellNotes) => cellNotes.length > 0);
 }
 
 export function listSavedGames(): SavedGameSummary[] {
