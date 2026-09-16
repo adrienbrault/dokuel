@@ -136,6 +136,19 @@ describe("pruneAbandonedSaves", () => {
     vi.useRealTimers();
   });
 
+  it("deletes a board abandoned before the first digit", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("untouched", { ...VALID_GAME, values: VALID_PUZZLE });
+    saveGame("played", VALID_GAME);
+    vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("untouched")).toBeNull();
+    expect(loadGame("played")).not.toBeNull();
+  });
+
   it("spares a duel still being played in another tab", () => {
     saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
 
