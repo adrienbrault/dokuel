@@ -152,6 +152,41 @@ export function listSavedGames(): SavedGameSummary[] {
   return results.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+/** How long a save the continue list won't show is kept anyway. A
+ *  duel or an untouched board is still live in another tab until its
+ *  clock stops, so nothing is removed on the day it was written. */
+const ABANDONED_SAVE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Delete the saves the landing can never offer again: duel boards,
+ * whose room is long gone. listSavedGames skips them, so without this
+ * they accumulate with no way for the player to see or clear them,
+ * and localStorage fills up behind their back.
+ *
+ * Daily saves are left alone — the daily screen still resumes them.
+ */
+export function pruneAbandonedSaves(): void {
+  const cutoff = Date.now() - ABANDONED_SAVE_TTL_MS;
+  try {
+    const stale: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      if (!storageKey?.startsWith(STORAGE_PREFIX)) continue;
+      const key = storageKey.slice(STORAGE_PREFIX.length);
+      if (key.startsWith("daily-")) continue;
+      const game = loadGame(key);
+      if (!game) continue;
+      if (game.updatedAt > cutoff) continue;
+      if (key.startsWith(MULTIPLAYER_KEY_PREFIX)) stale.push(key);
+    }
+    for (const key of stale) {
+      deleteGame(key);
+    }
+  } catch {
+    // localStorage unavailable
+  }
+}
+
 export function deleteGame(key: string): void {
   try {
     localStorage.removeItem(STORAGE_PREFIX + key);
