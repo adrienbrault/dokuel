@@ -93,6 +93,12 @@ export type SavedGameSummary = {
   timer: number;
 };
 
+/** A save is worth resuming once the player has entered a digit or a
+ *  note of their own; until then it only carries the given puzzle. */
+function hasProgress(game: SavedGame): boolean {
+  return game.values !== game.puzzle;
+}
+
 export function listSavedGames(): SavedGameSummary[] {
   const results: SavedGameSummary[] = [];
   try {
@@ -108,6 +114,11 @@ export function listSavedGames(): SavedGameSummary[] {
       if (key.startsWith(MULTIPLAYER_KEY_PREFIX)) continue;
       const game = loadGame(key);
       if (!game) continue;
+      // An untouched board is a start the player walked away from, not
+      // progress: opening a difficulty writes a save on the first
+      // render, so listing those piles the landing with 0% rows that
+      // hold nothing but a clock.
+      if (!hasProgress(game)) continue;
       const filledCells = game.values.split("").filter((c) => c !== ".").length;
       const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
