@@ -661,7 +661,7 @@ test.describe("stats with multiplayer history", () => {
 
   test("stats page with multiplayer", async ({ page }, testInfo) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /view stats/i }).click();
+    await page.getByRole("button", { name: /stats/i }).click();
     await page.getByRole("heading", { name: "Stats" }).waitFor();
     await page.screenshot({
       path: screenshotPath("stats-multiplayer", testInfo.project.name),

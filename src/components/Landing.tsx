@@ -179,7 +179,7 @@ export function Landing({
           onClick={onStats}
         >
           <ChartColumn size={16} aria-hidden="true" />
-          View Stats
+          Stats & History
         </button>
         <a
           href="https://github.com/adrienbrault/dokuel"
