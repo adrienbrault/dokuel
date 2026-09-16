@@ -7,7 +7,12 @@ import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
-import { deleteGame, loadGame, saveGame } from "../lib/game-storage.ts";
+import {
+  deleteGame,
+  loadGame,
+  MULTIPLAYER_KEY_PREFIX,
+  saveGame,
+} from "../lib/game-storage.ts";
 import type { AssistLevel, Cell } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
@@ -77,7 +82,7 @@ export function MultiplayerBoard({
   // Scope the autosave key by room + puzzle so a rematch in the same room
   // gets a fresh slate, and a different room never restores stale data.
   const gameKey = useMemo(
-    () => `mp_${roomId}_${puzzle.slice(0, 12)}`,
+    () => `${MULTIPLAYER_KEY_PREFIX}${roomId}_${puzzle.slice(0, 12)}`,
     [roomId, puzzle],
   );
   const saved = useMemo(() => loadGame(gameKey), [gameKey]);

@@ -14,6 +14,10 @@ export type SavedGame = {
 
 const STORAGE_PREFIX = "sudoku_save_";
 
+/** Marks an autosave as belonging to a multiplayer room (see
+ *  MultiplayerBoard), not to a resumable solo game. */
+export const MULTIPLAYER_KEY_PREFIX = "mp_";
+
 export function saveGame(key: string, data: SavedGame): void {
   try {
     localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
@@ -98,6 +102,10 @@ export function listSavedGames(): SavedGameSummary[] {
       const key = storageKey.slice(STORAGE_PREFIX.length);
       // Skip daily challenge saves — they have their own entry point
       if (key.startsWith("daily-")) continue;
+      // Skip duel autosaves — they belong to a room, and resuming one
+      // from the landing would drop the player into a solo board
+      // wearing their opponent's puzzle.
+      if (key.startsWith(MULTIPLAYER_KEY_PREFIX)) continue;
       const game = loadGame(key);
       if (!game) continue;
       const filledCells = game.values.split("").filter((c) => c !== ".").length;
