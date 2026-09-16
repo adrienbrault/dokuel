@@ -92,6 +92,11 @@ describe("listSavedGames", () => {
     localStorage.clear();
   });
 
+  it("omits a board the player never touched", () => {
+    saveGame("untouched", { ...VALID_GAME, values: VALID_PUZZLE });
+    expect(listSavedGames()).toEqual([]);
+  });
+
   it("omits multiplayer saves — a duel board can't be resumed solo", () => {
     saveGame("solo-1", VALID_GAME);
     saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
