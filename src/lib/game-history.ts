@@ -31,7 +31,8 @@ export function getGameHistory(): GameHistoryEntry[] {
     assistLevel: s.assistLevel,
     time: s.time,
     date: s.date,
-    timestamp: Date.parse(s.date),
+    // Results predating the stamp only know their day.
+    timestamp: s.timestamp ?? Date.parse(s.date),
     won: s.won,
   }));
   const duels: GameHistoryEntry[] = getMultiplayerStats().map((r) => ({
