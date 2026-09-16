@@ -93,8 +93,18 @@ describe("Stats page — multiplayer section", () => {
       1,
     );
   });
+});
 
-  it("lists recent matches with opponent name, time, and outcome", () => {
+describe("Stats page — history section", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("names the opponent, time, and outcome of a duel", () => {
     saveMultiplayerGameResult({
       difficulty: "hard",
       assistLevel: "standard",
@@ -109,22 +119,11 @@ describe("Stats page — multiplayer section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: /multiplayer/i });
-    const list = within(section).getByRole("list");
-    const row = within(list).getByRole("listitem");
+    const section = screen.getByRole("region", { name: /history/i });
+    const row = within(section).getByRole("listitem");
     expect(within(row).getByText(/brave otter/i)).toBeTruthy();
     expect(within(row).getByText("04:05")).toBeTruthy();
     expect(within(row).getByText(/won/i)).toBeTruthy();
-  });
-});
-
-describe("Stats page — history section", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    localStorage.clear();
   });
 
   it("logs solo wins and duels together, newest first", () => {
