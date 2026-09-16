@@ -39,6 +39,14 @@ function withTimeZone(timeZone: string, run: () => void) {
 }
 
 describe("startOfLocalDay", () => {
+  it("never yields NaN for a date it can't read", () => {
+    // A corrupt stored date must not poison the sort comparator that
+    // orders the game history: NaN there leaves the list in whatever
+    // order the entries happened to be in.
+    expect(startOfLocalDay("not-a-date")).toBe(0);
+    expect(new Date(startOfLocalDay("2026")).getFullYear()).toBe(2026);
+  });
+
   it("resolves a stored date to local midnight, not UTC midnight", () => {
     // Dates are written by todayLocalISO, so west of UTC a UTC-midnight
     // reading lands on the previous local afternoon and reorders the
