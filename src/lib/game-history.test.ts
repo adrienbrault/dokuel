@@ -38,6 +38,27 @@ describe("game-history", () => {
     ]);
   });
 
+  it("falls back to the date for results stored before stamps existed", () => {
+    localStorage.setItem(
+      "sudoku_stats",
+      JSON.stringify([
+        {
+          difficulty: "medium",
+          assistLevel: "standard",
+          time: 400,
+          date: "2026-02-10",
+          won: true,
+        },
+      ]),
+    );
+    saveDuel("2026-02-09", true);
+
+    expect(getGameHistory().map((entry) => entry.kind)).toEqual([
+      "solo",
+      "duel",
+    ]);
+  });
+
   it("orders same-day solo wins by when they were played", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-01T09:00:00Z"));
