@@ -37,4 +37,17 @@ describe("game-history", () => {
       "solo",
     ]);
   });
+
+  it("orders same-day solo wins by when they were played", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-01T09:00:00Z"));
+    saveGameResult("easy", "standard", 120, true);
+    vi.setSystemTime(new Date("2026-03-01T18:00:00Z"));
+    saveGameResult("hard", "standard", 600, true);
+
+    expect(getGameHistory().map((entry) => entry.difficulty)).toEqual([
+      "hard",
+      "easy",
+    ]);
+  });
 });
