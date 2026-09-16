@@ -136,6 +136,14 @@ describe("pruneAbandonedSaves", () => {
     vi.useRealTimers();
   });
 
+  it("spares a duel still being played in another tab", () => {
+    saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("mp_brave-otter-4f2a_1........")).not.toBeNull();
+  });
+
   it("deletes a duel save the landing can no longer reach", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
