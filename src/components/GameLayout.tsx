@@ -7,10 +7,12 @@ import {
   useState,
 } from "react";
 import { useDarkMode } from "../hooks/useDarkMode.ts";
+import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type { NumPadPosition } from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
+import { DigitColorPicker } from "./DigitColorPicker.tsx";
 import { NumPadPositionToggle } from "./NumPadPositionToggle.tsx";
 import { SoundToggle } from "./SoundToggle.tsx";
 
@@ -154,6 +156,7 @@ function SettingsButton({
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const darkMode = useDarkMode();
+  const digitColor = useDigitColorMode();
   // Sound was only reachable from the landing screen; mid-game is
   // where players actually decide they want silence.
   const [soundOn, setSoundOn] = useState(getSoundEnabled);
@@ -212,6 +215,15 @@ function SettingsButton({
             position={position}
             onChange={onPositionChange}
           />
+          <div className="mt-3 pt-3 border-t border-border-default">
+            <p className="text-xs text-text-muted font-medium mb-2">
+              Digit colors
+            </p>
+            <DigitColorPicker
+              mode={digitColor.mode}
+              onChange={digitColor.setMode}
+            />
+          </div>
           <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
             <p className="text-xs text-text-muted font-medium">Dark mode</p>
             <DarkModeToggle
