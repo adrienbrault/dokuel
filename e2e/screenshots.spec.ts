@@ -728,11 +728,15 @@ test.describe("stats with multiplayer history", () => {
  * so a palette screenshot shows givens, entered digits and multi-note
  * cells side by side rather than an untouched grid of givens.
  */
-async function playValuesAndNotes(page: Page) {
+async function startEasy(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Start Solo" }).click();
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+}
+
+async function playValuesAndNotes(page: Page) {
+  await startEasy(page);
 
   const enabledNumpad = page.locator(
     '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
@@ -799,5 +803,91 @@ test.describe("digit colors settings", () => {
     await page.screenshot({
       path: screenshotPath("digit-colors-settings", testInfo.project.name),
     });
+  });
+});
+
+test.describe("digit colors interactions", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "colors" } });
+
+  test("solo game - colors only, note mode pad", async ({ page }, testInfo) => {
+    await startEasy(page);
+
+    // Drag across two cells to arm a multi-cell selection, which flips
+    // the pad into note mode and swaps in the pencil-mark key faces.
+    const cells = page.locator('button[aria-label*=", empty"]');
+    const from = await cells.nth(0).boundingBox();
+    const to = await cells.nth(1).boundingBox();
+    if (!from || !to) throw new Error("cells not visible");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+
+    await page.screenshot({
+      path: screenshotPath("digit-colors-note-mode", testInfo.project.name),
+    });
+  });
+
+  test("solo game - colors only, charging a note", async ({
+    page,
+  }, testInfo) => {
+    await startEasy(page);
+    await page.locator('button[aria-label*=", empty"]').first().click();
+
+    const digit = page
+      .locator(
+        '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+      )
+      .first();
+    const box = await digit.boundingBox();
+    if (!box) throw new Error("digit not visible");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(250);
+
+    await page.screenshot({
+      path: screenshotPath("digit-colors-charging", testInfo.project.name),
+    });
+    await page.mouse.up();
+  });
+
+  test("solo game - colors only, drag mid-flight", async ({
+    page,
+  }, testInfo) => {
+    await startEasy(page);
+
+    const cellBox = await page
+      .locator('button[aria-label*=", empty"]')
+      .first()
+      .boundingBox();
+    if (!cellBox) throw new Error("empty cell not visible");
+    const digitBox = await page
+      .getByRole("button", { name: /^5(,|$)/ })
+      .first()
+      .boundingBox();
+    if (!digitBox) throw new Error("digit not visible");
+
+    await page.mouse.move(
+      digitBox.x + digitBox.width / 2,
+      digitBox.y + digitBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      digitBox.x + digitBox.width / 2,
+      digitBox.y + digitBox.height / 2 - 22,
+      { steps: 3 },
+    );
+    await page.mouse.move(
+      cellBox.x + cellBox.width / 2,
+      cellBox.y + cellBox.height / 2,
+      { steps: 8 },
+    );
+
+    await page.screenshot({
+      path: screenshotPath("digit-colors-drag", testInfo.project.name),
+    });
+    await page.mouse.up();
   });
 });
