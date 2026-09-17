@@ -22,6 +22,23 @@
   --color-cell-user: oklch(0.42 0.12 168);
   --color-cell-conflict: oklch(0.6 0.2 25);
   --color-cell-conflict-bg: oklch(0.95 0.04 25);
+
+  /* Digit palette (opt-in). Nine hues that must stay apart from each
+     other AND from the board's own signals. Evenly spaced hues collapse
+     in the yellow-green region, so this follows the shape categorical
+     palettes settle on: red, orange, gold, green, teal, blue, violet,
+     pink, and a brown to carry the ninth without crowding the reds.
+     Lightness is held near 0.6 so no digit shouts louder than the rest,
+     nudged up for gold, which needs it to stay yellow. */
+  --color-digit-1: oklch(0.56 0.2 25);
+  --color-digit-2: oklch(0.63 0.16 60);
+  --color-digit-3: oklch(0.64 0.13 98);
+  --color-digit-4: oklch(0.56 0.15 150);
+  --color-digit-5: oklch(0.6 0.1 200);
+  --color-digit-6: oklch(0.54 0.16 255);
+  --color-digit-7: oklch(0.49 0.19 295);
+  --color-digit-8: oklch(0.55 0.19 340);
+  --color-digit-9: oklch(0.46 0.05 70);
   --color-success: oklch(0.65 0.18 155);
   --color-accent: oklch(0.52 0.12 168);
   --color-accent-bright: oklch(0.61 0.13 168);
@@ -99,6 +116,18 @@
   --color-cell-user: oklch(0.7 0.13 168);
   --color-cell-conflict: oklch(0.7 0.18 25);
   --color-cell-conflict-bg: oklch(0.25 0.05 25);
+
+  /* Same nine hues lifted for a dark cell: chroma alone cannot carry
+     them against oklch(0.18) bg, so lightness leads. */
+  --color-digit-1: oklch(0.72 0.17 25);
+  --color-digit-2: oklch(0.78 0.14 60);
+  --color-digit-3: oklch(0.82 0.13 98);
+  --color-digit-4: oklch(0.76 0.14 150);
+  --color-digit-5: oklch(0.78 0.09 200);
+  --color-digit-6: oklch(0.72 0.14 255);
+  --color-digit-7: oklch(0.7 0.17 295);
+  --color-digit-8: oklch(0.73 0.17 340);
+  --color-digit-9: oklch(0.68 0.06 70);
   --color-accent-light: oklch(0.28 0.05 168);
 
   /* Semantic surfaces */
@@ -681,4 +710,84 @@ body {
   .confetti-container {
     display: none;
   }
+}
+
+/* --- Digit palette -------------------------------------------------
+   Opt-in colored digits. The mode lives on the document root, so one
+   attribute repaints the board and the numpad at once, and no memoized
+   Cell has to re-render to change color.
+
+   Every glyph carries its own digit, and resolves that into a single
+   --digit-hue here. Both modes then read that one variable. */
+.digit-ink[data-digit="1"] {
+  --digit-hue: var(--color-digit-1);
+}
+.digit-ink[data-digit="2"] {
+  --digit-hue: var(--color-digit-2);
+}
+.digit-ink[data-digit="3"] {
+  --digit-hue: var(--color-digit-3);
+}
+.digit-ink[data-digit="4"] {
+  --digit-hue: var(--color-digit-4);
+}
+.digit-ink[data-digit="5"] {
+  --digit-hue: var(--color-digit-5);
+}
+.digit-ink[data-digit="6"] {
+  --digit-hue: var(--color-digit-6);
+}
+.digit-ink[data-digit="7"] {
+  --digit-hue: var(--color-digit-7);
+}
+.digit-ink[data-digit="8"] {
+  --digit-hue: var(--color-digit-8);
+}
+.digit-ink[data-digit="9"] {
+  --digit-hue: var(--color-digit-9);
+}
+
+/* Tinted digits: the glyph keeps its shape and takes the hue.
+   Conflicts are deliberately excluded — a wrong digit is more urgent
+   than which digit it is, so it keeps the conflict red and its wavy
+   underline rather than blending into the palette. */
+[data-digit-color="digits"] .digit-ink[data-digit]:not([data-conflict]) {
+  color: var(--digit-hue);
+}
+
+/* Colors only: the glyph goes and the hue becomes the whole mark.
+   The cell background is left alone so selection, same-number and hint
+   highlighting all still read underneath. */
+[data-digit-color="colors"] .digit-ink[data-digit] {
+  color: transparent;
+  width: 58%;
+  height: auto;
+  aspect-ratio: 1;
+  background-color: var(--digit-hue);
+  border-radius: 9999px;
+}
+
+/* Givens keep their own shape. With the glyph gone, given-vs-entered
+   cannot ride on ink color — every digit already spends its hue on
+   identity — so it moves to a channel colorblind players keep. */
+[data-digit-color="colors"] .digit-ink[data-digit][data-given] {
+  border-radius: 0.3rem;
+}
+
+/* A swatch has nothing to underline, so the colorblind-safe conflict
+   marker becomes a ring. */
+[data-digit-color="colors"] .digit-ink[data-digit][data-conflict] {
+  box-shadow: 0 0 0 2px var(--color-cell-conflict);
+}
+
+/* Notes shrink to dots in their own sub-cell, which is the point of
+   coloring them: a pencilled cell shows its candidates as several
+   colors at once instead of three small glyphs to read. */
+[data-digit-color="colors"] .digit-ink-note[data-digit] {
+  width: 52%;
+  border-radius: 9999px;
+  /* The note grid sizes its tracks, so a dot with an explicit width
+     would otherwise sit at the start of its track instead of in the
+     middle of the sub-cell the digit belongs to. */
+  place-self: center;
 }
