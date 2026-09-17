@@ -1148,3 +1148,23 @@ describe("NumPad", () => {
     });
   });
 });
+
+describe("NumPad digit palette hooks", () => {
+  it("names the digit on each key face, but not its remaining count", () => {
+    // Colors-only turns key faces into swatches; without this the pad
+    // still reads as bare numerals and the mode is unplayable. The
+    // count beside it is a tally, not a digit, so it must stay text.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={{ ...ZERO_REMAINING, 3: 4 }}
+        onTapNumber={vi.fn()}
+      />,
+    );
+
+    const three = screen.getByRole("button", { name: /^3, / });
+    const tagged = [...three.querySelectorAll("[data-digit]")];
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0]).toHaveTextContent("3");
+  });
+});

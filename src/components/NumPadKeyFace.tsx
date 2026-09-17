@@ -47,7 +47,12 @@ export function NumPadKeyFace({
   }
   return (
     <>
-      <span className="text-lg lg:text-2xl leading-none">{digit}</span>
+      <span
+        data-digit={digit}
+        className="digit-ink text-lg lg:text-2xl leading-none"
+      >
+        {digit}
+      </span>
       {showRemainingCounts && (
         <span
           className={`text-[0.625rem] lg:text-xs leading-none mt-0.5 lg:mt-1 ${isComplete ? "invisible" : isAccented ? "text-text-on-accent/70" : "text-text-secondary"}`}
