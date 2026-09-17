@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import type { Page } from "@playwright/test";
 import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
   fillCells,
@@ -716,6 +717,87 @@ test.describe("stats with multiplayer history", () => {
     await page.screenshot({
       path: screenshotPath("stats-multiplayer", testInfo.project.name),
       fullPage: true,
+    });
+  });
+});
+
+// --- Digit color modes ---
+
+/**
+ * Plays a handful of values and pencil notes into a fresh easy board,
+ * so a palette screenshot shows givens, entered digits and multi-note
+ * cells side by side rather than an untouched grid of givens.
+ */
+async function playValuesAndNotes(page: Page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Solo" }).click();
+  await page.getByRole("button", { name: "Easy" }).click();
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+
+  const enabledNumpad = page.locator(
+    '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+  );
+  for (let i = 0; i < 5; i++) {
+    await page.locator('button[aria-label*=", empty"]').nth(0).click();
+    await page.keyboard.press(String((i % 9) + 1));
+  }
+  const remainingEmpty = page.locator('button[aria-label*=", empty"]');
+  for (let i = 0; i < 6; i++) {
+    const count = await enabledNumpad.count();
+    if (count < 2) break;
+    await remainingEmpty.nth(i).click();
+    await holdNumpadDigit(page, enabledNumpad.nth(i % count));
+    await holdNumpadDigit(page, enabledNumpad.nth((i + 1) % count));
+  }
+  await page.locator('button[aria-label*="value"]').first().click();
+}
+
+test.describe("digit colors tinted", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "digits" } });
+
+  test("solo game - tinted digits", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.screenshot({
+      path: screenshotPath("digit-colors-tinted", testInfo.project.name),
+    });
+  });
+});
+
+test.describe("digit colors only", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "colors" } });
+
+  test("solo game - colors only", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.screenshot({
+      path: screenshotPath("digit-colors-only", testInfo.project.name),
+    });
+  });
+});
+
+test.describe("digit colors only dark", () => {
+  test.use({
+    storage: { sudoku_digit_color_mode: "colors", sudoku_theme: "dark" },
+  });
+
+  test("solo game - colors only dark", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.screenshot({
+      path: screenshotPath("digit-colors-only-dark", testInfo.project.name),
+    });
+  });
+});
+
+test.describe("digit colors settings", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "digits" } });
+
+  test("solo game - digit color setting", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.waitForSelector(
+      '[role="radiogroup"][aria-label="Digit colors"]',
+    );
+    await page.screenshot({
+      path: screenshotPath("digit-colors-settings", testInfo.project.name),
     });
   });
 });
