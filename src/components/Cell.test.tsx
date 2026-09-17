@@ -277,3 +277,50 @@ describe("Cell chargingDigit", () => {
     expect(grid?.textContent).toBe("15");
   });
 });
+
+describe("Cell digit palette hooks", () => {
+  it("names the digit on its glyph so the palette can color it", () => {
+    // The palette is CSS keyed on this attribute, which is how one
+    // settings change repaints the board without re-rendering cells.
+    render(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
+
+    const digit = screen.getByText("5");
+    expect(digit).toHaveAttribute("data-digit", "5");
+    expect(digit.className).toContain("digit-ink");
+  });
+
+  it("names each pencil note, so a noted cell can show several colors", () => {
+    // The point of coloring notes: one glance at a cell says which
+    // candidates live there, without reading three small glyphs.
+    const { container } = render(
+      <Cell {...defaultProps()} cell={makeCell({ notes: new Set([2, 7]) })} />,
+    );
+
+    const noted = [...container.querySelectorAll("[data-digit]")].map((el) =>
+      el.getAttribute("data-digit"),
+    );
+    expect(noted).toEqual(["2", "7"]);
+  });
+
+  it("marks givens on the glyph, so colors-only keeps them apart by shape", () => {
+    // With the glyph gone, given-vs-entered can no longer ride on ink
+    // color — every digit is already spending its hue on identity. The
+    // palette gives givens a different shape instead.
+    render(
+      <Cell {...defaultProps()} cell={makeCell({ value: 4, isGiven: true })} />,
+    );
+
+    expect(screen.getByText("4")).toHaveAttribute("data-given", "true");
+  });
+
+  it("marks conflicts on the glyph, since a swatch cannot be underlined", () => {
+    // The wavy underline is the colorblind-safe conflict marker in the
+    // normal board, but colors-only replaces the glyph with a swatch
+    // and there is nothing left to underline. The palette rings it.
+    render(
+      <Cell {...defaultProps()} cell={makeCell({ value: 5 })} isConflict />,
+    );
+
+    expect(screen.getByText("5")).toHaveAttribute("data-conflict", "true");
+  });
+});
