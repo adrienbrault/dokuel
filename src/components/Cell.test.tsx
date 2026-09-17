@@ -323,4 +323,30 @@ describe("Cell digit palette hooks", () => {
 
     expect(screen.getByText("5")).toHaveAttribute("data-conflict", "true");
   });
+
+  it("routes the landing preview through the palette", () => {
+    // The preview promises the exact outcome of releasing here. Left
+    // untagged it promises a numeral on a board that draws swatches.
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        dropTargetState="valid"
+        dropMode="value"
+        dropDigit={8}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("drop-preview").querySelector("[data-digit]"),
+    ).toHaveTextContent("8");
+  });
+
+  it("routes the charging note through the palette", () => {
+    render(<Cell {...defaultProps()} cell={makeCell()} chargingDigit={3} />);
+
+    expect(
+      screen.getByTestId("note-charge").querySelector("[data-digit]"),
+    ).toHaveTextContent("3");
+  });
 });

@@ -203,7 +203,12 @@ export const Cell = memo(function Cell({
                 }
           }
         >
-          {dropDigit}
+          {/* The pose lives on the wrapper and the digit on this inner
+              span, so a palette swatch sizes itself against whichever
+              pose is active instead of fighting the inline width. */}
+          <span data-digit={dropDigit} className="digit-ink leading-none">
+            {dropDigit}
+          </span>
         </span>
       )}
       {cell.value === null && chargingDigit !== undefined && (
@@ -218,7 +223,9 @@ export const Cell = memo(function Cell({
             } as CSSProperties
           }
         >
-          {chargingDigit}
+          <span data-digit={chargingDigit} className="digit-ink leading-none">
+            {chargingDigit}
+          </span>
         </span>
       )}
     </button>

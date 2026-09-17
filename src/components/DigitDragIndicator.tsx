@@ -55,6 +55,9 @@ export function DigitDragIndicator({ state }: Props) {
       }}
     >
       <span
+        data-digit={state.digit}
+        data-accented="true"
+        className="digit-ink leading-none"
         style={{
           opacity: pose === "dimmed" ? 0 : 1,
           transition: "opacity 0.12s ease",
