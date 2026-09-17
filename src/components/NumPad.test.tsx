@@ -1187,4 +1187,23 @@ describe("NumPad digit palette hooks", () => {
       "true",
     );
   });
+
+  it("names the digit on the note-mode face too", () => {
+    // Note mode swaps in the pencil-mark preview. Left untagged it is
+    // the one place colors mode still shows a numeral, so the pad
+    // reads as digits while the board it writes to reads as color.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        tapAction="note"
+      />,
+    );
+
+    const four = screen.getByRole("button", { name: /^4, / });
+    const tagged = [...four.querySelectorAll("[data-digit]")];
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0]).toHaveTextContent("4");
+  });
 });
