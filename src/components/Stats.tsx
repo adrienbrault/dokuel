@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ASSIST_LEVEL_LABELS,
   DIFFICULTIES,
@@ -7,11 +7,10 @@ import {
 } from "../lib/constants.ts";
 import { getDailyStreak } from "../lib/daily-streak.ts";
 import { formatShortDate, formatTime } from "../lib/format.ts";
+import { type GameHistoryEntry, getGameHistory } from "../lib/game-history.ts";
 import {
-  getMultiplayerStats,
   getMultiplayerStatsForDifficulty,
   getMultiplayerSummary,
-  type MultiplayerGameRecord,
 } from "../lib/multiplayer-stats.ts";
 import {
   type AssistLevelStats,
@@ -24,20 +23,18 @@ type StatsProps = {
   onBack: () => void;
 };
 
-const RECENT_MATCHES_LIMIT = 10;
+// The history opens on a readable page; the rest is one tap away
+// rather than a wall of rows under the aggregates.
+const HISTORY_PAGE_SIZE = 10;
 
 export function Stats({ onBack }: StatsProps) {
   const allStats = useMemo(() => getStats(), []);
   const streak = useMemo(() => getDailyStreak(), []);
   const totalSoloWins = allStats.filter((s) => s.won).length;
   const mpSummary = useMemo(() => getMultiplayerSummary(), []);
-  const mpRecent = useMemo(() => {
-    const all = getMultiplayerStats();
-    return [...all]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, RECENT_MATCHES_LIMIT);
-  }, []);
   const totalGames = totalSoloWins + mpSummary.played;
+  const history = useMemo(() => getGameHistory(), []);
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
 
   return (
     <div className="screen">
@@ -103,20 +100,38 @@ export function Stats({ onBack }: StatsProps) {
                   <MultiplayerDifficultyStats key={diff} difficulty={diff} />
                 ))}
               </div>
-              {mpRecent.length > 0 && (
-                <div className="flex flex-col gap-2 w-full mt-2">
-                  <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-                    Recent matches
-                  </h4>
-                  <ul className="card divide-y divide-border-default w-full">
-                    {mpRecent.map((m) => (
-                      <RecentMatchRow
-                        key={`${m.roomId}-${m.gameNumber}`}
-                        match={m}
-                      />
-                    ))}
-                  </ul>
-                </div>
+            </>
+          )}
+        </section>
+
+        <section aria-label="History" className="flex flex-col gap-3 w-full">
+          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
+            History
+          </h3>
+          {history.length === 0 ? (
+            <div className="card p-4 w-full">
+              <p className="text-sm text-text-muted text-center">
+                No games yet
+              </p>
+            </div>
+          ) : (
+            <>
+              <ul className="card divide-y divide-border-default w-full">
+                {history.slice(0, historyLimit).map((entry, index) => (
+                  <HistoryRow
+                    key={`${entry.kind}-${entry.timestamp}-${index}`}
+                    entry={entry}
+                  />
+                ))}
+              </ul>
+              {history.length > historyLimit && (
+                <button
+                  type="button"
+                  className="self-center text-xs font-medium text-text-muted hover:text-accent transition-colors touch-manipulation"
+                  onClick={() => setHistoryLimit(history.length)}
+                >
+                  Show {history.length - historyLimit} more
+                </button>
               )}
             </>
           )}
@@ -282,28 +297,39 @@ function MultiplayerDifficultyStats({
   );
 }
 
-function RecentMatchRow({ match }: { match: MultiplayerGameRecord }) {
-  const outcomeColor = match.won ? "text-positive-text" : "text-negative-text";
+function HistoryRow({ entry }: { entry: GameHistoryEntry }) {
+  const label =
+    entry.kind === "duel" ? `vs ${entry.opponentName || "Opponent"}` : "Solo";
   return (
     <li className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="flex flex-col min-w-0">
-        <span className="text-sm text-text-primary truncate">
-          vs {match.opponentName || "Opponent"}
-        </span>
+        <span className="text-sm text-text-primary truncate">{label}</span>
         <span className="text-[11px] text-text-muted">
-          {formatShortDate(match.date)} ·{" "}
-          <span className={DIFFICULTY_TEXT_COLORS[match.difficulty]}>
-            {DIFFICULTY_LABELS[match.difficulty]}
+          {formatShortDate(entry.date)} ·{" "}
+          <span className={DIFFICULTY_TEXT_COLORS[entry.difficulty]}>
+            {DIFFICULTY_LABELS[entry.difficulty]}
           </span>
         </span>
       </div>
       <div className="flex flex-col items-end shrink-0">
-        <span className={`text-sm font-semibold ${outcomeColor}`}>
-          {match.won ? "Won" : "Lost"}
-        </span>
-        <span className="text-[11px] text-text-muted font-mono tabular-nums">
-          {formatTime(match.time)}
-        </span>
+        {entry.kind === "duel" ? (
+          <>
+            <span
+              className={`text-sm font-semibold ${
+                entry.won ? "text-positive-text" : "text-negative-text"
+              }`}
+            >
+              {entry.won ? "Won" : "Lost"}
+            </span>
+            <span className="text-[11px] text-text-muted font-mono tabular-nums">
+              {formatTime(entry.time)}
+            </span>
+          </>
+        ) : (
+          <span className="text-sm font-semibold text-text-primary font-mono tabular-nums">
+            {formatTime(entry.time)}
+          </span>
+        )}
       </div>
     </li>
   );

@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteGame,
+  listSavedGames,
   loadGame,
+  pruneAbandonedSaves,
   type SavedGame,
   saveGame,
 } from "./game-storage.ts";
@@ -24,7 +26,9 @@ describe("game-storage", () => {
 
   it("round-trips a saved game", () => {
     saveGame("k", VALID_GAME);
-    expect(loadGame("k")).toEqual(VALID_GAME);
+    // toMatchObject: the store also stamps updatedAt, which callers
+    // hand back to nobody.
+    expect(loadGame("k")).toMatchObject(VALID_GAME);
   });
 
   it("returns null for a missing key", () => {
@@ -83,5 +87,111 @@ describe("game-storage", () => {
       saveGame("k", { ...VALID_GAME, timer: Number.NaN });
       expect(loadGame("k")).toBeNull();
     });
+  });
+});
+
+describe("listSavedGames", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("lists the most recently played game first", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("older", VALID_GAME);
+    vi.setSystemTime(new Date("2026-01-02T10:00:00Z"));
+    saveGame("newer", VALID_GAME);
+    expect(listSavedGames().map((g) => g.key)).toEqual(["newer", "older"]);
+  });
+
+  it("omits a board the player never touched", () => {
+    saveGame("untouched", { ...VALID_GAME, values: VALID_PUZZLE });
+    expect(listSavedGames()).toEqual([]);
+  });
+
+  it("keeps a board whose only progress is pencil notes", () => {
+    const notes = Array.from({ length: 81 }, (): number[] => []);
+    notes[40] = [3, 7];
+    saveGame("noted", { ...VALID_GAME, values: VALID_PUZZLE, notes });
+    expect(listSavedGames().map((g) => g.key)).toEqual(["noted"]);
+  });
+
+  it("omits multiplayer saves — a duel board can't be resumed solo", () => {
+    saveGame("solo-1", VALID_GAME);
+    saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
+    expect(listSavedGames().map((g) => g.key)).toEqual(["solo-1"]);
+  });
+});
+
+describe("pruneAbandonedSaves", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("leaves the daily challenge and anything outside the store alone", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("daily-2026-01-01-medium", {
+      ...VALID_GAME,
+      values: VALID_PUZZLE,
+    });
+    localStorage.setItem("sudoku_stats", "[]");
+    vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("daily-2026-01-01-medium")).not.toBeNull();
+    expect(localStorage.getItem("sudoku_stats")).toBe("[]");
+  });
+
+  it("leaves a save it can't read in place", () => {
+    // Unreadable is not the same as abandoned, and a corrupt save
+    // carries no stamp to age it by. The error boundary's clear-all is
+    // the deliberate way out of that state.
+    localStorage.setItem("sudoku_save_broken", "{oops");
+
+    pruneAbandonedSaves();
+
+    expect(localStorage.getItem("sudoku_save_broken")).toBe("{oops");
+  });
+
+  it("deletes a board abandoned before the first digit", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("untouched", { ...VALID_GAME, values: VALID_PUZZLE });
+    saveGame("played", VALID_GAME);
+    vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("untouched")).toBeNull();
+    expect(loadGame("played")).not.toBeNull();
+  });
+
+  it("spares a duel still being played in another tab", () => {
+    saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("mp_brave-otter-4f2a_1........")).not.toBeNull();
+  });
+
+  it("deletes a duel save the landing can no longer reach", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    saveGame("mp_brave-otter-4f2a_1........", VALID_GAME);
+    vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+
+    pruneAbandonedSaves();
+
+    expect(loadGame("mp_brave-otter-4f2a_1........")).toBeNull();
   });
 });

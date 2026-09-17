@@ -12,11 +12,20 @@ export type SavedGame = {
   hintsUsed: number;
 };
 
+/** A save as it sits in storage: the game plus the moment it was
+ *  written. saveGame stamps it; callers never supply it. */
+export type StoredGame = SavedGame & { updatedAt: number };
+
 const STORAGE_PREFIX = "sudoku_save_";
+
+/** Marks an autosave as belonging to a multiplayer room (see
+ *  MultiplayerBoard), not to a resumable solo game. */
+export const MULTIPLAYER_KEY_PREFIX = "mp_";
 
 export function saveGame(key: string, data: SavedGame): void {
   try {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+    const stored: StoredGame = { ...data, updatedAt: Date.now() };
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(stored));
   } catch {
     // localStorage full or unavailable — silently ignore
   }
@@ -39,7 +48,7 @@ function isValidNotes(notes: unknown): notes is number[][] {
   );
 }
 
-export function loadGame(key: string): SavedGame | null {
+export function loadGame(key: string): StoredGame | null {
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + key);
     if (!raw) return null;
@@ -75,7 +84,15 @@ export function loadGame(key: string): SavedGame | null {
     ) {
       data.hintsUsed = 0;
     }
-    return data as SavedGame;
+    // Saves written before the stamp existed sort as oldest rather
+    // than as "just played" — the next autosave restamps them anyway.
+    if (
+      typeof data.updatedAt !== "number" ||
+      !Number.isFinite(data.updatedAt)
+    ) {
+      data.updatedAt = 0;
+    }
+    return data as StoredGame;
   } catch {
     return null;
   }
@@ -87,7 +104,16 @@ export type SavedGameSummary = {
   filledCells: number;
   givenCells: number;
   timer: number;
+  /** Epoch ms of the last autosave; drives most-recent-first order. */
+  updatedAt: number;
 };
+
+/** A save is worth resuming once the player has entered a digit or a
+ *  note of their own; until then it only carries the given puzzle. */
+function hasProgress(game: StoredGame): boolean {
+  if (game.values !== game.puzzle) return true;
+  return game.notes.some((cellNotes) => cellNotes.length > 0);
+}
 
 export function listSavedGames(): SavedGameSummary[] {
   const results: SavedGameSummary[] = [];
@@ -98,8 +124,17 @@ export function listSavedGames(): SavedGameSummary[] {
       const key = storageKey.slice(STORAGE_PREFIX.length);
       // Skip daily challenge saves — they have their own entry point
       if (key.startsWith("daily-")) continue;
+      // Skip duel autosaves — they belong to a room, and resuming one
+      // from the landing would drop the player into a solo board
+      // wearing their opponent's puzzle.
+      if (key.startsWith(MULTIPLAYER_KEY_PREFIX)) continue;
       const game = loadGame(key);
       if (!game) continue;
+      // An untouched board is a start the player walked away from, not
+      // progress: opening a difficulty writes a save on the first
+      // render, so listing those piles the landing with 0% rows that
+      // hold nothing but a clock.
+      if (!hasProgress(game)) continue;
       const filledCells = game.values.split("").filter((c) => c !== ".").length;
       const givenCells = game.puzzle.split("").filter((c) => c !== ".").length;
       results.push({
@@ -108,12 +143,51 @@ export function listSavedGames(): SavedGameSummary[] {
         filledCells,
         givenCells,
         timer: game.timer,
+        updatedAt: game.updatedAt,
       });
     }
   } catch {
     // localStorage unavailable
   }
-  return results;
+  return results.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** How long a save the continue list won't show is kept anyway. A
+ *  duel or an untouched board is still live in another tab until its
+ *  clock stops, so nothing is removed on the day it was written. */
+const ABANDONED_SAVE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Delete the saves the landing can never offer again: duel boards,
+ * whose room is long gone, and boards abandoned before a single digit
+ * or note. listSavedGames skips both, so without this they accumulate
+ * with no way for the player to see or clear them, and localStorage
+ * fills up behind their back.
+ *
+ * Daily saves are left alone — the daily screen still resumes them.
+ */
+export function pruneAbandonedSaves(): void {
+  const cutoff = Date.now() - ABANDONED_SAVE_TTL_MS;
+  try {
+    const stale: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      if (!storageKey?.startsWith(STORAGE_PREFIX)) continue;
+      const key = storageKey.slice(STORAGE_PREFIX.length);
+      if (key.startsWith("daily-")) continue;
+      const game = loadGame(key);
+      if (!game) continue;
+      if (game.updatedAt > cutoff) continue;
+      if (key.startsWith(MULTIPLAYER_KEY_PREFIX) || !hasProgress(game)) {
+        stale.push(key);
+      }
+    }
+    for (const key of stale) {
+      deleteGame(key);
+    }
+  } catch {
+    // localStorage unavailable
+  }
 }
 
 export function deleteGame(key: string): void {

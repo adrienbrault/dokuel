@@ -9,6 +9,9 @@ export type GameStats = {
   date: string;
   won: boolean;
   hintsUsed?: number;
+  /** Epoch ms the game finished. Absent on results recorded before the
+   *  field existed, where the date is all the ordering there is. */
+  timestamp?: number;
 };
 
 const STORAGE_KEY = "sudoku_stats";
@@ -47,6 +50,7 @@ export function saveGameResult(
     date: todayLocalISO(),
     won,
     hintsUsed: hintsUsed ?? 0,
+    timestamp: Date.now(),
   });
   writeJson(
     STORAGE_KEY,

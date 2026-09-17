@@ -4,6 +4,7 @@ import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
   fillCells,
   holdNumpadDigit,
+  inProgressSave,
   nearlyWonSave,
   preparePage,
   priorEasyStats,
@@ -552,6 +553,49 @@ test("solo game - settings popover open", async ({ page }, testInfo) => {
   });
 });
 
+test.describe("landing with games in progress", () => {
+  test.use({
+    storage: {
+      "sudoku_save_e2e-a": inProgressSave({
+        difficulty: "hard",
+        timer: 845,
+        blanks: 50,
+        filled: 19,
+        updatedAt: Date.parse("2026-05-19T20:00:00Z"),
+      }),
+      "sudoku_save_e2e-b": inProgressSave({
+        difficulty: "medium",
+        timer: 312,
+        blanks: 44,
+        filled: 30,
+        updatedAt: Date.parse("2026-05-18T20:00:00Z"),
+      }),
+      "sudoku_save_e2e-c": inProgressSave({
+        difficulty: "easy",
+        timer: 96,
+        blanks: 38,
+        filled: 5,
+        updatedAt: Date.parse("2026-05-17T20:00:00Z"),
+      }),
+      "sudoku_save_e2e-d": inProgressSave({
+        difficulty: "expert",
+        timer: 1503,
+        blanks: 56,
+        filled: 41,
+        updatedAt: Date.parse("2026-05-16T20:00:00Z"),
+      }),
+    },
+  });
+
+  test("landing - games in progress", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByText("Show 1 more in progress").waitFor();
+    await page.screenshot({
+      path: screenshotPath("landing-continue", testInfo.project.name),
+    });
+  });
+});
+
 test.describe("stats with multiplayer history", () => {
   test.use({
     storage: {
@@ -561,6 +605,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "paper",
           time: 240,
           date: "2026-05-10",
+          timestamp: Date.parse("2026-05-10T19:30:00Z"),
           won: true,
         },
         {
@@ -568,6 +613,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "standard",
           time: 180,
           date: "2026-05-12",
+          timestamp: Date.parse("2026-05-12T19:30:00Z"),
           won: true,
         },
         {
@@ -575,6 +621,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "standard",
           time: 165,
           date: "2026-05-14",
+          timestamp: Date.parse("2026-05-14T19:30:00Z"),
           won: true,
         },
         {
@@ -582,6 +629,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "standard",
           time: 320,
           date: "2026-05-15",
+          timestamp: Date.parse("2026-05-15T19:30:00Z"),
           won: true,
         },
         {
@@ -589,6 +637,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "full",
           time: 280,
           date: "2026-05-17",
+          timestamp: Date.parse("2026-05-17T19:30:00Z"),
           won: true,
         },
         {
@@ -596,6 +645,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "full",
           time: 540,
           date: "2026-05-18",
+          timestamp: Date.parse("2026-05-18T19:30:00Z"),
           won: true,
         },
       ]),
@@ -605,7 +655,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "standard",
           time: 240,
           date: "2026-05-11",
-          timestamp: 1_715_400_000_000,
+          timestamp: Date.parse("2026-05-11T20:15:00Z"),
           won: true,
           opponentName: "Clever Fox",
           roomId: "room-1",
@@ -616,7 +666,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "standard",
           time: 360,
           date: "2026-05-13",
-          timestamp: 1_715_600_000_000,
+          timestamp: Date.parse("2026-05-13T20:15:00Z"),
           won: false,
           opponentName: "Brave Otter",
           roomId: "room-2",
@@ -627,7 +677,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "standard",
           time: 295,
           date: "2026-05-16",
-          timestamp: 1_715_900_000_000,
+          timestamp: Date.parse("2026-05-16T20:15:00Z"),
           won: true,
           opponentName: "Brave Otter",
           roomId: "room-2",
@@ -638,7 +688,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "full",
           time: 480,
           date: "2026-05-18",
-          timestamp: 1_716_100_000_000,
+          timestamp: Date.parse("2026-05-18T20:15:00Z"),
           won: true,
           opponentName: "Swift Hawk",
           roomId: "room-3",
@@ -649,7 +699,7 @@ test.describe("stats with multiplayer history", () => {
           assistLevel: "standard",
           time: 510,
           date: "2026-05-19",
-          timestamp: 1_716_200_000_000,
+          timestamp: Date.parse("2026-05-19T20:15:00Z"),
           won: false,
           opponentName: "Lucky Bear",
           roomId: "room-4",
@@ -661,7 +711,7 @@ test.describe("stats with multiplayer history", () => {
 
   test("stats page with multiplayer", async ({ page }, testInfo) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /view stats/i }).click();
+    await page.getByRole("button", { name: /stats/i }).click();
     await page.getByRole("heading", { name: "Stats" }).waitFor();
     await page.screenshot({
       path: screenshotPath("stats-multiplayer", testInfo.project.name),

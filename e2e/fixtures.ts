@@ -142,6 +142,33 @@ export const nearlyWonSave = JSON.stringify({
   hintsUsed: 0,
 });
 
+/**
+ * SavedGame JSON for a part-played board: `blanks` cells are cut from
+ * the solved grid and `filled` of them entered back by the player, so
+ * the landing shows a real percentage instead of 0% or 100%.
+ */
+export function inProgressSave(opts: {
+  difficulty: string;
+  timer: number;
+  blanks: number;
+  filled: number;
+  updatedAt: number;
+}): string {
+  const givens = SOLVED_GRID.slice(0, 81 - opts.blanks);
+  return JSON.stringify({
+    puzzle: givens + ".".repeat(opts.blanks),
+    values:
+      SOLVED_GRID.slice(0, 81 - opts.blanks + opts.filled) +
+      ".".repeat(opts.blanks - opts.filled),
+    notes: Array.from({ length: 81 }, () => []),
+    timer: opts.timer,
+    difficulty: opts.difficulty,
+    assistLevel: "standard",
+    hintsUsed: 0,
+    updatedAt: opts.updatedAt,
+  });
+}
+
 /** Two prior easy wins, both slower than the seeded save's 03:42, so a
  *  completion is a genuine "New Personal Best!" with real stat tiles. */
 export const priorEasyStats = JSON.stringify([

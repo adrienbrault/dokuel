@@ -93,8 +93,18 @@ describe("Stats page — multiplayer section", () => {
       1,
     );
   });
+});
 
-  it("lists recent matches with opponent name, time, and outcome", () => {
+describe("Stats page — history section", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("names the opponent, time, and outcome of a duel", () => {
     saveMultiplayerGameResult({
       difficulty: "hard",
       assistLevel: "standard",
@@ -109,11 +119,35 @@ describe("Stats page — multiplayer section", () => {
 
     render(<Stats onBack={vi.fn()} />);
 
-    const section = screen.getByRole("region", { name: /multiplayer/i });
-    const list = within(section).getByRole("list");
-    const row = within(list).getByRole("listitem");
+    const section = screen.getByRole("region", { name: /history/i });
+    const row = within(section).getByRole("listitem");
     expect(within(row).getByText(/brave otter/i)).toBeTruthy();
     expect(within(row).getByText("04:05")).toBeTruthy();
     expect(within(row).getByText(/won/i)).toBeTruthy();
+  });
+
+  it("logs solo wins and duels together, newest first", () => {
+    saveGameResult("easy", "standard", 120, true);
+    saveMultiplayerGameResult({
+      difficulty: "hard",
+      assistLevel: "standard",
+      time: 245,
+      date: "2026-05-19",
+      timestamp: Date.now() + 60_000,
+      won: false,
+      opponentName: "Clever Fox",
+      roomId: "room-9",
+      gameNumber: 1,
+    });
+
+    render(<Stats onBack={vi.fn()} />);
+
+    const section = screen.getByRole("region", { name: /history/i });
+    const rows = within(section).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(
+      within(rows[0] as HTMLElement).getByText(/clever fox/i),
+    ).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByText(/^solo$/i)).toBeTruthy();
   });
 });

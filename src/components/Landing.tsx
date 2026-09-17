@@ -21,9 +21,14 @@ import {
   deleteGame,
   listSavedGames,
   loadGame,
+  pruneAbandonedSaves,
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
 import { getStats } from "../lib/stats.ts";
+
+// Past this many, the continue rows stop reading as a menu and start
+// reading as a log. The rest stay one tap away.
+const VISIBLE_SAVED_GAMES = 3;
 
 type LandingProps = {
   onSolo: () => void;
@@ -45,7 +50,18 @@ export function Landing({
   const today = useMemo(() => todayLocalISO(), []);
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
-  const [savedGames, setSavedGames] = useState(() => listSavedGames());
+  // Sweep before listing: the saves this drops are the ones the list
+  // would skip anyway, so the player sees no difference — only their
+  // storage stops filling with boards nothing can reach.
+  const [savedGames, setSavedGames] = useState(() => {
+    pruneAbandonedSaves();
+    return listSavedGames();
+  });
+  const [showAllSaved, setShowAllSaved] = useState(false);
+  const visibleSavedGames = showAllSaved
+    ? savedGames
+    : savedGames.slice(0, VISIBLE_SAVED_GAMES);
+  const hiddenSavedCount = savedGames.length - visibleSavedGames.length;
   const dailyProgress = useMemo(() => {
     if (completed) return null;
     const dailyKey = `daily-${today}-medium`;
@@ -103,7 +119,7 @@ export function Landing({
       )}
 
       <div className="flex flex-col gap-2.5 w-full">
-        {savedGames.map((game) => (
+        {visibleSavedGames.map((game) => (
           <ContinueRow
             key={game.key}
             game={game}
@@ -111,6 +127,15 @@ export function Landing({
             onDelete={() => handleDelete(game.key)}
           />
         ))}
+        {hiddenSavedCount > 0 && (
+          <button
+            type="button"
+            className="self-center text-xs font-medium text-text-muted hover:text-accent transition-colors touch-manipulation"
+            onClick={() => setShowAllSaved(true)}
+          >
+            Show {hiddenSavedCount} more in progress
+          </button>
+        )}
 
         <ActionRow
           variant="primary"
@@ -161,7 +186,7 @@ export function Landing({
           onClick={onStats}
         >
           <ChartColumn size={16} aria-hidden="true" />
-          View Stats
+          Stats & History
         </button>
         <a
           href="https://github.com/adrienbrault/dokuel"
