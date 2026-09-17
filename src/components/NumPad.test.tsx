@@ -1167,4 +1167,24 @@ describe("NumPad digit palette hooks", () => {
     expect(tagged).toHaveLength(1);
     expect(tagged[0]).toHaveTextContent("3");
   });
+
+  it("marks the accented key so its digit is not tinted into the fill", () => {
+    // An accented key is filled with the accent color, and a mid
+    // lightness hue on top of it is unreadable. The palette skips it
+    // and lets the key keep its on-accent ink.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        selectedValue={6}
+      />,
+    );
+
+    const six = screen.getByRole("button", { name: /^6, / });
+    expect(six.querySelector("[data-digit]")).toHaveAttribute(
+      "data-accented",
+      "true",
+    );
+  });
 });

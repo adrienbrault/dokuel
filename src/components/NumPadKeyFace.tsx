@@ -49,6 +49,7 @@ export function NumPadKeyFace({
     <>
       <span
         data-digit={digit}
+        data-accented={isAccented ? "true" : undefined}
         className="digit-ink text-lg lg:text-2xl leading-none"
       >
         {digit}

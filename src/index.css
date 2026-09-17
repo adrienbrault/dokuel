@@ -747,12 +747,21 @@ body {
   --digit-hue: var(--color-digit-9);
 }
 
-/* Tinted digits: the glyph keeps its shape and takes the hue.
-   Conflicts are deliberately excluded — a wrong digit is more urgent
-   than which digit it is, so it keeps the conflict red and its wavy
-   underline rather than blending into the palette. */
-[data-digit-color="digits"] .digit-ink[data-digit]:not([data-conflict]) {
+/* Tinted digits: the glyph keeps its shape and takes the hue. An
+   accented numpad key is skipped: it is filled with the accent color,
+   and a hue picked to sit on a pale cell is unreadable on top of it. */
+[data-digit-color="digits"] .digit-ink[data-digit]:not([data-accented]) {
   color: var(--digit-hue);
+}
+
+/* Conflicts keep their hue too. Painting them conflict-red instead
+   would break the one promise this mode makes — that a color always
+   names a digit — and collide outright with the 1, whose hue IS the
+   conflict red. The wavy underline carries the conflict on its own,
+   held to the conflict color so it stays a marker rather than looking
+   like part of the glyph. */
+[data-digit-color="digits"] .digit-ink[data-conflict] {
+  text-decoration-color: var(--color-cell-conflict);
 }
 
 /* Colors only: the glyph goes and the hue becomes the whole mark.
@@ -775,9 +784,13 @@ body {
 }
 
 /* A swatch has nothing to underline, so the colorblind-safe conflict
-   marker becomes a ring. */
+   marker becomes a ring. The inner band of cell background is what
+   makes it legible: rung straight against the swatch, a red ring
+   disappears on the 1, whose hue is the conflict red. */
 [data-digit-color="colors"] .digit-ink[data-digit][data-conflict] {
-  box-shadow: 0 0 0 2px var(--color-cell-conflict);
+  box-shadow:
+    0 0 0 2px var(--color-cell-bg),
+    0 0 0 4px var(--color-cell-conflict);
 }
 
 /* Notes shrink to dots in their own sub-cell, which is the point of
