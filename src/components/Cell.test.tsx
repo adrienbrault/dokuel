@@ -360,3 +360,22 @@ describe("Cell digit palette hooks", () => {
     ).toHaveTextContent("3");
   });
 });
+
+describe("Cell selection marker", () => {
+  it("marks a selected paper-mode cell the same way as any other", () => {
+    // Paper hides the highlights, so the ring is the only thing left
+    // saying which cell the next digit lands in. It has to be the same
+    // high-contrast ring the other assist levels get, not a softer one.
+    render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell()}
+        isSelected={true}
+        assistLevel="paper"
+      />,
+    );
+    expect(screen.getByRole("button").className).toContain(
+      "cell-selected-glow",
+    );
+  });
+});
