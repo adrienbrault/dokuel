@@ -86,6 +86,29 @@ test("multiplayer lobby", async ({ page }, testInfo) => {
   });
 });
 
+// The host plays with the vehicles and wants the guest on them too:
+// one toggle seeds the room from what they already use.
+test.describe("shared digit style", () => {
+  test.use({
+    storage: {
+      sudoku_digit_color_mode: "emoji",
+      sudoku_emoji_theme: "vehicles",
+    },
+  });
+
+  test("multiplayer lobby - shared digit style", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Create Game" }).click();
+    await page.getByRole("button", { name: "Easy" }).click();
+    await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
+    await page.getByRole("switch", { name: "Same digits for both" }).click();
+    await page.waitForSelector('[role="radiogroup"][aria-label="Emoji theme"]');
+    await page.screenshot({
+      path: screenshotPath("multiplayer-digit-style", testInfo.project.name),
+    });
+  });
+});
+
 // --- Dark mode variants ---
 
 test.describe("dark mode", () => {
