@@ -891,3 +891,36 @@ test.describe("digit colors interactions", () => {
     await page.mouse.up();
   });
 });
+
+// One scene per emoji theme, so the themes that turn to mush at note
+// size are visible rather than assumed.
+for (const theme of ["shapes", "fruit", "animals", "weather"] as const) {
+  test.describe(`emoji theme ${theme}`, () => {
+    test.use({
+      storage: {
+        sudoku_digit_color_mode: "emoji",
+        sudoku_emoji_theme: theme,
+      },
+    });
+
+    test(`solo game - emoji ${theme}`, async ({ page }, testInfo) => {
+      await playValuesAndNotes(page);
+      await page.screenshot({
+        path: screenshotPath(`emoji-${theme}`, testInfo.project.name),
+      });
+    });
+  });
+}
+
+test.describe("emoji theme settings", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "emoji" } });
+
+  test("solo game - emoji theme picker", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.waitForSelector('[role="radiogroup"][aria-label="Emoji theme"]');
+    await page.screenshot({
+      path: screenshotPath("emoji-settings", testInfo.project.name),
+    });
+  });
+});
