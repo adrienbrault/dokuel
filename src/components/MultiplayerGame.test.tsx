@@ -266,4 +266,29 @@ describe("MultiplayerGame shared digit style", () => {
 
     expect(document.documentElement.dataset.digitColor).toBe("emoji");
   });
+
+  it("holds the pinned style through a room-state flicker", () => {
+    // The board deliberately stays mounted when roomState blips during
+    // a Yjs sync. Reading the style straight off it would repaint all
+    // 81 cells in the player's own symbols and back for that blip.
+    localStorage.setItem("sudoku_digit_color_mode", "off");
+    mockMp.roomState = {
+      ...roomState,
+      digitStyle: { mode: "emoji", emojiTheme: "vehicles" },
+    };
+    const { rerender } = renderGame();
+
+    mockMp = { ...mockMp, roomState: null };
+    rerender(
+      <MultiplayerGame
+        playerId="me"
+        playerName="Me"
+        roomId="test-room"
+        difficulty={null}
+        onBack={() => {}}
+      />,
+    );
+
+    expect(document.documentElement.dataset.digitColor).toBe("emoji");
+  });
 });
