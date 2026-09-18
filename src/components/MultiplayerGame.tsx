@@ -75,6 +75,10 @@ export function MultiplayerGame({
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
     const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
+    // Only the host may move the shared palette once it is pinned:
+    // two peers editing the same key would just fight over it, and the
+    // guest opted into the host's board when they joined.
+    const isHost = mp.roomState?.hostId === playerId;
     return (
       <>
         <MultiplayerBoard
@@ -89,6 +93,10 @@ export function MultiplayerGame({
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
+          digitStyle={mp.roomState?.digitStyle ?? null}
+          onDigitStyleChange={
+            isHost && mp.roomState?.digitStyle ? mp.setDigitStyle : undefined
+          }
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
@@ -154,6 +162,7 @@ export function MultiplayerGame({
           }}
           onAssistLevelChange={mp.setAssistLevel}
           onDifficultyChange={mp.setDifficulty}
+          onDigitStyleChange={mp.setDigitStyle}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
