@@ -16,13 +16,17 @@ function parseTheme(raw: string): string | null {
  * than in the markup matters for more than re-renders: the numeral
  * stays in the DOM, so a cell still announces "value 5" to a screen
  * reader instead of the name of a piece of fruit.
+ *
+ * `imposed` is the multiplayer room's shared theme. Like the mode, it
+ * decides what gets drawn for the match and never reaches storage.
  */
-export function useEmojiTheme() {
-  const [theme, setTheme] = useLocalStorage<string>(
+export function useEmojiTheme(imposed?: string | null) {
+  const [stored, setTheme] = useLocalStorage<string>(
     STORAGE_KEY,
     DEFAULT_EMOJI_THEME,
     parseTheme,
   );
+  const theme = imposed ?? stored;
 
   useEffect(() => {
     const resolved =
@@ -36,5 +40,5 @@ export function useEmojiTheme() {
     });
   }, [theme]);
 
-  return { theme, setTheme };
+  return { theme, setTheme, locked: imposed != null };
 }
