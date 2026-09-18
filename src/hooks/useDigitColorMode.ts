@@ -22,13 +22,18 @@ function parseMode(raw: string): DigitColorMode | null {
  * That also lets several mounted copies of this hook (the settings
  * popover, the board) agree without a shared store, the same way
  * useDarkMode does.
+ *
+ * `imposed` is the multiplayer room's shared palette. It wins for what
+ * the board draws, but never reaches storage: the player is lending
+ * their board for a match, not changing their mind.
  */
-export function useDigitColorMode() {
-  const [mode, setMode] = useLocalStorage<DigitColorMode>(
+export function useDigitColorMode(imposed?: DigitColorMode | null) {
+  const [stored, setMode] = useLocalStorage<DigitColorMode>(
     STORAGE_KEY,
     "off",
     parseMode,
   );
+  const mode = imposed ?? stored;
 
   useEffect(() => {
     if (mode === "off") {
@@ -38,5 +43,5 @@ export function useDigitColorMode() {
     document.documentElement.dataset.digitColor = mode;
   }, [mode]);
 
-  return { mode, setMode };
+  return { mode, setMode, locked: imposed != null };
 }
