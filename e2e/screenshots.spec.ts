@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import type { Page } from "@playwright/test";
 import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
   fillCells,
@@ -716,6 +717,210 @@ test.describe("stats with multiplayer history", () => {
     await page.screenshot({
       path: screenshotPath("stats-multiplayer", testInfo.project.name),
       fullPage: true,
+    });
+  });
+});
+
+// --- Digit color modes ---
+
+/**
+ * Plays a handful of values and pencil notes into a fresh easy board,
+ * so a palette screenshot shows givens, entered digits and multi-note
+ * cells side by side rather than an untouched grid of givens.
+ */
+async function startEasy(page: Page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Solo" }).click();
+  await page.getByRole("button", { name: "Easy" }).click();
+  await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
+}
+
+async function playValuesAndNotes(page: Page) {
+  await startEasy(page);
+
+  const enabledNumpad = page.locator(
+    '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+  );
+  for (let i = 0; i < 5; i++) {
+    await page.locator('button[aria-label*=", empty"]').nth(0).click();
+    await page.keyboard.press(String((i % 9) + 1));
+  }
+  const remainingEmpty = page.locator('button[aria-label*=", empty"]');
+  for (let i = 0; i < 6; i++) {
+    const count = await enabledNumpad.count();
+    if (count < 2) break;
+    await remainingEmpty.nth(i).click();
+    await holdNumpadDigit(page, enabledNumpad.nth(i % count));
+    await holdNumpadDigit(page, enabledNumpad.nth((i + 1) % count));
+  }
+  await page.locator('button[aria-label*="value"]').first().click();
+}
+
+test.describe("digit colors tinted", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "digits" } });
+
+  test("solo game - tinted digits", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.screenshot({
+      path: screenshotPath("digit-colors-tinted", testInfo.project.name),
+    });
+  });
+});
+
+test.describe("digit colors only", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "colors" } });
+
+  test("solo game - colors only", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.screenshot({
+      path: screenshotPath("digit-colors-only", testInfo.project.name),
+    });
+  });
+});
+
+test.describe("digit colors only dark", () => {
+  test.use({
+    storage: { sudoku_digit_color_mode: "colors", sudoku_theme: "dark" },
+  });
+
+  test("solo game - colors only dark", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.screenshot({
+      path: screenshotPath("digit-colors-only-dark", testInfo.project.name),
+    });
+  });
+});
+
+test.describe("digit colors settings", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "digits" } });
+
+  test("solo game - digit color setting", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.waitForSelector(
+      '[role="radiogroup"][aria-label="Digit colors"]',
+    );
+    await page.screenshot({
+      path: screenshotPath("digit-colors-settings", testInfo.project.name),
+    });
+  });
+});
+
+test.describe("digit colors interactions", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "colors" } });
+
+  test("solo game - colors only, note mode pad", async ({ page }, testInfo) => {
+    await startEasy(page);
+
+    // Drag across two cells to arm a multi-cell selection, which flips
+    // the pad into note mode and swaps in the pencil-mark key faces.
+    const cells = page.locator('button[aria-label*=", empty"]');
+    const from = await cells.nth(0).boundingBox();
+    const to = await cells.nth(1).boundingBox();
+    if (!from || !to) throw new Error("cells not visible");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+
+    await page.screenshot({
+      path: screenshotPath("digit-colors-note-mode", testInfo.project.name),
+    });
+  });
+
+  test("solo game - colors only, charging a note", async ({
+    page,
+  }, testInfo) => {
+    await startEasy(page);
+    await page.locator('button[aria-label*=", empty"]').first().click();
+
+    const digit = page
+      .locator(
+        '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
+      )
+      .first();
+    const box = await digit.boundingBox();
+    if (!box) throw new Error("digit not visible");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(250);
+
+    await page.screenshot({
+      path: screenshotPath("digit-colors-charging", testInfo.project.name),
+    });
+    await page.mouse.up();
+  });
+
+  test("solo game - colors only, drag mid-flight", async ({
+    page,
+  }, testInfo) => {
+    await startEasy(page);
+
+    const cellBox = await page
+      .locator('button[aria-label*=", empty"]')
+      .first()
+      .boundingBox();
+    if (!cellBox) throw new Error("empty cell not visible");
+    const digitBox = await page
+      .getByRole("button", { name: /^5(,|$)/ })
+      .first()
+      .boundingBox();
+    if (!digitBox) throw new Error("digit not visible");
+
+    await page.mouse.move(
+      digitBox.x + digitBox.width / 2,
+      digitBox.y + digitBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      digitBox.x + digitBox.width / 2,
+      digitBox.y + digitBox.height / 2 - 22,
+      { steps: 3 },
+    );
+    await page.mouse.move(
+      cellBox.x + cellBox.width / 2,
+      cellBox.y + cellBox.height / 2,
+      { steps: 8 },
+    );
+
+    await page.screenshot({
+      path: screenshotPath("digit-colors-drag", testInfo.project.name),
+    });
+    await page.mouse.up();
+  });
+});
+
+// One scene per emoji theme, so the themes that turn to mush at note
+// size are visible rather than assumed.
+for (const theme of ["shapes", "fruit", "animals", "weather"] as const) {
+  test.describe(`emoji theme ${theme}`, () => {
+    test.use({
+      storage: {
+        sudoku_digit_color_mode: "emoji",
+        sudoku_emoji_theme: theme,
+      },
+    });
+
+    test(`solo game - emoji ${theme}`, async ({ page }, testInfo) => {
+      await playValuesAndNotes(page);
+      await page.screenshot({
+        path: screenshotPath(`emoji-${theme}`, testInfo.project.name),
+      });
+    });
+  });
+}
+
+test.describe("emoji theme settings", () => {
+  test.use({ storage: { sudoku_digit_color_mode: "emoji" } });
+
+  test("solo game - emoji theme picker", async ({ page }, testInfo) => {
+    await playValuesAndNotes(page);
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.waitForSelector('[role="radiogroup"][aria-label="Emoji theme"]');
+    await page.screenshot({
+      path: screenshotPath("emoji-settings", testInfo.project.name),
     });
   });
 });

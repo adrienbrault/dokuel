@@ -22,6 +22,27 @@
   --color-cell-user: oklch(0.42 0.12 168);
   --color-cell-conflict: oklch(0.6 0.2 25);
   --color-cell-conflict-bg: oklch(0.95 0.04 25);
+
+  /* Digit palette (opt-in). Nine hues that must stay apart from each
+     other AND from the board's own signals. Evenly spaced hues collapse
+     in the yellow-green region, so this follows the shape categorical
+     palettes settle on: red, orange, gold, green, teal, blue, violet,
+     pink, and a brown to carry the ninth without crowding the reds.
+     Lightness is held near 0.6 so no digit shouts louder than the rest,
+     nudged up for gold, which needs it to stay yellow. */
+  --color-digit-1: oklch(0.56 0.2 25);
+  --color-digit-2: oklch(0.63 0.16 60);
+  --color-digit-3: oklch(0.64 0.13 98);
+  --color-digit-4: oklch(0.56 0.15 150);
+  --color-digit-5: oklch(0.6 0.1 200);
+  --color-digit-6: oklch(0.54 0.16 255);
+  --color-digit-7: oklch(0.49 0.19 295);
+  --color-digit-8: oklch(0.55 0.19 340);
+  --color-digit-9: oklch(0.46 0.05 70);
+  /* Disc behind a player-entered symbol in emoji mode. Distinct from
+     the cell highlights it sits on top of, or it would vanish on a
+     selected or same-number cell. */
+  --color-digit-entered: oklch(0.87 0.07 168);
   --color-success: oklch(0.65 0.18 155);
   --color-accent: oklch(0.52 0.12 168);
   --color-accent-bright: oklch(0.61 0.13 168);
@@ -99,6 +120,19 @@
   --color-cell-user: oklch(0.7 0.13 168);
   --color-cell-conflict: oklch(0.7 0.18 25);
   --color-cell-conflict-bg: oklch(0.25 0.05 25);
+
+  /* Same nine hues lifted for a dark cell: chroma alone cannot carry
+     them against oklch(0.18) bg, so lightness leads. */
+  --color-digit-1: oklch(0.72 0.17 25);
+  --color-digit-2: oklch(0.78 0.14 60);
+  --color-digit-3: oklch(0.82 0.13 98);
+  --color-digit-4: oklch(0.76 0.14 150);
+  --color-digit-5: oklch(0.78 0.09 200);
+  --color-digit-6: oklch(0.72 0.14 255);
+  --color-digit-7: oklch(0.7 0.17 295);
+  --color-digit-8: oklch(0.73 0.17 340);
+  --color-digit-9: oklch(0.68 0.06 70);
+  --color-digit-entered: oklch(0.4 0.07 168);
   --color-accent-light: oklch(0.28 0.05 168);
 
   /* Semantic surfaces */
@@ -681,4 +715,149 @@ body {
   .confetti-container {
     display: none;
   }
+}
+
+/* --- Digit palette -------------------------------------------------
+   Opt-in colored digits. The mode lives on the document root, so one
+   attribute repaints the board and the numpad at once, and no memoized
+   Cell has to re-render to change color.
+
+   Every glyph carries its own digit, and resolves that into a single
+   --digit-hue here. Both modes then read that one variable. */
+.digit-ink[data-digit="1"] {
+  --digit-hue: var(--color-digit-1);
+  --digit-emoji: var(--digit-emoji-1);
+}
+.digit-ink[data-digit="2"] {
+  --digit-hue: var(--color-digit-2);
+  --digit-emoji: var(--digit-emoji-2);
+}
+.digit-ink[data-digit="3"] {
+  --digit-hue: var(--color-digit-3);
+  --digit-emoji: var(--digit-emoji-3);
+}
+.digit-ink[data-digit="4"] {
+  --digit-hue: var(--color-digit-4);
+  --digit-emoji: var(--digit-emoji-4);
+}
+.digit-ink[data-digit="5"] {
+  --digit-hue: var(--color-digit-5);
+  --digit-emoji: var(--digit-emoji-5);
+}
+.digit-ink[data-digit="6"] {
+  --digit-hue: var(--color-digit-6);
+  --digit-emoji: var(--digit-emoji-6);
+}
+.digit-ink[data-digit="7"] {
+  --digit-hue: var(--color-digit-7);
+  --digit-emoji: var(--digit-emoji-7);
+}
+.digit-ink[data-digit="8"] {
+  --digit-hue: var(--color-digit-8);
+  --digit-emoji: var(--digit-emoji-8);
+}
+.digit-ink[data-digit="9"] {
+  --digit-hue: var(--color-digit-9);
+  --digit-emoji: var(--digit-emoji-9);
+}
+
+/* Tinted digits: the glyph keeps its shape and takes the hue. An
+   accented numpad key is skipped: it is filled with the accent color,
+   and a hue picked to sit on a pale cell is unreadable on top of it. */
+[data-digit-color="digits"] .digit-ink[data-digit]:not([data-accented]) {
+  color: var(--digit-hue);
+}
+
+/* Conflicts keep their hue too. Painting them conflict-red instead
+   would break the one promise this mode makes — that a color always
+   names a digit — and collide outright with the 1, whose hue IS the
+   conflict red. The wavy underline carries the conflict on its own,
+   held to the conflict color so it stays a marker rather than looking
+   like part of the glyph. */
+[data-digit-color="digits"] .digit-ink[data-conflict] {
+  text-decoration-color: var(--color-cell-conflict);
+}
+
+/* Colors only: the glyph goes and the hue becomes the whole mark.
+   The cell background is left alone so selection, same-number and hint
+   highlighting all still read underneath. */
+[data-digit-color="colors"] .digit-ink[data-digit] {
+  color: transparent;
+  width: 58%;
+  height: auto;
+  aspect-ratio: 1;
+  background-color: var(--digit-hue);
+  border-radius: 9999px;
+}
+
+/* Givens keep their own shape. With the glyph gone, given-vs-entered
+   cannot ride on ink color — every digit already spends its hue on
+   identity — so it moves to a channel colorblind players keep. */
+[data-digit-color="colors"] .digit-ink[data-digit][data-given="true"] {
+  border-radius: 0.3rem;
+}
+
+/* A swatch has nothing to underline, so the colorblind-safe conflict
+   marker becomes a ring. The inner band of cell background is what
+   makes it legible: rung straight against the swatch, a red ring
+   disappears on the 1, whose hue is the conflict red. */
+[data-digit-color="colors"] .digit-ink[data-digit][data-conflict] {
+  box-shadow:
+    0 0 0 2px var(--color-cell-bg),
+    0 0 0 4px var(--color-cell-conflict);
+}
+
+/* Notes shrink to dots in their own sub-cell, which is the point of
+   coloring them: a pencilled cell shows its candidates as several
+   colors at once instead of three small glyphs to read. */
+[data-digit-color="colors"] .digit-ink-note[data-digit] {
+  width: 52%;
+  border-radius: 9999px;
+  /* The note grid sizes its tracks, so a dot with an explicit width
+     would otherwise sit at the start of its track instead of in the
+     middle of the sub-cell the digit belongs to. */
+  place-self: center;
+}
+
+/* Emoji: the numeral is covered rather than replaced. The text stays in
+   the DOM and only loses its visibility, so a cell still announces
+   "value 5" to a screen reader instead of the name of a piece of fruit,
+   and every test that reads the board keeps working.
+
+   The symbol is centered on the numeral's own box rather than laid out
+   after it, which is what keeps one rule working for a cell value, a
+   pencil note, a numpad key and a drag preview at once: each already
+   sizes its own text, and 1em here inherits whatever that was. */
+[data-digit-color="emoji"] .digit-ink[data-digit] {
+  visibility: hidden;
+  position: relative;
+}
+[data-digit-color="emoji"] .digit-ink[data-digit]::before {
+  content: var(--digit-emoji);
+  visibility: visible;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.92em;
+  line-height: 1;
+  padding: 0.12em;
+  border-radius: 9999px;
+}
+
+/* A symbol has no weight to thicken, so the given/entered split cannot
+   ride on the bold that carries it elsewhere. The player's own entries
+   sit on a faint disc instead, echoing the circle colors mode gives
+   them. Only a board value claims either state, which is why it says
+   "false" outright: notes and numpad keys carry no data-given at all
+   and must not pick up the disc. */
+[data-digit-color="emoji"] .digit-ink[data-digit][data-given="false"]::before {
+  background-color: var(--color-digit-entered);
+}
+
+/* The wavy conflict underline is drawn on the numeral, which this mode
+   hides, so the conflict marker becomes the same ring colors mode uses
+   — a form cue rather than one more color among the symbols. */
+[data-digit-color="emoji"] .digit-ink[data-digit][data-conflict]::before {
+  box-shadow: 0 0 0 2px var(--color-cell-conflict);
 }

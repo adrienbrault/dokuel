@@ -139,20 +139,31 @@ export const Cell = memo(function Cell({
       {cell.value ? (
         <span
           key={cell.value}
-          className={`text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
+          data-digit={cell.value}
+          data-given={cell.isGiven ? "true" : "false"}
+          data-conflict={isConflict ? "true" : undefined}
+          className={`digit-ink text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
         >
           {cell.value}
         </span>
       ) : cell.notes.size > 0 ? (
         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]">
-          {DIGITS.map((n) => (
-            <span
-              key={n}
-              className="flex items-center justify-center text-[clamp(0.80859375rem,3.1625vw,1.078125rem)] text-text-secondary font-medium leading-none"
-            >
-              {cell.notes.has(n) && chargingDigit !== n ? n : ""}
-            </span>
-          ))}
+          {DIGITS.map((n) => {
+            const shown = cell.notes.has(n) && chargingDigit !== n;
+            return (
+              <span
+                key={n}
+                // Only a note that is actually pencilled in names its
+                // digit: the other eight sub-cells are spacers, and a
+                // palette that painted them would draw nine dots in
+                // every empty cell.
+                data-digit={shown ? n : undefined}
+                className="digit-ink digit-ink-note flex items-center justify-center text-[clamp(0.80859375rem,3.1625vw,1.078125rem)] text-text-secondary font-medium leading-none"
+              >
+                {shown ? n : ""}
+              </span>
+            );
+          })}
         </div>
       ) : null}
       {dropTargetState === "valid" && (
@@ -192,7 +203,12 @@ export const Cell = memo(function Cell({
                 }
           }
         >
-          {dropDigit}
+          {/* The pose lives on the wrapper and the digit on this inner
+              span, so a palette swatch sizes itself against whichever
+              pose is active instead of fighting the inline width. */}
+          <span data-digit={dropDigit} className="digit-ink leading-none">
+            {dropDigit}
+          </span>
         </span>
       )}
       {cell.value === null && chargingDigit !== undefined && (
@@ -207,7 +223,9 @@ export const Cell = memo(function Cell({
             } as CSSProperties
           }
         >
-          {chargingDigit}
+          <span data-digit={chargingDigit} className="digit-ink leading-none">
+            {chargingDigit}
+          </span>
         </span>
       )}
     </button>

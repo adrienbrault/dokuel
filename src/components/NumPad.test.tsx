@@ -1148,3 +1148,62 @@ describe("NumPad", () => {
     });
   });
 });
+
+describe("NumPad digit palette hooks", () => {
+  it("names the digit on each key face, but not its remaining count", () => {
+    // Colors-only turns key faces into swatches; without this the pad
+    // still reads as bare numerals and the mode is unplayable. The
+    // count beside it is a tally, not a digit, so it must stay text.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={{ ...ZERO_REMAINING, 3: 4 }}
+        onTapNumber={vi.fn()}
+      />,
+    );
+
+    const three = screen.getByRole("button", { name: /^3, / });
+    const tagged = [...three.querySelectorAll("[data-digit]")];
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0]).toHaveTextContent("3");
+  });
+
+  it("marks the accented key so its digit is not tinted into the fill", () => {
+    // An accented key is filled with the accent color, and a mid
+    // lightness hue on top of it is unreadable. The palette skips it
+    // and lets the key keep its on-accent ink.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        selectedValue={6}
+      />,
+    );
+
+    const six = screen.getByRole("button", { name: /^6, / });
+    expect(six.querySelector("[data-digit]")).toHaveAttribute(
+      "data-accented",
+      "true",
+    );
+  });
+
+  it("names the digit on the note-mode face too", () => {
+    // Note mode swaps in the pencil-mark preview. Left untagged it is
+    // the one place colors mode still shows a numeral, so the pad
+    // reads as digits while the board it writes to reads as color.
+    render(
+      <NumPad
+        position="bottom"
+        remainingCounts={ZERO_REMAINING}
+        onTapNumber={vi.fn()}
+        tapAction="note"
+      />,
+    );
+
+    const four = screen.getByRole("button", { name: /^4, / });
+    const tagged = [...four.querySelectorAll("[data-digit]")];
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0]).toHaveTextContent("4");
+  });
+});

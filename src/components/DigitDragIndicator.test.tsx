@@ -28,6 +28,19 @@ describe("DigitDragIndicator", () => {
     expect(getByTestId("digit-drag-indicator").textContent).toBe("5");
   });
 
+  it("routes the carried digit through the palette", () => {
+    // The chip is the last surface that would still show a numeral
+    // once the board and the pad draw swatches.
+    const { getByTestId } = render(<DigitDragIndicator state={makeState()} />);
+    const glyph = getByTestId("digit-drag-indicator").querySelector(
+      "[data-digit]",
+    );
+    expect(glyph).toHaveTextContent("5");
+    // The chip is filled with the accent color, so tinted mode has to
+    // leave its on-accent ink alone, exactly like an accented key.
+    expect(glyph).toHaveAttribute("data-accented", "true");
+  });
+
   it("sits right at the cursor for a mouse drag", () => {
     const { getByTestId } = render(
       <DigitDragIndicator state={makeState({ x: 200, y: 300, lift: 0 })} />,

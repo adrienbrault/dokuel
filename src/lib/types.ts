@@ -81,6 +81,19 @@ export type GameStatus = "idle" | "playing" | "completed";
 
 export type AssistLevel = "paper" | "standard" | "full";
 
+// --- Digit colors ---
+
+/**
+ * How the board paints digits.
+ *
+ * "off"    — one ink for givens, one for the player's own entries.
+ * "digits" — each digit 1-9 keeps its glyph and takes its own hue.
+ * "colors" — the glyph goes, leaving only the hue. Notes become dots,
+ *            so a pencilled cell shows several colors at once.
+ * "emoji"  — the glyph is covered by a symbol from the chosen theme.
+ */
+export type DigitColorMode = "off" | "digits" | "colors" | "emoji";
+
 // --- Numpad ---
 
 export type NumPadPosition = "bottom" | "left" | "right";

@@ -27,7 +27,9 @@ export function NumPadNotePreview({
         >
           {slot === digit ? (
             <span
-              className={`animate-pop-in ${accented ? "text-text-on-accent" : "text-accent"}`}
+              data-digit={digit}
+              data-accented={accented ? "true" : undefined}
+              className={`digit-ink digit-ink-note animate-pop-in ${accented ? "text-text-on-accent" : "text-accent"}`}
             >
               {digit}
             </span>
