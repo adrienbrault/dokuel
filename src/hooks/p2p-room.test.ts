@@ -18,6 +18,7 @@ import {
   type P2PRoom,
   requestRematch,
   setDifficulty,
+  setDigitStyle,
   startGame,
   updateProgress,
 } from "./p2p-room.ts";
@@ -755,6 +756,26 @@ describe("p2p-room", () => {
       expect(getPlayers(roomA)).toHaveLength(2);
       expect(getPlayers(roomB)).toHaveLength(2);
       expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
+    });
+  });
+
+  describe("setDigitStyle", () => {
+    it("carries the host's chosen style to the other peer", () => {
+      // The whole point of a shared style: the guest's board has to
+      // repaint from the host's pick, not from its own preference.
+      const [docA, docB] = createLinkedDocs();
+      const roomA = createRoomFromDoc(docA, "test-room");
+      const roomB = createRoomFromDoc(docB, "test-room");
+      initializeRoom(roomA, "host", "medium");
+      joinRoom(roomA, "host", "Host");
+      joinRoom(roomB, "guest", "Guest");
+
+      setDigitStyle(roomA, { mode: "emoji", emojiTheme: "vehicles" });
+
+      expect(getRoomState(roomB)?.digitStyle).toEqual({
+        mode: "emoji",
+        emojiTheme: "vehicles",
+      });
     });
   });
 });
