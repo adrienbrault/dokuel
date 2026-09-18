@@ -47,4 +47,17 @@ describe("useDigitColorMode", () => {
 
     expect(result.current.mode).toBe("off");
   });
+
+  it("paints the board from an imposed mode without touching the stored one", () => {
+    // A shared multiplayer room overrides what both boards draw, but a
+    // player's own preference has to survive the match: they never
+    // chose to change it.
+    localStorage.setItem("sudoku_digit_color_mode", "digits");
+
+    const { result } = renderHook(() => useDigitColorMode("emoji"));
+
+    expect(document.documentElement.dataset.digitColor).toBe("emoji");
+    expect(localStorage.getItem("sudoku_digit_color_mode")).toBe("digits");
+    expect(result.current.locked).toBe(true);
+  });
 });
