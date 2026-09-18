@@ -761,6 +761,26 @@ describe("p2p-room", () => {
   });
 
   describe("setDigitStyle", () => {
+    it("ignores a style this build cannot draw", () => {
+      // The value arrives from a peer, so it can name a mode or a
+      // theme this build has never heard of — an older or tampered
+      // client. Falling back to free choice beats a board drawn from
+      // symbols that do not exist.
+      const room = createTestRoom();
+      initializeRoom(room, "host", "medium");
+      joinRoom(room, "host", "Host");
+
+      room.doc
+        .getMap("room")
+        .set("digitStyle", { mode: "emoji", emojiTheme: "dinosaurs" });
+      expect(getRoomState(room)?.digitStyle).toBeNull();
+
+      room.doc
+        .getMap("room")
+        .set("digitStyle", { mode: "hologram", emojiTheme: "fruit" });
+      expect(getRoomState(room)?.digitStyle).toBeNull();
+    });
+
     it("carries the host's chosen style to the other peer", () => {
       // The whole point of a shared style: the guest's board has to
       // repaint from the host's pick, not from its own preference.
