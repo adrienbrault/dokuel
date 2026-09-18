@@ -10,7 +10,7 @@ import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
-import { findEmojiTheme } from "../lib/emoji-themes.ts";
+import { describeDigitStyle } from "../lib/digit-style.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type {
   DigitColorMode,
@@ -323,21 +323,6 @@ function SettingsButton({
       )}
     </div>
   );
-}
-
-/** Reads a pinned style back as a sentence for the player who cannot
- *  change it: a greyed-out picker would invite clicks that do nothing. */
-export function describeDigitStyle(style: DigitStyle): string {
-  switch (style.mode) {
-    case "off":
-      return "Plain digits";
-    case "digits":
-      return "Tinted digits";
-    case "colors":
-      return "Colors only";
-    case "emoji":
-      return `Emoji · ${findEmojiTheme(style.emojiTheme)?.label ?? "Shapes"}`;
-  }
 }
 
 function Shortcut({ keys, label }: { keys: string; label: string }) {
