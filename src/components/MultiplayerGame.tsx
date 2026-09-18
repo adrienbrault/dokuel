@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import type { DigitStyle } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -24,6 +25,19 @@ export function MultiplayerGame({
 }: MultiplayerGameProps) {
   const mp = useYjsMultiplayer({ roomId, playerId, playerName, difficulty });
   const [toast, setToast] = useState<string | null>(null);
+  // The board survives a roomState blip (see below), and so must the
+  // palette it draws with: reading it live would repaint all 81 cells
+  // in the player's own symbols for the length of the blip, and demote
+  // the host to the read-only line and back. Only a real room state
+  // moves either — including a style back to null, which is the host
+  // unpinning. Host-only, because two peers editing the same key would
+  // just fight over it and the guest joined the host's board.
+  const lastDigitStyle = useRef<DigitStyle | null>(null);
+  const isHost = useRef(false);
+  if (mp.roomState) {
+    lastDigitStyle.current = mp.roomState.digitStyle;
+    isHost.current = mp.roomState.hostId === playerId;
+  }
   // Arms after the disconnect has persisted for a beat; combined with
   // the live value below so the banner hides instantly on return.
   const disconnectSettled = useDelayedFlag(
@@ -75,10 +89,6 @@ export function MultiplayerGame({
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
     const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
-    // Only the host may move the shared palette once it is pinned:
-    // two peers editing the same key would just fight over it, and the
-    // guest opted into the host's board when they joined.
-    const isHost = mp.roomState?.hostId === playerId;
     return (
       <>
         <MultiplayerBoard
@@ -93,9 +103,11 @@ export function MultiplayerGame({
           opponentProgress={mp.opponentProgress}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
-          digitStyle={mp.roomState?.digitStyle ?? null}
+          digitStyle={lastDigitStyle.current}
           onDigitStyleChange={
-            isHost && mp.roomState?.digitStyle ? mp.setDigitStyle : undefined
+            isHost.current && lastDigitStyle.current
+              ? mp.setDigitStyle
+              : undefined
           }
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
