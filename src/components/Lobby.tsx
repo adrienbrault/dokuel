@@ -1,9 +1,20 @@
 import { Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
+import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
 import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
-import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import { describeDigitStyle } from "../lib/digit-style.ts";
+import type {
+  AssistLevel,
+  Difficulty,
+  DigitStyle,
+  RoomState,
+} from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
+import { DigitColorPicker } from "./DigitColorPicker.tsx";
+import { EmojiThemePicker } from "./EmojiThemePicker.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
+import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
 type LobbyProps = {
   roomState: RoomState;
@@ -11,6 +22,8 @@ type LobbyProps = {
   onRename?: (name: string) => void;
   onAssistLevelChange?: (level: AssistLevel) => void;
   onDifficultyChange?: (level: Difficulty) => void;
+  /** Host only: pins one palette for both boards, or frees them with null. */
+  onDigitStyleChange?: (style: DigitStyle | null) => void;
   onStart: () => void;
   onBack: () => void;
 };
@@ -21,6 +34,7 @@ export function Lobby({
   onRename,
   onAssistLevelChange,
   onDifficultyChange,
+  onDigitStyleChange,
   onStart,
   onBack,
 }: LobbyProps) {
@@ -30,6 +44,13 @@ export function Lobby({
   // still be able to start.
   const canStart = roomState.players.length >= 2;
   const waiting = roomState.players.length < 2;
+  const pinnedStyle = roomState.digitStyle;
+  // Overridden by the room's pick when there is one, so the pickers
+  // below show what the guest will actually see; otherwise they show
+  // what the host plays with on their own, which is what the toggle
+  // seeds the room from.
+  const digitColor = useDigitColorMode(pinnedStyle?.mode ?? null);
+  const emojiTheme = useEmojiTheme(pinnedStyle?.emojiTheme ?? null);
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -207,6 +228,55 @@ export function Lobby({
           </div>
         )}
       </div>
+
+      {isHost && onDigitStyleChange ? (
+        <div className="flex flex-col gap-2 w-full">
+          <ToggleSwitch
+            checked={pinnedStyle !== null}
+            onChange={() =>
+              onDigitStyleChange(
+                pinnedStyle === null
+                  ? { mode: digitColor.mode, emojiTheme: emojiTheme.theme }
+                  : null,
+              )
+            }
+            label="Same digits for both"
+          />
+          {pinnedStyle !== null && (
+            <>
+              <DigitColorPicker
+                mode={pinnedStyle.mode}
+                onChange={(mode) =>
+                  onDigitStyleChange({
+                    mode,
+                    emojiTheme: pinnedStyle.emojiTheme,
+                  })
+                }
+              />
+              {pinnedStyle.mode === "emoji" && (
+                <EmojiThemePicker
+                  theme={pinnedStyle.emojiTheme}
+                  onChange={(theme) =>
+                    onDigitStyleChange({
+                      mode: pinnedStyle.mode,
+                      emojiTheme: theme,
+                    })
+                  }
+                />
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        pinnedStyle !== null && (
+          <div className="flex flex-col gap-2 w-full">
+            <span className="label">Digits</span>
+            <div className="card px-4 py-2.5 text-center text-sm font-semibold text-text-primary">
+              {describeDigitStyle(pinnedStyle)}
+            </div>
+          </div>
+        )
+      )}
 
       {onAssistLevelChange && (
         <div className="flex flex-col gap-2 w-full">
