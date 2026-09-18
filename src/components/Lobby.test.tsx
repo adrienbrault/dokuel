@@ -217,9 +217,7 @@ describe("Lobby", () => {
         onBack={vi.fn()}
       />,
     );
-    await userEvent.click(
-      screen.getByRole("switch", { name: /same digits/i }),
-    );
+    await userEvent.click(screen.getByRole("switch", { name: /same digits/i }));
 
     expect(onDigitStyleChange).toHaveBeenCalledWith({
       mode: "emoji",
