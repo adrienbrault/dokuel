@@ -54,10 +54,9 @@ describe("useDigitColorMode", () => {
     // chose to change it.
     localStorage.setItem("sudoku_digit_color_mode", "digits");
 
-    const { result } = renderHook(() => useDigitColorMode("emoji"));
+    renderHook(() => useDigitColorMode("emoji"));
 
     expect(document.documentElement.dataset.digitColor).toBe("emoji");
     expect(localStorage.getItem("sudoku_digit_color_mode")).toBe("digits");
-    expect(result.current.locked).toBe(true);
   });
 });

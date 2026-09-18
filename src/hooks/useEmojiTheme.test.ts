@@ -45,12 +45,11 @@ describe("useEmojiTheme", () => {
     // the match, and hands the player's own pick back afterwards.
     localStorage.setItem("sudoku_emoji_theme", "fruit");
 
-    const { result } = renderHook(() => useEmojiTheme("vehicles"));
+    renderHook(() => useEmojiTheme("vehicles"));
 
     expect(
       document.documentElement.style.getPropertyValue("--digit-emoji-1"),
     ).toBe('"🚗"');
     expect(localStorage.getItem("sudoku_emoji_theme")).toBe("fruit");
-    expect(result.current.locked).toBe(true);
   });
 });

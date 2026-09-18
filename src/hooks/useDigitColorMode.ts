@@ -43,5 +43,5 @@ export function useDigitColorMode(imposed?: DigitColorMode | null) {
     document.documentElement.dataset.digitColor = mode;
   }, [mode]);
 
-  return { mode, setMode, locked: imposed != null };
+  return { mode, setMode };
 }

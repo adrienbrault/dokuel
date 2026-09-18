@@ -40,5 +40,5 @@ export function useEmojiTheme(imposed?: string | null) {
     });
   }, [theme]);
 
-  return { theme, setTheme, locked: imposed != null };
+  return { theme, setTheme };
 }
