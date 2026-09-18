@@ -121,4 +121,20 @@ describe("mp-snapshot", () => {
     expect(loadSnapshot("room-fresh")).not.toBeNull();
     expect(localStorage.getItem("unrelated_key")).toBe("keep-me");
   });
+
+  it("keeps the room's pinned digit style across a reload", () => {
+    // The mirror exists for the reload where IndexedDB comes back
+    // empty. Coming back with the opponent's board drawn in different
+    // symbols than before would be the same bug as coming back to the
+    // wrong difficulty.
+    saveSnapshot(
+      "room-1",
+      makeState({ digitStyle: { mode: "emoji", emojiTheme: "vehicles" } }),
+    );
+
+    expect(loadSnapshot("room-1")?.digitStyle).toEqual({
+      mode: "emoji",
+      emojiTheme: "vehicles",
+    });
+  });
 });
