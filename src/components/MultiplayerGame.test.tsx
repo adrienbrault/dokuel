@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
@@ -290,5 +291,27 @@ describe("MultiplayerGame shared digit style", () => {
     );
 
     expect(document.documentElement.dataset.digitColor).toBe("emoji");
+  });
+
+  it("sends the host's mid-game pick to the room, not to their storage", async () => {
+    // The host can still change their mind once the game is running,
+    // and the whole point is that the change reaches the opponent —
+    // so it goes to the room and leaves their own settings alone.
+    localStorage.setItem("sudoku_digit_color_mode", "off");
+    mockMp.roomState = {
+      ...roomState,
+      hostId: "me",
+      digitStyle: { mode: "emoji", emojiTheme: "vehicles" },
+    };
+    renderGame();
+
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Tinted" }));
+
+    expect(mockMp.setDigitStyle).toHaveBeenCalledWith({
+      mode: "digits",
+      emojiTheme: "vehicles",
+    });
+    expect(localStorage.getItem("sudoku_digit_color_mode")).toBe("off");
   });
 });
