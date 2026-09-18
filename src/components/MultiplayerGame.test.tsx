@@ -59,6 +59,7 @@ function makeMp() {
     updateName: vi.fn(),
     setAssistLevel: vi.fn(),
     setDifficulty: vi.fn(),
+    setDigitStyle: vi.fn(),
   };
 }
 
@@ -241,5 +242,28 @@ describe("MultiplayerGame disconnect overlay", () => {
     mockMp.gameOver = { winnerId: "me", winnerName: "Me" };
     renderGame();
     expect(screen.queryByText("Opponent disconnected")).not.toBeInTheDocument();
+  });
+});
+
+describe("MultiplayerGame shared digit style", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    delete document.documentElement.dataset.digitColor;
+    mockMp = makeMp();
+  });
+
+  it("draws the in-game board from the room's pinned style", () => {
+    // The room state is the only thing both players agree on, so the
+    // board has to read the palette from it and not from the local
+    // preference the guest happens to have stored.
+    localStorage.setItem("sudoku_digit_color_mode", "off");
+    mockMp.roomState = {
+      ...roomState,
+      digitStyle: { mode: "emoji", emojiTheme: "vehicles" },
+    };
+
+    renderGame();
+
+    expect(document.documentElement.dataset.digitColor).toBe("emoji");
   });
 });
