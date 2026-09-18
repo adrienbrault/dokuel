@@ -5,13 +5,14 @@ const OPTIONS: { value: DigitColorMode; label: string }[] = [
   { value: "off", label: "Off" },
   { value: "digits", label: "Tinted" },
   { value: "colors", label: "Colors" },
+  { value: "emoji", label: "Emoji" },
 ];
 
 /**
- * Picks how the board paints digits: plain, one hue per digit, or hue
- * alone with the glyph dropped. Three states rather than a toggle,
- * because colors-only is a different board to read, not a louder
- * version of the tinted one.
+ * Picks how the board paints digits: plain, one hue per digit, hue
+ * alone with the glyph dropped, or a symbol from the chosen emoji
+ * theme. Separate states rather than a toggle, because each is a
+ * different board to read, not a louder version of the last.
  */
 export function DigitColorPicker({
   mode,
