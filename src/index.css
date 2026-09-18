@@ -39,6 +39,10 @@
   --color-digit-7: oklch(0.49 0.19 295);
   --color-digit-8: oklch(0.55 0.19 340);
   --color-digit-9: oklch(0.46 0.05 70);
+  /* Disc behind a player-entered symbol in emoji mode. Distinct from
+     the cell highlights it sits on top of, or it would vanish on a
+     selected or same-number cell. */
+  --color-digit-entered: oklch(0.87 0.07 168);
   --color-success: oklch(0.65 0.18 155);
   --color-accent: oklch(0.52 0.12 168);
   --color-accent-bright: oklch(0.61 0.13 168);
@@ -128,6 +132,7 @@
   --color-digit-7: oklch(0.7 0.17 295);
   --color-digit-8: oklch(0.73 0.17 340);
   --color-digit-9: oklch(0.68 0.06 70);
+  --color-digit-entered: oklch(0.4 0.07 168);
   --color-accent-light: oklch(0.28 0.05 168);
 
   /* Semantic surfaces */
@@ -721,30 +726,39 @@ body {
    --digit-hue here. Both modes then read that one variable. */
 .digit-ink[data-digit="1"] {
   --digit-hue: var(--color-digit-1);
+  --digit-emoji: var(--digit-emoji-1);
 }
 .digit-ink[data-digit="2"] {
   --digit-hue: var(--color-digit-2);
+  --digit-emoji: var(--digit-emoji-2);
 }
 .digit-ink[data-digit="3"] {
   --digit-hue: var(--color-digit-3);
+  --digit-emoji: var(--digit-emoji-3);
 }
 .digit-ink[data-digit="4"] {
   --digit-hue: var(--color-digit-4);
+  --digit-emoji: var(--digit-emoji-4);
 }
 .digit-ink[data-digit="5"] {
   --digit-hue: var(--color-digit-5);
+  --digit-emoji: var(--digit-emoji-5);
 }
 .digit-ink[data-digit="6"] {
   --digit-hue: var(--color-digit-6);
+  --digit-emoji: var(--digit-emoji-6);
 }
 .digit-ink[data-digit="7"] {
   --digit-hue: var(--color-digit-7);
+  --digit-emoji: var(--digit-emoji-7);
 }
 .digit-ink[data-digit="8"] {
   --digit-hue: var(--color-digit-8);
+  --digit-emoji: var(--digit-emoji-8);
 }
 .digit-ink[data-digit="9"] {
   --digit-hue: var(--color-digit-9);
+  --digit-emoji: var(--digit-emoji-9);
 }
 
 /* Tinted digits: the glyph keeps its shape and takes the hue. An
@@ -779,7 +793,7 @@ body {
 /* Givens keep their own shape. With the glyph gone, given-vs-entered
    cannot ride on ink color — every digit already spends its hue on
    identity — so it moves to a channel colorblind players keep. */
-[data-digit-color="colors"] .digit-ink[data-digit][data-given] {
+[data-digit-color="colors"] .digit-ink[data-digit][data-given="true"] {
   border-radius: 0.3rem;
 }
 
@@ -803,4 +817,47 @@ body {
      would otherwise sit at the start of its track instead of in the
      middle of the sub-cell the digit belongs to. */
   place-self: center;
+}
+
+/* Emoji: the numeral is covered rather than replaced. The text stays in
+   the DOM and only loses its visibility, so a cell still announces
+   "value 5" to a screen reader instead of the name of a piece of fruit,
+   and every test that reads the board keeps working.
+
+   The symbol is centered on the numeral's own box rather than laid out
+   after it, which is what keeps one rule working for a cell value, a
+   pencil note, a numpad key and a drag preview at once: each already
+   sizes its own text, and 1em here inherits whatever that was. */
+[data-digit-color="emoji"] .digit-ink[data-digit] {
+  visibility: hidden;
+  position: relative;
+}
+[data-digit-color="emoji"] .digit-ink[data-digit]::before {
+  content: var(--digit-emoji);
+  visibility: visible;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.92em;
+  line-height: 1;
+  padding: 0.12em;
+  border-radius: 9999px;
+}
+
+/* A symbol has no weight to thicken, so the given/entered split cannot
+   ride on the bold that carries it elsewhere. The player's own entries
+   sit on a faint disc instead, echoing the circle colors mode gives
+   them. Only a board value claims either state, which is why it says
+   "false" outright: notes and numpad keys carry no data-given at all
+   and must not pick up the disc. */
+[data-digit-color="emoji"] .digit-ink[data-digit][data-given="false"]::before {
+  background-color: var(--color-digit-entered);
+}
+
+/* The wavy conflict underline is drawn on the numeral, which this mode
+   hides, so the conflict marker becomes the same ring colors mode uses
+   — a form cue rather than one more color among the symbols. */
+[data-digit-color="emoji"] .digit-ink[data-digit][data-conflict]::before {
+  box-shadow: 0 0 0 2px var(--color-cell-conflict);
 }

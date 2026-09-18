@@ -5,7 +5,12 @@ import { useLocalStorage } from "./useLocalStorage.ts";
 const STORAGE_KEY = "sudoku_digit_color_mode";
 
 function parseMode(raw: string): DigitColorMode | null {
-  return raw === "off" || raw === "digits" || raw === "colors" ? raw : null;
+  return raw === "off" ||
+    raw === "digits" ||
+    raw === "colors" ||
+    raw === "emoji"
+    ? raw
+    : null;
 }
 
 /**

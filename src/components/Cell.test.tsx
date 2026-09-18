@@ -313,6 +313,16 @@ describe("Cell digit palette hooks", () => {
     expect(screen.getByText("4")).toHaveAttribute("data-given", "true");
   });
 
+  it("says so when a digit is the player's own, not just when it is given", () => {
+    // Emoji mode marks entered symbols rather than givens — a symbol
+    // has no weight to thicken — so "not given" has to be stated, not
+    // inferred from a missing attribute that notes and numpad keys
+    // also lack.
+    render(<Cell {...defaultProps()} cell={makeCell({ value: 4 })} />);
+
+    expect(screen.getByText("4")).toHaveAttribute("data-given", "false");
+  });
+
   it("marks conflicts on the glyph, since a swatch cannot be underlined", () => {
     // The wavy underline is the colorblind-safe conflict marker in the
     // normal board, but colors-only replaces the glyph with a swatch

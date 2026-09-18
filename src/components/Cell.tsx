@@ -140,7 +140,7 @@ export const Cell = memo(function Cell({
         <span
           key={cell.value}
           data-digit={cell.value}
-          data-given={cell.isGiven ? "true" : undefined}
+          data-given={cell.isGiven ? "true" : "false"}
           data-conflict={isConflict ? "true" : undefined}
           className={`digit-ink text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
         >

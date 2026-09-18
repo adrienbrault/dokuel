@@ -90,8 +90,9 @@ export type AssistLevel = "paper" | "standard" | "full";
  * "digits" — each digit 1-9 keeps its glyph and takes its own hue.
  * "colors" — the glyph goes, leaving only the hue. Notes become dots,
  *            so a pencilled cell shows several colors at once.
+ * "emoji"  — the glyph is covered by a symbol from the chosen theme.
  */
-export type DigitColorMode = "off" | "digits" | "colors";
+export type DigitColorMode = "off" | "digits" | "colors" | "emoji";
 
 // --- Numpad ---
 
