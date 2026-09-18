@@ -422,6 +422,10 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
     if (!roomMap.has("difficulty")) roomMap.set("difficulty", snap.difficulty);
     if (!roomMap.has("assistLevel"))
       roomMap.set("assistLevel", snap.assistLevel);
+    // Older snapshots predate the shared style; undefined would write
+    // a key that reads back as "pinned to nothing".
+    if (!roomMap.has("digitStyle"))
+      roomMap.set("digitStyle", snap.digitStyle ?? null);
     if (!roomMap.has("hostId")) roomMap.set("hostId", snap.hostId);
     if (!roomMap.has("winnerId")) roomMap.set("winnerId", snap.winnerId);
     if (!roomMap.has("winnerName")) roomMap.set("winnerName", snap.winnerName);

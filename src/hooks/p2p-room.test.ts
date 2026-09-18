@@ -603,6 +603,7 @@ describe("p2p-room", () => {
         status: "playing",
         difficulty: "hard",
         assistLevel: "standard",
+        digitStyle: null,
         hostId: "p1",
         players: [
           {
