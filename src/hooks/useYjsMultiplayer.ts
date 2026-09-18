@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AssistLevel, Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Difficulty, DigitStyle } from "../lib/types.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
 import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
@@ -295,6 +295,10 @@ export function useYjsMultiplayer({
     roomRef.current?.setDifficulty(level);
   }, []);
 
+  const setDigitStyle = useCallback((style: DigitStyle | null) => {
+    roomRef.current?.setDigitStyle(style);
+  }, []);
+
   return {
     connected,
     ...projection,
@@ -306,5 +310,6 @@ export function useYjsMultiplayer({
     updateName,
     setAssistLevel,
     setDifficulty,
+    setDigitStyle,
   };
 }

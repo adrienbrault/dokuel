@@ -1,5 +1,10 @@
 import type { Doc } from "yjs";
-import type { AssistLevel, Difficulty, RoomState } from "../lib/types.ts";
+import type {
+  AssistLevel,
+  Difficulty,
+  DigitStyle,
+  RoomState,
+} from "../lib/types.ts";
 import {
   clearSnapshot,
   loadSnapshot,
@@ -22,6 +27,7 @@ import {
   requestRematch,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
+  setDigitStyle as setRoomDigitStyle,
   startGame,
   updatePlayerName,
   updateProgress,
@@ -177,6 +183,8 @@ export type Room = {
   updateName(name: string): void;
   setAssistLevel(level: AssistLevel): void;
   setDifficulty(level: Difficulty): void;
+  /** Pin both boards to one palette, or null to free them again. */
+  setDigitStyle(style: DigitStyle | null): void;
   /**
    * Mirror the room to synchronous local storage. Local persistence is
    * async and a backgrounded tab is not always given time to flush it
@@ -521,6 +529,9 @@ export function createRoom({
     },
     setDifficulty(level) {
       setRoomDifficulty(p2p, level);
+    },
+    setDigitStyle(style) {
+      setRoomDigitStyle(p2p, style);
     },
     persistSnapshot() {
       const state = getRoomState(p2p);
