@@ -20,6 +20,7 @@ export type MpSnapshot = {
   status: RoomState["status"];
   difficulty: RoomState["difficulty"];
   assistLevel: RoomState["assistLevel"];
+  digitStyle: RoomState["digitStyle"];
   hostId: string;
   players: Player[];
   winnerId: string | null;
@@ -48,6 +49,7 @@ export function saveSnapshot(roomId: string, state: RoomState): void {
     status: state.status,
     difficulty: state.difficulty,
     assistLevel: state.assistLevel,
+    digitStyle: state.digitStyle,
     hostId: state.hostId,
     players: state.players,
     winnerId: state.winnerId,

@@ -108,6 +108,7 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
     title: "Multiplayer",
     scenes: [
       "multiplayer-lobby",
+      "multiplayer-digit-style",
       "multiplayer-progress-bars",
       "multiplayer-progress-bars-dark",
       "multiplayer-progress-hidden",

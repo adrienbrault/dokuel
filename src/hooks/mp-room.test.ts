@@ -688,6 +688,20 @@ describe("commands", () => {
 
     expect(doc.getMap("room").get("assistLevel")).toBe("paper");
   });
+
+  it("pins the digit style for both players", () => {
+    // Host-driven: the guest reads it off the room rather than being
+    // asked to hunt for the same theme in their own settings.
+    const { doc, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    room.setDigitStyle({ mode: "emoji", emojiTheme: "vehicles" });
+
+    expect(doc.getMap("room").get("digitStyle")).toEqual({
+      mode: "emoji",
+      emojiTheme: "vehicles",
+    });
+  });
 });
 
 describe("close", () => {

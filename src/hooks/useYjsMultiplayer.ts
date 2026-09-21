@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { AssistLevel, Difficulty } from "../lib/types.ts";
+import { useEffect, useRef, useState } from "react";
+import type { Difficulty } from "../lib/types.ts";
+import { useRoomCommands } from "./mp-commands.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
 import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
@@ -52,6 +53,8 @@ export function useYjsMultiplayer({
   // factory must not tear the room down on every render.
   const openConnectionRef = useRef(openConnection);
   openConnectionRef.current = openConnection;
+
+  const commands = useRoomCommands({ roomRef, connectionRef, playerId });
 
   useEffect(() => {
     // Self-diagnostic for the iOS Safari reload problem. Visible to
@@ -242,69 +245,5 @@ export function useYjsMultiplayer({
     // renames through Yjs without remounting.
   }, [roomId, playerId]);
 
-  const sendStartGame = useCallback(() => {
-    roomRef.current?.start();
-  }, []);
-
-  const sendProgress = useCallback(
-    (cellsRemaining: number, completionPercent: number) => {
-      roomRef.current?.progress(cellsRemaining, completionPercent);
-    },
-    [],
-  );
-
-  const sendComplete = useCallback((board: string) => {
-    roomRef.current?.complete(board);
-  }, []);
-
-  // Forfeit path: the opponent's presence dropped and the grace period
-  // ran out. Distinct from sendComplete so an unfinished board is never
-  // disguised as a solve.
-  const claimForfeitWin = useCallback(() => {
-    const room = roomRef.current;
-    if (!room) return;
-    // Presence is re-read here, not taken from the Room's last event:
-    // the countdown was armed from stale state and the opponent may
-    // have reconnected in the meantime.
-    const connection = connectionRef.current;
-    room.claimForfeit({
-      hasOtherPeer: connection?.hasOtherPeer(playerId) ?? false,
-    });
-  }, [playerId]);
-
-  const sendRematch = useCallback(() => {
-    roomRef.current?.rematch();
-  }, []);
-
-  const updateName = useCallback(
-    (newName: string) => {
-      const room = roomRef.current;
-      if (!room) return;
-      room.updateName(newName);
-      // Presence carries the name too, and that lives on the Connection.
-      connectionRef.current?.announce({ id: playerId, name: newName });
-    },
-    [playerId],
-  );
-
-  const setAssistLevel = useCallback((level: AssistLevel) => {
-    roomRef.current?.setAssistLevel(level);
-  }, []);
-
-  const setDifficulty = useCallback((level: Difficulty) => {
-    roomRef.current?.setDifficulty(level);
-  }, []);
-
-  return {
-    connected,
-    ...projection,
-    sendStartGame,
-    sendProgress,
-    sendComplete,
-    claimForfeitWin,
-    sendRematch,
-    updateName,
-    setAssistLevel,
-    setDifficulty,
-  };
+  return { connected, ...projection, ...commands };
 }

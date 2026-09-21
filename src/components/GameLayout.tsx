@@ -10,8 +10,13 @@ import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
+import { describeDigitStyle } from "../lib/digit-style.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
-import type { NumPadPosition } from "../lib/types.ts";
+import type {
+  DigitColorMode,
+  DigitStyle,
+  NumPadPosition,
+} from "../lib/types.ts";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { DigitColorPicker } from "./DigitColorPicker.tsx";
 import { EmojiThemePicker } from "./EmojiThemePicker.tsx";
@@ -33,6 +38,17 @@ type GameLayoutProps = {
   headerClassName?: string | undefined;
   onDeselectCell?: (() => void) | undefined;
   settingsExtra?: ReactNode | undefined;
+  /**
+   * A palette the multiplayer room pins for both players. Overrides
+   * what the board draws without touching the player's own settings.
+   */
+  digitStyle?: DigitStyle | null | undefined;
+  /**
+   * Present only for the player who may change that shared palette
+   * (the host). Their picks go to the room instead of to their own
+   * preferences, so the opponent's board follows along.
+   */
+  onDigitStyleChange?: ((style: DigitStyle) => void) | undefined;
 };
 
 export function GameLayout({
@@ -50,6 +66,8 @@ export function GameLayout({
   headerClassName = "max-w-lg",
   onDeselectCell,
   settingsExtra,
+  digitStyle,
+  onDigitStyleChange,
 }: GameLayoutProps) {
   const handleBackgroundPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (!onDeselectCell) return;
@@ -84,6 +102,8 @@ export function GameLayout({
           position={position}
           onPositionChange={onPositionChange}
           extra={settingsExtra}
+          digitStyle={digitStyle}
+          onDigitStyleChange={onDigitStyleChange}
         />
       </div>
 
@@ -149,17 +169,33 @@ function SettingsButton({
   position,
   onPositionChange,
   extra,
+  digitStyle,
+  onDigitStyleChange,
 }: {
   position: NumPadPosition;
   onPositionChange: (position: NumPadPosition) => void;
   extra?: ReactNode;
+  digitStyle?: DigitStyle | null | undefined;
+  onDigitStyleChange?: ((style: DigitStyle) => void) | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const darkMode = useDarkMode();
-  const digitColor = useDigitColorMode();
-  const emojiTheme = useEmojiTheme();
+  const digitColor = useDigitColorMode(digitStyle?.mode ?? null);
+  const emojiTheme = useEmojiTheme(digitStyle?.emojiTheme ?? null);
+  // A pinned style the local player cannot change: the room decides,
+  // and only the host was handed a way to change what it decided.
+  const styleIsTheirs = digitStyle != null && !onDigitStyleChange;
+  // Host picks feed the room; everyone else's feed their own storage.
+  const changeMode = onDigitStyleChange
+    ? (mode: DigitColorMode) =>
+        onDigitStyleChange({ mode, emojiTheme: emojiTheme.theme })
+    : digitColor.setMode;
+  const changeTheme = onDigitStyleChange
+    ? (theme: string) =>
+        onDigitStyleChange({ mode: digitColor.mode, emojiTheme: theme })
+    : emojiTheme.setTheme;
   // Sound was only reachable from the landing screen; mid-game is
   // where players actually decide they want silence.
   const [soundOn, setSoundOn] = useState(getSoundEnabled);
@@ -219,20 +255,35 @@ function SettingsButton({
             onChange={onPositionChange}
           />
           <div className="mt-3 pt-3 border-t border-border-default">
-            <p className="text-xs text-text-muted font-medium mb-2">
-              Digit colors
-            </p>
-            <DigitColorPicker
-              mode={digitColor.mode}
-              onChange={digitColor.setMode}
-            />
-            {digitColor.mode === "emoji" && (
-              <div className="mt-2">
-                <EmojiThemePicker
-                  theme={emojiTheme.theme}
-                  onChange={emojiTheme.setTheme}
+            <div className="flex items-baseline justify-between mb-2 gap-2">
+              <p className="text-xs text-text-muted font-medium">
+                Digit colors
+              </p>
+              {digitStyle != null && (
+                <p className="text-xs text-text-muted">
+                  {styleIsTheirs ? "Set by the host" : "Shared with opponent"}
+                </p>
+              )}
+            </div>
+            {styleIsTheirs ? (
+              <p className="text-sm text-text-secondary">
+                {describeDigitStyle(digitStyle)}
+              </p>
+            ) : (
+              <>
+                <DigitColorPicker
+                  mode={digitColor.mode}
+                  onChange={changeMode}
                 />
-              </div>
+                {digitColor.mode === "emoji" && (
+                  <div className="mt-2">
+                    <EmojiThemePicker
+                      theme={emojiTheme.theme}
+                      onChange={changeTheme}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">

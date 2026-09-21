@@ -13,7 +13,7 @@ import {
   MULTIPLAYER_KEY_PREFIX,
   saveGame,
 } from "../lib/game-storage.ts";
-import type { AssistLevel, Cell } from "../lib/types.ts";
+import type { AssistLevel, Cell, DigitStyle } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -56,6 +56,11 @@ export type MultiplayerBoardProps = {
   } | null;
   opponentDisconnected: boolean;
   gameOver: { winnerId: string; winnerName: string } | null;
+  /** The palette the room pins for both boards, null when each keeps
+   *  their own. */
+  digitStyle?: DigitStyle | null | undefined;
+  /** Host only: changing the pinned palette mid-game. */
+  onDigitStyleChange?: ((style: DigitStyle) => void) | undefined;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
@@ -74,6 +79,8 @@ export function MultiplayerBoard({
   opponentProgress,
   opponentDisconnected,
   gameOver,
+  digitStyle,
+  onDigitStyleChange,
   onProgress,
   onComplete,
   onRematch,
@@ -222,6 +229,8 @@ export function MultiplayerBoard({
   return (
     <GameLayout
       onBack={onBack}
+      digitStyle={digitStyle}
+      onDigitStyleChange={onDigitStyleChange}
       position={position}
       onPositionChange={setPosition}
       onDeselectCell={highlight.deselectCell}

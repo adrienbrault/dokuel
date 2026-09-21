@@ -26,6 +26,7 @@ const BASE_STATE: RoomState = {
   winnerName: null,
   winnerBoard: null,
   gameNumber: 0,
+  digitStyle: null,
 };
 
 describe("Lobby", () => {
@@ -198,5 +199,29 @@ describe("Lobby", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /start/i }));
     expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it("lets the host pin one digit style for both boards", async () => {
+    // "Let's both play with the vehicles" is a lobby decision, so the
+    // toggle seeds the room from what the host already plays with.
+    localStorage.setItem("sudoku_digit_color_mode", "emoji");
+    localStorage.setItem("sudoku_emoji_theme", "vehicles");
+    const onDigitStyleChange = vi.fn();
+
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        playerId="p1"
+        onDigitStyleChange={onDigitStyleChange}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("switch", { name: /same digits/i }));
+
+    expect(onDigitStyleChange).toHaveBeenCalledWith({
+      mode: "emoji",
+      emojiTheme: "vehicles",
+    });
   });
 });

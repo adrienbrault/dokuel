@@ -94,6 +94,16 @@ export type AssistLevel = "paper" | "standard" | "full";
  */
 export type DigitColorMode = "off" | "digits" | "colors" | "emoji";
 
+/**
+ * A digit palette pinned down to one board: the mode plus the emoji
+ * theme it draws from. The theme is carried even for modes that don't
+ * read it, so switching back to "emoji" doesn't lose the pick.
+ */
+export type DigitStyle = {
+  mode: DigitColorMode;
+  emojiTheme: string;
+};
+
 // --- Numpad ---
 
 export type NumPadPosition = "bottom" | "left" | "right";
@@ -143,4 +153,10 @@ export type RoomState = {
    */
   winnerBoard: string | null;
   gameNumber: number;
+  /**
+   * The palette both boards draw with, or null when each player keeps
+   * their own. Set by the host, for rooms where matching symbols are
+   * the point ("we both play with the vehicles").
+   */
+  digitStyle: DigitStyle | null;
 };

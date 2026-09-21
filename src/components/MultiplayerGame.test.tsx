@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
@@ -36,6 +37,7 @@ const roomState: RoomState = {
   winnerName: null,
   winnerBoard: null,
   gameNumber: 1,
+  digitStyle: null,
 };
 
 function makeMp() {
@@ -58,6 +60,7 @@ function makeMp() {
     updateName: vi.fn(),
     setAssistLevel: vi.fn(),
     setDifficulty: vi.fn(),
+    setDigitStyle: vi.fn(),
   };
 }
 
@@ -240,5 +243,75 @@ describe("MultiplayerGame disconnect overlay", () => {
     mockMp.gameOver = { winnerId: "me", winnerName: "Me" };
     renderGame();
     expect(screen.queryByText("Opponent disconnected")).not.toBeInTheDocument();
+  });
+});
+
+describe("MultiplayerGame shared digit style", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    delete document.documentElement.dataset.digitColor;
+    mockMp = makeMp();
+  });
+
+  it("draws the in-game board from the room's pinned style", () => {
+    // The room state is the only thing both players agree on, so the
+    // board has to read the palette from it and not from the local
+    // preference the guest happens to have stored.
+    localStorage.setItem("sudoku_digit_color_mode", "off");
+    mockMp.roomState = {
+      ...roomState,
+      digitStyle: { mode: "emoji", emojiTheme: "vehicles" },
+    };
+
+    renderGame();
+
+    expect(document.documentElement.dataset.digitColor).toBe("emoji");
+  });
+
+  it("holds the pinned style through a room-state flicker", () => {
+    // The board deliberately stays mounted when roomState blips during
+    // a Yjs sync. Reading the style straight off it would repaint all
+    // 81 cells in the player's own symbols and back for that blip.
+    localStorage.setItem("sudoku_digit_color_mode", "off");
+    mockMp.roomState = {
+      ...roomState,
+      digitStyle: { mode: "emoji", emojiTheme: "vehicles" },
+    };
+    const { rerender } = renderGame();
+
+    mockMp = { ...mockMp, roomState: null };
+    rerender(
+      <MultiplayerGame
+        playerId="me"
+        playerName="Me"
+        roomId="test-room"
+        difficulty={null}
+        onBack={() => {}}
+      />,
+    );
+
+    expect(document.documentElement.dataset.digitColor).toBe("emoji");
+  });
+
+  it("sends the host's mid-game pick to the room, not to their storage", async () => {
+    // The host can still change their mind once the game is running,
+    // and the whole point is that the change reaches the opponent —
+    // so it goes to the room and leaves their own settings alone.
+    localStorage.setItem("sudoku_digit_color_mode", "off");
+    mockMp.roomState = {
+      ...roomState,
+      hostId: "me",
+      digitStyle: { mode: "emoji", emojiTheme: "vehicles" },
+    };
+    renderGame();
+
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Tinted" }));
+
+    expect(mockMp.setDigitStyle).toHaveBeenCalledWith({
+      mode: "digits",
+      emojiTheme: "vehicles",
+    });
+    expect(localStorage.getItem("sudoku_digit_color_mode")).toBe("off");
   });
 });

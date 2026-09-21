@@ -1,8 +1,10 @@
 import * as Y from "yjs";
+import { findEmojiTheme } from "../lib/emoji-themes.ts";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Difficulty,
+  DigitStyle,
   Player,
   RoomState,
 } from "../lib/types.ts";
@@ -115,6 +117,16 @@ export function leaveRoom(room: P2PRoom, playerId: string): void {
 export function setAssistLevel(room: P2PRoom, level: AssistLevel): void {
   room.doc.transact(() => {
     room.doc.getMap("room").set("assistLevel", level);
+  });
+}
+
+/**
+ * Pin both boards to one palette, or hand the choice back to each
+ * player with null.
+ */
+export function setDigitStyle(room: P2PRoom, style: DigitStyle | null): void {
+  room.doc.transact(() => {
+    room.doc.getMap("room").set("digitStyle", style);
   });
 }
 
@@ -282,6 +294,26 @@ function projectWinnerBoard(raw: unknown): string | null {
 }
 
 /**
+ * Digit styles come off the wire, so nothing renders from them until
+ * the mode is one this build knows and the theme is one it ships:
+ * an unknown value would otherwise strand a player on a board drawn
+ * from nothing.
+ */
+function projectDigitStyle(raw: unknown): DigitStyle | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const { mode, emojiTheme } = raw as Partial<DigitStyle>;
+  const modeValid =
+    mode === "off" ||
+    mode === "digits" ||
+    mode === "colors" ||
+    mode === "emoji";
+  if (!modeValid) return null;
+  if (typeof emojiTheme !== "string" || !findEmojiTheme(emojiTheme))
+    return null;
+  return { mode, emojiTheme };
+}
+
+/**
  * Snapshot the room into a plain RoomState the React tree can render.
  * Returns null when there is no joined player yet — callers treat that
  * as "lobby has not started syncing."
@@ -313,6 +345,7 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     // judges it forged.
     winnerBoard: projectWinnerBoard(roomMap.get("winnerBoard")),
     gameNumber: (roomMap.get("gameNumber") as number) || 0,
+    digitStyle: projectDigitStyle(roomMap.get("digitStyle")),
   };
 }
 
@@ -389,6 +422,10 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
     if (!roomMap.has("difficulty")) roomMap.set("difficulty", snap.difficulty);
     if (!roomMap.has("assistLevel"))
       roomMap.set("assistLevel", snap.assistLevel);
+    // Older snapshots predate the shared style; undefined would write
+    // a key that reads back as "pinned to nothing".
+    if (!roomMap.has("digitStyle"))
+      roomMap.set("digitStyle", snap.digitStyle ?? null);
     if (!roomMap.has("hostId")) roomMap.set("hostId", snap.hostId);
     if (!roomMap.has("winnerId")) roomMap.set("winnerId", snap.winnerId);
     if (!roomMap.has("winnerName")) roomMap.set("winnerName", snap.winnerName);

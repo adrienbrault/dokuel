@@ -18,6 +18,7 @@ import {
   type P2PRoom,
   requestRematch,
   setDifficulty,
+  setDigitStyle,
   startGame,
   updateProgress,
 } from "./p2p-room.ts";
@@ -602,6 +603,7 @@ describe("p2p-room", () => {
         status: "playing",
         difficulty: "hard",
         assistLevel: "standard",
+        digitStyle: null,
         hostId: "p1",
         players: [
           {
@@ -755,6 +757,46 @@ describe("p2p-room", () => {
       expect(getPlayers(roomA)).toHaveLength(2);
       expect(getPlayers(roomB)).toHaveLength(2);
       expect(getPlayers(roomB).some((p) => p.id === overflowId)).toBe(false);
+    });
+  });
+
+  describe("setDigitStyle", () => {
+    it("ignores a style this build cannot draw", () => {
+      // The value arrives from a peer, so it can name a mode or a
+      // theme this build has never heard of — an older or tampered
+      // client. Falling back to free choice beats a board drawn from
+      // symbols that do not exist.
+      const room = createTestRoom();
+      initializeRoom(room, "host", "medium");
+      joinRoom(room, "host", "Host");
+
+      room.doc
+        .getMap("room")
+        .set("digitStyle", { mode: "emoji", emojiTheme: "dinosaurs" });
+      expect(getRoomState(room)?.digitStyle).toBeNull();
+
+      room.doc
+        .getMap("room")
+        .set("digitStyle", { mode: "hologram", emojiTheme: "fruit" });
+      expect(getRoomState(room)?.digitStyle).toBeNull();
+    });
+
+    it("carries the host's chosen style to the other peer", () => {
+      // The whole point of a shared style: the guest's board has to
+      // repaint from the host's pick, not from its own preference.
+      const [docA, docB] = createLinkedDocs();
+      const roomA = createRoomFromDoc(docA, "test-room");
+      const roomB = createRoomFromDoc(docB, "test-room");
+      initializeRoom(roomA, "host", "medium");
+      joinRoom(roomA, "host", "Host");
+      joinRoom(roomB, "guest", "Guest");
+
+      setDigitStyle(roomA, { mode: "emoji", emojiTheme: "vehicles" });
+
+      expect(getRoomState(roomB)?.digitStyle).toEqual({
+        mode: "emoji",
+        emojiTheme: "vehicles",
+      });
     });
   });
 });
