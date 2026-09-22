@@ -20,6 +20,11 @@ export default defineConfig({
     actionTimeout: 5_000,
     navigationTimeout: 10_000,
     trace: isCI ? "on-first-retry" : "off",
+    // The production build registers an offline service worker. Left
+    // on, every test would download the whole precache after load and
+    // answer page loads from a worker instead of the fresh build under
+    // test. Only the offline spec opts back in.
+    serviceWorkers: "block",
   },
   webServer: {
     command: "bunx vite preview --port 4173 --strictPort",
