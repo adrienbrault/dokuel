@@ -97,6 +97,29 @@ describe("createSwUpdates", () => {
     expect(s.reload).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores a reload request when nothing is waiting", () => {
+    const s = setup({ controlled: true });
+    track(s);
+
+    s.updates.applyUpdate();
+    s.container.dispatchEvent(new Event("controllerchange"));
+
+    expect(s.reload).not.toHaveBeenCalled();
+  });
+
+  it("stops notifying a listener once it unsubscribes", () => {
+    // The toast unmounts when the player leaves a menu for a board.
+    const s = setup({ controlled: true });
+    const listener = vi.fn();
+    const unsubscribe = s.updates.subscribe(listener);
+    track(s);
+    unsubscribe();
+
+    s.registration.startInstall().setState("installed");
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it("never reloads for a controller change nobody asked for", () => {
     // clients.claim() on a first install also fires controllerchange;
     // that must not yank the page out from under a game.
