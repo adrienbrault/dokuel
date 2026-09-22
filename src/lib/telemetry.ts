@@ -151,10 +151,36 @@ export function createTelemetrySender({
   };
 }
 
-export function installTelemetry(_sender: TelemetrySender): () => void {
-  return () => {};
+let active: TelemetrySender | null = null;
+
+/**
+ * Make `sender` the one every {@link track} call goes to. Returns the
+ * uninstaller, which also disposes the sender.
+ */
+export function installTelemetry(sender: TelemetrySender): () => void {
+  active?.dispose();
+  active = sender;
+  return () => {
+    if (active !== sender) return;
+    sender.dispose();
+    active = null;
+  };
 }
 
-export function track(_event: TelemetryEvent): void {}
+/** Record an event. A no-op until a sender is installed; never throws. */
+export function track(event: TelemetryEvent): void {
+  try {
+    active?.track(event);
+  } catch {
+    // Diagnostics must never break the thing they diagnose.
+  }
+}
 
-export function flushTelemetry(): void {}
+/** Send whatever is queued now instead of at the next interval. */
+export function flushTelemetry(): void {
+  try {
+    active?.flush();
+  } catch {
+    // Same.
+  }
+}
