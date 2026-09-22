@@ -14,3 +14,10 @@ bindings = [
 [[migrations]]
 tag = "v1"
 new_classes = ["SignalingRoom"]
+
+# Anonymous client telemetry written by POST /events (see src/events.ts).
+# The dataset is created on first write; Analytics Engine must be
+# enabled once for the account in the Cloudflare dashboard.
+[[analytics_engine_datasets]]
+binding = "EVENTS"
+dataset = "dokuel_events"
