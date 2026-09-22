@@ -41,13 +41,11 @@ export function normalizeChallenge(raw: unknown): Challenge | null {
 /** Reads a challenge from a solo board URL's query string. */
 export function parseChallenge(search: string): Challenge | null {
   const params = new URLSearchParams(search);
-  const seconds = Math.floor(Number(params.get("t")));
-  if (!Number.isFinite(seconds) || seconds <= 0) return null;
-  return {
-    seconds: Math.min(seconds, MAX_CHALLENGE_SECONDS),
-    name: cleanName(params.get("by") ?? ""),
+  return normalizeChallenge({
+    seconds: Number(params.get("t")),
+    name: params.get("by") ?? "",
     hinted: params.get("h") === "1",
-  };
+  });
 }
 
 export type ChallengeComparison = {
