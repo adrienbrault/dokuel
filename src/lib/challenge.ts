@@ -35,31 +35,48 @@ export function parseChallenge(search: string): Challenge | null {
 export type ChallengeComparison = {
   outcome: "won" | "lost" | "tie";
   headline: string;
+  /** Who leaned on hints, if anyone; null for a clean head-to-head. */
+  hintNote: string | null;
 };
+
+function describeHints(mine: boolean, challenge: Challenge): string | null {
+  if (mine && challenge.hinted) return "Both of you used hints";
+  if (mine) return "You used hints";
+  if (challenge.hinted) return `${challenge.name} used hints`;
+  return null;
+}
 
 /** The result screen's verdict on a finished challenge, player's side. */
 export function compareToChallenge({
   seconds,
+  hintsUsed,
   challenge,
 }: {
   seconds: number;
   hintsUsed: number;
   challenge: Challenge;
 }): ChallengeComparison {
-  const margin = Math.abs(seconds - challenge.seconds);
+  const margin = formatShortTime(Math.abs(seconds - challenge.seconds));
+  const hintNote = describeHints(hintsUsed > 0, challenge);
   if (seconds < challenge.seconds) {
     return {
       outcome: "won",
-      headline: `You beat ${challenge.name} by ${formatShortTime(margin)}`,
+      headline: `You beat ${challenge.name} by ${margin}`,
+      hintNote,
     };
   }
   if (seconds > challenge.seconds) {
     return {
       outcome: "lost",
-      headline: `${challenge.name} was ${formatShortTime(margin)} faster`,
+      headline: `${challenge.name} was ${margin} faster`,
+      hintNote,
     };
   }
-  return { outcome: "tie", headline: `Dead heat with ${challenge.name}` };
+  return {
+    outcome: "tie",
+    headline: `Dead heat with ${challenge.name}`,
+    hintNote,
+  };
 }
 
 /**
