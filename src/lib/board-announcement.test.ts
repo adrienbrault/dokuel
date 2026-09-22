@@ -32,4 +32,16 @@ describe("describeBoardChange", () => {
       "7 erased, row 1 column 9",
     );
   });
+
+  it("flags a placed value that conflicts", () => {
+    const prev = makeBoard([[2, 0, { value: 5 }]]);
+    const next = makeBoard([
+      [2, 0, { value: 5 }],
+      [2, 3, { value: 5 }],
+    ]);
+    // Keys are row * 9 + col (cellKey).
+    expect(describeBoardChange(prev, next, new Set([18, 21]))).toBe(
+      "5 placed, row 3 column 4, conflict",
+    );
+  });
 });
