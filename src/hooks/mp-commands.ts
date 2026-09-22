@@ -1,4 +1,5 @@
 import { type RefObject, useCallback } from "react";
+import type { ReplayFrame } from "../lib/replay.ts";
 import type { AssistLevel, Difficulty, DigitStyle } from "../lib/types.ts";
 import type { Connection } from "./mp-connection.ts";
 import type { Room } from "./mp-room.ts";
@@ -91,8 +92,16 @@ export function useRoomCommands({
     [roomRef],
   );
 
+  const sendReplay = useCallback(
+    (frames: ReplayFrame[]) => {
+      roomRef.current?.publishReplay(frames);
+    },
+    [roomRef],
+  );
+
   return {
     sendStartGame,
+    sendReplay,
     sendProgress,
     sendComplete,
     claimForfeitWin,

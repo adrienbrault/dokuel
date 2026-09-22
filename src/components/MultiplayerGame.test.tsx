@@ -61,6 +61,8 @@ function makeMp() {
     setAssistLevel: vi.fn(),
     setDifficulty: vi.fn(),
     setDigitStyle: vi.fn(),
+    sendReplay: vi.fn(),
+    replays: {} as Record<string, number[][]>,
   };
 }
 
@@ -243,6 +245,40 @@ describe("MultiplayerGame disconnect overlay", () => {
     mockMp.gameOver = { winnerId: "me", winnerName: "Me" };
     renderGame();
     expect(screen.queryByText("Opponent disconnected")).not.toBeInTheDocument();
+  });
+});
+
+describe("MultiplayerGame replay", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+  });
+
+  it("shares our replay with the room once the game is over", () => {
+    mockMp.gameOver = { winnerId: "opp", winnerName: "Opponent" };
+    renderGame();
+
+    expect(mockMp.sendReplay).toHaveBeenCalledWith([]);
+  });
+
+  it("replays the opponent's board from the room", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.gameOver = { winnerId: "me", winnerName: "Me" };
+      mockMp.replays = { me: [[1_000, 0, 5]], opp: [[2_000, 1, 9]] };
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      fireEvent.click(screen.getByText("Watch Replay"));
+
+      expect(
+        screen.getByRole("group", { name: "Board: Opponent" }),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

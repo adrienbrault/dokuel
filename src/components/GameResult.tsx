@@ -14,6 +14,8 @@ type GameResultProps = {
   isMultiplayer?: boolean | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
+  /** Multiplayer: opens the replay of both boards. */
+  onWatchReplay?: (() => void) | undefined;
   stats?: { gamesPlayed: number; bestTime: number; averageTime: number } | null;
   isNewPB?: boolean | undefined;
   hintsUsed?: number | undefined;
@@ -59,6 +61,7 @@ export function GameResult({
   isMultiplayer,
   onRematch,
   onNewGame,
+  onWatchReplay,
   stats,
   isNewPB,
   hintsUsed,
@@ -216,6 +219,15 @@ export function GameResult({
               onClick={onRematch}
             >
               {isMultiplayer ? "Rematch" : "Play Again"}
+            </button>
+          )}
+          {onWatchReplay && (
+            <button
+              type="button"
+              className="btn btn-secondary w-full py-3 text-lg"
+              onClick={onWatchReplay}
+            >
+              Watch Replay
             </button>
           )}
           <button

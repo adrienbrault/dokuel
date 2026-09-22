@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import { findEmojiTheme } from "../lib/emoji-themes.ts";
+import { parseReplay, type ReplayFrame } from "../lib/replay.ts";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
@@ -190,6 +191,45 @@ export function updateProgress(
     playerMap.set("cellsRemaining", cellsRemaining);
     playerMap.set("completionPercent", completionPercent);
   });
+}
+
+/**
+ * Store a player's replay on their own entry. Tagged with the game it
+ * was recorded in: the entry outlives a rematch, and the next game's
+ * end screen must not pick up the previous game's moves. One writer per
+ * entry, so the whole value is simply replaced on every publish.
+ */
+export function publishReplay(
+  room: P2PRoom,
+  playerId: string,
+  gameNumber: number,
+  frames: ReplayFrame[],
+): void {
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!playerMap) return;
+  room.doc.transact(() => {
+    playerMap.set("replay", { game: gameNumber, frames });
+  });
+}
+
+/** Every well-formed replay published for `gameNumber`, by player id. */
+export function getReplays(
+  room: P2PRoom,
+  gameNumber: number,
+): Record<string, ReplayFrame[]> {
+  const result: Record<string, ReplayFrame[]> = {};
+  for (const [id, playerMap] of room.doc.getMap("players")) {
+    const raw = (playerMap as Y.Map<unknown>).get("replay") as
+      | { game?: unknown; frames?: unknown }
+      | undefined;
+    if (typeof raw !== "object" || raw === null) continue;
+    if (raw.game !== gameNumber) continue;
+    const frames = parseReplay(raw.frames);
+    if (frames) result[id] = frames;
+  }
+  return result;
 }
 
 export function getOpponentProgress(
