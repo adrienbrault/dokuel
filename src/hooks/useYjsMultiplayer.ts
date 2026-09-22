@@ -4,6 +4,7 @@ import type { Difficulty } from "../lib/types.ts";
 import { useRoomCommands } from "./mp-commands.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
 import { openWebrtcConnection } from "./mp-connection.webrtc.ts";
+import { watchConnectionHealth } from "./mp-connection-health.ts";
 import { createRoom, INITIAL_PROJECTION, type Room } from "./mp-room.ts";
 import { recordRoomMount } from "./mp-telemetry.ts";
 
@@ -77,6 +78,7 @@ export function useYjsMultiplayer({
     // open still builds a transport, and y-webrtc's globally named room
     // registry hands it the slot the live one needs.
     const opening = new AbortController();
+    const openedAt = now();
 
     // Everything below runs once the Connection is open: opening is
     // async because the relay credentials must be resolved before the
@@ -117,6 +119,13 @@ export function useYjsMultiplayer({
       });
 
       const unsubscribePresence = connection.onPresenceChange(updatePresence);
+      // Telemetry only: time to first peer, connect timeouts, ICE route.
+      const stopHealthWatch = watchConnectionHealth(connection, {
+        playerId,
+        role: initialDifficultyRef.current === null ? "joiner" : "creator",
+        openedAt,
+        now,
+      });
 
       setConnected(connection.connected);
 
@@ -207,6 +216,7 @@ export function useYjsMultiplayer({
         }
         unsubscribeStatus();
         unsubscribePresence();
+        stopHealthWatch();
         unsubscribeRoom();
         // The Room observes the doc the Connection owns — it has to let
         // go before close() destroys it.
