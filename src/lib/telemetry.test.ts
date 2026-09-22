@@ -67,4 +67,28 @@ describe("createTelemetrySender", () => {
     ]);
     sender.dispose();
   });
+
+  it("falls back to a keepalive fetch when the beacon is refused", () => {
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response(null)));
+    const sender = createTelemetrySender({
+      endpoint: ENDPOINT,
+      sessionId: SID,
+      sendBeacon: beaconSpy(false),
+      fetch: fetchSpy,
+    });
+
+    sender.track({ name: "mp_first_peer", ms: 1 });
+    sender.flush();
+
+    expect(fetchSpy).toHaveBeenCalledWith(ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        sid: SID,
+        events: [{ name: "mp_first_peer", ms: 1 }],
+      }),
+      keepalive: true,
+      credentials: "omit",
+    });
+    sender.dispose();
+  });
 });

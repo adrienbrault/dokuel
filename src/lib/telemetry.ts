@@ -36,6 +36,7 @@ export type TelemetrySenderOptions = {
   endpoint: string;
   sessionId: string;
   sendBeacon?: (url: string, body: string) => boolean;
+  fetch?: (url: string, init: RequestInit) => Promise<unknown>;
   flushIntervalMs?: number;
 };
 
