@@ -6,6 +6,16 @@ import {
   sweepStaleRoomDatabases,
   sweepStaleSnapshots,
 } from "./hooks/mp-snapshot.ts";
+import { registerServiceWorker } from "./lib/sw-updates.ts";
+
+// Production only: dev serves unbundled modules the worker knows
+// nothing about, and sw.js is only emitted by `vite build`. Deferred
+// to "load" so precaching never competes with first paint.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    void registerServiceWorker(navigator.serviceWorker);
+  });
+}
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");
