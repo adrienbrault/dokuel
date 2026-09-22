@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  buildChallengeUrl,
   MAX_CHALLENGE_SECONDS,
   MAX_CHALLENGER_NAME_LENGTH,
   parseChallenge,
@@ -50,5 +51,22 @@ describe("parseChallenge", () => {
   it("falls back to a friendly name when none is given", () => {
     expect(parseChallenge("?t=60")?.name).toBe("A friend");
     expect(parseChallenge("?t=60&by=%20%20")?.name).toBe("A friend");
+  });
+});
+
+describe("buildChallengeUrl", () => {
+  it("points at the same solo board and round-trips through parseChallenge", () => {
+    const challenge = { name: "Swift Fox", seconds: 272, hinted: true };
+    const url = new URL(
+      buildChallengeUrl({
+        origin: "https://dokuel.com",
+        difficulty: "hard",
+        gameKey: "k3y",
+        challenge,
+      }),
+    );
+    expect(url.origin).toBe("https://dokuel.com");
+    expect(url.pathname).toBe("/solo/hard/k3y");
+    expect(parseChallenge(url.search)).toEqual(challenge);
   });
 });
