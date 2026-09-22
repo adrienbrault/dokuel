@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { recordFrame, replayAt } from "./replay.ts";
+import {
+  parseReplay,
+  recordFrame,
+  replayAt,
+  replayDuration,
+} from "./replay.ts";
 import { parsePuzzle } from "./sudoku.ts";
 
 const PUZZLE =
@@ -26,5 +31,36 @@ describe("replay", () => {
     const end = replayAt(PUZZLE, frames, 5_000);
     expect(end[0]![3]!.notes).toEqual(new Set([2, 6]));
     expect(end[0]![0]!.isGiven).toBe(true);
+  });
+
+  it("only accepts peer replays shaped like frames", () => {
+    const valid = [
+      [0, 2, 4],
+      [900, 3, 0b100010 << 4],
+    ];
+    expect(parseReplay(valid)).toEqual(valid);
+    expect(parseReplay("nope")).toBeNull();
+    expect(parseReplay([[0, 81, 4]])).toBeNull();
+    expect(parseReplay([[0, 2]])).toBeNull();
+    expect(parseReplay([[0, 2, 10]])).toBeNull();
+    expect(parseReplay([[0, 2, 1 << 13]])).toBeNull();
+    expect(parseReplay([[1.5, 2, 4]])).toBeNull();
+    // Out-of-order frames would replay a later state before an earlier one.
+    expect(
+      parseReplay([
+        [500, 2, 4],
+        [100, 2, 5],
+      ]),
+    ).toBeNull();
+  });
+
+  it("ends at the last frame's instant", () => {
+    expect(replayDuration([])).toBe(0);
+    expect(
+      replayDuration([
+        [100, 2, 4],
+        [4_200, 2, 0],
+      ]),
+    ).toBe(4_200);
   });
 });
