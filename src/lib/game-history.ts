@@ -48,3 +48,12 @@ export function getGameHistory(): GameHistoryEntry[] {
   }));
   return [...duels, ...solo].sort((a, b) => b.timestamp - a.timestamp);
 }
+
+/**
+ * Whether this device has ever finished a game of any kind. Until it
+ * has, the player is a first-timer and the landing teaches the
+ * gestures; a loss counts as much as a win.
+ */
+export function hasFinishedAGame(): boolean {
+  return getStats().length > 0 || getMultiplayerStats().length > 0;
+}
