@@ -27,6 +27,8 @@ export function createErrorReporter({
   getPathname,
 }: {
   getPathname: () => string;
+  /** Distinct errors reported per page load before going quiet. */
+  maxReports?: number;
 }): ErrorReporter {
   return {
     report(error, source) {

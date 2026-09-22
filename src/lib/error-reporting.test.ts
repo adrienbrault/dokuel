@@ -44,4 +44,23 @@ describe("createErrorReporter", () => {
       },
     ]);
   });
+
+  it("reports a repeating error once and caps distinct ones per page", () => {
+    const reporter = createErrorReporter({
+      getPathname: () => "/",
+      maxReports: 3,
+    });
+
+    for (let i = 0; i < 50; i++) reporter.report(new Error("loop"), "window");
+    reporter.report("loop", "rejection");
+    for (let i = 0; i < 10; i++) reporter.report(`distinct ${i}`, "window");
+
+    expect(
+      telemetry
+        .events()
+        .map((event) =>
+          event.name === "error" ? `${event.source}:${event.message}` : "",
+        ),
+    ).toEqual(["window:loop", "rejection:loop", "window:distinct 0"]);
+  });
 });
