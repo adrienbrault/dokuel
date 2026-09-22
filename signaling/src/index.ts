@@ -15,6 +15,7 @@
  */
 
 import { DurableObject } from "cloudflare:workers";
+import { handleEvents } from "./events";
 
 const MAX_ROOM_KEY_LENGTH = 64;
 
@@ -59,6 +60,10 @@ type Env = {
   // back to STUN-only.
   TURN_KEY_ID?: string;
   TURN_KEY_API_TOKEN?: string;
+  // Analytics Engine dataset for anonymous client telemetry (see
+  // events.ts). Optional: without the binding /events accepts and
+  // drops, so local `wrangler dev` needs no setup.
+  EVENTS?: AnalyticsEngineDataset;
 };
 
 // Credential lifetime. TURN allocations refresh with the credential
@@ -97,6 +102,23 @@ async function generateTurnCredentials(env: Env): Promise<Response> {
   });
 }
 
+async function routeEvents(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: corsHeaders(),
+    });
+  }
+  if (!isAllowedOrigin(request.headers.get("Origin"))) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  const response = await handleEvents(request, env);
+  for (const [name, value] of Object.entries(corsHeaders())) {
+    response.headers.set(name, value);
+  }
+  return response;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     // CORS preflight
@@ -131,6 +153,12 @@ export default {
       return generateTurnCredentials(env);
     }
 
+    // Anonymous client telemetry: error reports and multiplayer
+    // connection events. Same origin gate as the TURN route.
+    if (url.pathname === "/events") {
+      return routeEvents(request, env);
+    }
+
     // Health check (non-WebSocket requests)
     if (url.pathname === "/" || url.pathname === "/health") {
       return new Response("ok", { headers: corsHeaders() });
@@ -143,7 +171,7 @@ export default {
 function corsHeaders(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "*",
   };
 }
