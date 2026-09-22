@@ -21,6 +21,23 @@ function cleanName(raw: string): string {
   return name || FALLBACK_NAME;
 }
 
+/**
+ * Validates and clamps a challenge from any untrusted source (a stored
+ * save, say). Returns null when there is no usable time to beat.
+ */
+export function normalizeChallenge(raw: unknown): Challenge | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const { name, seconds, hinted } = raw as Record<string, unknown>;
+  if (typeof seconds !== "number") return null;
+  const whole = Math.floor(seconds);
+  if (!Number.isFinite(whole) || whole <= 0) return null;
+  return {
+    seconds: Math.min(whole, MAX_CHALLENGE_SECONDS),
+    name: cleanName(typeof name === "string" ? name : ""),
+    hinted: hinted === true,
+  };
+}
+
 /** Reads a challenge from a solo board URL's query string. */
 export function parseChallenge(search: string): Challenge | null {
   const params = new URLSearchParams(search);
