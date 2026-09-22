@@ -39,8 +39,40 @@ export type TelemetrySenderOptions = {
   flushIntervalMs?: number;
 };
 
-export function createTelemetrySender(
-  _options: TelemetrySenderOptions,
-): TelemetrySender {
-  return { track() {}, flush() {}, dispose() {} };
+const DEFAULT_FLUSH_INTERVAL_MS = 10_000;
+
+export function createTelemetrySender({
+  endpoint,
+  sessionId,
+  sendBeacon = (url, body) => navigator.sendBeacon(url, body),
+  flushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS,
+}: TelemetrySenderOptions): TelemetrySender {
+  let queue: TelemetryEvent[] = [];
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const flush = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (queue.length === 0) return;
+    const events = queue;
+    queue = [];
+    sendBeacon(endpoint, JSON.stringify({ sid: sessionId, events }));
+  };
+
+  return {
+    track(event) {
+      queue.push(event);
+      // Armed on demand rather than as a standing interval: an idle
+      // page never wakes up just to find an empty queue.
+      timer ??= setTimeout(flush, flushIntervalMs);
+    },
+    flush,
+    dispose() {
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+      queue = [];
+    },
+  };
 }
