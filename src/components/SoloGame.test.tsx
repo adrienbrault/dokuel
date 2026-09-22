@@ -43,6 +43,25 @@ describe("SoloGame numpad selection", () => {
     expect(document.activeElement).toBe(gear);
   });
 
+  it("announces completion to screen readers when the last digit lands", () => {
+    const oneLeft = `${SOLVED.slice(0, 8)}.${SOLVED.slice(9)}`;
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={oneLeft} onBack={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 9, empty/));
+    const two = screen.getByRole("button", { name: /^2\b/ });
+    fireEvent.pointerDown(two, { pointerType: "touch" });
+    fireEvent.pointerUp(two, { pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
+      "Puzzle complete",
+    );
+  });
+
   it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
