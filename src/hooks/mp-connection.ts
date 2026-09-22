@@ -182,7 +182,16 @@ export type Connection = {
   connect(): void;
   disconnect(): void;
   close(): void;
+  /**
+   * Diagnostics only, and optional: the ICE candidate types of the
+   * selected pair on some live peer connection, or null when there is
+   * none (no peer yet, or the peer is reached over BroadcastChannel).
+   */
+  iceRoute?(): Promise<IceRoute | null>;
 };
+
+/** Candidate types ("host", "srflx", "prflx", "relay") of a live pair. */
+export type IceRoute = { local: string; remote: string };
 
 /** What a caller may ask of an {@link OpenConnection}. */
 export type OpenOptions = {

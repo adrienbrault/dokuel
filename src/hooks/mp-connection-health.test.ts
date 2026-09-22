@@ -64,6 +64,26 @@ describe("watchConnectionHealth", () => {
     stop();
   });
 
+  it("reports the candidate types the first peer connected over", async () => {
+    const connection = await openFake();
+    connection.iceRoute = () =>
+      Promise.resolve({ local: "relay", remote: "srflx" });
+    const stop = watchConnectionHealth(connection, {
+      playerId: "p1",
+      role: "joiner",
+      openedAt: 1_000,
+      now,
+    });
+
+    opponentAnnounces(connection);
+    await Promise.resolve();
+
+    expect(
+      telemetry.events().filter((event) => event.name === "mp_ice_route"),
+    ).toEqual([{ name: "mp_ice_route", local: "relay", remote: "srflx" }]);
+    stop();
+  });
+
   describe("when no peer shows up in time", () => {
     beforeEach(() => {
       vi.useFakeTimers();
