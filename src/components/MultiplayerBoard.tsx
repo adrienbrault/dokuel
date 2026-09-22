@@ -5,6 +5,7 @@ import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
+import { useReplayRecorder } from "../hooks/useReplayRecorder.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
@@ -14,8 +15,12 @@ import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
-import { GameResult } from "./GameResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
+import {
+  MultiplayerResult,
+  type ReplaySource,
+  replayPlayers,
+} from "./MultiplayerResult.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { TimerPill } from "./TimerPill.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
@@ -57,6 +62,8 @@ export type MultiplayerBoardProps = {
   digitStyle?: DigitStyle | null | undefined;
   /** Host only: changing the pinned palette mid-game. */
   onDigitStyleChange?: ((style: DigitStyle) => void) | undefined;
+  /** The room's side of the match replay; omitted, there is none. */
+  replay?: ReplaySource | undefined;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
@@ -77,6 +84,7 @@ export function MultiplayerBoard({
   gameOver,
   digitStyle,
   onDigitStyleChange,
+  replay,
   onProgress,
   onComplete,
   onRematch,
@@ -161,6 +169,17 @@ export function MultiplayerBoard({
     timerSecondsRef,
     difficulty,
     assistLevel,
+  });
+
+  // Recorded from the first move, shared only once the game is over:
+  // a live replay would show the opponent our board mid-race.
+  useReplayRecorder({
+    puzzle,
+    board: game.board,
+    gameNumber,
+    startOffsetMs: initialTimerSeconds * 1000,
+    share: gameOver !== null && replay !== undefined,
+    onShare: (frames) => replay?.share(frames),
   });
 
   useRecordMultiplayerMatch({
@@ -262,13 +281,26 @@ export function MultiplayerBoard({
       }
       footer={
         showResult && gameOver && iFinished ? (
-          <GameResult
+          <MultiplayerResult
+            // A rematch closes the replay of the game it replaced.
+            key={gameNumber}
             isWinner={iWon}
             time={formatTime(timerSecondsRef.current)}
             difficulty={difficulty}
-            isMultiplayer
             onNewGame={onBack}
             onRematch={onRematch}
+            replay={
+              replay && {
+                puzzle,
+                solution,
+                players: replayPlayers(
+                  replay,
+                  playerId,
+                  opponentName,
+                  gameOver,
+                ),
+              }
+            }
           />
         ) : undefined
       }
