@@ -9,6 +9,8 @@ import type { Board } from "../lib/types.ts";
  */
 const SETTLE_MS = 250;
 
+const NBSP = String.fromCharCode(0xa0);
+
 type BoardAnnouncerProps = {
   board: Board;
   conflicts: Set<number>;
@@ -44,7 +46,7 @@ export function BoardAnnouncer({ board, conflicts }: BoardAnnouncerProps) {
   return (
     <div aria-live="polite" aria-atomic="true" className="sr-only">
       {message.text}
-      {message.count % 2 === 1 ? " " : ""}
+      {message.count % 2 === 1 ? NBSP : ""}
     </div>
   );
 }
