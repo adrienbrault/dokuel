@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useMultiplayerAutosave } from "../hooks/useMultiplayerAutosave.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
@@ -7,12 +8,7 @@ import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
-import {
-  deleteGame,
-  loadGame,
-  MULTIPLAYER_KEY_PREFIX,
-  saveGame,
-} from "../lib/game-storage.ts";
+import { loadGame, MULTIPLAYER_KEY_PREFIX } from "../lib/game-storage.ts";
 import type { AssistLevel, Cell, DigitStyle } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
@@ -156,49 +152,16 @@ export function MultiplayerBoard({
     onComplete(serializeBoard(game.board as Cell[][]).values);
   }, [game.status, game.board, onComplete]);
 
-  // Autosave the local board so a transient unmount/remount or page
-  // refresh doesn't wipe in-flight progress. The Yjs doc only carries
-  // the puzzle + opponent progress; the filled cells live here.
-  useEffect(() => {
-    if (game.status === "completed") return;
-    // On rematch this effect and the RESET dispatch share a commit: the
-    // reducer still holds the OLD game's board while gameKey already
-    // points at the new one. Writing that mix would resume game 2
-    // wearing game 1's cells if the tab dies before the next render.
-    const boardMatchesPuzzle = game.board.every((boardRow, r) =>
-      boardRow.every((boardCell, c) => {
-        const ch = puzzle[r * 9 + c];
-        return ch === "."
-          ? !boardCell.isGiven
-          : boardCell.isGiven && boardCell.value === Number(ch);
-      }),
-    );
-    if (!boardMatchesPuzzle) return;
-    const { values, notes } = serializeBoard(game.board as Cell[][]);
-    saveGame(gameKey, {
-      puzzle,
-      values,
-      notes,
-      timer: timerSecondsRef.current,
-      difficulty,
-      assistLevel,
-      hintsUsed: game.hintsUsed,
-    });
-  }, [
-    game.board,
-    game.status,
-    game.hintsUsed,
+  useMultiplayerAutosave({
     gameKey,
     puzzle,
+    board: game.board,
+    status: game.status,
+    hintsUsed: game.hintsUsed,
+    timerSecondsRef,
     difficulty,
     assistLevel,
-  ]);
-
-  // Clear the save once this player finishes — keyed off local status so
-  // the loser's in-progress save survives the opponent's win.
-  useEffect(() => {
-    if (game.status === "completed") deleteGame(gameKey);
-  }, [game.status, gameKey]);
+  });
 
   useRecordMultiplayerMatch({
     gameOver,
