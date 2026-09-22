@@ -1,0 +1,52 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createTelemetrySender } from "./telemetry.ts";
+
+const ENDPOINT = "https://signal.example/events";
+const SID = "session123";
+
+function beaconSpy(accept = true) {
+  return vi.fn((_url: string, _body: string) => accept);
+}
+
+function sentEvents(spy: { mock: { calls: unknown[][] } }): unknown[][] {
+  return spy.mock.calls.map(
+    (call) => (JSON.parse(call[1] as string) as { events: unknown[] }).events,
+  );
+}
+
+describe("createTelemetrySender", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("sends events tracked within the flush interval as one beacon", () => {
+    const sendBeacon = beaconSpy();
+    const sender = createTelemetrySender({
+      endpoint: ENDPOINT,
+      sessionId: SID,
+      sendBeacon,
+      flushIntervalMs: 5_000,
+    });
+
+    sender.track({ name: "mp_room_mount", count: 1 });
+    sender.track({ name: "mp_first_peer", ms: 800 });
+    expect(sendBeacon).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(5_000);
+
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+    expect(sendBeacon.mock.calls[0]?.[0]).toBe(ENDPOINT);
+    expect(JSON.parse(sendBeacon.mock.calls[0]?.[1] as string)).toEqual({
+      sid: SID,
+      events: [
+        { name: "mp_room_mount", count: 1 },
+        { name: "mp_first_peer", ms: 800 },
+      ],
+    });
+    expect(sentEvents(sendBeacon)).toHaveLength(1);
+    sender.dispose();
+  });
+});
