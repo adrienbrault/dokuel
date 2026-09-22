@@ -79,6 +79,7 @@ export function sceneLabel(scene: string): string {
   const overrides: Record<string, string> = {
     landing: "Landing",
     "landing-dark": "Landing (dark)",
+    "landing-offline": "Landing (offline)",
     "solo-game": "Solo game",
     "solo-game-dark": "Solo game (dark)",
     "solo-numpad-left": "Solo · numpad left",
