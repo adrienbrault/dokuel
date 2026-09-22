@@ -36,26 +36,32 @@ export function BoardAnnouncer({
   const prevCompletedRef = useRef(completed);
   const conflictsRef = useRef(conflicts);
   conflictsRef.current = conflicts;
+  const pendingRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     const prev = prevBoardRef.current;
     prevBoardRef.current = board;
     const justCompleted = completed && !prevCompletedRef.current;
     prevCompletedRef.current = completed;
-    // Completion supersedes the final placement; re-running this effect
-    // on the flip also cancels that placement's pending announcement.
+    // Completion supersedes the final placement's pending announcement.
     const text = justCompleted
       ? "Puzzle complete"
       : prev === board
         ? null
         : describeBoardChange(prev, board, conflictsRef.current);
+    // A change with nothing to say leaves the pending one alone; only a
+    // newer sentence replaces it.
     if (text === null) return;
-    const id = setTimeout(
+    clearTimeout(pendingRef.current);
+    pendingRef.current = setTimeout(
       () => setMessage((m) => ({ text, count: m.count + 1 })),
       SETTLE_MS,
     );
-    return () => clearTimeout(id);
   }, [board, completed]);
+
+  useEffect(() => () => clearTimeout(pendingRef.current), []);
 
   return (
     <div aria-live="polite" aria-atomic="true" className="sr-only">
