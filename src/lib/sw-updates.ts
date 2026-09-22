@@ -46,8 +46,14 @@ export function createSwUpdates(reload: () => void): SwUpdates {
     },
     isUpdateReady: () => waiting !== null,
     applyUpdate() {
-      void container;
-      void reload;
+      if (!waiting || !container) return;
+      // Reload only after the new worker controls the page, otherwise
+      // the reload is served by the old one. Registered here, not in
+      // track(), so a first install's clients.claim() never reloads.
+      container.addEventListener("controllerchange", () => reload(), {
+        once: true,
+      });
+      waiting.postMessage({ type: "SKIP_WAITING" });
     },
   };
 }
