@@ -92,6 +92,25 @@ describe("createTelemetrySender", () => {
     sender.dispose();
   });
 
+  it("splits a flush into worker-sized batches and caps the queue", () => {
+    const sendBeacon = beaconSpy();
+    const sender = createTelemetrySender({
+      endpoint: ENDPOINT,
+      sessionId: SID,
+      sendBeacon,
+    });
+
+    for (let count = 0; count < 130; count++) {
+      sender.track({ name: "mp_room_mount", count });
+    }
+    sender.flush();
+
+    expect(sentEvents(sendBeacon).map((events) => events.length)).toEqual([
+      20, 20, 20, 20, 20,
+    ]);
+    sender.dispose();
+  });
+
   it("swallows transport failures instead of throwing into the app", async () => {
     const sender = createTelemetrySender({
       endpoint: ENDPOINT,
