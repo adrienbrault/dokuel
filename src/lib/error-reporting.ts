@@ -3,6 +3,18 @@
  * ({@link ./telemetry.ts}).
  */
 
+export type ErrorSource = "window" | "rejection" | "boundary";
+
+export type ErrorReporter = {
+  report(error: unknown, source: ErrorSource): void;
+};
+
+export function createErrorReporter(_options: {
+  getPathname: () => string;
+}): ErrorReporter {
+  return { report() {} };
+}
+
 const STATIC_ROUTES = new Set(["daily", "join", "stats"]);
 
 /**
