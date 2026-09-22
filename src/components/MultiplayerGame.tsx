@@ -109,6 +109,11 @@ export function MultiplayerGame({
               ? mp.setDigitStyle
               : undefined
           }
+          replay={{
+            players: mp.roomState?.players ?? [],
+            replays: mp.replays,
+            share: mp.sendReplay,
+          }}
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
           onRematch={mp.sendRematch}
