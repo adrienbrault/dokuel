@@ -1,0 +1,26 @@
+import type { Board } from "./types.ts";
+
+function position(row: number, col: number): string {
+  return `row ${row + 1} column ${col + 1}`;
+}
+
+/**
+ * One short sentence describing what changed between two boards, for a
+ * polite live region. Returns null when there is nothing worth saying.
+ */
+export function describeBoardChange(
+  prev: Board,
+  next: Board,
+  _conflicts: Set<number>,
+): string | null {
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const before = prev[r]?.[c];
+      const after = next[r]?.[c];
+      if (after?.value != null && after.value !== before?.value) {
+        return `${after.value} placed, ${position(r, c)}`;
+      }
+    }
+  }
+  return null;
+}
