@@ -288,11 +288,13 @@ export function GameResult({
           </button>
           {!isMultiplayer && (
             <div
-              className={`grid gap-2 w-full ${challengeLink ? "grid-cols-2" : "grid-cols-1"}`}
+              // Side by side when they fit, stacked on the narrowest
+              // phones rather than wrapping a label mid-phrase.
+              className="flex flex-wrap justify-center gap-x-2 w-full"
             >
               <button
                 type="button"
-                className="btn btn-ghost w-full py-2"
+                className={`btn btn-ghost py-2 px-3 whitespace-nowrap ${challengeLink ? "" : "w-full"}`}
                 onClick={handleShare}
               >
                 {copied ? "Copied!" : "Share Result"}
@@ -300,15 +302,17 @@ export function GameResult({
               {challengeLink && (
                 <button
                   type="button"
-                  className="btn btn-ghost w-full py-2 gap-1.5 text-accent font-semibold"
+                  className="btn btn-ghost py-2 px-3"
                   onClick={handleChallenge}
                 >
-                  <Swords size={16} aria-hidden="true" />
-                  {challengeCopied
-                    ? "Link copied!"
-                    : challengeResult
-                      ? "Challenge back"
-                      : "Challenge a friend"}
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-semibold text-accent">
+                    <Swords size={15} aria-hidden="true" />
+                    {challengeCopied
+                      ? "Link copied!"
+                      : challengeResult
+                        ? "Challenge back"
+                        : "Challenge a friend"}
+                  </span>
                 </button>
               )}
             </div>
