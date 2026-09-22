@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { track } from "../lib/telemetry.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { useRoomCommands } from "./mp-commands.ts";
 import type { Connection, OpenConnection } from "./mp-connection.ts";
@@ -61,6 +62,7 @@ export function useYjsMultiplayer({
     // anyone with Safari Web Inspector access; surfaced as a console
     // warn when the same room mounts more than once in an hour.
     const mountCount = recordRoomMount(roomId);
+    track({ name: "mp_room_mount", count: mountCount });
     if (mountCount > 1) {
       console.warn(
         `[dokuel] mp room ${roomId} mounted ${mountCount}× in last hour`,
