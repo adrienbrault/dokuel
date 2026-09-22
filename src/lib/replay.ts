@@ -112,3 +112,44 @@ export function parseReplay(raw: unknown): ReplayFrame[] | null {
   }
   return raw as ReplayFrame[];
 }
+
+export type ProgressPoint = { t: number; filled: number };
+
+/**
+ * How many of the puzzle's empty cells held a digit after each frame,
+ * starting from an empty board at 0. Erasing and replacing a digit
+ * counts, so a player's mistakes show up as dips.
+ */
+export function progressTimeline(
+  puzzle: string,
+  frames: readonly ReplayFrame[],
+): ProgressPoint[] {
+  const filled = new Set<number>();
+  const points: ProgressPoint[] = [{ t: 0, filled: 0 }];
+  for (const frame of frames) {
+    for (let i = 1; i + 1 < frame.length; i += 2) {
+      const cell = frame[i]!;
+      if (puzzle[cell] !== ".") continue;
+      if ((frame[i + 1]! & VALUE_MASK) === 0) filled.delete(cell);
+      else filled.add(cell);
+    }
+    points.push({ t: frame[0]!, filled: filled.size });
+  }
+  return points;
+}
+
+/** The cells the last frame at or before `t` changed. */
+export function changedCellsAt(
+  frames: readonly ReplayFrame[],
+  t: number,
+): Set<number> {
+  let latest: ReplayFrame | undefined;
+  for (const frame of frames) {
+    if (frame[0]! > t) break;
+    latest = frame;
+  }
+  const cells = new Set<number>();
+  if (!latest) return cells;
+  for (let i = 1; i + 1 < latest.length; i += 2) cells.add(latest[i]!);
+  return cells;
+}
