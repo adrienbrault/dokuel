@@ -81,6 +81,23 @@ describe("Cell accessible state", () => {
     ).toBeInTheDocument();
   });
 
+  it("flags a conflicting value with aria-invalid", () => {
+    const { rerender } = render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell({ value: 5 })}
+        isConflict={true}
+      />,
+    );
+    expect(screen.getByRole("gridcell")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+
+    rerender(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
+    expect(screen.getByRole("gridcell")).not.toHaveAttribute("aria-invalid");
+  });
+
   it("marks given cells read-only and player cells editable", () => {
     const { rerender } = render(
       <Cell {...defaultProps()} cell={makeCell({ value: 7, isGiven: true })} />,
