@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  buildChallengeShare,
   buildChallengeText,
   buildChallengeUrl,
   compareToChallenge,
@@ -99,6 +100,36 @@ describe("buildChallengeText", () => {
     expect(
       buildChallengeText({ seconds: 272, hinted: true, difficulty: "expert" }),
     ).toBe("Can you beat my 4:32 (with hints) on this Expert Dokuel sudoku?");
+  });
+});
+
+describe("buildChallengeShare", () => {
+  it("pairs the invite line with the link for one finished board", () => {
+    expect(
+      buildChallengeShare({
+        origin: "https://dokuel.com",
+        name: "Brave Otter",
+        difficulty: "easy",
+        gameKey: "k3y",
+        seconds: 231,
+        hinted: false,
+      }),
+    ).toEqual({
+      text: "Can you beat my 3:51 on this Easy Dokuel sudoku?",
+      url: "https://dokuel.com/solo/easy/k3y?t=231&by=Brave+Otter",
+    });
+  });
+
+  it("never sends a zero time the receiver would throw away", () => {
+    const { url } = buildChallengeShare({
+      origin: "https://dokuel.com",
+      name: "Brave Otter",
+      difficulty: "easy",
+      gameKey: "k3y",
+      seconds: 0,
+      hinted: false,
+    });
+    expect(parseChallenge(new URL(url).search)?.seconds).toBe(1);
   });
 });
 
