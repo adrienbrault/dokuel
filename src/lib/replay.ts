@@ -26,6 +26,14 @@ function packCell(value: number | null, notes: Set<number>): number {
   return (value ?? 0) | (mask << VALUE_BITS);
 }
 
+function unpackNotes(packed: number): Set<number> {
+  const notes = new Set<number>();
+  for (let n = 1; n <= 9; n++) {
+    if (packed & (1 << (n - 1 + VALUE_BITS))) notes.add(n);
+  }
+  return notes;
+}
+
 /**
  * The frame that takes `prev` to `next` at instant `t`, or null when no
  * cell changed (a selection move, a notes-mode toggle).
@@ -64,12 +72,43 @@ export function replayAt(
       const packed = frame[i + 1]!;
       const value = packed & VALUE_MASK;
       cell.value = value === 0 ? null : value;
-      const notes = new Set<number>();
-      for (let n = 1; n <= 9; n++) {
-        if (packed & (1 << (n - 1 + VALUE_BITS))) notes.add(n);
-      }
-      cell.notes = notes;
+      cell.notes = unpackNotes(packed);
     }
   }
   return board;
+}
+
+/** The instant the last change happened, 0 for an untouched board. */
+export function replayDuration(frames: readonly ReplayFrame[]): number {
+  return frames.length > 0 ? frames[frames.length - 1]![0]! : 0;
+}
+
+const MAX_PACKED = (0x1ff << VALUE_BITS) | 9;
+
+function isFrame(raw: unknown): raw is ReplayFrame {
+  if (!Array.isArray(raw) || raw.length < 3 || raw.length % 2 === 0) {
+    return false;
+  }
+  if (!raw.every((n) => Number.isInteger(n) && n >= 0)) return false;
+  for (let i = 1; i < raw.length; i += 2) {
+    const packed = raw[i + 1] as number;
+    if ((raw[i] as number) > 80) return false;
+    if (packed > MAX_PACKED || (packed & VALUE_MASK) > 9) return false;
+  }
+  return true;
+}
+
+/**
+ * A replay that came off the wire, or null when it is not one. Frames
+ * must be well formed and in time order: a peer can write anything into
+ * the room, and the end screen must not crash or scrub backwards on it.
+ */
+export function parseReplay(raw: unknown): ReplayFrame[] | null {
+  if (!Array.isArray(raw)) return null;
+  let last = 0;
+  for (const frame of raw) {
+    if (!isFrame(frame) || frame[0]! < last) return null;
+    last = frame[0]!;
+  }
+  return raw as ReplayFrame[];
 }
