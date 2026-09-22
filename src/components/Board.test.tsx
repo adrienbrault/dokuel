@@ -804,4 +804,32 @@ describe("Board grid semantics", () => {
       /^Cell row 5 column 7,/,
     );
   });
+
+  it("moves focus with the selection while focus is inside the grid", () => {
+    const ui = (selectedCell: { row: number; col: number }) => (
+      <>
+        <button type="button">outside</button>
+        <Board
+          board={makeBoard()}
+          selectedCell={selectedCell}
+          conflicts={new Set()}
+          onSelectCell={vi.fn()}
+        />
+      </>
+    );
+    const { rerender } = render(ui({ row: 0, col: 0 }));
+    screen.getByLabelText(/^Cell row 1 column 1,/).focus();
+
+    // Arrow keys (handled by the game's keyboard hook) change the
+    // selection; focus must follow so the screen reader reads the new cell.
+    rerender(ui({ row: 0, col: 1 }));
+    expect(document.activeElement).toHaveAccessibleName(
+      /^Cell row 1 column 2,/,
+    );
+
+    // Focus elsewhere is never stolen by a selection change.
+    screen.getByRole("button", { name: "outside" }).focus();
+    rerender(ui({ row: 3, col: 3 }));
+    expect(document.activeElement).toHaveAccessibleName("outside");
+  });
 });
