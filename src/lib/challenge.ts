@@ -1,3 +1,4 @@
+import { formatShortTime } from "./format.ts";
 import type { Challenge, Difficulty } from "./types.ts";
 
 /** 23:59:59. Longer than any real solve; keeps the display sane. */
@@ -29,6 +30,36 @@ export function parseChallenge(search: string): Challenge | null {
     name: cleanName(params.get("by") ?? ""),
     hinted: params.get("h") === "1",
   };
+}
+
+export type ChallengeComparison = {
+  outcome: "won" | "lost" | "tie";
+  headline: string;
+};
+
+/** The result screen's verdict on a finished challenge, player's side. */
+export function compareToChallenge({
+  seconds,
+  challenge,
+}: {
+  seconds: number;
+  hintsUsed: number;
+  challenge: Challenge;
+}): ChallengeComparison {
+  const margin = Math.abs(seconds - challenge.seconds);
+  if (seconds < challenge.seconds) {
+    return {
+      outcome: "won",
+      headline: `You beat ${challenge.name} by ${formatShortTime(margin)}`,
+    };
+  }
+  if (seconds > challenge.seconds) {
+    return {
+      outcome: "lost",
+      headline: `${challenge.name} was ${formatShortTime(margin)} faster`,
+    };
+  }
+  return { outcome: "tie", headline: `Dead heat with ${challenge.name}` };
 }
 
 /**
