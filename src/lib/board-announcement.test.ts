@@ -70,4 +70,21 @@ describe("describeBoardChange", () => {
       "Note 3 removed in 3 cells",
     );
   });
+
+  it("falls back to a generic phrase for mixed note edits", () => {
+    const prev = makeBoard([[0, 0, { notes: new Set([1, 2, 3]) }]]);
+    const next = makeBoard();
+    expect(describeBoardChange(prev, next, new Set())).toBe(
+      "Notes updated, row 1 column 1",
+    );
+  });
+
+  it("stays silent when a new puzzle replaces the board", () => {
+    const prev = makeBoard([[0, 0, { value: 1, isGiven: true }]]);
+    const next = makeBoard([
+      [0, 0, { value: 4, isGiven: true }],
+      [5, 5, { value: 9, isGiven: true }],
+    ]);
+    expect(describeBoardChange(prev, next, new Set())).toBeNull();
+  });
 });
