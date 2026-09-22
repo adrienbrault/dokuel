@@ -29,7 +29,11 @@ export function createSwUpdates(reload: () => void): SwUpdates {
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
         worker?.addEventListener("statechange", () => {
-          if (worker.state === "installed") offer(worker);
+          // Without a controller this is the first install, which is
+          // offline support arriving, not an update.
+          if (worker.state === "installed" && swContainer.controller) {
+            offer(worker);
+          }
         });
       });
     },
