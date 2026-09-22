@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSwUpdates } from "./sw-updates.ts";
+import { createSwUpdates, registerServiceWorker } from "./sw-updates.ts";
 
 // Minimal stand-ins for the browser's ServiceWorker objects: the
 // container and registration are the system boundary here.
@@ -106,5 +106,40 @@ describe("createSwUpdates", () => {
     s.container.dispatchEvent(new Event("controllerchange"));
 
     expect(s.reload).not.toHaveBeenCalled();
+  });
+});
+
+describe("registerServiceWorker", () => {
+  it("registers the built worker and watches it for updates", async () => {
+    const registration = new FakeRegistration();
+    registration.waiting = new FakeWorker();
+    const container = Object.assign(new FakeContainer({}), {
+      register: vi.fn(() => Promise.resolve(registration)),
+    });
+    const updates = createSwUpdates(vi.fn());
+
+    await registerServiceWorker(
+      container as unknown as ServiceWorkerContainer,
+      updates,
+    );
+
+    expect(container.register).toHaveBeenCalledWith("/sw.js");
+    expect(updates.isUpdateReady()).toBe(true);
+  });
+
+  it("shrugs off a failed registration", async () => {
+    // Offline support is a bonus: a blocked or failing worker must
+    // never break the app that is already running.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const container = Object.assign(new FakeContainer(null), {
+      register: vi.fn(() => Promise.reject(new Error("blocked"))),
+    });
+
+    await registerServiceWorker(
+      container as unknown as ServiceWorkerContainer,
+      createSwUpdates(vi.fn()),
+    );
+
+    expect(warn).toHaveBeenCalled();
   });
 });
