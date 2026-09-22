@@ -40,6 +40,15 @@ export type TelemetrySenderOptions = {
   flushIntervalMs?: number;
 };
 
+export function resolveTelemetryEndpoint(_config: {
+  override: string | undefined;
+  prod: boolean;
+  hostname: string;
+  defaultUrl: string;
+}): string | null {
+  return null;
+}
+
 const DEFAULT_FLUSH_INTERVAL_MS = 10_000;
 // The worker refuses batches over 25 events; stay clear of it.
 const MAX_BATCH = 20;

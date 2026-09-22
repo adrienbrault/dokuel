@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createTelemetrySender } from "./telemetry.ts";
+import {
+  createTelemetrySender,
+  resolveTelemetryEndpoint,
+} from "./telemetry.ts";
 
 const ENDPOINT = "https://signal.example/events";
 const SID = "session123";
@@ -126,5 +129,34 @@ describe("createTelemetrySender", () => {
     // A rejected fetch left unhandled would fail the run here.
     await vi.runAllTimersAsync();
     sender.dispose();
+  });
+});
+
+describe("resolveTelemetryEndpoint", () => {
+  const DEFAULT = "https://signal.example/events";
+  const LOCAL = "http://localhost:8787/events";
+
+  it.each([
+    ["a production build on the real host", {}, DEFAULT],
+    ["a dev or test build", { prod: false }, null],
+    ["a build served from localhost", { hostname: "localhost" }, null],
+    ["a build served from 127.0.0.1", { hostname: "127.0.0.1" }, null],
+    ["an explicit override", { override: LOCAL }, LOCAL],
+    [
+      "an override in a local dev build",
+      { prod: false, hostname: "localhost", override: LOCAL },
+      LOCAL,
+    ],
+    ["an explicit opt-out", { override: "off" }, null],
+  ])("resolves %s", (_label, overrides, expected) => {
+    expect(
+      resolveTelemetryEndpoint({
+        prod: true,
+        hostname: "dokuel.com",
+        override: undefined,
+        defaultUrl: DEFAULT,
+        ...overrides,
+      }),
+    ).toBe(expected);
   });
 });
