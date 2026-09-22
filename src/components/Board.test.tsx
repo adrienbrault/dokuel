@@ -700,3 +700,43 @@ describe("Board filled-cell drag gating", () => {
     expect(onSelectCell).toHaveBeenCalledWith(3, 3);
   });
 });
+
+describe("Board grid semantics", () => {
+  function renderBoard(props: Partial<Parameters<typeof Board>[0]> = {}) {
+    return render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        {...props}
+      />,
+    );
+  }
+
+  it("exposes a 9x9 grid whose rows own their cells in reading order", () => {
+    renderBoard();
+
+    const grid = screen.getByRole("grid", { name: "Sudoku board" });
+    expect(grid).toHaveAttribute("aria-rowcount", "9");
+    expect(grid).toHaveAttribute("aria-colcount", "9");
+
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(9);
+    rows.forEach((rowEl, r) => {
+      expect(rowEl).toHaveAttribute("aria-rowindex", String(r + 1));
+      const owned = rowEl.getAttribute("aria-owns")?.split(" ") ?? [];
+      expect(owned).toHaveLength(9);
+      owned.forEach((id, c) => {
+        const cellEl = document.getElementById(id);
+        expect(cellEl).toHaveAttribute("role", "gridcell");
+        expect(cellEl).toHaveAttribute("aria-rowindex", String(r + 1));
+        expect(cellEl).toHaveAttribute("aria-colindex", String(c + 1));
+        expect(cellEl).toHaveAccessibleName(
+          new RegExp(`^Cell row ${r + 1} column ${c + 1},`),
+        );
+      });
+    });
+    expect(screen.getAllByRole("gridcell")).toHaveLength(81);
+  });
+});
