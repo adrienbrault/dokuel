@@ -181,6 +181,28 @@ describe("MultiplayerBoard local autosave", () => {
     }
   });
 
+  it("announces completion to screen readers when the last digit lands", () => {
+    vi.useFakeTimers();
+    try {
+      const oneLeft = `.${SOLVED.slice(1)}`;
+      render(<MultiplayerBoard {...baseProps()} puzzle={oneLeft} />);
+
+      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+      const five = screen.getAllByLabelText(/^5\b/)[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
+        "Puzzle complete",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps the cell selected after a numpad tap places a value", () => {
     vi.useFakeTimers();
     try {
