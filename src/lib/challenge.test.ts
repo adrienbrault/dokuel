@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildChallengeUrl,
+  compareToChallenge,
   MAX_CHALLENGE_SECONDS,
   MAX_CHALLENGER_NAME_LENGTH,
   parseChallenge,
@@ -51,6 +52,28 @@ describe("parseChallenge", () => {
   it("falls back to a friendly name when none is given", () => {
     expect(parseChallenge("?t=60")?.name).toBe("A friend");
     expect(parseChallenge("?t=60&by=%20%20")?.name).toBe("A friend");
+  });
+});
+
+describe("compareToChallenge", () => {
+  const fox = { name: "Swift Fox", seconds: 272, hinted: false };
+
+  it("says by how much the player beat the challenger", () => {
+    expect(
+      compareToChallenge({ seconds: 231, hintsUsed: 0, challenge: fox }),
+    ).toMatchObject({ outcome: "won", headline: "You beat Swift Fox by 0:41" });
+  });
+
+  it("says how much faster the challenger was", () => {
+    expect(
+      compareToChallenge({ seconds: 284, hintsUsed: 0, challenge: fox }),
+    ).toMatchObject({ outcome: "lost", headline: "Swift Fox was 0:12 faster" });
+  });
+
+  it("calls an identical time a tie", () => {
+    expect(
+      compareToChallenge({ seconds: 272, hintsUsed: 0, challenge: fox }),
+    ).toMatchObject({ outcome: "tie", headline: "Dead heat with Swift Fox" });
   });
 });
 
