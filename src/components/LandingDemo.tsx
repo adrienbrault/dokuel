@@ -7,6 +7,8 @@ import {
   demoFrame,
   LANDING_DEMO_PUZZLE,
   LANDING_DEMO_SCRIPT,
+  LANDING_DEMO_STILL_STEP,
+  LANDING_DEMO_SUMMARY,
 } from "../lib/landing-demo.ts";
 import { Board } from "./Board.tsx";
 import { NumPad } from "./NumPad.tsx";
@@ -19,6 +21,23 @@ const FINGER_PX = 60;
 // A touch drag aims above the fingertip (see useDigitDrag); the demo
 // finger sits that far below the cell it is dropping on, like a real one.
 const TOUCH_LIFT_PX = liftForPointerType("touch");
+
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+/** Tracks the OS "reduce motion" setting, live. */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia?.(REDUCED_MOTION).matches ?? false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia?.(REDUCED_MOTION);
+    if (!mq) return;
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
 
 function remainingCounts(frame: DemoFrame): Record<number, number> {
   const counts: Record<number, number> = {};
@@ -84,19 +103,22 @@ function fingerPoint(
  * no gesture hook fires (no sounds, no haptics) and nothing is saved.
  */
 export function LandingDemo() {
-  const [step, setStep] = useState(0);
+  const still = usePrefersReducedMotion();
+  const [playhead, setStep] = useState(0);
+  const step = still ? LANDING_DEMO_STILL_STEP : playhead;
   const frame = useMemo(
     () => demoFrame(SCRIPT, LANDING_DEMO_PUZZLE, step),
     [step],
   );
 
   useEffect(() => {
+    if (still) return;
     const id = setTimeout(
       () => setStep((s) => (s + 1) % SCRIPT.length),
       SCRIPT[step]!.ms,
     );
     return () => clearTimeout(id);
-  }, [step]);
+  }, [step, still]);
 
   // Scale the full-size stage into the card's box. Measured, not fixed:
   // the real components pick their own layout per breakpoint.
@@ -191,22 +213,37 @@ export function LandingDemo() {
       </div>
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <span className="label">How to play</span>
-        <p
-          data-testid="landing-demo-caption"
-          className="text-sm font-semibold leading-snug text-balance text-text-primary min-h-[2lh]"
-          aria-hidden="true"
-        >
-          {frame.caption}
-        </p>
-        <span
-          className="h-1 w-full rounded-full bg-bg-inset overflow-hidden"
-          aria-hidden="true"
-        >
-          <span
-            className="block h-full rounded-full bg-accent transition-[width] duration-300"
-            style={{ width: `${((step + 1) / SCRIPT.length) * 100}%` }}
-          />
-        </span>
+        {still ? (
+          <ul className="flex flex-col gap-0.5 text-xs leading-tight text-text-secondary">
+            {LANDING_DEMO_SUMMARY.map(([gesture, effect]) => (
+              <li key={gesture}>
+                <span className="font-semibold text-text-primary">
+                  {gesture}
+                </span>{" "}
+                {effect}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <p
+              data-testid="landing-demo-caption"
+              className="text-sm font-semibold leading-snug text-balance text-text-primary min-h-[2lh]"
+              aria-hidden="true"
+            >
+              {frame.caption}
+            </p>
+            <span
+              className="h-1 w-full rounded-full bg-bg-inset overflow-hidden"
+              aria-hidden="true"
+            >
+              <span
+                className="block h-full rounded-full bg-accent transition-[width] duration-300"
+                style={{ width: `${((step + 1) / SCRIPT.length) * 100}%` }}
+              />
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

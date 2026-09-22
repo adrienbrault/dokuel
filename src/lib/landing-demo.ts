@@ -213,7 +213,11 @@ export const LANDING_DEMO_PUZZLE =
   "534.78...67.19534..983...6.8.9.61.234..853..17.3.2.8.6.6.5..28..8.419..5...286.79";
 
 const PICK = "Tap a cell to select it";
+const TAP = "Tap a number to fill it in";
+const HOLD = "Hold a number to pencil a note";
+const SKIM = "Slide along the pad to spot a digit";
 const DRAG = "Drag onto a cell: top half places";
+const DRAG_NOTE = "Bottom half pencils a note";
 
 /**
  * The tutorial itself: one pass through every numpad gesture, ending on
@@ -224,13 +228,13 @@ export const LANDING_DEMO_SCRIPT: readonly DemoStep[] = [
   {
     action: { kind: "tap", digit: 1 },
     ms: 1400,
-    caption: "Tap a number to fill it in",
+    caption: TAP,
   },
   { action: { kind: "select", row: 6, col: 0 }, ms: 1000, caption: PICK },
   {
     action: { kind: "hold", digit: 3 },
     ms: 1400,
-    caption: "Hold a number to pencil a note",
+    caption: HOLD,
   },
   {
     action: { kind: "hold", digit: 9 },
@@ -240,22 +244,22 @@ export const LANDING_DEMO_SCRIPT: readonly DemoStep[] = [
   {
     action: { kind: "skim", digit: 4 },
     ms: 450,
-    caption: "Slide along the pad to spot a digit",
+    caption: SKIM,
   },
   {
     action: { kind: "skim", digit: 5 },
     ms: 450,
-    caption: "Slide along the pad to spot a digit",
+    caption: SKIM,
   },
   {
     action: { kind: "skim", digit: 6 },
     ms: 450,
-    caption: "Slide along the pad to spot a digit",
+    caption: SKIM,
   },
   {
     action: { kind: "skim", digit: 7 },
     ms: 1000,
-    caption: "Slide along the pad to spot a digit",
+    caption: SKIM,
   },
   {
     action: { kind: "drag", digit: 7, row: 4, col: 6, mode: "value" },
@@ -265,7 +269,7 @@ export const LANDING_DEMO_SCRIPT: readonly DemoStep[] = [
   {
     action: { kind: "drag", digit: 7, row: 4, col: 6, mode: "note" },
     ms: 1400,
-    caption: "Bottom half pencils a note",
+    caption: DRAG_NOTE,
   },
   {
     action: { kind: "drag", digit: 7, row: 4, col: 6, mode: "value" },
@@ -284,3 +288,23 @@ export const LANDING_DEMO_SCRIPT: readonly DemoStep[] = [
     caption: "Clashes turn red, never blocked",
   },
 ];
+
+/**
+ * Every gesture at a glance, as [gesture, what it does], for a demo
+ * that must hold still. Terser than the captions: all of it has to
+ * fit beside the board at once.
+ */
+export const LANDING_DEMO_SUMMARY: readonly (readonly [string, string])[] = [
+  ["Tap", "fills in a number"],
+  ["Hold", "pencils a note"],
+  ["Slide the pad", "spots a digit"],
+  ["Drag to a cell", "top half fills, bottom half notes"],
+];
+
+/**
+ * The frame a still demo shows: a digit mid-drag over a bottom half,
+ * with a value, stacked notes and the skim's highlight already down.
+ */
+export const LANDING_DEMO_STILL_STEP = LANDING_DEMO_SCRIPT.findIndex(
+  (step) => step.caption === DRAG_NOTE,
+);
