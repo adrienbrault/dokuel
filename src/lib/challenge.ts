@@ -1,3 +1,4 @@
+import { DIFFICULTY_LABELS } from "./constants.ts";
 import { formatShortTime } from "./format.ts";
 import type { Challenge, Difficulty } from "./types.ts";
 
@@ -77,6 +78,20 @@ export function compareToChallenge({
     headline: `Dead heat with ${challenge.name}`,
     hintNote,
   };
+}
+
+/** The invite line shared alongside a challenge link. */
+export function buildChallengeText({
+  seconds,
+  hinted,
+  difficulty,
+}: {
+  seconds: number;
+  hinted: boolean;
+  difficulty: Difficulty;
+}): string {
+  const hints = hinted ? " (with hints)" : "";
+  return `Can you beat my ${formatShortTime(seconds)}${hints} on this ${DIFFICULTY_LABELS[difficulty]} Dokuel sudoku?`;
 }
 
 /**
