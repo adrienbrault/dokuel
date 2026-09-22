@@ -278,7 +278,7 @@ describe("Board drag-select filters non-empty cells", () => {
       { row: 0, col: 4 }, // pointerup
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, { clientX: 0, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 1, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 2, clientY: 0 });
@@ -322,7 +322,7 @@ describe("Board drag-select filters non-empty cells", () => {
       { row: 0, col: 2 },
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, { clientX: 0, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 1, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 2, clientY: 0 });
@@ -347,7 +347,7 @@ describe("Board iOS back-swipe suppression", () => {
       />,
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     const event = new Event("touchstart", { bubbles: true, cancelable: true });
     region.dispatchEvent(event);
 
@@ -382,7 +382,7 @@ describe("Board iOS back-swipe suppression", () => {
       findCell(0, 0),
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 5,
       clientY: 100,
@@ -426,7 +426,7 @@ describe("Board iOS back-swipe suppression", () => {
       findCell(0, 0),
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 5,
       clientY: 100,
@@ -469,7 +469,7 @@ describe("Board iOS back-swipe suppression", () => {
       findCell(0, 0),
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 5,
       clientY: 100,
@@ -538,7 +538,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 0, col: 0 },
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 100,
       clientY: 100,
@@ -579,7 +579,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 0, col: 1 }, // pointermove crosses cells immediately
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 100,
       clientY: 100,
@@ -618,7 +618,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 0, col: 0 },
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 100,
       clientY: 100,
@@ -668,7 +668,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 3, col: 3 }, // second gesture: pointerdown on the given cell tapped next
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     // First gesture: digit drag (no trailing click, simulating iOS skip).
     fireEvent.pointerDown(region, {
       clientX: 100,

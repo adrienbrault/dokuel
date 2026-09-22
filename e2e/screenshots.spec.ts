@@ -156,7 +156,10 @@ test.describe("dark mode", () => {
     // - That cell becomes selected (cell-selected bg)
     // - Same-number cells get highlighted (cell-same-number bg)
     // - Row/col/box cells get highlighted (cell-highlight bg)
-    await page.locator('button[aria-label*="value"]').first().click();
+    await page
+      .locator('[role="gridcell"][aria-label*="value"]')
+      .first()
+      .click();
 
     await page.screenshot({
       path: screenshotPath("solo-cell-selected-dark", testInfo.project.name),
@@ -215,7 +218,10 @@ test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
   // Select an empty cell so the hold has a meaningful target
-  await page.locator('button[aria-label*=", empty"]').first().click();
+  await page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first()
+    .click();
 
   // Hold a digit past the threshold so the note commits and the in-cell
   // charge glyph appears, then screenshot. Animations are disabled here,
@@ -247,7 +253,9 @@ test("solo game - drag from numpad mid-flight", async ({ page }, testInfo) => {
 
   // Find an empty cell roughly in the middle of the board to use as drop
   // target. The ghost will be rendered hovering over it.
-  const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+  const emptyCell = page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first();
   const cellBox = await emptyCell.boundingBox();
   if (!cellBox) throw new Error("empty cell not visible");
 
@@ -290,7 +298,9 @@ test("drag from numpad commits the digit on drop", async ({ page }) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+  const emptyCell = page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first();
   const cellPrefix = (await emptyCell.getAttribute("aria-label"))?.split(
     ",",
   )[0];
@@ -327,10 +337,12 @@ test("drag from numpad commits the digit on drop", async ({ page }) => {
   // The dropped 5 must land in the target cell as a value. Match the
   // specific cell and allow state suffixes (e.g. ", conflict") — the
   // board is random, so the dropped digit may legitimately conflict.
-  const dropped = page.locator(`button[aria-label^="${cellPrefix}, value 5"]`);
+  const dropped = page.locator(
+    `[role="gridcell"][aria-label^="${cellPrefix}, value 5"]`,
+  );
   if ((await dropped.count()) === 0) {
     const after = await page
-      .locator(`button[aria-label^="${cellPrefix},"]`)
+      .locator(`[role="gridcell"][aria-label^="${cellPrefix},"]`)
       .first()
       .getAttribute("aria-label");
     throw new Error(`drop did not commit a value; cell is now: ${after}`);
@@ -343,11 +355,15 @@ test("solo game - drag from a filled cell", async ({ page }, testInfo) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const sourceCell = page.locator('button[aria-label*=", value"]').first();
+  const sourceCell = page
+    .locator('[role="gridcell"][aria-label*=", value"]')
+    .first();
   const sourceBox = await sourceCell.boundingBox();
   if (!sourceBox) throw new Error("source cell not visible");
 
-  const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+  const emptyCell = page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first();
   const emptyBox = await emptyCell.boundingBox();
   if (!emptyBox) throw new Error("empty cell not visible");
 
@@ -384,7 +400,7 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const emptyCells = page.locator('button[aria-label*=", empty"]');
+  const emptyCells = page.locator('[role="gridcell"][aria-label*=", empty"]');
   const enabledNumpad = page.locator(
     '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
   );
@@ -397,7 +413,9 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 
   // Add pencil notes to subsequent cells by holding numpad digits past
   // the threshold — hold = note.
-  const remainingEmpty = page.locator('button[aria-label*=", empty"]');
+  const remainingEmpty = page.locator(
+    '[role="gridcell"][aria-label*=", empty"]',
+  );
   for (let i = 0; i < 6; i++) {
     const count = await enabledNumpad.count();
     if (count < 2) break;
@@ -407,7 +425,7 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
   }
 
   // Deselect by clicking a filled cell for cleaner screenshot
-  await page.locator('button[aria-label*="value"]').first().click();
+  await page.locator('[role="gridcell"][aria-label*="value"]').first().click();
 
   await page.screenshot({
     path: screenshotPath("solo-in-progress", testInfo.project.name),
@@ -431,7 +449,7 @@ test.describe("solo win modal", () => {
       '[role="group"][aria-label="Number pad"]:visible',
     );
 
-    await page.locator('button[aria-label*=", empty"]').click();
+    await page.locator('[role="gridcell"][aria-label*=", empty"]').click();
     await page.keyboard.press("5");
 
     const dialog = page.getByRole("dialog");
@@ -765,10 +783,15 @@ async function playValuesAndNotes(page: Page) {
     '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
   );
   for (let i = 0; i < 5; i++) {
-    await page.locator('button[aria-label*=", empty"]').nth(0).click();
+    await page
+      .locator('[role="gridcell"][aria-label*=", empty"]')
+      .nth(0)
+      .click();
     await page.keyboard.press(String((i % 9) + 1));
   }
-  const remainingEmpty = page.locator('button[aria-label*=", empty"]');
+  const remainingEmpty = page.locator(
+    '[role="gridcell"][aria-label*=", empty"]',
+  );
   for (let i = 0; i < 6; i++) {
     const count = await enabledNumpad.count();
     if (count < 2) break;
@@ -776,7 +799,7 @@ async function playValuesAndNotes(page: Page) {
     await holdNumpadDigit(page, enabledNumpad.nth(i % count));
     await holdNumpadDigit(page, enabledNumpad.nth((i + 1) % count));
   }
-  await page.locator('button[aria-label*="value"]').first().click();
+  await page.locator('[role="gridcell"][aria-label*="value"]').first().click();
 }
 
 test.describe("digit colors tinted", () => {
@@ -837,7 +860,7 @@ test.describe("digit colors interactions", () => {
 
     // Drag across two cells to arm a multi-cell selection, which flips
     // the pad into note mode and swaps in the pencil-mark key faces.
-    const cells = page.locator('button[aria-label*=", empty"]');
+    const cells = page.locator('[role="gridcell"][aria-label*=", empty"]');
     const from = await cells.nth(0).boundingBox();
     const to = await cells.nth(1).boundingBox();
     if (!from || !to) throw new Error("cells not visible");
@@ -857,7 +880,10 @@ test.describe("digit colors interactions", () => {
     page,
   }, testInfo) => {
     await startEasy(page);
-    await page.locator('button[aria-label*=", empty"]').first().click();
+    await page
+      .locator('[role="gridcell"][aria-label*=", empty"]')
+      .first()
+      .click();
 
     const digit = page
       .locator(
@@ -882,7 +908,7 @@ test.describe("digit colors interactions", () => {
     await startEasy(page);
 
     const cellBox = await page
-      .locator('button[aria-label*=", empty"]')
+      .locator('[role="gridcell"][aria-label*=", empty"]')
       .first()
       .boundingBox();
     if (!cellBox) throw new Error("empty cell not visible");
