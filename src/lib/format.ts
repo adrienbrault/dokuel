@@ -4,6 +4,17 @@ export function formatTime(totalSeconds: number): string {
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
+/** Prose-friendly duration: "0:41", "4:32", "1:02:03". */
+export function formatShortTime(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = String(totalSeconds % 60).padStart(2, "0");
+  if (hours > 0) {
+    return `${hours}:${String(mins).padStart(2, "0")}:${secs}`;
+  }
+  return `${mins}:${secs}`;
+}
+
 const SHORT_MONTHS = [
   "Jan",
   "Feb",
