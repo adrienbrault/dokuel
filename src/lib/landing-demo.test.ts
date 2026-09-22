@@ -39,4 +39,19 @@ describe("demoFrame", () => {
     expect(frame.chargingDigit).toBe(7);
     expect(frame.finger).toEqual({ kind: "key", digit: 7 });
   });
+
+  it("skims the numpad into a board-wide highlight, dropping the selection", () => {
+    const script: DemoStep[] = [
+      { action: { kind: "select", row: 4, col: 4 }, ms: 900, caption: "Pick" },
+      { action: { kind: "skim", digit: 2 }, ms: 400, caption: "Skim" },
+      { action: { kind: "skim", digit: 3 }, ms: 400, caption: "Skim" },
+    ];
+
+    const frame = demoFrame(script, PUZZLE, 2);
+
+    expect(frame.selectedCell).toBeNull();
+    expect(frame.highlightedDigit).toBe(3);
+    expect(frame.activeKey).toBe(3);
+    expect(frame.finger).toEqual({ kind: "key", digit: 3 });
+  });
 });
