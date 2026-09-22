@@ -67,16 +67,26 @@ export function createTelemetrySender({
     const events = queue;
     queue = [];
     const body = JSON.stringify({ sid: sessionId, events });
-    if (sendBeacon(endpoint, body)) return;
+    try {
+      if (sendBeacon(endpoint, body)) return;
+    } catch {
+      // Fall through to fetch.
+    }
     // A string body goes out as text/plain, a CORS-safelisted type:
     // no preflight round trip for a request nobody reads the answer
     // to. The worker parses the text as JSON regardless.
-    void fetch(endpoint, {
-      method: "POST",
-      body,
-      keepalive: true,
-      credentials: "omit",
-    });
+    try {
+      fetch(endpoint, {
+        method: "POST",
+        body,
+        keepalive: true,
+        credentials: "omit",
+      }).catch(() => {
+        // Offline or blocked: diagnostics are best-effort.
+      });
+    } catch {
+      // Same.
+    }
   };
 
   // "hidden" is the last point a mobile browser reliably runs script
