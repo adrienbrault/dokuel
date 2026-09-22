@@ -8,6 +8,7 @@ import {
   createRoomFromDoc,
   initializeRoom,
   joinRoom,
+  publishReplay,
   startGame,
   updateProgress,
 } from "./p2p-room.ts";
@@ -701,6 +702,39 @@ describe("commands", () => {
       mode: "emoji",
       emojiTheme: "vehicles",
     });
+  });
+});
+
+describe("replays", () => {
+  it("keeps our replay to ourselves until the game is over", () => {
+    const { room } = setupStartedGame();
+
+    room.publishReplay([[0, 2, 4]]);
+
+    expect(room.snapshot().replays).toEqual({});
+  });
+
+  it("projects both players' replays once the game is over", () => {
+    const { p2p, room, solution } = setupStartedGame();
+    claimWinner(p2p, "p2", "Bob", solution);
+    publishReplay(p2p, "p2", 1, [[0, 5, 6]]);
+
+    room.publishReplay([[0, 2, 4]]);
+
+    expect(room.snapshot().replays).toEqual({
+      p1: [[0, 2, 4]],
+      p2: [[0, 5, 6]],
+    });
+  });
+
+  it("forgets the last game's replays on a rematch", () => {
+    const { p2p, room, solution } = setupStartedGame();
+    claimWinner(p2p, "p2", "Bob", solution);
+    room.publishReplay([[0, 2, 4]]);
+
+    startGame(p2p);
+
+    expect(room.snapshot().replays).toEqual({});
   });
 });
 
