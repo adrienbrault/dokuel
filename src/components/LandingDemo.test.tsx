@@ -33,4 +33,37 @@ describe("LandingDemo", () => {
     });
     expect(caption()).toBe(FIRST.caption);
   });
+
+  it("holds one still frame and lists every gesture under reduced motion", () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === "(prefers-reduced-motion: reduce)",
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    const { container } = render(<LandingDemo />);
+    const cells = () =>
+      [...container.querySelectorAll("[data-row]")].map((el) =>
+        el.getAttribute("aria-label"),
+      );
+    const before = cells();
+
+    act(() => {
+      vi.advanceTimersByTime(LOOP_MS);
+    });
+
+    expect(cells()).toEqual(before);
+    expect(screen.queryByTestId("landing-demo-caption")).toBeNull();
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual([
+      "Tap fills in a number",
+      "Hold pencils a note",
+      "Slide the pad spots a digit",
+      "Drag to a cell top half fills, bottom half notes",
+    ]);
+  });
 });
