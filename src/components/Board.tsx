@@ -56,6 +56,8 @@ type BoardProps = {
         pointerType: string;
       }) => void)
     | undefined;
+  /** True once the puzzle is solved; the live region announces it. */
+  completed?: boolean | undefined;
 };
 
 export function Board({
@@ -72,6 +74,7 @@ export function Board({
   chargingDigit,
   dragState,
   onStartCellDrag,
+  completed,
 }: BoardProps) {
   const isPaper = assistLevel === "paper";
   const isFull = assistLevel === "full";
@@ -314,7 +317,11 @@ export function Board({
           );
         })}
       </div>
-      <BoardAnnouncer board={board} conflicts={conflicts} />
+      <BoardAnnouncer
+        board={board}
+        conflicts={conflicts}
+        completed={completed}
+      />
     </div>
   );
 }
