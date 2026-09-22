@@ -150,3 +150,11 @@ export function createTelemetrySender({
     },
   };
 }
+
+export function installTelemetry(_sender: TelemetrySender): () => void {
+  return () => {};
+}
+
+export function track(_event: TelemetryEvent): void {}
+
+export function flushTelemetry(): void {}

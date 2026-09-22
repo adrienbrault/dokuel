@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createTelemetrySender,
+  flushTelemetry,
+  installTelemetry,
   resolveTelemetryEndpoint,
+  track,
 } from "./telemetry.ts";
 
 const ENDPOINT = "https://signal.example/events";
@@ -129,6 +132,26 @@ describe("createTelemetrySender", () => {
     // A rejected fetch left unhandled would fail the run here.
     await vi.runAllTimersAsync();
     sender.dispose();
+  });
+});
+
+describe("track", () => {
+  it("does nothing until a sender is installed, then forwards to it", () => {
+    track({ name: "mp_first_peer", ms: 1 });
+
+    const sendBeacon = beaconSpy();
+    const uninstall = installTelemetry(
+      createTelemetrySender({ endpoint: ENDPOINT, sessionId: SID, sendBeacon }),
+    );
+    track({ name: "mp_first_peer", ms: 2 });
+    flushTelemetry();
+    uninstall();
+    track({ name: "mp_first_peer", ms: 3 });
+    flushTelemetry();
+
+    expect(sentEvents(sendBeacon)).toEqual([
+      [{ name: "mp_first_peer", ms: 2 }],
+    ]);
   });
 });
 
