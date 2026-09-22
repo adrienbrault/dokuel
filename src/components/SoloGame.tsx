@@ -8,9 +8,10 @@ import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
-import type { AssistLevel, Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Challenge, Difficulty } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { Board } from "./Board.tsx";
+import { ChallengeBanner } from "./ChallengeBanner.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
@@ -37,6 +38,8 @@ type SoloGameProps = {
     | ((time: number, result: GameCompletionResult) => void)
     | undefined;
   streakInfo?: { currentStreak: number; longestStreak: number } | undefined;
+  /** A "beat my time" challenge this board was opened with. */
+  challenge?: Challenge | null | undefined;
 };
 
 export function SoloGame({
@@ -51,10 +54,11 @@ export function SoloGame({
   onRematch,
   onComplete,
   streakInfo,
+  challenge: linkChallenge,
 }: SoloGameProps) {
   const timerSecondsRef = useRef(0);
 
-  const { game, assistLevel, setAssistLevel, initialTimerSeconds } =
+  const { game, assistLevel, setAssistLevel, initialTimerSeconds, challenge } =
     useResumableSudoku({
       gameKey,
       initialPuzzle,
@@ -63,6 +67,7 @@ export function SoloGame({
       getTimerSeconds: () => timerSecondsRef.current,
       dailyDate,
       onComplete,
+      challenge: linkChallenge,
     });
 
   // Seed the ref so saves before the first onTick capture the resumed timer.
@@ -150,6 +155,9 @@ export function SoloGame({
       onPositionChange={setPosition}
       onDeselectCell={highlight.deselectCell}
       boardClassName={game.status === "completed" ? "animate-celebration" : ""}
+      headerExtra={
+        challenge ? <ChallengeBanner challenge={challenge} /> : undefined
+      }
       settingsExtra={
         <AssistLevelPicker value={assistLevel} onChange={setAssistLevel} />
       }

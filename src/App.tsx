@@ -227,6 +227,7 @@ function App() {
           difficulty={screen.difficulty}
           gameKey={screen.gameKey}
           assistLevel={screen.assistLevel}
+          challenge={screen.challenge}
           onBack={() => navigate({ name: "landing" })}
           onRematch={() => {
             navigate(
