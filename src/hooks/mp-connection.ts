@@ -52,6 +52,12 @@ export function signalingUrl(roomId: string): string {
  */
 export const TURN_CREDENTIALS_URL = `https://${SIGNALING_HOST}/turn-credentials`;
 
+/**
+ * Anonymous telemetry intake (error reports, connection events), served
+ * by the same worker (see signaling/src/events.ts).
+ */
+export const TELEMETRY_EVENTS_URL = `https://${SIGNALING_HOST}/events`;
+
 // Bound the wait: opening a connection blocks on ICE resolution, and a
 // slow/broken endpoint must degrade to STUN-only, not a hung lobby.
 const TURN_FETCH_TIMEOUT_MS = 3_000;
