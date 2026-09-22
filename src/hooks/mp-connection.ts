@@ -1,4 +1,5 @@
 import type { Doc } from "yjs";
+import { type IceServersSource, track } from "../lib/telemetry.ts";
 
 /**
  * The Connection: how a room's state reaches its peers and survives
@@ -114,10 +115,25 @@ export function createIceServerResolver(
 ): () => Promise<RTCIceServer[] | null> {
   let minted: RTCIceServer[] | null = null;
   return async () => {
+    const startedAt = performance.now();
+    const report = (source: IceServersSource) => {
+      track({
+        name: "mp_ice_servers",
+        source,
+        ms: Math.round(performance.now() - startedAt),
+      });
+    };
     const configured = configuredIceServers();
-    if (configured) return configured;
-    if (minted) return minted;
+    if (configured) {
+      report("env");
+      return configured;
+    }
+    if (minted) {
+      report("cached");
+      return minted;
+    }
     minted = await fetchIceServers();
+    report(minted ? "minted" : "none");
     return minted;
   };
 }
