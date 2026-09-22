@@ -151,6 +151,35 @@ describe("useYjsMultiplayer", () => {
     telemetry.stop();
   });
 
+  it("reports when the opponent first becomes reachable", async () => {
+    const telemetry = recordTelemetry();
+    const { unmount } = renderRoom({
+      roomId: "room-first-peer-telemetry",
+      difficulty: null,
+    });
+    await flushSync();
+    const { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } =
+      await import("y-protocols/awareness");
+    const otherDoc = new Doc();
+    const otherAwareness = new Awareness(otherDoc);
+    otherAwareness.setLocalStateField("user", { id: "p2", name: "Bob" });
+
+    act(() => {
+      applyAwarenessUpdate(
+        connections.last!.awareness,
+        encodeAwarenessUpdate(otherAwareness, [otherDoc.clientID]),
+        "test",
+      );
+    });
+
+    expect(
+      telemetry.events().filter((event) => event.name === "mp_first_peer"),
+    ).toEqual([{ name: "mp_first_peer", ms: expect.any(Number) }]);
+    unmount();
+    otherAwareness.destroy();
+    telemetry.stop();
+  });
+
   it("reports the transport's connection status", async () => {
     const { result } = renderRoom({
       roomId: "room-status",
