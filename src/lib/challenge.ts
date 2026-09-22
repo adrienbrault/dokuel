@@ -1,4 +1,4 @@
-import type { Challenge } from "./types.ts";
+import type { Challenge, Difficulty } from "./types.ts";
 
 /** 23:59:59. Longer than any real solve; keeps the display sane. */
 export const MAX_CHALLENGE_SECONDS = 24 * 60 * 60 - 1;
@@ -29,4 +29,27 @@ export function parseChallenge(search: string): Challenge | null {
     name: cleanName(params.get("by") ?? ""),
     hinted: params.get("h") === "1",
   };
+}
+
+/**
+ * The link a finisher sends: the same seeded solo board plus their
+ * result, in readable params (?t=272&by=Swift+Fox, &h=1 with hints).
+ */
+export function buildChallengeUrl({
+  origin,
+  difficulty,
+  gameKey,
+  challenge,
+}: {
+  origin: string;
+  difficulty: Difficulty;
+  gameKey: string;
+  challenge: Challenge;
+}): string {
+  const params = new URLSearchParams({
+    t: String(challenge.seconds),
+    by: challenge.name,
+  });
+  if (challenge.hinted) params.set("h", "1");
+  return `${origin}/solo/${difficulty}/${encodeURIComponent(gameKey)}?${params}`;
 }
