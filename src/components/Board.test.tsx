@@ -886,4 +886,23 @@ describe("Board live announcements", () => {
     });
     expect(announcer()).toHaveTextContent("6 placed, row 3 column 4");
   });
+
+  it("announces completion instead of the final placement", () => {
+    vi.useFakeTimers();
+    const start = makeBoard([[0, 0, 1]]);
+    const { rerender } = render(ui(start));
+    rerender(
+      <Board
+        board={withPlayerValue(start, 8, 8, 9)}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        completed={true}
+      />,
+    );
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(announcer()).toHaveTextContent("Puzzle complete");
+  });
 });
