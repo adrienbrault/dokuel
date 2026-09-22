@@ -8,6 +8,7 @@ import { NotFound } from "./components/NotFound.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
+import { UpdateToast } from "./components/UpdateToast.tsx";
 import { MAX_ROOM_KEY_LENGTH } from "./hooks/mp-connection.ts";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { generateId } from "./lib/id.ts";
@@ -115,6 +116,20 @@ export function pathToScreen(pathname: string): Screen {
   return { name: "notFound", path: pathname };
 }
 
+// Never over a board: it would cover the timer, and a reload
+// mid-match drops the player from the room. Games end on menus.
+const UPDATE_PROMPT_SCREENS = new Set<Screen["name"]>([
+  "landing",
+  "difficulty",
+  "join",
+  "stats",
+  "notFound",
+]);
+
+export function offersUpdates(screen: Screen): boolean {
+  return UPDATE_PROMPT_SCREENS.has(screen.name);
+}
+
 function App() {
   const [screen, setScreen] = useState<Screen>(() =>
     pathToScreen(window.location.pathname),
@@ -155,136 +170,145 @@ function App() {
   const darkMode = useDarkMode();
   const [soundOn, setSoundOn] = useState(getSoundEnabled);
 
-  switch (screen.name) {
-    case "landing":
-      return (
-        <div className="screen relative">
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
-            <SoundToggle
-              enabled={soundOn}
-              onToggle={() => {
-                const next = !soundOn;
-                setSoundOn(next);
-                setSoundEnabled(next);
-              }}
-            />
-            <DarkModeToggle
-              isDark={darkMode.isDark}
-              onToggle={darkMode.toggle}
-            />
-          </div>
-          <Landing
-            onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
-            onDaily={() => navigate({ name: "daily" })}
-            onCreate={() => navigate({ name: "difficulty", mode: "create" })}
-            onJoin={() => navigate({ name: "join" })}
-            onStats={() => navigate({ name: "stats" })}
-            onContinue={(gameKey, difficulty) => {
-              navigate({
-                name: "solo",
-                difficulty: difficulty as Difficulty,
-                gameKey,
-                assistLevel: "standard",
-              });
-            }}
-          />
-        </div>
-      );
-
-    case "difficulty":
-      return (
-        <div className="screen">
-          <DifficultyPicker
-            onSelect={(difficulty, assistLevel) => {
-              if (screen.mode === "solo") {
+  const renderScreen = () => {
+    switch (screen.name) {
+      case "landing":
+        return (
+          <div className="screen relative">
+            <div className="absolute top-4 right-4 flex gap-2 z-10">
+              <SoundToggle
+                enabled={soundOn}
+                onToggle={() => {
+                  const next = !soundOn;
+                  setSoundOn(next);
+                  setSoundEnabled(next);
+                }}
+              />
+              <DarkModeToggle
+                isDark={darkMode.isDark}
+                onToggle={darkMode.toggle}
+              />
+            </div>
+            <Landing
+              onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
+              onDaily={() => navigate({ name: "daily" })}
+              onCreate={() => navigate({ name: "difficulty", mode: "create" })}
+              onJoin={() => navigate({ name: "join" })}
+              onStats={() => navigate({ name: "stats" })}
+              onContinue={(gameKey, difficulty) => {
                 navigate({
                   name: "solo",
-                  difficulty,
+                  difficulty: difficulty as Difficulty,
+                  gameKey,
+                  assistLevel: "standard",
+                });
+              }}
+            />
+          </div>
+        );
+
+      case "difficulty":
+        return (
+          <div className="screen">
+            <DifficultyPicker
+              onSelect={(difficulty, assistLevel) => {
+                if (screen.mode === "solo") {
+                  navigate({
+                    name: "solo",
+                    difficulty,
+                    gameKey: generateId(),
+                    assistLevel,
+                  });
+                } else {
+                  const roomId = generateRoomCode();
+                  navigate({
+                    name: "multiplayer",
+                    roomId,
+                    difficulty,
+                  });
+                }
+              }}
+              onBack={() => navigate({ name: "landing" })}
+            />
+          </div>
+        );
+
+      case "solo":
+        return (
+          <SoloGame
+            key={screen.gameKey}
+            difficulty={screen.difficulty}
+            gameKey={screen.gameKey}
+            assistLevel={screen.assistLevel}
+            onBack={() => navigate({ name: "landing" })}
+            onRematch={() => {
+              navigate(
+                {
+                  name: "solo",
+                  difficulty: screen.difficulty,
                   gameKey: generateId(),
-                  assistLevel,
-                });
-              } else {
-                const roomId = generateRoomCode();
-                navigate({
-                  name: "multiplayer",
-                  roomId,
-                  difficulty,
-                });
-              }
+                  assistLevel: screen.assistLevel,
+                },
+                { replace: true },
+              );
+            }}
+          />
+        );
+
+      case "daily":
+        return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+
+      case "multiplayer":
+        return (
+          <Suspense
+            fallback={
+              <div className="screen">
+                <p className="caption">Connecting...</p>
+              </div>
+            }
+          >
+            <MultiplayerScreen
+              roomId={screen.roomId}
+              difficulty={screen.difficulty}
+              onBack={() => navigate({ name: "landing" })}
+            />
+          </Suspense>
+        );
+
+      case "stats":
+        return <Stats onBack={() => navigate({ name: "landing" })} />;
+
+      case "join":
+        return (
+          <JoinScreen
+            onJoin={(roomId) => {
+              navigate({
+                name: "multiplayer",
+                roomId,
+                difficulty: null,
+              });
             }}
             onBack={() => navigate({ name: "landing" })}
           />
-        </div>
-      );
+        );
 
-    case "solo":
-      return (
-        <SoloGame
-          key={screen.gameKey}
-          difficulty={screen.difficulty}
-          gameKey={screen.gameKey}
-          assistLevel={screen.assistLevel}
-          onBack={() => navigate({ name: "landing" })}
-          onRematch={() => {
-            navigate(
-              {
-                name: "solo",
-                difficulty: screen.difficulty,
-                gameKey: generateId(),
-                assistLevel: screen.assistLevel,
-              },
-              { replace: true },
-            );
-          }}
-        />
-      );
-
-    case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
-
-    case "multiplayer":
-      return (
-        <Suspense
-          fallback={
-            <div className="screen">
-              <p className="caption">Connecting...</p>
-            </div>
-          }
-        >
-          <MultiplayerScreen
-            roomId={screen.roomId}
-            difficulty={screen.difficulty}
-            onBack={() => navigate({ name: "landing" })}
+      case "notFound":
+        return (
+          <NotFound
+            path={screen.path}
+            onHome={() => navigate({ name: "landing" })}
+            onJoin={() => navigate({ name: "join" })}
           />
-        </Suspense>
-      );
+        );
+    }
+  };
 
-    case "stats":
-      return <Stats onBack={() => navigate({ name: "landing" })} />;
-
-    case "join":
-      return (
-        <JoinScreen
-          onJoin={(roomId) => {
-            navigate({
-              name: "multiplayer",
-              roomId,
-              difficulty: null,
-            });
-          }}
-          onBack={() => navigate({ name: "landing" })}
-        />
-      );
-
-    case "notFound":
-      return (
-        <NotFound
-          path={screen.path}
-          onHome={() => navigate({ name: "landing" })}
-          onJoin={() => navigate({ name: "join" })}
-        />
-      );
-  }
+  return (
+    <>
+      {renderScreen()}
+      {offersUpdates(screen) && <UpdateToast />}
+    </>
+  );
 }
 
 export default App;
