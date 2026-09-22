@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  buildChallengeText,
   buildChallengeUrl,
   compareToChallenge,
   MAX_CHALLENGE_SECONDS,
@@ -84,6 +85,20 @@ describe("compareToChallenge", () => {
     expect(note(2)).toBe("You used hints");
     expect(note(0, hintedFox)).toBe("Swift Fox used hints");
     expect(note(1, hintedFox)).toBe("Both of you used hints");
+  });
+});
+
+describe("buildChallengeText", () => {
+  it("invites the friend to beat the time on this board", () => {
+    expect(
+      buildChallengeText({ seconds: 272, hinted: false, difficulty: "easy" }),
+    ).toBe("Can you beat my 4:32 on this Easy Dokuel sudoku?");
+  });
+
+  it("owns up to hints in the invite", () => {
+    expect(
+      buildChallengeText({ seconds: 272, hinted: true, difficulty: "expert" }),
+    ).toBe("Can you beat my 4:32 (with hints) on this Expert Dokuel sudoku?");
   });
 });
 
