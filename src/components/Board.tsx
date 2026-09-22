@@ -8,6 +8,7 @@ import type {
   Board as BoardType,
   Position,
 } from "../lib/types.ts";
+import { BoardAnnouncer } from "./BoardAnnouncer.tsx";
 import { Cell } from "./Cell.tsx";
 
 type BoardProps = {
@@ -313,6 +314,7 @@ export function Board({
           );
         })}
       </div>
+      <BoardAnnouncer board={board} conflicts={conflicts} />
     </div>
   );
 }
