@@ -87,4 +87,25 @@ describe("describeBoardChange", () => {
     ]);
     expect(describeBoardChange(prev, next, new Set())).toBeNull();
   });
+
+  it("stays silent when a same-shaped puzzle swaps its given digits", () => {
+    const prev = makeBoard([[3, 3, { value: 1, isGiven: true }]]);
+    const next = makeBoard([[3, 3, { value: 2, isGiven: true }]]);
+    expect(describeBoardChange(prev, next, new Set())).toBeNull();
+  });
+
+  it("says nothing when nothing changed", () => {
+    expect(describeBoardChange(makeBoard(), makeBoard(), new Set())).toBeNull();
+  });
+
+  it("uses the generic phrase when cells toggle different notes", () => {
+    const prev = makeBoard();
+    const next = makeBoard([
+      [0, 0, { notes: new Set([3]) }],
+      [0, 1, { notes: new Set([4]) }],
+    ]);
+    expect(describeBoardChange(prev, next, new Set())).toBe(
+      "Notes updated in 2 cells",
+    );
+  });
 });
