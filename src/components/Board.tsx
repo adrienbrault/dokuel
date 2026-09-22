@@ -1,6 +1,7 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
+import { useGridFocus } from "../hooks/useGridFocus.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
@@ -72,13 +73,7 @@ export function Board({
   onStartCellDrag,
 }: BoardProps) {
   const isPaper = assistLevel === "paper";
-  const idPrefix = useId();
-  const cellId = (row: number, col: number) => `${idPrefix}r${row}c${col}`;
   const isFull = assistLevel === "full";
-  // Roving tabindex: the grid is one Tab stop, landing on the selected
-  // cell (or the top-left one when nothing is selected); arrow keys
-  // move within it.
-  const tabStop = selectedCell ?? { row: 0, col: 0 };
   const selectedValue =
     selectedCell !== null
       ? board[selectedCell.row]![selectedCell.col]!.value
@@ -159,6 +154,7 @@ export function Board({
     el.addEventListener("touchstart", handler, { passive: false });
     return () => el.removeEventListener("touchstart", handler);
   }, []);
+  const { cellId, tabStop } = useGridFocus(gridRef, selectedCell);
 
   return (
     <div
