@@ -39,6 +39,30 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+/**
+ * Whether anyone can see `ref`'s element: the tab is visible and the
+ * element is on screen. Assumes it is on screen until told otherwise.
+ */
+function useIsSeen(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [tabVisible, setTabVisible] = useState(() => !document.hidden);
+  const [onScreen, setOnScreen] = useState(true);
+  useEffect(() => {
+    const onChange = () => setTabVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      setOnScreen(entries.some((entry) => entry.isIntersecting));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+  return tabVisible && onScreen;
+}
+
 function remainingCounts(frame: DemoFrame): Record<number, number> {
   const counts: Record<number, number> = {};
   for (const n of DIGITS) counts[n] = 9;
@@ -104,6 +128,10 @@ function fingerPoint(
  */
 export function LandingDemo() {
   const still = usePrefersReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+  // Nobody watching, no timers: the loop costs nothing in a background
+  // tab or scrolled away, and resumes on the step it was showing.
+  const playing = useIsSeen(cardRef) && !still;
   const [playhead, setStep] = useState(0);
   const step = still ? LANDING_DEMO_STILL_STEP : playhead;
   const frame = useMemo(
@@ -112,13 +140,13 @@ export function LandingDemo() {
   );
 
   useEffect(() => {
-    if (still) return;
+    if (!playing) return;
     const id = setTimeout(
       () => setStep((s) => (s + 1) % SCRIPT.length),
       SCRIPT[step]!.ms,
     );
     return () => clearTimeout(id);
-  }, [step, still]);
+  }, [step, playing]);
 
   // Scale the full-size stage into the card's box. Measured, not fixed:
   // the real components pick their own layout per breakpoint.
@@ -159,7 +187,10 @@ export function LandingDemo() {
   const pressing = frame.drag !== null || frame.finger.kind === "key";
 
   return (
-    <div className="card w-full flex items-center gap-3.5 p-3 short:p-2.5 lg:flex-col lg:items-stretch">
+    <div
+      ref={cardRef}
+      className="card w-full flex items-center gap-3.5 p-3 short:p-2.5 lg:flex-col lg:items-stretch"
+    >
       <div
         ref={boxRef}
         className="relative shrink-0 w-36 short:w-28 [@media(max-height:600px)]:w-24 sm:w-40 lg:w-60 lg:self-center overflow-hidden rounded-lg pointer-events-none"
