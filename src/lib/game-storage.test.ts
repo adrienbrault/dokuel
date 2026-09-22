@@ -55,6 +55,22 @@ describe("game-storage", () => {
     expect(loadGame("k")?.hintsUsed).toBe(0);
   });
 
+  it("keeps the challenge a game is being played against", () => {
+    const challenge = { name: "Swift Fox", seconds: 272, hinted: true };
+    saveGame("k", { ...VALID_GAME, challenge });
+    expect(loadGame("k")?.challenge).toEqual(challenge);
+  });
+
+  it("drops a malformed challenge but keeps the game", () => {
+    localStorage.setItem(
+      "sudoku_save_k",
+      JSON.stringify({ ...VALID_GAME, challenge: { name: 3, seconds: "x" } }),
+    );
+    const loaded = loadGame("k");
+    expect(loaded?.timer).toBe(42);
+    expect(loaded?.challenge).toBeNull();
+  });
+
   // A corrupt save is re-read on every app load; anything loadGame lets
   // through flows straight into initState during render, where a bad
   // character or non-array note entry throws and white-screens the app.
