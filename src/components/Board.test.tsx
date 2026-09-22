@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Cell } from "../lib/types.ts";
@@ -760,6 +761,47 @@ describe("Board grid semantics", () => {
     ]);
     expect(screen.getAllByRole("gridcell", { selected: false })).toHaveLength(
       79,
+    );
+  });
+
+  it("is a single tab stop landing on the selected cell, or the first one", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <>
+        <button type="button">before</button>
+        <Board
+          board={makeBoard()}
+          selectedCell={null}
+          conflicts={new Set()}
+          onSelectCell={vi.fn()}
+        />
+        <button type="button">after</button>
+      </>,
+    );
+
+    await user.tab();
+    await user.tab();
+    expect(document.activeElement).toHaveAccessibleName(
+      /^Cell row 1 column 1,/,
+    );
+    await user.tab();
+    expect(document.activeElement).toHaveAccessibleName("after");
+
+    rerender(
+      <>
+        <button type="button">before</button>
+        <Board
+          board={makeBoard()}
+          selectedCell={{ row: 4, col: 6 }}
+          conflicts={new Set()}
+          onSelectCell={vi.fn()}
+        />
+        <button type="button">after</button>
+      </>,
+    );
+    await user.tab({ shift: true });
+    expect(document.activeElement).toHaveAccessibleName(
+      /^Cell row 5 column 7,/,
     );
   });
 });
