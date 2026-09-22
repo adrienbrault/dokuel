@@ -269,6 +269,7 @@ export function MultiplayerBoard({
             chargingDigit={chargingDigit}
             dragState={dragState}
             onStartCellDrag={startCellDrag}
+            completed={game.status === "completed"}
           />
           <DigitDragIndicator state={dragState} />
         </>
