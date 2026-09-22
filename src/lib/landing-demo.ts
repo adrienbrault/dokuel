@@ -1,4 +1,8 @@
-import { applyDigitIntent, digitIntent } from "./digit-intent.ts";
+import {
+  applyDigitIntent,
+  type DigitIntentOps,
+  digitIntent,
+} from "./digit-intent.ts";
 import { parsePuzzle } from "./sudoku.ts";
 import type { Board, Position } from "./types.ts";
 
@@ -15,7 +19,9 @@ export type DemoAction =
   /** Tap a cell to select it. */
   | { kind: "select"; row: number; col: number }
   /** Quick tap on a numpad key. */
-  | { kind: "tap"; digit: number };
+  | { kind: "tap"; digit: number }
+  /** Press and hold a numpad key: pencils a note, keeps the selection. */
+  | { kind: "hold"; digit: number };
 
 export type DemoStep = {
   action: DemoAction;
@@ -36,6 +42,8 @@ export type DemoFrame = {
   /** The numpad key drawn accented (pressed, or the selection's digit). */
   activeKey: number | null;
   finger: DemoFinger;
+  /** A digit a hold is pencilling in, for the in-cell charge animation. */
+  chargingDigit: number | null;
   caption: string;
 };
 
@@ -44,44 +52,49 @@ type DemoState = {
   selectedCell: Position | null;
 };
 
+function opsFor(state: DemoState): DigitIntentOps {
+  const selected = () => {
+    const at = state.selectedCell;
+    const cell = at ? state.board[at.row]![at.col]! : null;
+    return cell && !cell.isGiven ? cell : null;
+  };
+  return {
+    placeNumber: (value, asNote) => {
+      const cell = selected();
+      if (!cell) return;
+      if (asNote) {
+        if (cell.value === null) cell.notes.add(value);
+        return;
+      }
+      cell.value = value;
+      cell.notes = new Set();
+    },
+    placeNoteAt: () => {},
+    selectCell: (row, col) => {
+      state.selectedCell = { row, col };
+    },
+    deselectCell: () => {
+      state.selectedCell = null;
+    },
+    toggleHighlight: () => {},
+    setHighlight: () => {},
+  };
+}
+
 function apply(state: DemoState, action: DemoAction): void {
-  switch (action.kind) {
-    case "select":
-      state.selectedCell = { row: action.row, col: action.col };
-      return;
-    case "tap":
-      applyDigitIntent(
-        digitIntent(
-          { kind: "tap" },
-          {
-            board: state.board,
-            selectedCell: state.selectedCell,
-            selectedCells: new Set(),
-          },
-        ),
-        action.digit,
-        {
-          placeNumber: (value) => {
-            const at = state.selectedCell;
-            if (!at) return;
-            const cell = state.board[at.row]![at.col]!;
-            if (cell.isGiven) return;
-            cell.value = value;
-            cell.notes = new Set();
-          },
-          placeNoteAt: () => {},
-          selectCell: (row, col) => {
-            state.selectedCell = { row, col };
-          },
-          deselectCell: () => {
-            state.selectedCell = null;
-          },
-          toggleHighlight: () => {},
-          setHighlight: () => {},
-        },
-      );
-      return;
+  if (action.kind === "select") {
+    state.selectedCell = { row: action.row, col: action.col };
+    return;
   }
+  const intent = digitIntent(
+    { kind: action.kind },
+    {
+      board: state.board,
+      selectedCell: state.selectedCell,
+      selectedCells: new Set(),
+    },
+  );
+  applyDigitIntent(intent, action.digit, opsFor(state));
 }
 
 function fingerOf(action: DemoAction): DemoFinger {
@@ -89,6 +102,7 @@ function fingerOf(action: DemoAction): DemoFinger {
     case "select":
       return { kind: "cell", row: action.row, col: action.col };
     case "tap":
+    case "hold":
       return { kind: "key", digit: action.digit };
   }
 }
@@ -111,6 +125,7 @@ export function demoFrame(
     selectedCell: state.selectedCell,
     activeKey: finger.kind === "key" ? finger.digit : null,
     finger,
+    chargingDigit: step.action.kind === "hold" ? step.action.digit : null,
     caption: step.caption,
   };
 }
