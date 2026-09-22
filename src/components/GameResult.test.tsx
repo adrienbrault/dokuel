@@ -93,6 +93,24 @@ describe("GameResult", () => {
     expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument();
   });
 
+  it("shows the verdict against a challenger, with any hint note", () => {
+    render(
+      <GameResult
+        isWinner={true}
+        time="03:51"
+        onNewGame={vi.fn()}
+        challengeResult={{
+          outcome: "won",
+          headline: "You beat Swift Fox by 0:41",
+          hintNote: "You used hints",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("You beat Swift Fox by 0:41")).toBeInTheDocument();
+    expect(screen.getByText("You used hints")).toBeInTheDocument();
+  });
+
   it("shows stats grid when stats prop provided", () => {
     render(
       <GameResult
