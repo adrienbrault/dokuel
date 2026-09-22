@@ -5,24 +5,58 @@ function position(row: number, col: number): string {
   return `row ${row + 1} column ${col + 1}`;
 }
 
+type NoteChange = { at: string; added: number[]; removed: number[] };
+
+function describeNoteChange({ at, added, removed }: NoteChange): string {
+  if (added.length === 1 && removed.length === 0) {
+    return `Note ${added[0]} added, ${at}`;
+  }
+  if (removed.length === 1 && added.length === 0) {
+    return `Note ${removed[0]} removed, ${at}`;
+  }
+  return `Notes updated, ${at}`;
+}
+
 /**
  * One short sentence describing what changed between two boards, for a
  * polite live region. Returns null when there is nothing worth saying.
+ *
+ * A value change wins over note changes: placing a digit also clears
+ * that digit from peer notes, and the placement is what matters.
  */
 export function describeBoardChange(
   prev: Board,
   next: Board,
   conflicts: Set<number>,
 ): string | null {
+  const noteChanges: NoteChange[] = [];
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
-      const before = prev[r]?.[c]?.value ?? null;
-      const after = next[r]?.[c]?.value ?? null;
-      if (after === before) continue;
-      if (after === null) return `${before} erased, ${position(r, c)}`;
-      const conflict = conflicts.has(cellKey(r, c)) ? ", conflict" : "";
-      return `${after} placed, ${position(r, c)}${conflict}`;
+      const before = prev[r]?.[c];
+      const after = next[r]?.[c];
+      if (!(before && after)) continue;
+      if (after.value !== before.value) {
+        return describeValueChange(before.value, after.value, r, c, conflicts);
+      }
+      const added = [...after.notes].filter((n) => !before.notes.has(n));
+      const removed = [...before.notes].filter((n) => !after.notes.has(n));
+      if (added.length > 0 || removed.length > 0) {
+        noteChanges.push({ at: position(r, c), added, removed });
+      }
     }
   }
-  return null;
+  const [first] = noteChanges;
+  return first ? describeNoteChange(first) : null;
+}
+
+function describeValueChange(
+  before: number | null,
+  after: number | null,
+  row: number,
+  col: number,
+  conflicts: Set<number>,
+): string {
+  if (after === null) return `${before} erased, ${position(row, col)}`;
+  const conflict = conflicts.has(cellKey(row, col)) ? ", conflict" : "";
+  return `${after} placed, ${position(row, col)}${conflict}`;
 }
