@@ -36,6 +36,14 @@ export function watchConnectionHealth(
     if (peerSeen || !connection.hasOtherPeer(playerId)) return;
     peerSeen = true;
     track({ name: "mp_first_peer", ms: elapsed() });
+    connection
+      .iceRoute?.()
+      .then((route) => {
+        if (route) track({ name: "mp_ice_route", ...route });
+      })
+      .catch(() => {
+        // Stats are a diagnostic nicety; a closed peer can reject.
+      });
   };
 
   const checkTimeout = () => {
