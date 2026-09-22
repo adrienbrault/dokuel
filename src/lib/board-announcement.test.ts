@@ -24,4 +24,12 @@ describe("describeBoardChange", () => {
       "5 placed, row 3 column 4",
     );
   });
+
+  it("announces an erased value", () => {
+    const prev = makeBoard([[0, 8, { value: 7 }]]);
+    const next = makeBoard();
+    expect(describeBoardChange(prev, next, new Set())).toBe(
+      "7 erased, row 1 column 9",
+    );
+  });
 });
