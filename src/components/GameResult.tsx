@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ChallengeComparison } from "../lib/challenge.ts";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -21,6 +22,8 @@ type GameResultProps = {
   isDaily?: boolean | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
+  /** Verdict against the "beat my time" challenger, when there was one. */
+  challengeResult?: ChallengeComparison | null | undefined;
 };
 
 export function buildShareText({
@@ -66,6 +69,7 @@ export function GameResult({
   isDaily,
   tip,
   onDismissTip,
+  challengeResult,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -185,6 +189,24 @@ export function GameResult({
             <span className="text-sm font-bold text-accent">
               New Personal Best!
             </span>
+          )}
+          {challengeResult && (
+            <div className="flex flex-col items-center gap-0.5 px-3 text-center">
+              <span
+                className={`text-sm font-bold ${
+                  challengeResult.outcome === "won"
+                    ? "text-accent"
+                    : "text-text-secondary"
+                }`}
+              >
+                {challengeResult.headline}
+              </span>
+              {challengeResult.hintNote && (
+                <span className="text-xs text-text-muted">
+                  {challengeResult.hintNote}
+                </span>
+              )}
+            </div>
           )}
         </div>
 
