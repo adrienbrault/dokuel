@@ -23,7 +23,22 @@ export type DemoAction =
   /** Press and hold a numpad key: pencils a note, keeps the selection. */
   | { kind: "hold"; digit: number }
   /** Slide along the numpad onto a key: spotlights that digit. */
-  | { kind: "skim"; digit: number };
+  | { kind: "skim"; digit: number }
+  /** Carry a digit dragged off the numpad over one half of a cell. */
+  | ({ kind: "drag" } & DemoDrop)
+  /** Let go of a dragged digit over one half of a cell. */
+  | ({ kind: "drop" } & DemoDrop);
+
+/**
+ * A dragged digit over a cell: the top half commits the value, the
+ * bottom half pencils a note (see useDigitDrag).
+ */
+export type DemoDrop = {
+  digit: number;
+  row: number;
+  col: number;
+  mode: "value" | "note";
+};
 
 export type DemoStep = {
   action: DemoAction;
@@ -35,7 +50,7 @@ export type DemoStep = {
 
 /** Where the finger is: a board cell or a numpad key. */
 export type DemoFinger =
-  | { kind: "cell"; row: number; col: number }
+  | { kind: "cell"; row: number; col: number; half?: "top" | "bottom" }
   | { kind: "key"; digit: number };
 
 export type DemoFrame = {
@@ -46,6 +61,8 @@ export type DemoFrame = {
   /** The numpad key drawn accented (pressed, or the selection's digit). */
   activeKey: number | null;
   finger: DemoFinger;
+  /** The digit in flight and the cell half it would land in. */
+  drag: DemoDrop | null;
   /** A digit a hold is pencilling in, for the in-cell charge animation. */
   chargingDigit: number | null;
   caption: string;
@@ -74,7 +91,10 @@ function opsFor(state: DemoState): DigitIntentOps {
       cell.value = value;
       cell.notes = new Set();
     },
-    placeNoteAt: () => {},
+    placeNoteAt: (row, col, value) => {
+      const cell = state.board[row]![col]!;
+      if (!cell.isGiven && cell.value === null) cell.notes.add(value);
+    },
     selectCell: (row, col) => {
       state.selectedCell = { row, col };
     },
@@ -103,8 +123,16 @@ function apply(state: DemoState, action: DemoAction): void {
     state.highlightedDigit = action.digit;
     return;
   }
+  if (action.kind === "drag") return;
   const intent = digitIntent(
-    { kind: action.kind },
+    action.kind === "drop"
+      ? {
+          kind: "drop",
+          mode: action.mode,
+          target: { row: action.row, col: action.col },
+          from: null,
+        }
+      : { kind: action.kind },
     {
       board: state.board,
       selectedCell: state.selectedCell,
@@ -122,6 +150,14 @@ function fingerOf(action: DemoAction): DemoFinger {
     case "hold":
     case "skim":
       return { kind: "key", digit: action.digit };
+    case "drag":
+    case "drop":
+      return {
+        kind: "cell",
+        row: action.row,
+        col: action.col,
+        half: action.mode === "value" ? "top" : "bottom",
+      };
   }
 }
 
@@ -141,7 +177,8 @@ export function demoFrame(
   };
   for (let i = 0; i <= index; i++) apply(state, script[i]!.action);
   const step = script[index]!;
-  const finger = fingerOf(step.action);
+  const { action } = step;
+  const finger = fingerOf(action);
   const at = state.selectedCell;
   // Same rule as a game's numpad: the pressed key wins, else the
   // selected cell's digit, else the spotlighted one.
@@ -153,8 +190,17 @@ export function demoFrame(
     selectedCell: state.selectedCell,
     highlightedDigit: state.highlightedDigit,
     activeKey: finger.kind === "key" ? finger.digit : restingKey,
+    drag:
+      action.kind === "drag"
+        ? {
+            digit: action.digit,
+            row: action.row,
+            col: action.col,
+            mode: action.mode,
+          }
+        : null,
     finger,
-    chargingDigit: step.action.kind === "hold" ? step.action.digit : null,
+    chargingDigit: action.kind === "hold" ? action.digit : null,
     caption: step.caption,
   };
 }
