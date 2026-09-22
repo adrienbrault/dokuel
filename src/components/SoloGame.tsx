@@ -4,8 +4,10 @@ import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useResumableSudoku } from "../hooks/useResumableSudoku.ts";
+import { buildChallengeShare, compareToChallenge } from "../lib/challenge.ts";
 import { formatTime } from "../lib/format.ts";
 import type { GameCompletionResult } from "../lib/game-completion.ts";
+import { getPlayerName } from "../lib/player-identity.ts";
 import { getStatsForDifficulty } from "../lib/stats.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { AssistLevel, Challenge, Difficulty } from "../lib/types.ts";
@@ -252,6 +254,27 @@ export function SoloGame({
               (personalBest === null || timerSecondsRef.current < personalBest)
             }
             hintsUsed={game.hintsUsed}
+            challengeResult={
+              challenge
+                ? compareToChallenge({
+                    seconds: timerSecondsRef.current,
+                    hintsUsed: game.hintsUsed,
+                    challenge,
+                  })
+                : null
+            }
+            challengeLink={
+              gameKey && !isDaily
+                ? buildChallengeShare({
+                    origin: window.location.origin,
+                    name: getPlayerName(),
+                    difficulty,
+                    gameKey,
+                    seconds: timerSecondsRef.current,
+                    hinted: game.hintsUsed > 0,
+                  })
+                : undefined
+            }
             streakInfo={streakInfo}
             isDaily={isDaily}
             tip={
