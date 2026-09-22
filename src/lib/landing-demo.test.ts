@@ -124,4 +124,26 @@ describe("demoFrame", () => {
     expect(wrong).toHaveLength(1);
     expect(last.conflicts.has(wrong[0]!)).toBe(true);
   });
+
+  it("toggles a digit's highlight when a number is tapped with nothing selected", () => {
+    const script: DemoStep[] = [
+      { action: { kind: "tap", digit: 4 }, ms: 900, caption: "On" },
+      { action: { kind: "tap", digit: 4 }, ms: 900, caption: "Off" },
+    ];
+
+    expect(demoFrame(script, PUZZLE, 0).highlightedDigit).toBe(4);
+    expect(demoFrame(script, PUZZLE, 1).highlightedDigit).toBeNull();
+  });
+
+  it("never pencils into a given cell", () => {
+    const script: DemoStep[] = [
+      { action: { kind: "select", row: 0, col: 0 }, ms: 900, caption: "Pick" },
+      { action: { kind: "hold", digit: 5 }, ms: 900, caption: "Hold" },
+    ];
+
+    const cell = demoFrame(script, PUZZLE, 1).board[0]![0]!;
+
+    expect(cell.value).toBe(1);
+    expect(cell.notes.size).toBe(0);
+  });
 });
