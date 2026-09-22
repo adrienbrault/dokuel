@@ -887,6 +887,20 @@ describe("Board live announcements", () => {
     expect(announcer()).toHaveTextContent("6 placed, row 3 column 4");
   });
 
+  it("keeps a pending announcement through a change with nothing to say", () => {
+    vi.useFakeTimers();
+    const start = makeBoard([[0, 0, 1]]);
+    const { rerender } = render(ui(start));
+    const placed = withPlayerValue(start, 2, 3, 5);
+    rerender(ui(placed));
+    // Same content, new identity (as a reducer may hand back).
+    rerender(ui(placed.map((r) => [...r])));
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(announcer()).toHaveTextContent("5 placed, row 3 column 4");
+  });
+
   it("announces completion instead of the final placement", () => {
     vi.useFakeTimers();
     const start = makeBoard([[0, 0, 1]]);
