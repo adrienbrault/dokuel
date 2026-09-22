@@ -131,3 +131,32 @@ export function buildChallengeUrl({
   if (challenge.hinted) params.set("h", "1");
   return `${origin}/solo/${difficulty}/${encodeURIComponent(gameKey)}?${params}`;
 }
+
+/** Everything the share sheet needs for a board just finished. */
+export function buildChallengeShare({
+  origin,
+  name,
+  difficulty,
+  gameKey,
+  seconds,
+  hinted,
+}: {
+  origin: string;
+  name: string;
+  difficulty: Difficulty;
+  gameKey: string;
+  seconds: number;
+  hinted: boolean;
+}): { url: string; text: string } {
+  // A sub-second finish would read as "no challenge" on the other end.
+  const time = Math.max(1, seconds);
+  return {
+    url: buildChallengeUrl({
+      origin,
+      difficulty,
+      gameKey,
+      challenge: { name, seconds: time, hinted },
+    }),
+    text: buildChallengeText({ seconds: time, hinted, difficulty }),
+  };
+}
