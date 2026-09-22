@@ -23,16 +23,25 @@ function describe(error: unknown): { message: string; stack: string } {
   return { message: String(error), stack: "" };
 }
 
+const DEFAULT_MAX_REPORTS = 10;
+
 export function createErrorReporter({
   getPathname,
+  maxReports = DEFAULT_MAX_REPORTS,
 }: {
   getPathname: () => string;
   /** Distinct errors reported per page load before going quiet. */
   maxReports?: number;
 }): ErrorReporter {
+  // Keyed on source + message: the same throw from a render loop or a
+  // failing interval is one report, however many times it fires.
+  const seen = new Set<string>();
   return {
     report(error, source) {
       const { message, stack } = describe(error);
+      const key = `${source}\n${message}`;
+      if (seen.has(key) || seen.size >= maxReports) return;
+      seen.add(key);
       track({
         name: "error",
         source,
