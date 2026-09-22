@@ -117,6 +117,38 @@ describe("createTelemetrySender", () => {
     sender.dispose();
   });
 
+  it("uses the browser's beacon, or global fetch where there is none", () => {
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response(null)));
+    vi.stubGlobal("fetch", fetchSpy);
+    const sender = createTelemetrySender({
+      endpoint: ENDPOINT,
+      sessionId: SID,
+    });
+
+    // jsdom, like some embedded webviews, ships no sendBeacon.
+    sender.track({ name: "mp_first_peer", ms: 1 });
+    sender.flush();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    const sendBeacon = beaconSpy();
+    Object.defineProperty(navigator, "sendBeacon", {
+      configurable: true,
+      value: sendBeacon,
+    });
+    try {
+      sender.track({ name: "mp_first_peer", ms: 2 });
+      sender.flush();
+    } finally {
+      Reflect.deleteProperty(navigator, "sendBeacon");
+      vi.unstubAllGlobals();
+    }
+    expect(sentEvents(sendBeacon)).toEqual([
+      [{ name: "mp_first_peer", ms: 2 }],
+    ]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    sender.dispose();
+  });
+
   it("swallows transport failures instead of throwing into the app", async () => {
     const sender = createTelemetrySender({
       endpoint: ENDPOINT,

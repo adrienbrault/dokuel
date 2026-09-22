@@ -84,6 +84,25 @@ describe("watchConnectionHealth", () => {
     stop();
   });
 
+  it("stays quiet when the ICE stats cannot be read", async () => {
+    const connection = await openFake();
+    connection.iceRoute = () => Promise.reject(new Error("peer closed"));
+    const stop = watchConnectionHealth(connection, {
+      playerId: "p1",
+      role: "joiner",
+      openedAt: 1_000,
+      now,
+    });
+
+    opponentAnnounces(connection);
+    await Promise.resolve();
+
+    expect(telemetry.events().map((event) => event.name)).toEqual([
+      "mp_first_peer",
+    ]);
+    stop();
+  });
+
   describe("when no peer shows up in time", () => {
     beforeEach(() => {
       vi.useFakeTimers();
