@@ -7,6 +7,7 @@ import {
   compareToChallenge,
   MAX_CHALLENGE_SECONDS,
   MAX_CHALLENGER_NAME_LENGTH,
+  normalizeChallenge,
   parseChallenge,
 } from "./challenge.ts";
 
@@ -54,6 +55,20 @@ describe("parseChallenge", () => {
   it("falls back to a friendly name when none is given", () => {
     expect(parseChallenge("?t=60")?.name).toBe("A friend");
     expect(parseChallenge("?t=60&by=%20%20")?.name).toBe("A friend");
+  });
+});
+
+describe("normalizeChallenge", () => {
+  it("rebuilds a stored challenge whose fields were mangled", () => {
+    expect(
+      normalizeChallenge({ name: 42, seconds: 90.7, hinted: "yes" }),
+    ).toEqual({ name: "A friend", seconds: 90, hinted: false });
+  });
+
+  it("rejects anything that is not an object with a time", () => {
+    expect(normalizeChallenge(null)).toBeNull();
+    expect(normalizeChallenge("272")).toBeNull();
+    expect(normalizeChallenge({ name: "Fox" })).toBeNull();
   });
 });
 
