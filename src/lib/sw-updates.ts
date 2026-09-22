@@ -26,6 +26,9 @@ export function createSwUpdates(reload: () => void): SwUpdates {
   return {
     track(registration, swContainer) {
       container = swContainer;
+      if (registration.waiting && swContainer.controller) {
+        offer(registration.waiting);
+      }
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
         worker?.addEventListener("statechange", () => {
