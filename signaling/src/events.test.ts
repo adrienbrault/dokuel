@@ -55,6 +55,30 @@ describe("handleEvents", () => {
     ]);
   });
 
+  it("fills fields a client left out with empty values", async () => {
+    const { dataset, writeDataPoint } = fakeDataset();
+
+    await handleEvents(
+      post({ sid: SID, events: [{ name: "mp_connect_failed" }] }),
+      { EVENTS: dataset },
+    );
+
+    expect(writeDataPoint).toHaveBeenCalledWith({
+      indexes: ["mp_connect_failed"],
+      blobs: ["mp_connect_failed", SID, "", ""],
+      doubles: [0],
+    });
+  });
+
+  it("accepts and drops a valid batch when no dataset is bound", async () => {
+    const response = await handleEvents(
+      post({ sid: SID, events: [{ name: "mp_first_peer", ms: 5 }] }),
+      {},
+    );
+
+    expect(response.status).toBe(204);
+  });
+
   const valid = { name: "mp_first_peer", ms: 1 };
 
   it.each([
