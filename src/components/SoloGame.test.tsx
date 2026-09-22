@@ -219,3 +219,27 @@ describe("SoloGame numpad selection", () => {
     expect(three.className).not.toContain("bg-accent");
   });
 });
+
+describe("SoloGame challenge", () => {
+  const fox = { name: "Swift Fox", seconds: 272, hinted: false };
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("shows the challenger's time to beat while playing", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={PUZZLE}
+        challenge={fox}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Swift Fox's time")).toBeInTheDocument();
+    expect(screen.getByText("4:32")).toBeInTheDocument();
+  });
+});
