@@ -3,7 +3,7 @@ import {
   type DigitIntentOps,
   digitIntent,
 } from "./digit-intent.ts";
-import { parsePuzzle } from "./sudoku.ts";
+import { getConflicts, parsePuzzle } from "./sudoku.ts";
 import type { Board, Position } from "./types.ts";
 
 /**
@@ -61,6 +61,8 @@ export type DemoFrame = {
   /** The numpad key drawn accented (pressed, or the selection's digit). */
   activeKey: number | null;
   finger: DemoFinger;
+  /** Cells in a row/column/box clash, as cellKey numbers. */
+  conflicts: Set<number>;
   /** The digit in flight and the cell half it would land in. */
   drag: DemoDrop | null;
   /** A digit a hold is pencilling in, for the in-cell charge animation. */
@@ -189,6 +191,7 @@ export function demoFrame(
     board: state.board,
     selectedCell: state.selectedCell,
     highlightedDigit: state.highlightedDigit,
+    conflicts: getConflicts(state.board),
     activeKey: finger.kind === "key" ? finger.digit : restingKey,
     drag:
       action.kind === "drag"
@@ -204,3 +207,80 @@ export function demoFrame(
     caption: step.caption,
   };
 }
+
+/** An easy board with room to play: 46 givens, every demo cell open. */
+export const LANDING_DEMO_PUZZLE =
+  "534.78...67.19534..983...6.8.9.61.234..853..17.3.2.8.6.6.5..28..8.419..5...286.79";
+
+const PICK = "Tap a cell to select it";
+const DRAG = "Drag onto a cell: top half places";
+
+/**
+ * The tutorial itself: one pass through every numpad gesture, ending on
+ * a deliberate clash so soft validation shows too. Loops forever.
+ */
+export const LANDING_DEMO_SCRIPT: readonly DemoStep[] = [
+  { action: { kind: "select", row: 2, col: 0 }, ms: 1200, caption: PICK },
+  {
+    action: { kind: "tap", digit: 1 },
+    ms: 1400,
+    caption: "Tap a number to fill it in",
+  },
+  { action: { kind: "select", row: 6, col: 0 }, ms: 1000, caption: PICK },
+  {
+    action: { kind: "hold", digit: 3 },
+    ms: 1400,
+    caption: "Hold a number to pencil a note",
+  },
+  {
+    action: { kind: "hold", digit: 9 },
+    ms: 1400,
+    caption: "Hold another to stack notes",
+  },
+  {
+    action: { kind: "skim", digit: 4 },
+    ms: 450,
+    caption: "Slide along the pad to spot a digit",
+  },
+  {
+    action: { kind: "skim", digit: 5 },
+    ms: 450,
+    caption: "Slide along the pad to spot a digit",
+  },
+  {
+    action: { kind: "skim", digit: 6 },
+    ms: 450,
+    caption: "Slide along the pad to spot a digit",
+  },
+  {
+    action: { kind: "skim", digit: 7 },
+    ms: 1000,
+    caption: "Slide along the pad to spot a digit",
+  },
+  {
+    action: { kind: "drag", digit: 7, row: 4, col: 6, mode: "value" },
+    ms: 1400,
+    caption: DRAG,
+  },
+  {
+    action: { kind: "drag", digit: 7, row: 4, col: 6, mode: "note" },
+    ms: 1400,
+    caption: "Bottom half pencils a note",
+  },
+  {
+    action: { kind: "drag", digit: 7, row: 4, col: 6, mode: "value" },
+    ms: 700,
+    caption: DRAG,
+  },
+  {
+    action: { kind: "drop", digit: 7, row: 4, col: 6, mode: "value" },
+    ms: 1300,
+    caption: "Let go to drop it in",
+  },
+  { action: { kind: "select", row: 7, col: 0 }, ms: 1000, caption: PICK },
+  {
+    action: { kind: "tap", digit: 5 },
+    ms: 2400,
+    caption: "Clashes turn red, never blocked",
+  },
+];
