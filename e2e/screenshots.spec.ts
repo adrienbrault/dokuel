@@ -10,6 +10,7 @@ import {
   preparePage,
   priorEasyStats,
   readBoard,
+  SOLVED_GRID,
   test,
 } from "./fixtures.ts";
 
@@ -648,9 +649,52 @@ test.describe("landing with games in progress", () => {
   });
 });
 
+/**
+ * A lost duel's archived replay for the Stats scene: the opponent fills
+ * every blank at a steady clip, we pencil a few notes and fall behind.
+ */
+function archivedDuelReplay() {
+  const blanks = [
+    0, 2, 4, 10, 12, 14, 20, 22, 24, 30, 32, 34, 40, 42, 44, 50, 52, 54, 60, 62,
+  ];
+  const puzzle = [...SOLVED_GRID]
+    .map((ch, i) => (blanks.includes(i) ? "." : ch))
+    .join("");
+  const place = (i: number) => Number(SOLVED_GRID[i]);
+  const noteMask = (digits: number[]) =>
+    digits.reduce((m, d) => m | (1 << (d - 1)), 0) << 4;
+  return JSON.stringify([
+    {
+      roomId: "room-4",
+      gameNumber: 1,
+      puzzle,
+      solution: SOLVED_GRID,
+      me: {
+        name: "You",
+        color: "#3B82F6",
+        won: false,
+        frames: [
+          [4_000, 60, noteMask([1, 3, 9])],
+          [7_000, 62, noteMask([2, 8])],
+          ...blanks
+            .slice(0, 9)
+            .map((i, k) => [12_000 + k * 9_000, i, place(i)]),
+        ],
+      },
+      opponent: {
+        name: "Lucky Bear",
+        color: "#EF4444",
+        won: true,
+        frames: blanks.map((i, k) => [3_000 + k * 5_500, i, place(i)]),
+      },
+    },
+  ]);
+}
+
 test.describe("stats with multiplayer history", () => {
   test.use({
     storage: {
+      sudoku_mp_replays: archivedDuelReplay(),
       sudoku_stats: JSON.stringify([
         {
           difficulty: "easy",
@@ -768,6 +812,18 @@ test.describe("stats with multiplayer history", () => {
     await page.screenshot({
       path: screenshotPath("stats-multiplayer", testInfo.project.name),
       fullPage: true,
+    });
+  });
+
+  test("stats page - duel replay", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /stats/i }).click();
+    await page.getByRole("button", { name: "Replay vs Lucky Bear" }).click();
+    const scrubber = page.getByLabel("Replay time");
+    const max = Number(await scrubber.getAttribute("max"));
+    await scrubber.fill(String(Math.round(max * 0.5)));
+    await page.screenshot({
+      path: screenshotPath("stats-replay", testInfo.project.name),
     });
   });
 });
