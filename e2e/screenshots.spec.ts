@@ -622,6 +622,34 @@ test.describe("multiplayer session", () => {
       path: screenshotPath("multiplayer-opponent-finished-banner", project),
     });
 
+    // Host slips once, corrects it, and finishes: both replays now hold
+    // a real game, mistake included.
+    const slip = empties[5]!;
+    const wrong = `${solution.slice(0, slip)}${(Number(solution[slip]) % 9) + 1}${solution.slice(slip + 1)}`;
+    await fillCells(page, wrong, [slip]);
+    // Erase before refilling: the slip counts against its digit, and a
+    // digit placed nine times leaves the pad.
+    await page.getByRole("button", { name: "Erase" }).click();
+    await fillCells(page, solution, empties.slice(5));
+    await page.getByRole("dialog").getByText("Puzzle Complete!").waitFor();
+
+    // Scrub both replays to the middle of the race, where the boards
+    // differ most.
+    for (const [tab, name] of [
+      [page, "multiplayer-replay"],
+      [guest, "multiplayer-replay-dark"],
+    ] as const) {
+      await tab.getByRole("button", { name: "Watch Replay" }).click();
+      await tab
+        .getByRole("group", { name: /^Board: / })
+        .first()
+        .waitFor();
+      const scrubber = tab.getByLabel("Replay time");
+      const max = Number(await scrubber.getAttribute("max"));
+      await scrubber.fill(String(Math.round(max * 0.55)));
+      await tab.screenshot({ path: screenshotPath(name, project) });
+    }
+
     await guest.close();
   });
 });

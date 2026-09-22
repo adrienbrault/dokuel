@@ -491,6 +491,82 @@ describe("MultiplayerBoard after opponent wins", () => {
     }
   });
 
+  it("shares its replay once the game is over, not before", () => {
+    vi.useFakeTimers();
+    try {
+      const share = vi.fn();
+      const props = {
+        ...baseProps(),
+        replay: { players: [], replays: {}, share },
+      };
+      const { rerender } = render(<MultiplayerBoard {...props} />);
+      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+      expect(share).not.toHaveBeenCalled();
+
+      rerender(
+        <MultiplayerBoard
+          {...props}
+          gameOver={{ winnerId: "p2", winnerName: "Brave Otter" }}
+        />,
+      );
+
+      const frames = share.mock.lastCall?.[0] as number[][];
+      expect(frames.map((f) => f.slice(1))).toEqual([[0, 5]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("opens the replay of both boards from the result", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <MultiplayerBoard
+          {...baseProps()}
+          gameOver={{ winnerId: "p1", winnerName: "Me" }}
+          replay={{
+            share: vi.fn(),
+            players: [
+              {
+                id: "p1",
+                name: "Me",
+                color: "#3B82F6",
+                cellsRemaining: 0,
+                completionPercent: 100,
+              },
+              {
+                id: "p2",
+                name: "Brave Otter",
+                color: "#EF4444",
+                cellsRemaining: 2,
+                completionPercent: 33,
+              },
+            ],
+            replays: { p1: [[1_000, 0, 5]], p2: [[2_000, 1, 3]] },
+          }}
+        />,
+      );
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      fireEvent.click(screen.getByText("Watch Replay"));
+
+      expect(screen.getByRole("group", { name: "Board: You" })).toBeTruthy();
+      expect(
+        screen.getByRole("group", { name: "Board: Brave Otter" }),
+      ).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: /Results/ }));
+      expect(screen.getByText("You Won!")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not show the result modal to the loser while they keep playing", () => {
     vi.useFakeTimers();
     try {

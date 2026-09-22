@@ -99,6 +99,8 @@ export function sceneLabel(scene: string): string {
     "solo-challenge-banner-dark": "Challenge · banner (dark)",
     "solo-challenge-result": "Challenge · result",
     "solo-challenge-result-dark": "Challenge · result (dark)",
+    "multiplayer-replay": "Multiplayer · match replay",
+    "multiplayer-replay-dark": "Multiplayer · match replay (dark)",
   };
   return overrides[scene] ?? titleCase(scene);
 }

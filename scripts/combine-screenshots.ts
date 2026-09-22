@@ -123,6 +123,8 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
       "multiplayer-progress-bars-dark",
       "multiplayer-progress-hidden",
       "multiplayer-settings-toggle",
+      "multiplayer-replay",
+      "multiplayer-replay-dark",
     ],
   },
   {
