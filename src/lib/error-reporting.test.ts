@@ -72,21 +72,25 @@ describe("createErrorReporter", () => {
 describe("installGlobalErrorReporting", () => {
   it("reports uncaught errors and unhandled rejections until removed", () => {
     const telemetry = recordTelemetry();
+    // A private target standing in for window: an ErrorEvent dispatched
+    // on the real one also reaches vitest's own handler, which fails
+    // the run with the very error this test is simulating.
+    const target = new EventTarget() as unknown as Window;
     const uninstall = installGlobalErrorReporting(
-      window,
+      target,
       createErrorReporter({ getPathname: () => "/daily" }),
     );
 
-    window.dispatchEvent(
+    target.dispatchEvent(
       new ErrorEvent("error", { error: new TypeError("uncaught") }),
     );
     // Cross-origin script errors arrive with no error object at all.
-    window.dispatchEvent(new ErrorEvent("error", { message: "Script error." }));
-    window.dispatchEvent(
+    target.dispatchEvent(new ErrorEvent("error", { message: "Script error." }));
+    target.dispatchEvent(
       Object.assign(new Event("unhandledrejection"), { reason: "rejected" }),
     );
     uninstall();
-    window.dispatchEvent(
+    target.dispatchEvent(
       new ErrorEvent("error", { error: new Error("after uninstall") }),
     );
 
