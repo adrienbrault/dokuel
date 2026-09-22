@@ -231,6 +231,37 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 - Vitest for testing
 - Strict TDD: every feature gets tests first
 
+## Telemetry
+
+Anonymous, and only from deployed builds (never dev servers, tests or a
+preview served from localhost). No accounts, cookies, IP addresses,
+player names or room codes are collected.
+
+- **Page views**: Cloudflare Web Analytics (cookieless), injected only
+  when the build sets `VITE_CF_BEACON_TOKEN`.
+- **Errors**: uncaught errors, unhandled promise rejections and errors
+  caught by the error screen. Each report carries the message, a
+  truncated stack and the route shape (`/:room`, `/solo/hard/:game`),
+  never the room code. Each distinct error is sent once per page load,
+  at most 10 per page load.
+- **Multiplayer connection events**:
+  - room mounts with the existing last-hour reload count (the iOS
+    reload diagnostic)
+  - where the relay config came from: build config, a fresh TURN mint,
+    the cache, or none
+  - time from opening a room to the first reachable opponent
+  - the ICE candidate types the first peer connected over (relay vs
+    direct)
+  - connect timeouts after 20 s with a reason: `signaling_timeout` (the
+    signaling socket never opened) or `peer_timeout` (a joiner on
+    signaling but no reachable opponent)
+
+Events are grouped by a random id generated per page load and never
+stored, then batched and sent with `sendBeacon` (falling back to a
+keepalive `fetch`) to the signaling worker's `POST /events`, which
+validates them against a fixed schema and writes them to Workers
+Analytics Engine. Telemetry failures never surface in the app.
+
 ## Backlog
 
 Speced or desired, deliberately not built yet:
