@@ -1,3 +1,4 @@
+import { cellKey } from "./sudoku.ts";
 import type { Board } from "./types.ts";
 
 function position(row: number, col: number): string {
@@ -11,16 +12,16 @@ function position(row: number, col: number): string {
 export function describeBoardChange(
   prev: Board,
   next: Board,
-  _conflicts: Set<number>,
+  conflicts: Set<number>,
 ): string | null {
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const before = prev[r]?.[c]?.value ?? null;
       const after = next[r]?.[c]?.value ?? null;
       if (after === before) continue;
-      return after === null
-        ? `${before} erased, ${position(r, c)}`
-        : `${after} placed, ${position(r, c)}`;
+      if (after === null) return `${before} erased, ${position(r, c)}`;
+      const conflict = conflicts.has(cellKey(r, c)) ? ", conflict" : "";
+      return `${after} placed, ${position(r, c)}${conflict}`;
     }
   }
   return null;
