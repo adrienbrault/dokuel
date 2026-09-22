@@ -75,6 +75,16 @@ describe("compareToChallenge", () => {
       compareToChallenge({ seconds: 272, hintsUsed: 0, challenge: fox }),
     ).toMatchObject({ outcome: "tie", headline: "Dead heat with Swift Fox" });
   });
+
+  it("notes honestly when hints helped either side", () => {
+    const hintedFox = { ...fox, hinted: true };
+    const note = (hintsUsed: number, challenge = fox) =>
+      compareToChallenge({ seconds: 200, hintsUsed, challenge }).hintNote;
+    expect(note(0)).toBeNull();
+    expect(note(2)).toBe("You used hints");
+    expect(note(0, hintedFox)).toBe("Swift Fox used hints");
+    expect(note(1, hintedFox)).toBe("Both of you used hints");
+  });
 });
 
 describe("buildChallengeUrl", () => {
