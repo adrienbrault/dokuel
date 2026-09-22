@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pathToScreen, screenToPath } from "./App.tsx";
+import { offersUpdates, pathToScreen, screenToPath } from "./App.tsx";
 
 describe("pathToScreen", () => {
   it("maps the static screens", () => {
@@ -78,5 +78,18 @@ describe("screenToPath", () => {
   it("round-trips a multiplayer room", () => {
     const screen = pathToScreen("/calm-lamb-g4bb");
     expect(screenToPath(screen)).toBe("/calm-lamb-g4bb");
+  });
+});
+
+describe("offersUpdates", () => {
+  it("prompts for updates on menus, never over a board", () => {
+    // A toast pinned over the timer mid-game is a distraction, and a
+    // reload mid-match would drop the player from the room. Every game
+    // ends back on a menu, so the prompt still gets seen.
+    expect(offersUpdates(pathToScreen("/"))).toBe(true);
+    expect(offersUpdates(pathToScreen("/stats"))).toBe(true);
+    expect(offersUpdates(pathToScreen("/daily"))).toBe(false);
+    expect(offersUpdates(pathToScreen("/solo/easy/abc"))).toBe(false);
+    expect(offersUpdates(pathToScreen("/calm-lamb-g4bb"))).toBe(false);
   });
 });
