@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadGame, saveGame } from "../lib/game-storage.ts";
+import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
+import { saveGameResult } from "../lib/stats.ts";
 import { Landing } from "./Landing.tsx";
 
 const PUZZLE = `1${".".repeat(80)}`;
@@ -59,5 +61,54 @@ describe("Landing — in-progress games", () => {
     expect(screen.getAllByText("Continue")).toHaveLength(3);
     await userEvent.click(screen.getByRole("button", { name: /2 more/i }));
     expect(screen.getAllByText("Continue")).toHaveLength(5);
+  });
+});
+
+describe("Landing — gesture demo", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("teaches a first-timer the gestures before the actions", () => {
+    renderLanding();
+
+    expect(screen.getByText("How to play")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Start Solo/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps showing the demo while the first game is still in progress", () => {
+    saveInProgressGame("a");
+
+    renderLanding();
+
+    expect(screen.getByText("How to play")).toBeInTheDocument();
+  });
+
+  it("drops the demo once any game has been finished", () => {
+    saveGameResult("easy", "standard", 240, true);
+
+    renderLanding();
+
+    expect(screen.queryByText("How to play")).not.toBeInTheDocument();
+  });
+
+  it("counts a finished duel, even a lost one", () => {
+    saveMultiplayerGameResult({
+      difficulty: "easy",
+      assistLevel: "standard",
+      time: 300,
+      date: "2026-01-02",
+      timestamp: Date.parse("2026-01-02T12:00:00Z"),
+      won: false,
+      opponentName: "Brave Otter",
+      roomId: "room-a",
+      gameNumber: 1,
+    });
+
+    renderLanding();
+
+    expect(screen.queryByText("How to play")).not.toBeInTheDocument();
   });
 });
