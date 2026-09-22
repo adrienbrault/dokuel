@@ -242,4 +242,60 @@ describe("SoloGame challenge", () => {
     expect(screen.getByText("Swift Fox's time")).toBeInTheDocument();
     expect(screen.getByText("4:32")).toBeInTheDocument();
   });
+
+  describe("on the win", () => {
+    // One cell short of solved at 3:51, so a single keypress wins.
+    const nearlyWon = {
+      puzzle: `.${SOLVED.slice(1)}`,
+      values: ".".repeat(81),
+      notes: Array.from({ length: 81 }, () => []),
+      timer: 231,
+      difficulty: "easy",
+      assistLevel: "standard",
+      hintsUsed: 0,
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      localStorage.setItem("sudoku_player_name", "Brave Otter");
+      localStorage.setItem("sudoku_save_k3y", JSON.stringify(nearlyWon));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      Object.assign(navigator, { share: undefined });
+    });
+
+    function win() {
+      fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+      fireEvent.keyDown(document, { key: "5" });
+      act(() => {
+        vi.advanceTimersByTime(400);
+      });
+    }
+
+    it("compares against the challenger and offers to challenge back", async () => {
+      const share = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { share });
+      render(
+        <SoloGame
+          difficulty="easy"
+          gameKey="k3y"
+          challenge={fox}
+          onBack={vi.fn()}
+        />,
+      );
+      win();
+
+      expect(
+        screen.getByText("You beat Swift Fox by 0:41"),
+      ).toBeInTheDocument();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Challenge back" }));
+      });
+      expect(share).toHaveBeenCalledWith({
+        text: "Can you beat my 3:51 on this Easy Dokuel sudoku?",
+        url: `${window.location.origin}/solo/easy/k3y?t=231&by=Brave+Otter`,
+      });
+    });
+  });
 });
