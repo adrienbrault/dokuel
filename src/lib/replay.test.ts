@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  changedCellsAt,
   parseReplay,
+  progressTimeline,
   recordFrame,
   replayAt,
   replayDuration,
@@ -52,6 +54,30 @@ describe("replay", () => {
         [100, 2, 5],
       ]),
     ).toBeNull();
+  });
+
+  it("charts how many cells a player had filled over time", () => {
+    const frames = [
+      [1_000, 2, 4],
+      [2_000, 3, 6, 5, 1],
+      [3_000, 3, 0b10 << 4],
+    ];
+    expect(progressTimeline(PUZZLE, frames)).toEqual([
+      { t: 0, filled: 0 },
+      { t: 1_000, filled: 1 },
+      { t: 2_000, filled: 3 },
+      { t: 3_000, filled: 2 },
+    ]);
+  });
+
+  it("names the cells the latest change at an instant touched", () => {
+    const frames = [
+      [1_000, 2, 4],
+      [2_000, 3, 6, 5, 1],
+    ];
+    expect(changedCellsAt(frames, 500)).toEqual(new Set());
+    expect(changedCellsAt(frames, 1_500)).toEqual(new Set([2]));
+    expect(changedCellsAt(frames, 2_000)).toEqual(new Set([3, 5]));
   });
 
   it("ends at the last frame's instant", () => {
