@@ -117,6 +117,7 @@ export const Cell = memo(function Cell({
       role="gridcell"
       aria-rowindex={row + 1}
       aria-colindex={col + 1}
+      aria-selected={isSelected || isMultiSelected}
       className={`
 					relative flex items-center justify-center
 					aspect-square w-full

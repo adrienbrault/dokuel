@@ -174,6 +174,7 @@ export function Board({
         aria-label="Sudoku board"
         aria-rowcount={9}
         aria-colcount={9}
+        aria-multiselectable={onSetSelectedCells ? true : undefined}
         data-board-glow
         onPointerDown={
           onSetSelectedCells ? dragHandlers.onPointerDown : undefined
