@@ -53,11 +53,29 @@ export function createErrorReporter({
   };
 }
 
+/**
+ * Catch what never reaches the ErrorBoundary: throws in event
+ * handlers, timers and transport callbacks, and rejected promises
+ * nobody awaited. Returns the uninstaller.
+ */
 export function installGlobalErrorReporting(
-  _target: Window,
-  _reporter: ErrorReporter,
+  target: Window,
+  reporter: ErrorReporter,
 ): () => void {
-  return () => {};
+  const onError = (event: ErrorEvent) => {
+    // Cross-origin script errors carry no error object, only a
+    // generic message; report that rather than nothing.
+    reporter.report(event.error ?? event.message, "window");
+  };
+  const onRejection = (event: PromiseRejectionEvent) => {
+    reporter.report(event.reason, "rejection");
+  };
+  target.addEventListener("error", onError);
+  target.addEventListener("unhandledrejection", onRejection);
+  return () => {
+    target.removeEventListener("error", onError);
+    target.removeEventListener("unhandledrejection", onRejection);
+  };
 }
 
 const STATIC_ROUTES = new Set(["daily", "join", "stats"]);
