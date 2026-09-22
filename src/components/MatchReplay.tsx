@@ -25,6 +25,8 @@ type MatchReplayProps = {
   /** Left of the compare divider first, right second. */
   players: [ReplayPlayer, ReplayPlayer];
   onClose: () => void;
+  /** Names the screen the back button returns to. */
+  closeLabel?: string | undefined;
 };
 
 const SPEEDS = [4, 16, 64];
@@ -83,6 +85,7 @@ export function MatchReplay({
   solution,
   players,
   onClose,
+  closeLabel = "Results",
 }: MatchReplayProps) {
   const duration = Math.max(
     ...players.map((p) => (p.frames ? replayDuration(p.frames) : 0)),
@@ -122,7 +125,7 @@ export function MatchReplay({
       <div className="mx-auto flex w-full max-w-[min(100vw-2rem,28rem)] flex-col gap-3">
         <div className="flex items-center justify-between">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            ← Results
+            ← {closeLabel}
           </button>
           <h2 className="heading">Replay</h2>
           <span className="w-20" aria-hidden="true" />

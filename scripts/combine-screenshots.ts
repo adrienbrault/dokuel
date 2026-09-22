@@ -115,6 +115,7 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
       "multiplayer-settings-toggle",
       "multiplayer-replay",
       "multiplayer-replay-dark",
+      "stats-replay",
     ],
   },
   {

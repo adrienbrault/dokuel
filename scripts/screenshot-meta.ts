@@ -97,6 +97,7 @@ export function sceneLabel(scene: string): string {
     "multiplayer-settings-toggle": "Multiplayer · settings toggle",
     "multiplayer-replay": "Multiplayer · match replay",
     "multiplayer-replay-dark": "Multiplayer · match replay (dark)",
+    "stats-replay": "Stats · duel replay",
   };
   return overrides[scene] ?? titleCase(scene);
 }

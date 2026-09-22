@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useArchiveMatchReplay } from "../hooks/useArchiveMatchReplay.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
-import type { DigitStyle } from "../lib/types.ts";
+import type { DigitStyle, Player } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
@@ -14,6 +15,8 @@ type MultiplayerGameProps = {
   onRename?: (name: string) => void;
   onBack: () => void;
 };
+
+const NO_PLAYERS: Player[] = [];
 
 export function MultiplayerGame({
   playerId,
@@ -38,6 +41,17 @@ export function MultiplayerGame({
     lastDigitStyle.current = mp.roomState.digitStyle;
     isHost.current = mp.roomState.hostId === playerId;
   }
+  // Outlives the room: Stats replays the match from this copy.
+  useArchiveMatchReplay({
+    roomId,
+    playerId,
+    gameNumber: mp.roomState?.gameNumber ?? 0,
+    puzzle: mp.puzzle,
+    solution: mp.solution,
+    players: mp.roomState?.players ?? NO_PLAYERS,
+    replays: mp.replays,
+    gameOver: mp.gameOver,
+  });
   // Arms after the disconnect has persisted for a beat; combined with
   // the live value below so the banner hides instantly on return.
   const disconnectSettled = useDelayedFlag(
