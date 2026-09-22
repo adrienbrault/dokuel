@@ -42,10 +42,17 @@ export type TelemetrySenderOptions = {
 
 const DEFAULT_FLUSH_INTERVAL_MS = 10_000;
 
+/** False when the browser has no beacon API, so the fetch fallback runs. */
+function defaultSendBeacon(url: string, body: string): boolean {
+  if (typeof navigator.sendBeacon !== "function") return false;
+  return navigator.sendBeacon(url, body);
+}
+
 export function createTelemetrySender({
   endpoint,
   sessionId,
-  sendBeacon = (url, body) => navigator.sendBeacon(url, body),
+  sendBeacon = defaultSendBeacon,
+  fetch = (url, init) => globalThis.fetch(url, init),
   flushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS,
 }: TelemetrySenderOptions): TelemetrySender {
   let queue: TelemetryEvent[] = [];
@@ -59,7 +66,17 @@ export function createTelemetrySender({
     if (queue.length === 0) return;
     const events = queue;
     queue = [];
-    sendBeacon(endpoint, JSON.stringify({ sid: sessionId, events }));
+    const body = JSON.stringify({ sid: sessionId, events });
+    if (sendBeacon(endpoint, body)) return;
+    // A string body goes out as text/plain, a CORS-safelisted type:
+    // no preflight round trip for a request nobody reads the answer
+    // to. The worker parses the text as JSON regardless.
+    void fetch(endpoint, {
+      method: "POST",
+      body,
+      keepalive: true,
+      credentials: "omit",
+    });
   };
 
   // "hidden" is the last point a mobile browser reliably runs script
