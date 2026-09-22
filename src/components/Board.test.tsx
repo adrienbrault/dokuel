@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cellKey } from "../lib/sudoku.ts";
@@ -831,5 +831,59 @@ describe("Board grid semantics", () => {
     screen.getByRole("button", { name: "outside" }).focus();
     rerender(ui({ row: 3, col: 3 }));
     expect(document.activeElement).toHaveAccessibleName("outside");
+  });
+});
+
+describe("Board live announcements", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function withPlayerValue(
+    board: BoardType,
+    row: number,
+    col: number,
+    value: number,
+  ): BoardType {
+    const next = board.map((r) => [...r]);
+    next[row]![col] = { value, isGiven: false, notes: new Set() };
+    return next;
+  }
+
+  function ui(board: BoardType) {
+    return (
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />
+    );
+  }
+
+  function announcer() {
+    return document.querySelector('[aria-live="polite"]') as HTMLElement;
+  }
+
+  it("politely announces only the settled outcome of rapid input", () => {
+    vi.useFakeTimers();
+    const start = makeBoard([[0, 0, 1]]);
+    const { rerender } = render(ui(start));
+    expect(announcer()).toHaveAttribute("aria-atomic", "true");
+    expect(announcer()).toHaveTextContent("");
+
+    const first = withPlayerValue(start, 2, 3, 5);
+    rerender(ui(first));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    const second = withPlayerValue(first, 2, 3, 6);
+    rerender(ui(second));
+    expect(announcer()).toHaveTextContent("");
+
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(announcer()).toHaveTextContent("6 placed, row 3 column 4");
   });
 });
