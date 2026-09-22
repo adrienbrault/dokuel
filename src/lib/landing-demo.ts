@@ -21,7 +21,9 @@ export type DemoAction =
   /** Quick tap on a numpad key. */
   | { kind: "tap"; digit: number }
   /** Press and hold a numpad key: pencils a note, keeps the selection. */
-  | { kind: "hold"; digit: number };
+  | { kind: "hold"; digit: number }
+  /** Slide along the numpad onto a key: spotlights that digit. */
+  | { kind: "skim"; digit: number };
 
 export type DemoStep = {
   action: DemoAction;
@@ -39,6 +41,8 @@ export type DemoFinger =
 export type DemoFrame = {
   board: Board;
   selectedCell: Position | null;
+  /** The digit spotlighted board-wide when no cell is selected. */
+  highlightedDigit: number | null;
   /** The numpad key drawn accented (pressed, or the selection's digit). */
   activeKey: number | null;
   finger: DemoFinger;
@@ -50,6 +54,7 @@ export type DemoFrame = {
 type DemoState = {
   board: Board;
   selectedCell: Position | null;
+  highlightedDigit: number | null;
 };
 
 function opsFor(state: DemoState): DigitIntentOps {
@@ -75,15 +80,27 @@ function opsFor(state: DemoState): DigitIntentOps {
     },
     deselectCell: () => {
       state.selectedCell = null;
+      state.highlightedDigit = null;
     },
-    toggleHighlight: () => {},
-    setHighlight: () => {},
+    toggleHighlight: (digit) => {
+      state.highlightedDigit = state.highlightedDigit === digit ? null : digit;
+    },
+    setHighlight: (digit) => {
+      state.highlightedDigit = digit;
+    },
   };
 }
 
 function apply(state: DemoState, action: DemoAction): void {
   if (action.kind === "select") {
     state.selectedCell = { row: action.row, col: action.col };
+    state.highlightedDigit = null;
+    return;
+  }
+  if (action.kind === "skim") {
+    // useDigitHighlight.skimToDigit: the board follows the finger.
+    state.selectedCell = null;
+    state.highlightedDigit = action.digit;
     return;
   }
   const intent = digitIntent(
@@ -103,6 +120,7 @@ function fingerOf(action: DemoAction): DemoFinger {
       return { kind: "cell", row: action.row, col: action.col };
     case "tap":
     case "hold":
+    case "skim":
       return { kind: "key", digit: action.digit };
   }
 }
@@ -116,14 +134,25 @@ export function demoFrame(
   puzzle: string,
   index: number,
 ): DemoFrame {
-  const state: DemoState = { board: parsePuzzle(puzzle), selectedCell: null };
+  const state: DemoState = {
+    board: parsePuzzle(puzzle),
+    selectedCell: null,
+    highlightedDigit: null,
+  };
   for (let i = 0; i <= index; i++) apply(state, script[i]!.action);
   const step = script[index]!;
   const finger = fingerOf(step.action);
+  const at = state.selectedCell;
+  // Same rule as a game's numpad: the pressed key wins, else the
+  // selected cell's digit, else the spotlighted one.
+  const restingKey = at
+    ? state.board[at.row]![at.col]!.value
+    : state.highlightedDigit;
   return {
     board: state.board,
     selectedCell: state.selectedCell,
-    activeKey: finger.kind === "key" ? finger.digit : null,
+    highlightedDigit: state.highlightedDigit,
+    activeKey: finger.kind === "key" ? finger.digit : restingKey,
     finger,
     chargingDigit: step.action.kind === "hold" ? step.action.digit : null,
     caption: step.caption,
