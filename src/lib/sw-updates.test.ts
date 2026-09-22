@@ -71,4 +71,14 @@ describe("createSwUpdates", () => {
 
     expect(s.updates.isUpdateReady()).toBe(false);
   });
+
+  it("offers a version that was already waiting from an earlier visit", () => {
+    // The update downloaded last time but the tab was closed before
+    // the player reloaded: it is still waiting on this page load.
+    const s = setup({ controlled: true });
+    s.registration.waiting = new FakeWorker();
+    track(s);
+
+    expect(s.updates.isUpdateReady()).toBe(true);
+  });
 });
