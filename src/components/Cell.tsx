@@ -25,6 +25,11 @@ type CellProps = {
   isHighlighted: boolean;
   isSameNumber: boolean;
   isConflict: boolean;
+  /**
+   * True for the one cell the grid's roving tabindex lets Tab land on.
+   * Defaults to true so a Cell rendered on its own stays reachable.
+   */
+  isTabStop?: boolean | undefined;
   isHintRelated?: boolean | undefined;
   isSameNumberRowCol?: boolean | undefined;
   assistLevel?: AssistLevel | undefined;
@@ -61,6 +66,7 @@ export const Cell = memo(function Cell({
   isHighlighted,
   isSameNumber,
   isConflict,
+  isTabStop = true,
   isHintRelated,
   isSameNumberRowCol,
   assistLevel = "standard",
@@ -142,7 +148,7 @@ export const Cell = memo(function Cell({
       data-drop-mode={
         dropTargetState === "valid" ? (dropMode ?? undefined) : undefined
       }
-      tabIndex={0}
+      tabIndex={isTabStop ? 0 : -1}
       onClick={() => onSelect(row, col)}
       onKeyDown={(e) => {
         // Keep the activation keys the old <button> had, so a keyboard

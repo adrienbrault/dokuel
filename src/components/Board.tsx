@@ -75,6 +75,10 @@ export function Board({
   const idPrefix = useId();
   const cellId = (row: number, col: number) => `${idPrefix}r${row}c${col}`;
   const isFull = assistLevel === "full";
+  // Roving tabindex: the grid is one Tab stop, landing on the selected
+  // cell (or the top-left one when nothing is selected); arrow keys
+  // move within it.
+  const tabStop = selectedCell ?? { row: 0, col: 0 };
   const selectedValue =
     selectedCell !== null
       ? board[selectedCell.row]![selectedCell.col]!.value
@@ -290,6 +294,7 @@ export function Board({
                     isHintRelated={isHintRelated}
                     isSameNumberRowCol={isSameNumberRowCol}
                     assistLevel={assistLevel}
+                    isTabStop={tabStop.row === rowIdx && tabStop.col === colIdx}
                     onSelect={onSelectCell}
                     revealDelay={
                       animateReveal && cell.isGiven
