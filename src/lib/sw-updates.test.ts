@@ -81,4 +81,30 @@ describe("createSwUpdates", () => {
 
     expect(s.updates.isUpdateReady()).toBe(true);
   });
+
+  it("activates the waiting version and reloads once it takes control", () => {
+    const s = setup({ controlled: true });
+    const worker = new FakeWorker();
+    s.registration.waiting = worker;
+    track(s);
+
+    s.updates.applyUpdate();
+    expect(worker.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+    // Reloading before the swap would just load the old version again.
+    expect(s.reload).not.toHaveBeenCalled();
+
+    s.container.dispatchEvent(new Event("controllerchange"));
+    expect(s.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("never reloads for a controller change nobody asked for", () => {
+    // clients.claim() on a first install also fires controllerchange;
+    // that must not yank the page out from under a game.
+    const s = setup({ controlled: false });
+    track(s);
+
+    s.container.dispatchEvent(new Event("controllerchange"));
+
+    expect(s.reload).not.toHaveBeenCalled();
+  });
 });
