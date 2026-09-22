@@ -1,3 +1,4 @@
+import { Swords } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ChallengeComparison } from "../lib/challenge.ts";
 import {
@@ -24,6 +25,8 @@ type GameResultProps = {
   onDismissTip?: (() => void) | undefined;
   /** Verdict against the "beat my time" challenger, when there was one. */
   challengeResult?: ChallengeComparison | null | undefined;
+  /** A "beat my time" link to share; its absence hides the action. */
+  challengeLink?: { url: string; text: string } | undefined;
 };
 
 export function buildShareText({
@@ -70,12 +73,18 @@ export function GameResult({
   tip,
   onDismissTip,
   challengeResult,
+  challengeLink,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [challengeCopied, setChallengeCopied] = useState(false);
+  const challengeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
       if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+      if (challengeTimerRef.current !== null) {
+        clearTimeout(challengeTimerRef.current);
+      }
     },
     [],
   );
@@ -136,6 +145,36 @@ export function GameResult({
         // Copy failed (permissions, lost activation) — leave the
         // button label unchanged so the player can try again.
       });
+  };
+
+  // Same order as the lobby invite: the native share sheet first, the
+  // clipboard when there is none (desktop) or it fails for a reason
+  // other than the player backing out of it.
+  const handleChallenge = async () => {
+    if (!challengeLink) return;
+    if (navigator.share) {
+      try {
+        await navigator.share(challengeLink);
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(
+        `${challengeLink.text} ${challengeLink.url}`,
+      );
+    } catch {
+      return;
+    }
+    setChallengeCopied(true);
+    if (challengeTimerRef.current !== null) {
+      clearTimeout(challengeTimerRef.current);
+    }
+    challengeTimerRef.current = setTimeout(
+      () => setChallengeCopied(false),
+      2000,
+    );
   };
 
   return (
@@ -248,13 +287,31 @@ export function GameResult({
             New Game
           </button>
           {!isMultiplayer && (
-            <button
-              type="button"
-              className="btn btn-ghost w-full py-2"
-              onClick={handleShare}
+            <div
+              className={`grid gap-2 w-full ${challengeLink ? "grid-cols-2" : "grid-cols-1"}`}
             >
-              {copied ? "Copied!" : "Share Result"}
-            </button>
+              <button
+                type="button"
+                className="btn btn-ghost w-full py-2"
+                onClick={handleShare}
+              >
+                {copied ? "Copied!" : "Share Result"}
+              </button>
+              {challengeLink && (
+                <button
+                  type="button"
+                  className="btn btn-ghost w-full py-2 gap-1.5 text-accent font-semibold"
+                  onClick={handleChallenge}
+                >
+                  <Swords size={16} aria-hidden="true" />
+                  {challengeCopied
+                    ? "Link copied!"
+                    : challengeResult
+                      ? "Challenge back"
+                      : "Challenge a friend"}
+                </button>
+              )}
+            </div>
           )}
         </div>
         {tip && (
