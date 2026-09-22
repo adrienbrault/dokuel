@@ -57,3 +57,19 @@ export function createSwUpdates(reload: () => void): SwUpdates {
     },
   };
 }
+
+/** The app-wide store the update toast reads. */
+export const swUpdates = createSwUpdates(() => window.location.reload());
+
+export async function registerServiceWorker(
+  container: ServiceWorkerContainer,
+  updates: SwUpdates = swUpdates,
+): Promise<void> {
+  try {
+    const registration = await container.register("/sw.js");
+    updates.track(registration, container);
+  } catch (err) {
+    // Offline support is a bonus; the running app must not care.
+    console.warn("Service worker registration failed", err);
+  }
+}
