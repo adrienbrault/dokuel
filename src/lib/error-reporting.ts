@@ -3,16 +3,43 @@
  * ({@link ./telemetry.ts}).
  */
 
+import { track } from "./telemetry.ts";
+
 export type ErrorSource = "window" | "rejection" | "boundary";
 
 export type ErrorReporter = {
   report(error: unknown, source: ErrorSource): void;
 };
 
-export function createErrorReporter(_options: {
+// Mirrors the worker's limits for the "error" event.
+const MAX_MESSAGE = 300;
+const MAX_STACK = 2000;
+const MAX_PATH = 100;
+
+function describe(error: unknown): { message: string; stack: string } {
+  if (error instanceof Error) {
+    return { message: error.message, stack: error.stack ?? "" };
+  }
+  return { message: String(error), stack: "" };
+}
+
+export function createErrorReporter({
+  getPathname,
+}: {
   getPathname: () => string;
 }): ErrorReporter {
-  return { report() {} };
+  return {
+    report(error, source) {
+      const { message, stack } = describe(error);
+      track({
+        name: "error",
+        source,
+        message: message.slice(0, MAX_MESSAGE),
+        stack: stack.slice(0, MAX_STACK),
+        path: routeTemplate(getPathname()).slice(0, MAX_PATH),
+      });
+    },
+  };
 }
 
 const STATIC_ROUTES = new Set(["daily", "join", "stats"]);
