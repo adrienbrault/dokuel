@@ -91,4 +91,21 @@ describe("createTelemetrySender", () => {
     });
     sender.dispose();
   });
+
+  it("swallows transport failures instead of throwing into the app", async () => {
+    const sender = createTelemetrySender({
+      endpoint: ENDPOINT,
+      sessionId: SID,
+      sendBeacon: () => {
+        throw new TypeError("beacon body too large");
+      },
+      fetch: () => Promise.reject(new TypeError("offline")),
+    });
+
+    sender.track({ name: "mp_first_peer", ms: 1 });
+    expect(() => sender.flush()).not.toThrow();
+    // A rejected fetch left unhandled would fail the run here.
+    await vi.runAllTimersAsync();
+    sender.dispose();
+  });
 });
