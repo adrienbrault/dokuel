@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { type DemoStep, demoFrame } from "./landing-demo.ts";
+import {
+  type DemoStep,
+  demoFrame,
+  LANDING_DEMO_PUZZLE,
+  LANDING_DEMO_SCRIPT,
+} from "./landing-demo.ts";
+import { solvePuzzle } from "./sudoku.ts";
 
 // Row 0 holds 1-8, so the empty cell at the end of it takes a 9.
 const PUZZLE = `12345678${".".repeat(73)}`;
@@ -90,5 +96,32 @@ describe("demoFrame", () => {
     expect([...noted.board[2]![2]!.notes]).toEqual([5]);
     expect(placed.board[3]![3]!.value).toBe(5);
     expect(placed.selectedCell).toEqual({ row: 3, col: 3 });
+  });
+
+  it("ships a script that teaches every gesture and ends on a clash", () => {
+    const kinds = new Set(LANDING_DEMO_SCRIPT.map((step) => step.action.kind));
+    const last = demoFrame(
+      LANDING_DEMO_SCRIPT,
+      LANDING_DEMO_PUZZLE,
+      LANDING_DEMO_SCRIPT.length - 1,
+    );
+    const solution = solvePuzzle(LANDING_DEMO_PUZZLE)!;
+    const wrong = last.board
+      .flat()
+      .flatMap((cell, i) =>
+        cell.value !== null && String(cell.value) !== solution[i] ? [i] : [],
+      );
+
+    expect([...kinds].sort()).toEqual([
+      "drag",
+      "drop",
+      "hold",
+      "select",
+      "skim",
+      "tap",
+    ]);
+    // The only wrong entry is the deliberate one, and the board says so.
+    expect(wrong).toHaveLength(1);
+    expect(last.conflicts.has(wrong[0]!)).toBe(true);
   });
 });
