@@ -54,4 +54,41 @@ describe("demoFrame", () => {
     expect(frame.activeKey).toBe(3);
     expect(frame.finger).toEqual({ kind: "key", digit: 3 });
   });
+
+  it("previews a dragged digit over a cell half and commits it on drop", () => {
+    const over = (mode: "value" | "note") =>
+      ({ kind: "drag", digit: 5, row: 2, col: 2, mode }) as const;
+    const script: DemoStep[] = [
+      { action: over("value"), ms: 900, caption: "Top half" },
+      { action: over("note"), ms: 900, caption: "Bottom half" },
+      {
+        action: { kind: "drop", digit: 5, row: 2, col: 2, mode: "note" },
+        ms: 900,
+        caption: "Drop",
+      },
+      { action: over("value"), ms: 900, caption: "Top half" },
+      {
+        action: { kind: "drop", digit: 5, row: 3, col: 3, mode: "value" },
+        ms: 900,
+        caption: "Drop",
+      },
+    ];
+
+    const hovering = demoFrame(script, PUZZLE, 1);
+    const noted = demoFrame(script, PUZZLE, 2);
+    const placed = demoFrame(script, PUZZLE, 4);
+
+    expect(hovering.drag).toEqual({ digit: 5, row: 2, col: 2, mode: "note" });
+    expect(hovering.board[2]![2]!.notes.size).toBe(0);
+    expect(hovering.finger).toEqual({
+      kind: "cell",
+      row: 2,
+      col: 2,
+      half: "bottom",
+    });
+    expect(noted.drag).toBeNull();
+    expect([...noted.board[2]![2]!.notes]).toEqual([5]);
+    expect(placed.board[3]![3]!.value).toBe(5);
+    expect(placed.selectedCell).toEqual({ row: 3, col: 3 });
+  });
 });
