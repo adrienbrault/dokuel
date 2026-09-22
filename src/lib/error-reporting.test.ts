@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createErrorReporter, routeTemplate } from "./error-reporting.ts";
+import {
+  createErrorReporter,
+  installGlobalErrorReporting,
+  routeTemplate,
+} from "./error-reporting.ts";
 import { recordTelemetry } from "./telemetry.fake.ts";
 
 describe("routeTemplate", () => {
@@ -62,5 +66,41 @@ describe("createErrorReporter", () => {
           event.name === "error" ? `${event.source}:${event.message}` : "",
         ),
     ).toEqual(["window:loop", "rejection:loop", "window:distinct 0"]);
+  });
+});
+
+describe("installGlobalErrorReporting", () => {
+  it("reports uncaught errors and unhandled rejections until removed", () => {
+    const telemetry = recordTelemetry();
+    const uninstall = installGlobalErrorReporting(
+      window,
+      createErrorReporter({ getPathname: () => "/daily" }),
+    );
+
+    window.dispatchEvent(
+      new ErrorEvent("error", { error: new TypeError("uncaught") }),
+    );
+    // Cross-origin script errors arrive with no error object at all.
+    window.dispatchEvent(new ErrorEvent("error", { message: "Script error." }));
+    window.dispatchEvent(
+      Object.assign(new Event("unhandledrejection"), { reason: "rejected" }),
+    );
+    uninstall();
+    window.dispatchEvent(
+      new ErrorEvent("error", { error: new Error("after uninstall") }),
+    );
+
+    expect(
+      telemetry
+        .events()
+        .map((event) =>
+          event.name === "error" ? `${event.source}:${event.message}` : "",
+        ),
+    ).toEqual([
+      "window:uncaught",
+      "window:Script error.",
+      "rejection:rejected",
+    ]);
+    telemetry.stop();
   });
 });

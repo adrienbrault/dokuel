@@ -53,6 +53,13 @@ export function createErrorReporter({
   };
 }
 
+export function installGlobalErrorReporting(
+  _target: Window,
+  _reporter: ErrorReporter,
+): () => void {
+  return () => {};
+}
+
 const STATIC_ROUTES = new Set(["daily", "join", "stats"]);
 
 /**
