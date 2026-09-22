@@ -42,6 +42,11 @@ describe("parseChallenge", () => {
     expect(name).toHaveLength(MAX_CHALLENGER_NAME_LENGTH);
   });
 
+  it("remembers that the challenger's time was hint-assisted", () => {
+    expect(parseChallenge("?t=60&by=Fox&h=1")?.hinted).toBe(true);
+    expect(parseChallenge("?t=60&by=Fox&h=0")?.hinted).toBe(false);
+  });
+
   it("falls back to a friendly name when none is given", () => {
     expect(parseChallenge("?t=60")?.name).toBe("A friend");
     expect(parseChallenge("?t=60&by=%20%20")?.name).toBe("A friend");
