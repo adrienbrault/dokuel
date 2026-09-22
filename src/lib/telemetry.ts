@@ -61,6 +61,14 @@ export function createTelemetrySender({
     sendBeacon(endpoint, JSON.stringify({ sid: sessionId, events }));
   };
 
+  // "hidden" is the last point a mobile browser reliably runs script
+  // before it freezes or discards the tab; pagehide alone misses iOS
+  // app switches.
+  const flushIfHidden = () => {
+    if (document.visibilityState === "hidden") flush();
+  };
+  document.addEventListener("visibilitychange", flushIfHidden);
+
   return {
     track(event) {
       queue.push(event);
@@ -70,6 +78,7 @@ export function createTelemetrySender({
     },
     flush,
     dispose() {
+      document.removeEventListener("visibilitychange", flushIfHidden);
       if (timer !== null) clearTimeout(timer);
       timer = null;
       queue = [];
