@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import { describeBoardChange } from "./board-announcement.ts";
+import type { Board, Cell } from "./types.ts";
+
+function cell(value: number | null = null, notes: number[] = []): Cell {
+  return { value, isGiven: false, notes: new Set(notes) };
+}
+
+function makeBoard(overrides: [number, number, Partial<Cell>][] = []): Board {
+  const board = Array.from({ length: 9 }, () =>
+    Array.from({ length: 9 }, () => cell()),
+  );
+  for (const [r, c, patch] of overrides) {
+    board[r]![c] = { ...cell(), ...patch };
+  }
+  return board;
+}
+
+describe("describeBoardChange", () => {
+  it("announces a placed value with its position", () => {
+    const prev = makeBoard();
+    const next = makeBoard([[2, 3, { value: 5 }]]);
+    expect(describeBoardChange(prev, next, new Set())).toBe(
+      "5 placed, row 3 column 4",
+    );
+  });
+});
