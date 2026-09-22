@@ -55,4 +55,19 @@ describe("describeBoardChange", () => {
       "Note 6 removed, row 5 column 5",
     );
   });
+
+  it("summarises a note pencilled across a multi-cell selection", () => {
+    const prev = makeBoard();
+    const next = makeBoard([
+      [0, 0, { notes: new Set([3]) }],
+      [0, 1, { notes: new Set([3]) }],
+      [1, 1, { notes: new Set([3]) }],
+    ]);
+    expect(describeBoardChange(prev, next, new Set())).toBe(
+      "Note 3 added in 3 cells",
+    );
+    expect(describeBoardChange(next, prev, new Set())).toBe(
+      "Note 3 removed in 3 cells",
+    );
+  });
 });
