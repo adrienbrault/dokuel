@@ -297,5 +297,34 @@ describe("SoloGame challenge", () => {
         url: `${window.location.origin}/solo/easy/k3y?t=231&by=Brave+Otter`,
       });
     });
+
+    it("offers a fresh challenge after an unchallenged win", () => {
+      render(<SoloGame difficulty="easy" gameKey="k3y" onBack={vi.fn()} />);
+      win();
+
+      expect(
+        screen.getByRole("button", { name: "Challenge a friend" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/You beat|was \S+ faster|Dead heat/),
+      ).toBeNull();
+    });
+
+    it("keeps challenge links off the daily, whose board depends on the date", () => {
+      render(
+        <SoloGame
+          difficulty="easy"
+          gameKey="k3y"
+          isDaily={true}
+          onBack={vi.fn()}
+        />,
+      );
+      win();
+
+      expect(screen.getByText("You Won!")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /challenge/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 });
