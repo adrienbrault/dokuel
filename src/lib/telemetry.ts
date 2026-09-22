@@ -41,6 +41,9 @@ export type TelemetrySenderOptions = {
 };
 
 const DEFAULT_FLUSH_INTERVAL_MS = 10_000;
+// The worker refuses batches over 25 events; stay clear of it.
+const MAX_BATCH = 20;
+const MAX_QUEUE = 100;
 
 /** False when the browser has no beacon API, so the fetch fallback runs. */
 function defaultSendBeacon(url: string, body: string): boolean {
@@ -58,14 +61,7 @@ export function createTelemetrySender({
   let queue: TelemetryEvent[] = [];
   let timer: ReturnType<typeof setTimeout> | null = null;
 
-  const flush = () => {
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    if (queue.length === 0) return;
-    const events = queue;
-    queue = [];
+  const send = (events: TelemetryEvent[]) => {
     const body = JSON.stringify({ sid: sessionId, events });
     try {
       if (sendBeacon(endpoint, body)) return;
@@ -89,6 +85,18 @@ export function createTelemetrySender({
     }
   };
 
+  const flush = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    const events = queue;
+    queue = [];
+    for (let start = 0; start < events.length; start += MAX_BATCH) {
+      send(events.slice(start, start + MAX_BATCH));
+    }
+  };
+
   // "hidden" is the last point a mobile browser reliably runs script
   // before it freezes or discards the tab; pagehide alone misses iOS
   // app switches.
@@ -99,6 +107,9 @@ export function createTelemetrySender({
 
   return {
     track(event) {
+      // Past the cap the newest events are the ones dropped: in a
+      // runaway loop the first occurrences are the informative ones.
+      if (queue.length >= MAX_QUEUE) return;
       queue.push(event);
       // Armed on demand rather than as a standing interval: an idle
       // page never wakes up just to find an empty queue.
