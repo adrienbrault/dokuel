@@ -36,6 +36,9 @@ function renderLanding() {
 describe("Landing — in-progress games", () => {
   beforeEach(() => {
     localStorage.clear();
+    // A stack of saves belongs to a returning player; keeping the
+    // first-timer demo out also keeps these role queries fast.
+    saveGameResult("easy", "standard", 240, true);
   });
 
   afterEach(() => {
