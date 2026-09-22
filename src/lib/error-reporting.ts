@@ -54,6 +54,14 @@ export function createErrorReporter({
 }
 
 /**
+ * The page's one reporter, shared by the global handlers and the
+ * ErrorBoundary so dedupe and the cap span both.
+ */
+export const pageErrorReporter = createErrorReporter({
+  getPathname: () => window.location.pathname,
+});
+
+/**
  * Catch what never reaches the ErrorBoundary: throws in event
  * handlers, timers and transport callbacks, and rejected promises
  * nobody awaited. Returns the uninstaller.
