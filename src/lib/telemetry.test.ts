@@ -49,4 +49,22 @@ describe("createTelemetrySender", () => {
     expect(sentEvents(sendBeacon)).toHaveLength(1);
     sender.dispose();
   });
+
+  it("flushes right away when the page is hidden", () => {
+    const sendBeacon = beaconSpy();
+    const sender = createTelemetrySender({
+      endpoint: ENDPOINT,
+      sessionId: SID,
+      sendBeacon,
+    });
+    sender.track({ name: "mp_first_peer", ms: 1 });
+
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(sentEvents(sendBeacon)).toEqual([
+      [{ name: "mp_first_peer", ms: 1 }],
+    ]);
+    sender.dispose();
+  });
 });
