@@ -66,4 +66,59 @@ describe("LandingDemo", () => {
       "Drag to a cell top half fills, bottom half notes",
     ]);
   });
+
+  it("pauses while the tab is hidden and picks up where it left off", () => {
+    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(false);
+    render(<LandingDemo />);
+
+    hidden.mockReturnValue(true);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => {
+      vi.advanceTimersByTime(LOOP_MS);
+    });
+    expect(caption()).toBe(FIRST.caption);
+
+    hidden.mockReturnValue(false);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => {
+      vi.advanceTimersByTime(FIRST.ms);
+    });
+    expect(caption()).toBe(SECOND.caption);
+  });
+
+  it("pauses while scrolled out of view", () => {
+    let report: (entries: { isIntersecting: boolean }[]) => void = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(cb: typeof report) {
+          report = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    render(<LandingDemo />);
+
+    act(() => {
+      report([{ isIntersecting: false }]);
+    });
+    act(() => {
+      vi.advanceTimersByTime(LOOP_MS);
+    });
+    expect(caption()).toBe(FIRST.caption);
+
+    act(() => {
+      report([{ isIntersecting: true }]);
+    });
+    act(() => {
+      vi.advanceTimersByTime(FIRST.ms);
+    });
+    expect(caption()).toBe(SECOND.caption);
+    vi.unstubAllGlobals();
+  });
 });
