@@ -60,4 +60,15 @@ describe("createSwUpdates", () => {
     expect(s.updates.isUpdateReady()).toBe(true);
     expect(s.onChange).toHaveBeenCalled();
   });
+
+  it("stays quiet on the very first install", () => {
+    // No controller means this page ran without a worker: the first
+    // version installing is not an update, just offline support.
+    const s = setup({ controlled: false });
+    track(s);
+
+    s.registration.startInstall().setState("installed");
+
+    expect(s.updates.isUpdateReady()).toBe(false);
+  });
 });
