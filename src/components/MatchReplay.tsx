@@ -176,18 +176,18 @@ export function MatchReplay({
         <div className="flex items-center justify-between gap-3">
           <button
             type="button"
-            className="btn btn-md btn-primary min-w-24"
+            className="btn btn-md btn-primary min-w-20"
             onClick={playback.toggle}
           >
             {playback.playing ? "Pause" : "Play"}
           </button>
-          <span className="font-mono tabular-nums text-sm text-text-secondary">
+          <span className="whitespace-nowrap font-mono tabular-nums text-xs text-text-secondary sm:text-sm">
             {formatTime(Math.floor(playback.t / 1000))} /{" "}
             {formatTime(Math.floor(duration / 1000))}
           </span>
           <button
             type="button"
-            className="btn btn-md btn-secondary min-w-16"
+            className="btn btn-md btn-secondary min-w-14"
             aria-label={`Playback speed ${playback.speed}×`}
             onClick={playback.cycleSpeed}
           >
@@ -218,7 +218,7 @@ function PlayerChip({
   total: number;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-1.5 rounded-full bg-bg-inset px-3 py-1 text-sm">
+    <div className="flex min-w-0 flex-1 basis-0 items-center gap-1.5 rounded-full bg-bg-inset px-2.5 py-1 text-sm last:justify-end">
       <span
         className="h-2.5 w-2.5 shrink-0 rounded-full"
         style={{ backgroundColor: player.color }}
@@ -228,12 +228,12 @@ function PlayerChip({
         {player.name}
       </span>
       {player.won && (
-        <span role="img" aria-label="winner">
+        <span role="img" aria-label="winner" className="shrink-0">
           🏆
         </span>
       )}
       {filled !== undefined && (
-        <span className="font-mono tabular-nums text-text-muted">
+        <span className="shrink-0 font-mono tabular-nums text-text-muted">
           {filled}/{total}
         </span>
       )}
