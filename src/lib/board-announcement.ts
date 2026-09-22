@@ -41,6 +41,7 @@ export function describeBoardChange(
   next: Board,
   conflicts: Set<number>,
 ): string | null {
+  if (givensDiffer(prev, next)) return null;
   const noteChanges: NoteChange[] = [];
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
@@ -58,6 +59,17 @@ export function describeBoardChange(
     }
   }
   return describeNoteChanges(noteChanges);
+}
+
+/** A new or restored puzzle, not a move: not worth announcing. */
+function givensDiffer(prev: Board, next: Board): boolean {
+  return prev.some((row, r) =>
+    row.some((before, c) => {
+      const after = next[r]?.[c];
+      if (!after || before.isGiven !== after.isGiven) return true;
+      return before.isGiven && before.value !== after.value;
+    }),
+  );
 }
 
 function describeValueChange(
