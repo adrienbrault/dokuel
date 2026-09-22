@@ -40,13 +40,30 @@ export type TelemetrySenderOptions = {
   flushIntervalMs?: number;
 };
 
-export function resolveTelemetryEndpoint(_config: {
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1"]);
+
+/**
+ * Where telemetry goes, or null for nowhere. Only a production build
+ * on a real host reports by default: dev servers, the test suite and
+ * Playwright's local preview server stay silent so local runs never
+ * land in the production dataset. `VITE_TELEMETRY_URL` overrides that
+ * in either direction ("off" disables, a URL redirects).
+ */
+export function resolveTelemetryEndpoint({
+  override,
+  prod,
+  hostname,
+  defaultUrl,
+}: {
   override: string | undefined;
   prod: boolean;
   hostname: string;
   defaultUrl: string;
 }): string | null {
-  return null;
+  if (override === "off") return null;
+  if (override) return override;
+  if (!prod || LOCAL_HOSTNAMES.has(hostname)) return null;
+  return defaultUrl;
 }
 
 const DEFAULT_FLUSH_INTERVAL_MS = 10_000;
