@@ -27,6 +27,6 @@ export function parseChallenge(search: string): Challenge | null {
   return {
     seconds: Math.min(seconds, MAX_CHALLENGE_SECONDS),
     name: cleanName(params.get("by") ?? ""),
-    hinted: false,
+    hinted: params.get("h") === "1",
   };
 }
