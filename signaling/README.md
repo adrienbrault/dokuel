@@ -70,6 +70,52 @@ The frontend can still override everything at build time with
 `VITE_TURN_URL` / `VITE_TURN_USERNAME` / `VITE_TURN_CREDENTIAL` (static
 credentials, e.g. for local testing against coturn).
 
+### 5. Telemetry (Workers Analytics Engine)
+
+`POST /events` takes anonymous batches of error reports and multiplayer
+connection events from deployed app builds (see the Telemetry section of
+`spec.md`) and writes each event to the `dokuel_events` Analytics Engine
+dataset through the `EVENTS` binding in `wrangler.toml`.
+
+One-time setup: in the Cloudflare dashboard, open **Workers & Pages →
+Analytics Engine** and enable it for the account. The dataset is created
+on the first write; nothing else is needed. Without the binding the route
+still answers 204 and drops the events, so `wrangler dev` works as is.
+
+Validation is strict (`src/events.ts`): known event names only, known
+fields only, bounded strings, at most 25 events and 32 KB per request;
+anything else is a 400 and nothing is written. Column layout per row:
+
+| Column | Content |
+|--------|---------|
+| `index1`, `blob1` | event name |
+| `blob2` | random per-page-load session id |
+| `blob3`... | the event's string fields, in `EVENT_SPECS` order |
+| `double1`... | the event's number fields, in `EVENT_SPECS` order |
+
+| Event | Strings (blob3...) | Numbers (double1...) |
+|-------|--------------------|----------------------|
+| `error` | source, message, stack, path | |
+| `mp_room_mount` | | count |
+| `mp_ice_servers` | source | ms |
+| `mp_first_peer` | | ms |
+| `mp_ice_route` | local, remote | |
+| `mp_connect_failed` | reason, role | ms |
+
+Query with the [SQL API](https://developers.cloudflare.com/analytics/analytics-engine/sql-api/),
+for example the connect failure reasons over the last week:
+
+```sql
+SELECT blob3 AS reason, blob4 AS role, SUM(_sample_interval) AS failures
+FROM dokuel_events
+WHERE index1 = 'mp_connect_failed' AND timestamp > NOW() - INTERVAL '7' DAY
+GROUP BY reason, role
+```
+
+To point a local app build at `wrangler dev`, build it with
+`VITE_TELEMETRY_URL=http://localhost:8787/events`; `VITE_TELEMETRY_URL=off`
+disables telemetry in a deployed build.
+
 ## Architecture
 
 - **Worker**: Routes all WebSocket connections to a single Durable Object instance
