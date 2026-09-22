@@ -44,4 +44,15 @@ describe("describeBoardChange", () => {
       "5 placed, row 3 column 4, conflict",
     );
   });
+
+  it("announces a toggled pencil note", () => {
+    const empty = makeBoard([[4, 4, { notes: new Set([1]) }]]);
+    const noted = makeBoard([[4, 4, { notes: new Set([1, 6]) }]]);
+    expect(describeBoardChange(empty, noted, new Set())).toBe(
+      "Note 6 added, row 5 column 5",
+    );
+    expect(describeBoardChange(noted, empty, new Set())).toBe(
+      "Note 6 removed, row 5 column 5",
+    );
+  });
 });
