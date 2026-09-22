@@ -15,11 +15,12 @@ export function describeBoardChange(
 ): string | null {
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
-      const before = prev[r]?.[c];
-      const after = next[r]?.[c];
-      if (after?.value != null && after.value !== before?.value) {
-        return `${after.value} placed, ${position(r, c)}`;
-      }
+      const before = prev[r]?.[c]?.value ?? null;
+      const after = next[r]?.[c]?.value ?? null;
+      if (after === before) continue;
+      return after === null
+        ? `${before} erased, ${position(r, c)}`
+        : `${after} placed, ${position(r, c)}`;
     }
   }
   return null;
