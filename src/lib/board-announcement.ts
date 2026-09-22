@@ -7,14 +7,26 @@ function position(row: number, col: number): string {
 
 type NoteChange = { at: string; added: number[]; removed: number[] };
 
-function describeNoteChange({ at, added, removed }: NoteChange): string {
-  if (added.length === 1 && removed.length === 0) {
-    return `Note ${added[0]} added, ${at}`;
-  }
-  if (removed.length === 1 && added.length === 0) {
-    return `Note ${removed[0]} removed, ${at}`;
-  }
-  return `Notes updated, ${at}`;
+/** "Note 3 added" when every change toggles the same single digit. */
+function singleNoteVerb(changes: NoteChange[]): string | null {
+  const phrase = ({ added, removed }: NoteChange) => {
+    if (added.length + removed.length !== 1) return null;
+    return added.length === 1
+      ? `Note ${added[0]} added`
+      : `Note ${removed[0]} removed`;
+  };
+  const phrases = new Set(changes.map(phrase));
+  const [only] = phrases;
+  return phrases.size === 1 ? (only ?? null) : null;
+}
+
+function describeNoteChanges(changes: NoteChange[]): string | null {
+  const [first] = changes;
+  if (!first) return null;
+  const what = singleNoteVerb(changes) ?? "Notes updated";
+  return changes.length === 1
+    ? `${what}, ${first.at}`
+    : `${what} in ${changes.length} cells`;
 }
 
 /**
@@ -45,8 +57,7 @@ export function describeBoardChange(
       }
     }
   }
-  const [first] = noteChanges;
-  return first ? describeNoteChange(first) : null;
+  return describeNoteChanges(noteChanges);
 }
 
 function describeValueChange(
