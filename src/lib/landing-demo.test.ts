@@ -23,4 +23,20 @@ describe("demoFrame", () => {
     expect(filled.activeKey).toBe(9);
     expect(filled.caption).toBe("Fill");
   });
+
+  it("stacks held digits as pencil notes, keeping the cell selected", () => {
+    const script: DemoStep[] = [
+      { action: { kind: "select", row: 4, col: 4 }, ms: 900, caption: "Pick" },
+      { action: { kind: "hold", digit: 3 }, ms: 900, caption: "Hold" },
+      { action: { kind: "hold", digit: 7 }, ms: 900, caption: "Hold" },
+    ];
+
+    const frame = demoFrame(script, PUZZLE, 2);
+
+    expect(frame.board[4]![4]!.value).toBeNull();
+    expect([...frame.board[4]![4]!.notes].sort()).toEqual([3, 7]);
+    expect(frame.selectedCell).toEqual({ row: 4, col: 4 });
+    expect(frame.chargingDigit).toBe(7);
+    expect(frame.finger).toEqual({ kind: "key", digit: 7 });
+  });
 });
