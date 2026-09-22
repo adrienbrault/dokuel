@@ -76,7 +76,7 @@ describe("Landing — offline", () => {
 
     expect(screen.getByRole("button", { name: /Create Game/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Join Game/ })).toBeDisabled();
-    expect(screen.getAllByText("Needs an internet connection")).toHaveLength(2);
+    expect(screen.getAllByText("Offline: needs internet")).toHaveLength(2);
     expect(screen.getByRole("button", { name: /Start Solo/ })).toBeEnabled();
     expect(
       screen.getByRole("button", { name: /Daily Challenge/ }),

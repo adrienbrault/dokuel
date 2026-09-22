@@ -31,7 +31,7 @@ import { getStats } from "../lib/stats.ts";
 // reading as a log. The rest stay one tap away.
 const VISIBLE_SAVED_GAMES = 3;
 
-const OFFLINE_SUBLABEL = "Needs an internet connection";
+const OFFLINE_SUBLABEL = "Offline: needs internet";
 
 type LandingProps = {
   onSolo: () => void;
