@@ -105,3 +105,11 @@ export function getArchivedReplay(
   const raw = readAll().find((r) => sameMatch(r, roomId, gameNumber));
   return raw === undefined ? null : parseArchived(raw);
 }
+
+/** Every stored replay that survives intact, oldest first. */
+export function getArchivedReplays(): ArchivedReplay[] {
+  return readAll().flatMap((raw) => {
+    const parsed = parseArchived(raw);
+    return parsed ? [parsed] : [];
+  });
+}

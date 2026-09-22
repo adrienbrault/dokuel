@@ -13,11 +13,16 @@ import {
   getMultiplayerSummary,
 } from "../lib/multiplayer-stats.ts";
 import {
+  type ArchivedReplay,
+  getArchivedReplays,
+} from "../lib/replay-archive.ts";
+import {
   type AssistLevelStats,
   getStats,
   getStatsByAssistLevel,
 } from "../lib/stats.ts";
 import type { Difficulty } from "../lib/types.ts";
+import { ArchivedMatchReplay } from "./ArchivedMatchReplay.tsx";
 
 type StatsProps = {
   onBack: () => void;
@@ -35,6 +40,20 @@ export function Stats({ onBack }: StatsProps) {
   const totalGames = totalSoloWins + mpSummary.played;
   const history = useMemo(() => getGameHistory(), []);
   const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
+  const replays = useMemo(
+    () =>
+      new Map(
+        getArchivedReplays().map((r) => [`${r.roomId}:${r.gameNumber}`, r]),
+      ),
+    [],
+  );
+  const [replay, setReplay] = useState<ArchivedReplay | null>(null);
+
+  if (replay) {
+    return (
+      <ArchivedMatchReplay replay={replay} onClose={() => setReplay(null)} />
+    );
+  }
 
   return (
     <div className="screen">
@@ -121,6 +140,12 @@ export function Stats({ onBack }: StatsProps) {
                   <HistoryRow
                     key={`${entry.kind}-${entry.timestamp}-${index}`}
                     entry={entry}
+                    replay={
+                      entry.kind === "duel"
+                        ? replays.get(`${entry.roomId}:${entry.gameNumber}`)
+                        : undefined
+                    }
+                    onReplay={setReplay}
                   />
                 ))}
               </ul>
@@ -297,7 +322,16 @@ function MultiplayerDifficultyStats({
   );
 }
 
-function HistoryRow({ entry }: { entry: GameHistoryEntry }) {
+function HistoryRow({
+  entry,
+  replay,
+  onReplay,
+}: {
+  entry: GameHistoryEntry;
+  /** The duel's archived moves, when this device recorded them. */
+  replay: ArchivedReplay | undefined;
+  onReplay: (replay: ArchivedReplay) => void;
+}) {
   const label =
     entry.kind === "duel" ? `vs ${entry.opponentName || "Opponent"}` : "Solo";
   return (
@@ -311,6 +345,16 @@ function HistoryRow({ entry }: { entry: GameHistoryEntry }) {
           </span>
         </span>
       </div>
+      {replay && (
+        <button
+          type="button"
+          className="btn btn-secondary ml-auto shrink-0 rounded-full px-3 py-1 text-xs"
+          aria-label={`Replay ${label}`}
+          onClick={() => onReplay(replay)}
+        >
+          Replay
+        </button>
+      )}
       <div className="flex flex-col items-end shrink-0">
         {entry.kind === "duel" ? (
           <>
