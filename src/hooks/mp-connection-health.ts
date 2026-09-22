@@ -10,6 +10,8 @@ import type { Connection } from "./mp-connection.ts";
 
 export type ConnectionRole = "creator" | "joiner";
 
+export const CONNECT_TIMEOUT_MS = 20_000;
+
 export type ConnectionHealthOptions = {
   playerId: string;
   role: ConnectionRole;
