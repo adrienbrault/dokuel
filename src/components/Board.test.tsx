@@ -739,4 +739,27 @@ describe("Board grid semantics", () => {
     });
     expect(screen.getAllByRole("gridcell")).toHaveLength(81);
   });
+
+  it("marks the selected cells with aria-selected and the rest false", () => {
+    renderBoard({
+      selectedCell: { row: 2, col: 3 },
+      selectedCells: new Set([cellKey(2, 3), cellKey(2, 4)]),
+      onSetSelectedCells: vi.fn(),
+    });
+
+    expect(screen.getByRole("grid")).toHaveAttribute(
+      "aria-multiselectable",
+      "true",
+    );
+    const selected = screen
+      .getAllByRole("gridcell", { selected: true })
+      .map((el) => el.getAttribute("aria-label"));
+    expect(selected).toEqual([
+      expect.stringMatching(/^Cell row 3 column 4,/),
+      expect.stringMatching(/^Cell row 3 column 5,/),
+    ]);
+    expect(screen.getAllByRole("gridcell", { selected: false })).toHaveLength(
+      79,
+    );
+  });
 });
