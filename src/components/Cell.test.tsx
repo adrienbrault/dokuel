@@ -81,6 +81,19 @@ describe("Cell accessible state", () => {
     ).toBeInTheDocument();
   });
 
+  it("marks given cells read-only and player cells editable", () => {
+    const { rerender } = render(
+      <Cell {...defaultProps()} cell={makeCell({ value: 7, isGiven: true })} />,
+    );
+    expect(screen.getByRole("gridcell")).toHaveAttribute(
+      "aria-readonly",
+      "true",
+    );
+
+    rerender(<Cell {...defaultProps()} cell={makeCell({ value: 7 })} />);
+    expect(screen.getByRole("gridcell")).not.toHaveAttribute("aria-readonly");
+  });
+
   it("announces pencil notes", () => {
     render(
       <Cell {...defaultProps()} cell={makeCell({ notes: new Set([4, 1]) })} />,
