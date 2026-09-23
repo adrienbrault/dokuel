@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { offersUpdates, pathToScreen, screenToPath } from "./App.tsx";
+import { pathToScreen, screenToPath } from "./App.tsx";
+import { offersUpdates } from "./components/UpdateToast.tsx";
 
 describe("pathToScreen", () => {
   it("maps the static screens", () => {

@@ -8,7 +8,7 @@ import { NotFound } from "./components/NotFound.tsx";
 import { SoloGame } from "./components/SoloGame.tsx";
 import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
-import { UpdateToast } from "./components/UpdateToast.tsx";
+import { offersUpdates, UpdateToast } from "./components/UpdateToast.tsx";
 import { MAX_ROOM_KEY_LENGTH } from "./hooks/mp-connection.ts";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { generateId } from "./lib/id.ts";
@@ -26,7 +26,7 @@ const MultiplayerScreen = lazy(() =>
   })),
 );
 
-type Screen =
+export type Screen =
   | { name: "landing" }
   | { name: "difficulty"; mode: "solo" | "create" }
   | {
@@ -114,20 +114,6 @@ export function pathToScreen(pathname: string): Screen {
   }
 
   return { name: "notFound", path: pathname };
-}
-
-// Never over a board: it would cover the timer, and a reload
-// mid-match drops the player from the room. Games end on menus.
-const UPDATE_PROMPT_SCREENS = new Set<Screen["name"]>([
-  "landing",
-  "difficulty",
-  "join",
-  "stats",
-  "notFound",
-]);
-
-export function offersUpdates(screen: Screen): boolean {
-  return UPDATE_PROMPT_SCREENS.has(screen.name);
 }
 
 function App() {
