@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { formatShortDate, formatTime } from "./format.ts";
+import { formatShortDate, formatShortTime, formatTime } from "./format.ts";
 
 describe("formatTime", () => {
   it("formats zero seconds", () => {
@@ -35,5 +35,17 @@ describe("formatShortDate", () => {
 
   it("strips leading zeros from day", () => {
     expect(formatShortDate("2026-12-01")).toBe("Dec 1");
+  });
+});
+
+describe("formatShortTime", () => {
+  it("drops the leading zero on minutes, the way people write a time", () => {
+    expect(formatShortTime(272)).toBe("4:32");
+    expect(formatShortTime(41)).toBe("0:41");
+    expect(formatShortTime(600)).toBe("10:00");
+  });
+
+  it("adds hours past the hour mark", () => {
+    expect(formatShortTime(3723)).toBe("1:02:03");
   });
 });

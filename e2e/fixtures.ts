@@ -76,7 +76,7 @@ export async function holdNumpadDigit(
  */
 export async function readBoard(page: Page): Promise<string> {
   const labels = await page
-    .locator('button[aria-label^="Cell row"]')
+    .locator('[role="gridcell"][aria-label^="Cell row"]')
     .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label") ?? ""));
   if (labels.length !== 81) {
     throw new Error(`expected 81 board cells, saw ${labels.length}`);
@@ -106,7 +106,9 @@ export async function fillCells(
     const row = Math.floor(idx / 9) + 1;
     const col = (idx % 9) + 1;
     await page
-      .locator(`button[aria-label^="Cell row ${row} column ${col},"]`)
+      .locator(
+        `[role="gridcell"][aria-label^="Cell row ${row} column ${col},"]`,
+      )
       .click();
     await pad
       .getByRole("button", { name: new RegExp(`^${solution[idx]}(,|$)`) })

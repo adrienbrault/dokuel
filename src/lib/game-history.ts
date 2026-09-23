@@ -17,7 +17,13 @@ type PlayedGame = {
 
 export type GameHistoryEntry =
   | (PlayedGame & { kind: "solo" })
-  | (PlayedGame & { kind: "duel"; opponentName: string });
+  | (PlayedGame & {
+      kind: "duel";
+      opponentName: string;
+      /** With gameNumber, identifies the match (and its replay). */
+      roomId: string;
+      gameNumber: number;
+    });
 
 /**
  * Every finished game the device remembers, newest first, across both
@@ -45,6 +51,8 @@ export function getGameHistory(): GameHistoryEntry[] {
     timestamp: r.timestamp,
     won: r.won,
     opponentName: r.opponentName,
+    roomId: r.roomId,
+    gameNumber: r.gameNumber,
   }));
   return [...duels, ...solo].sort((a, b) => b.timestamp - a.timestamp);
 }

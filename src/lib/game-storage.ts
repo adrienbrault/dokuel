@@ -1,4 +1,5 @@
-import type { AssistLevel, Difficulty } from "./types.ts";
+import { normalizeChallenge } from "./challenge.ts";
+import type { AssistLevel, Challenge, Difficulty } from "./types.ts";
 
 export type SavedGame = {
   puzzle: string;
@@ -10,6 +11,9 @@ export type SavedGame = {
   // Hints taken so far. Persisted so a save/resume cycle can't launder
   // a hint-assisted game into PB eligibility.
   hintsUsed: number;
+  /** The "beat my time" challenge this board was opened with, if any.
+   *  Kept so a refresh or a resume from the landing still shows it. */
+  challenge?: Challenge | null | undefined;
 };
 
 /** A save as it sits in storage: the game plus the moment it was
@@ -84,6 +88,9 @@ export function loadGame(key: string): StoredGame | null {
     ) {
       data.hintsUsed = 0;
     }
+    // Optional and cosmetic: a mangled challenge is dropped, the game
+    // it rode along with is not.
+    data.challenge = normalizeChallenge(data.challenge);
     // Saves written before the stamp existed sort as oldest rather
     // than as "just played" — the next autosave restamps them anyway.
     if (

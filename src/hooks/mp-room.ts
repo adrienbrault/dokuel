@@ -1,4 +1,5 @@
 import type { Doc } from "yjs";
+import type { ReplayFrame } from "../lib/replay.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -16,6 +17,7 @@ import {
   createRoomFromDoc,
   getOpponentProgress,
   getPlayers,
+  getReplays,
   getRoomState,
   hydrateRoomFromSnapshot,
   initializeRoom,
@@ -24,6 +26,7 @@ import {
   leaveRoom,
   MAX_PLAYERS,
   observeRoomChanges,
+  publishReplay,
   requestRematch,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
@@ -108,7 +111,15 @@ export type RoomProjection = {
    * their effect.
    */
   error: { message: string } | null;
+  /**
+   * Each player's replay of the current game, by player id. Empty until
+   * the game is over: nobody publishes before then, and a replay left
+   * over from the previous game is never shown for this one.
+   */
+  replays: Readonly<Record<string, ReplayFrame[]>>;
 };
+
+const NO_REPLAYS: RoomProjection["replays"] = Object.freeze({});
 
 export const INITIAL_PROJECTION: RoomProjection = {
   roomState: null,
@@ -120,6 +131,7 @@ export const INITIAL_PROJECTION: RoomProjection = {
   hasStartedGame: false,
   roomFull: false,
   error: null,
+  replays: NO_REPLAYS,
 };
 
 /**
@@ -186,6 +198,11 @@ export type Room = {
   /** Pin both boards to one palette, or null to free them again. */
   setDigitStyle(style: DigitStyle | null): void;
   /**
+   * Share our replay of the game that just ended. Refused while the game
+   * is still on: a live replay would show the opponent our board.
+   */
+  publishReplay(frames: ReplayFrame[]): void;
+  /**
    * Mirror the room to synchronous local storage. Local persistence is
    * async and a backgrounded tab is not always given time to flush it
    * before the process is killed.
@@ -228,6 +245,8 @@ export function createRoom({
 
   // Serialized last-published room state for the no-op-fire guard.
   let lastRoomStateJson: string | undefined;
+  // Same guard for replays, which live outside the room state.
+  let lastReplaysJson = "{}";
   let lastGameNumber = 0;
   // The puzzle latched for lastGameNumber — lets the projection spot a
   // same-number/different-puzzle merge after a start collision.
@@ -393,6 +412,20 @@ export function createRoom({
     completeSetup();
   }
 
+  /**
+   * Replays only matter once the game is over, and only for the game
+   * that just ended. Reports whether the projection moved, since a
+   * replay write leaves the room state itself untouched.
+   */
+  function trackReplays(): boolean {
+    const next = draft.gameOver ? getReplays(p2p, lastGameNumber) : NO_REPLAYS;
+    const json = JSON.stringify(next);
+    if (json === lastReplaysJson) return false;
+    lastReplaysJson = json;
+    set("replays", next);
+    return true;
+  }
+
   function project(): void {
     const state = getRoomState(p2p);
     // Live peer state beat the snapshot to it — drop the snapshot.
@@ -404,7 +437,10 @@ export function createRoom({
     // keystrokes' progress writes. A cheap content compare (the state
     // is ~1KB) keeps identity stable across no-op fires.
     const stateJson = JSON.stringify(state);
-    if (stateJson === lastRoomStateJson) return;
+    if (stateJson === lastRoomStateJson) {
+      if (trackReplays()) publish();
+      return;
+    }
     lastRoomStateJson = stateJson;
 
     set("roomState", state);
@@ -415,6 +451,7 @@ export function createRoom({
       trackOpponentProgress();
       settleSeat(state);
     }
+    trackReplays();
     publish();
   }
 
@@ -532,6 +569,10 @@ export function createRoom({
     },
     setDigitStyle(style) {
       setRoomDigitStyle(p2p, style);
+    },
+    publishReplay(frames) {
+      if (!draft.gameOver) return;
+      publishReplay(p2p, playerId, lastGameNumber, frames);
     },
     persistSnapshot() {
       const state = getRoomState(p2p);

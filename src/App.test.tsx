@@ -64,6 +64,19 @@ describe("pathToScreen", () => {
     });
   });
 
+  it("picks up a challenge from a solo link's query string", () => {
+    expect(
+      pathToScreen("/solo/hard/abc123", "?t=272&by=Swift+Fox"),
+    ).toMatchObject({
+      name: "solo",
+      gameKey: "abc123",
+      challenge: { name: "Swift Fox", seconds: 272, hinted: false },
+    });
+    expect(pathToScreen("/solo/hard/abc123")).toMatchObject({
+      challenge: null,
+    });
+  });
+
   it("falls back to landing for malformed solo paths", () => {
     expect(pathToScreen("/solo/nope/abc")).toEqual({ name: "landing" });
     expect(pathToScreen("/solo/easy/")).toEqual({ name: "landing" });

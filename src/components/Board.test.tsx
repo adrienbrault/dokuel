@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Cell } from "../lib/types.ts";
@@ -278,7 +279,7 @@ describe("Board drag-select filters non-empty cells", () => {
       { row: 0, col: 4 }, // pointerup
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, { clientX: 0, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 1, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 2, clientY: 0 });
@@ -322,7 +323,7 @@ describe("Board drag-select filters non-empty cells", () => {
       { row: 0, col: 2 },
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, { clientX: 0, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 1, clientY: 0 });
     fireEvent.pointerMove(region, { clientX: 2, clientY: 0 });
@@ -347,7 +348,7 @@ describe("Board iOS back-swipe suppression", () => {
       />,
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     const event = new Event("touchstart", { bubbles: true, cancelable: true });
     region.dispatchEvent(event);
 
@@ -382,7 +383,7 @@ describe("Board iOS back-swipe suppression", () => {
       findCell(0, 0),
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 5,
       clientY: 100,
@@ -426,7 +427,7 @@ describe("Board iOS back-swipe suppression", () => {
       findCell(0, 0),
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 5,
       clientY: 100,
@@ -469,7 +470,7 @@ describe("Board iOS back-swipe suppression", () => {
       findCell(0, 0),
     );
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 5,
       clientY: 100,
@@ -538,7 +539,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 0, col: 0 },
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 100,
       clientY: 100,
@@ -579,7 +580,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 0, col: 1 }, // pointermove crosses cells immediately
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 100,
       clientY: 100,
@@ -618,7 +619,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 0, col: 0 },
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     fireEvent.pointerDown(region, {
       clientX: 100,
       clientY: 100,
@@ -668,7 +669,7 @@ describe("Board filled-cell drag gating", () => {
       { row: 3, col: 3 }, // second gesture: pointerdown on the given cell tapped next
     ]);
 
-    const region = screen.getByRole("region", { name: /sudoku board/i });
+    const region = screen.getByRole("grid", { name: /sudoku board/i });
     // First gesture: digit drag (no trailing click, simulating iOS skip).
     fireEvent.pointerDown(region, {
       clientX: 100,
@@ -698,5 +699,224 @@ describe("Board filled-cell drag gating", () => {
     fireEvent.click(cell33);
 
     expect(onSelectCell).toHaveBeenCalledWith(3, 3);
+  });
+});
+
+describe("Board grid semantics", () => {
+  function renderBoard(props: Partial<Parameters<typeof Board>[0]> = {}) {
+    return render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        {...props}
+      />,
+    );
+  }
+
+  it("exposes a 9x9 grid whose rows own their cells in reading order", () => {
+    renderBoard();
+
+    const grid = screen.getByRole("grid", { name: "Sudoku board" });
+    expect(grid).toHaveAttribute("aria-rowcount", "9");
+    expect(grid).toHaveAttribute("aria-colcount", "9");
+
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(9);
+    rows.forEach((rowEl, r) => {
+      expect(rowEl).toHaveAttribute("aria-rowindex", String(r + 1));
+      const owned = rowEl.getAttribute("aria-owns")?.split(" ") ?? [];
+      expect(owned).toHaveLength(9);
+      owned.forEach((id, c) => {
+        const cellEl = document.getElementById(id);
+        expect(cellEl).toHaveAttribute("role", "gridcell");
+        expect(cellEl).toHaveAttribute("aria-rowindex", String(r + 1));
+        expect(cellEl).toHaveAttribute("aria-colindex", String(c + 1));
+        expect(cellEl).toHaveAccessibleName(
+          new RegExp(`^Cell row ${r + 1} column ${c + 1},`),
+        );
+      });
+    });
+    expect(screen.getAllByRole("gridcell")).toHaveLength(81);
+  });
+
+  it("marks the selected cells with aria-selected and the rest false", () => {
+    renderBoard({
+      selectedCell: { row: 2, col: 3 },
+      selectedCells: new Set([cellKey(2, 3), cellKey(2, 4)]),
+      onSetSelectedCells: vi.fn(),
+    });
+
+    expect(screen.getByRole("grid")).toHaveAttribute(
+      "aria-multiselectable",
+      "true",
+    );
+    const selected = screen
+      .getAllByRole("gridcell", { selected: true })
+      .map((el) => el.getAttribute("aria-label"));
+    expect(selected).toEqual([
+      expect.stringMatching(/^Cell row 3 column 4,/),
+      expect.stringMatching(/^Cell row 3 column 5,/),
+    ]);
+    expect(screen.getAllByRole("gridcell", { selected: false })).toHaveLength(
+      79,
+    );
+  });
+
+  it("is a single tab stop landing on the selected cell, or the first one", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <>
+        <button type="button">before</button>
+        <Board
+          board={makeBoard()}
+          selectedCell={null}
+          conflicts={new Set()}
+          onSelectCell={vi.fn()}
+        />
+        <button type="button">after</button>
+      </>,
+    );
+
+    await user.tab();
+    await user.tab();
+    expect(document.activeElement).toHaveAccessibleName(
+      /^Cell row 1 column 1,/,
+    );
+    await user.tab();
+    expect(document.activeElement).toHaveAccessibleName("after");
+
+    rerender(
+      <>
+        <button type="button">before</button>
+        <Board
+          board={makeBoard()}
+          selectedCell={{ row: 4, col: 6 }}
+          conflicts={new Set()}
+          onSelectCell={vi.fn()}
+        />
+        <button type="button">after</button>
+      </>,
+    );
+    await user.tab({ shift: true });
+    expect(document.activeElement).toHaveAccessibleName(
+      /^Cell row 5 column 7,/,
+    );
+  });
+
+  it("moves focus with the selection while focus is inside the grid", () => {
+    const ui = (selectedCell: { row: number; col: number }) => (
+      <>
+        <button type="button">outside</button>
+        <Board
+          board={makeBoard()}
+          selectedCell={selectedCell}
+          conflicts={new Set()}
+          onSelectCell={vi.fn()}
+        />
+      </>
+    );
+    const { rerender } = render(ui({ row: 0, col: 0 }));
+    screen.getByLabelText(/^Cell row 1 column 1,/).focus();
+
+    // Arrow keys (handled by the game's keyboard hook) change the
+    // selection; focus must follow so the screen reader reads the new cell.
+    rerender(ui({ row: 0, col: 1 }));
+    expect(document.activeElement).toHaveAccessibleName(
+      /^Cell row 1 column 2,/,
+    );
+
+    // Focus elsewhere is never stolen by a selection change.
+    screen.getByRole("button", { name: "outside" }).focus();
+    rerender(ui({ row: 3, col: 3 }));
+    expect(document.activeElement).toHaveAccessibleName("outside");
+  });
+});
+
+describe("Board live announcements", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function withPlayerValue(
+    board: BoardType,
+    row: number,
+    col: number,
+    value: number,
+  ): BoardType {
+    const next = board.map((r) => [...r]);
+    next[row]![col] = { value, isGiven: false, notes: new Set() };
+    return next;
+  }
+
+  function ui(board: BoardType) {
+    return (
+      <Board
+        board={board}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />
+    );
+  }
+
+  function announcer() {
+    return document.querySelector('[aria-live="polite"]') as HTMLElement;
+  }
+
+  it("politely announces only the settled outcome of rapid input", () => {
+    vi.useFakeTimers();
+    const start = makeBoard([[0, 0, 1]]);
+    const { rerender } = render(ui(start));
+    expect(announcer()).toHaveAttribute("aria-atomic", "true");
+    expect(announcer()).toHaveTextContent("");
+
+    const first = withPlayerValue(start, 2, 3, 5);
+    rerender(ui(first));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    const second = withPlayerValue(first, 2, 3, 6);
+    rerender(ui(second));
+    expect(announcer()).toHaveTextContent("");
+
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(announcer()).toHaveTextContent("6 placed, row 3 column 4");
+  });
+
+  it("keeps a pending announcement through a change with nothing to say", () => {
+    vi.useFakeTimers();
+    const start = makeBoard([[0, 0, 1]]);
+    const { rerender } = render(ui(start));
+    const placed = withPlayerValue(start, 2, 3, 5);
+    rerender(ui(placed));
+    // Same content, new identity (as a reducer may hand back).
+    rerender(ui(placed.map((r) => [...r])));
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(announcer()).toHaveTextContent("5 placed, row 3 column 4");
+  });
+
+  it("announces completion instead of the final placement", () => {
+    vi.useFakeTimers();
+    const start = makeBoard([[0, 0, 1]]);
+    const { rerender } = render(ui(start));
+    rerender(
+      <Board
+        board={withPlayerValue(start, 8, 8, 9)}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+        completed={true}
+      />,
+    );
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(announcer()).toHaveTextContent("Puzzle complete");
   });
 });

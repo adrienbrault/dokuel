@@ -7,6 +7,7 @@ import {
   getHostId,
   getOpponentProgress,
   getPlayers,
+  getReplays,
   getRoomState,
   getRoomStatus,
   hydrateRoomFromSnapshot,
@@ -16,6 +17,7 @@ import {
   leaveRoom,
   observeRoomChanges,
   type P2PRoom,
+  publishReplay,
   requestRematch,
   setDifficulty,
   setDigitStyle,
@@ -265,6 +267,32 @@ describe("p2p-room", () => {
       const p1 = players.get("player1") as Y.Map<unknown>;
       expect(p1.get("cellsRemaining")).toBe(20);
       expect(p1.get("completionPercent")).toBe(75);
+    });
+  });
+
+  describe("replays", () => {
+    it("reads back each player's replay for the game it was recorded in", () => {
+      const [doc1, doc2] = createLinkedDocs();
+      const room1 = createRoomFromDoc(doc1, "r");
+      const room2 = createRoomFromDoc(doc2, "r");
+      joinRoom(room1, "player1", "Alice");
+      joinRoom(room2, "player2", "Bob");
+
+      publishReplay(room1, "player1", 3, [[0, 2, 4]]);
+      publishReplay(room2, "player2", 2, [[0, 5, 6]]);
+
+      expect(getReplays(room2, 3)).toEqual({ player1: [[0, 2, 4]] });
+    });
+
+    it("drops a replay that is not shaped like one", () => {
+      const room = createTestRoom();
+      joinRoom(room, "player1", "Alice");
+      const player = room.doc
+        .getMap("players")
+        .get("player1") as Y.Map<unknown>;
+      player.set("replay", { game: 1, frames: [["x"]] });
+
+      expect(getReplays(room, 1)).toEqual({});
     });
   });
 

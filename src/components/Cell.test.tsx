@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Cell as CellType } from "../lib/types.ts";
 import { Cell } from "./Cell.tsx";
@@ -24,6 +24,25 @@ function defaultProps() {
     onSelect: vi.fn(),
   };
 }
+
+describe("Cell keyboard activation", () => {
+  it.each([
+    "Enter",
+    " ",
+  ])("selects the cell on %j like a button would", (key) => {
+    const props = defaultProps();
+    render(<Cell {...props} row={2} col={5} cell={makeCell()} />);
+    fireEvent.keyDown(screen.getByRole("gridcell"), { key });
+    expect(props.onSelect).toHaveBeenCalledWith(2, 5);
+  });
+
+  it("ignores other keys so digits and arrows reach the game's keyboard hook", () => {
+    const props = defaultProps();
+    render(<Cell {...props} cell={makeCell()} />);
+    fireEvent.keyDown(screen.getByRole("gridcell"), { key: "5" });
+    expect(props.onSelect).not.toHaveBeenCalled();
+  });
+});
 
 describe("Cell accessible state", () => {
   it("announces a conflict in the label, not just via color", () => {
@@ -60,6 +79,36 @@ describe("Cell accessible state", () => {
     expect(
       screen.getByLabelText("Cell row 1 column 1, value 7, given"),
     ).toBeInTheDocument();
+  });
+
+  it("flags a conflicting value with aria-invalid", () => {
+    const { rerender } = render(
+      <Cell
+        {...defaultProps()}
+        cell={makeCell({ value: 5 })}
+        isConflict={true}
+      />,
+    );
+    expect(screen.getByRole("gridcell")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+
+    rerender(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
+    expect(screen.getByRole("gridcell")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("marks given cells read-only and player cells editable", () => {
+    const { rerender } = render(
+      <Cell {...defaultProps()} cell={makeCell({ value: 7, isGiven: true })} />,
+    );
+    expect(screen.getByRole("gridcell")).toHaveAttribute(
+      "aria-readonly",
+      "true",
+    );
+
+    rerender(<Cell {...defaultProps()} cell={makeCell({ value: 7 })} />);
+    expect(screen.getByRole("gridcell")).not.toHaveAttribute("aria-readonly");
   });
 
   it("announces pencil notes", () => {
@@ -169,7 +218,7 @@ describe("Cell chargingDigit", () => {
     // Cell itself must declare `touch-none`, otherwise iOS Safari treats
     // a horizontal drag from a left-edge cell as the system back gesture.
     render(<Cell {...defaultProps()} cell={makeCell({ value: 5 })} />);
-    expect(screen.getByRole("button").className).toContain("touch-none");
+    expect(screen.getByRole("gridcell").className).toContain("touch-none");
   });
 
   it("draws the dragged digit as the landing preview on a valid target", () => {

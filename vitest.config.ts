@@ -9,6 +9,10 @@ export default defineConfig({
     // A spy left installed by a failing test must not cascade into the
     // next test's failure — restore all mocks between tests.
     restoreMocks: true,
+    // jsdom renders of full game screens take ~1s alone but blow past the
+    // 5s default when the CPU is shared (parallel agents, loaded CI
+    // runners). A slow machine is not a failing test.
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       include: ["src/lib/**", "src/hooks/**", "signaling/src/**"],
