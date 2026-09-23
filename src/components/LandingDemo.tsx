@@ -3,6 +3,12 @@ import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { liftForPointerType } from "../hooks/useDigitDrag.ts";
 import { DIGITS } from "../lib/constants.ts";
 import {
+  type FingerStroke,
+  fingerStroke,
+  fingerTravel,
+  type Point,
+} from "../lib/finger-motion.ts";
+import {
   type DemoFrame,
   demoFrame,
   LANDING_DEMO_PUZZLE,
@@ -134,19 +140,31 @@ export function LandingDemo() {
   const playing = useIsSeen(cardRef) && !still;
   const [playhead, setStep] = useState(0);
   const step = still ? LANDING_DEMO_STILL_STEP : playhead;
+  // The step the board shows: it catches up with `step` only once the
+  // finger has reached its target, so a tap changes the board at
+  // touchdown instead of while the finger is still on its way.
+  const [landedStep, setLandedStep] = useState(step);
+  const shownStep = still ? step : landedStep;
+  const landed = shownStep === step;
   const frame = useMemo(
     () => demoFrame(SCRIPT, LANDING_DEMO_PUZZLE, step),
     [step],
   );
+  const shown = useMemo(
+    () => demoFrame(SCRIPT, LANDING_DEMO_PUZZLE, shownStep),
+    [shownStep],
+  );
 
+  // The dwell starts once the gesture has landed, so each step gets its
+  // full reading time after the effect, whatever the trip took.
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || !landed) return;
     const id = setTimeout(
       () => setStep((s) => (s + 1) % SCRIPT.length),
       SCRIPT[step]!.ms,
     );
     return () => clearTimeout(id);
-  }, [step, playing]);
+  }, [step, playing, landed]);
 
   // Scale the full-size stage into the card's box. Measured, not fixed:
   // the real components pick their own layout per breakpoint.
@@ -174,17 +192,56 @@ export function LandingDemo() {
   }, []);
 
   const fingerRef = useRef<HTMLDivElement>(null);
+  const fingerAt = useRef<Point | null>(null);
+  const previousStep = useRef(step);
+  const [stroke, setStroke] = useState<FingerStroke>("touch");
   useLayoutEffect(() => {
+    const from = previousStep.current;
+    previousStep.current = step;
+    const land = () => setLandedStep(step);
     const stage = stageRef.current;
     const finger = fingerRef.current;
-    if (!stage || !finger || !fit) return;
-    const point = fingerPoint(stage, frame);
-    if (!point) return;
-    finger.style.transform = `translate(${point.x - FINGER_PX / 2}px, ${point.y - FINGER_PX / 2}px)`;
+    const point = stage && finger && fit ? fingerPoint(stage, frame) : null;
+    if (!finger || !point) {
+      land();
+      return;
+    }
+    const place = (p: Point) =>
+      `translate(${p.x - FINGER_PX / 2}px, ${p.y - FINGER_PX / 2}px)`;
+    const start = fingerAt.current;
+    fingerAt.current = point;
     finger.style.opacity = "1";
-  }, [frame, fit]);
+    finger.style.transform = place(point);
+    if (!start || still || typeof finger.animate !== "function") {
+      land();
+      return;
+    }
+    const kind = fingerStroke(SCRIPT[from]!.action, SCRIPT[step]!.action);
+    setStroke(kind);
+    const { points, ms } = fingerTravel(start, point, kind);
+    const trip = finger.animate(
+      points.map((p) => ({ transform: place(p) })),
+      { duration: ms, easing: "linear" },
+    );
+    let cancelled = false;
+    trip.finished.then(
+      () => {
+        if (!cancelled) land();
+      },
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+      trip.cancel();
+    };
+  }, [step, frame, fit, still]);
 
-  const pressing = frame.drag !== null || frame.finger.kind === "key";
+  // Lifted while travelling between separate touches; pressed into the
+  // glass once landed on a key, holding, or dragging a digit.
+  const lifted = !landed && stroke === "touch";
+  const holding = landed && shown.chargingDigit !== null;
+  const pressing =
+    !lifted && (shown.drag !== null || frame.finger.kind === "key");
 
   return (
     <div
@@ -209,19 +266,19 @@ export function LandingDemo() {
               so the viewport-sized digits keep their real proportions. */}
           <div className="w-[22rem] sm:w-[30rem] lg:w-[26rem]">
             <Board
-              board={frame.board}
-              selectedCell={frame.selectedCell}
-              conflicts={frame.conflicts}
-              highlightedDigit={frame.highlightedDigit}
+              board={shown.board}
+              selectedCell={shown.selectedCell}
+              conflicts={shown.conflicts}
+              highlightedDigit={shown.highlightedDigit}
               onSelectCell={noop}
-              chargingDigit={frame.chargingDigit}
-              dragState={dragStateOf(frame)}
+              chargingDigit={shown.chargingDigit}
+              dragState={dragStateOf(shown)}
             />
           </div>
           <NumPad
             position="bottom"
-            remainingCounts={remainingCounts(frame)}
-            selectedValue={frame.activeKey}
+            remainingCounts={remainingCounts(shown)}
+            selectedValue={shown.activeKey}
             showRemainingCounts={false}
             disableCompleted
             onTapNumber={noop}
@@ -229,16 +286,19 @@ export function LandingDemo() {
           <div
             ref={fingerRef}
             data-testid="landing-demo-finger"
-            className="absolute top-0 left-0 rounded-full transition-[transform,opacity] duration-300 ease-out opacity-0"
+            className="absolute top-0 left-0 rounded-full transition-opacity duration-300 opacity-0"
             style={{ width: FINGER_PX, height: FINGER_PX }}
           >
             <span
-              className={`absolute inset-0 rounded-full border-[3px] border-accent bg-accent/30 ring-2 ring-bg-primary/80 shadow-lg shadow-accent/40 transition-transform duration-150 ${pressing ? "scale-90" : "scale-100"}`}
+              className={`absolute inset-0 rounded-full border-[3px] border-accent ring-2 ring-bg-primary/80 transition-[transform,background-color,box-shadow] ${holding ? "duration-700 scale-[0.82] bg-accent/45" : pressing ? "duration-100 scale-90 bg-accent/35" : lifted ? "duration-200 scale-110 bg-accent/20 shadow-xl shadow-accent/30" : "duration-200 scale-100 bg-accent/30 shadow-lg shadow-accent/40"}`}
             />
-            <span
-              key={step}
-              className="absolute inset-0 rounded-full border-[3px] border-accent animate-demo-tap"
-            />
+            {/* One ripple per touchdown: slides and drags stay silent. */}
+            {landed && stroke === "touch" && (
+              <span
+                key={step}
+                className="absolute inset-0 rounded-full border-[3px] border-accent animate-demo-tap"
+              />
+            )}
           </div>
         </div>
       </div>
