@@ -1,25 +1,26 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useMultiplayerAutosave } from "../hooks/useMultiplayerAutosave.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
+import { useReplayRecorder } from "../hooks/useReplayRecorder.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
-import {
-  deleteGame,
-  loadGame,
-  MULTIPLAYER_KEY_PREFIX,
-  saveGame,
-} from "../lib/game-storage.ts";
+import { loadGame, MULTIPLAYER_KEY_PREFIX } from "../lib/game-storage.ts";
 import type { AssistLevel, Cell, DigitStyle } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
-import { GameResult } from "./GameResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
+import {
+  MultiplayerResult,
+  type ReplaySource,
+  replayPlayers,
+} from "./MultiplayerResult.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { TimerPill } from "./TimerPill.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
@@ -61,6 +62,8 @@ export type MultiplayerBoardProps = {
   digitStyle?: DigitStyle | null | undefined;
   /** Host only: changing the pinned palette mid-game. */
   onDigitStyleChange?: ((style: DigitStyle) => void) | undefined;
+  /** The room's side of the match replay; omitted, there is none. */
+  replay?: ReplaySource | undefined;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
   onRematch: () => void;
@@ -81,6 +84,7 @@ export function MultiplayerBoard({
   gameOver,
   digitStyle,
   onDigitStyleChange,
+  replay,
   onProgress,
   onComplete,
   onRematch,
@@ -156,49 +160,27 @@ export function MultiplayerBoard({
     onComplete(serializeBoard(game.board as Cell[][]).values);
   }, [game.status, game.board, onComplete]);
 
-  // Autosave the local board so a transient unmount/remount or page
-  // refresh doesn't wipe in-flight progress. The Yjs doc only carries
-  // the puzzle + opponent progress; the filled cells live here.
-  useEffect(() => {
-    if (game.status === "completed") return;
-    // On rematch this effect and the RESET dispatch share a commit: the
-    // reducer still holds the OLD game's board while gameKey already
-    // points at the new one. Writing that mix would resume game 2
-    // wearing game 1's cells if the tab dies before the next render.
-    const boardMatchesPuzzle = game.board.every((boardRow, r) =>
-      boardRow.every((boardCell, c) => {
-        const ch = puzzle[r * 9 + c];
-        return ch === "."
-          ? !boardCell.isGiven
-          : boardCell.isGiven && boardCell.value === Number(ch);
-      }),
-    );
-    if (!boardMatchesPuzzle) return;
-    const { values, notes } = serializeBoard(game.board as Cell[][]);
-    saveGame(gameKey, {
-      puzzle,
-      values,
-      notes,
-      timer: timerSecondsRef.current,
-      difficulty,
-      assistLevel,
-      hintsUsed: game.hintsUsed,
-    });
-  }, [
-    game.board,
-    game.status,
-    game.hintsUsed,
+  useMultiplayerAutosave({
     gameKey,
     puzzle,
+    board: game.board,
+    status: game.status,
+    hintsUsed: game.hintsUsed,
+    timerSecondsRef,
     difficulty,
     assistLevel,
-  ]);
+  });
 
-  // Clear the save once this player finishes — keyed off local status so
-  // the loser's in-progress save survives the opponent's win.
-  useEffect(() => {
-    if (game.status === "completed") deleteGame(gameKey);
-  }, [game.status, gameKey]);
+  // Recorded from the first move, shared only once the game is over:
+  // a live replay would show the opponent our board mid-race.
+  useReplayRecorder({
+    puzzle,
+    board: game.board,
+    gameNumber,
+    startOffsetMs: initialTimerSeconds * 1000,
+    share: gameOver !== null && replay !== undefined,
+    onShare: (frames) => replay?.share(frames),
+  });
 
   useRecordMultiplayerMatch({
     gameOver,
@@ -269,6 +251,7 @@ export function MultiplayerBoard({
             chargingDigit={chargingDigit}
             dragState={dragState}
             onStartCellDrag={startCellDrag}
+            completed={game.status === "completed"}
           />
           <DigitDragIndicator state={dragState} />
         </>
@@ -299,13 +282,26 @@ export function MultiplayerBoard({
       }
       footer={
         showResult && gameOver && iFinished ? (
-          <GameResult
+          <MultiplayerResult
+            // A rematch closes the replay of the game it replaced.
+            key={gameNumber}
             isWinner={iWon}
             time={formatTime(timerSecondsRef.current)}
             difficulty={difficulty}
-            isMultiplayer
             onNewGame={onBack}
             onRematch={onRematch}
+            replay={
+              replay && {
+                puzzle,
+                solution,
+                players: replayPlayers(
+                  replay,
+                  playerId,
+                  opponentName,
+                  gameOver,
+                ),
+              }
+            }
           />
         ) : undefined
       }

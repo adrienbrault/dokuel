@@ -1,4 +1,6 @@
+import { Swords } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { ChallengeComparison } from "../lib/challenge.ts";
 import {
   DIFFICULTY_BADGE_CLASSES,
   DIFFICULTY_LABELS,
@@ -14,6 +16,8 @@ type GameResultProps = {
   isMultiplayer?: boolean | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
+  /** Multiplayer: opens the replay of both boards. */
+  onWatchReplay?: (() => void) | undefined;
   stats?: { gamesPlayed: number; bestTime: number; averageTime: number } | null;
   isNewPB?: boolean | undefined;
   hintsUsed?: number | undefined;
@@ -21,6 +25,10 @@ type GameResultProps = {
   isDaily?: boolean | undefined;
   tip?: string | undefined;
   onDismissTip?: (() => void) | undefined;
+  /** Verdict against the "beat my time" challenger, when there was one. */
+  challengeResult?: ChallengeComparison | null | undefined;
+  /** A "beat my time" link to share; its absence hides the action. */
+  challengeLink?: { url: string; text: string } | undefined;
 };
 
 export function buildShareText({
@@ -59,6 +67,7 @@ export function GameResult({
   isMultiplayer,
   onRematch,
   onNewGame,
+  onWatchReplay,
   stats,
   isNewPB,
   hintsUsed,
@@ -66,12 +75,19 @@ export function GameResult({
   isDaily,
   tip,
   onDismissTip,
+  challengeResult,
+  challengeLink,
 }: GameResultProps) {
   const [copied, setCopied] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [challengeCopied, setChallengeCopied] = useState(false);
+  const challengeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
       if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+      if (challengeTimerRef.current !== null) {
+        clearTimeout(challengeTimerRef.current);
+      }
     },
     [],
   );
@@ -134,6 +150,36 @@ export function GameResult({
       });
   };
 
+  // Same order as the lobby invite: the native share sheet first, the
+  // clipboard when there is none (desktop) or it fails for a reason
+  // other than the player backing out of it.
+  const handleChallenge = async () => {
+    if (!challengeLink) return;
+    if (navigator.share) {
+      try {
+        await navigator.share(challengeLink);
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(
+        `${challengeLink.text} ${challengeLink.url}`,
+      );
+    } catch {
+      return;
+    }
+    setChallengeCopied(true);
+    if (challengeTimerRef.current !== null) {
+      clearTimeout(challengeTimerRef.current);
+    }
+    challengeTimerRef.current = setTimeout(
+      () => setChallengeCopied(false),
+      2000,
+    );
+  };
+
   return (
     <div className="modal-overlay p-6">
       {isWinner && (
@@ -186,6 +232,24 @@ export function GameResult({
               New Personal Best!
             </span>
           )}
+          {challengeResult && (
+            <div className="flex flex-col items-center gap-0.5 px-3 text-center">
+              <span
+                className={`text-sm font-bold ${
+                  challengeResult.outcome === "won"
+                    ? "text-accent"
+                    : "text-text-secondary"
+                }`}
+              >
+                {challengeResult.headline}
+              </span>
+              {challengeResult.hintNote && (
+                <span className="text-xs text-text-muted">
+                  {challengeResult.hintNote}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {stats && !isMultiplayer && (
@@ -218,6 +282,15 @@ export function GameResult({
               {isMultiplayer ? "Rematch" : "Play Again"}
             </button>
           )}
+          {onWatchReplay && (
+            <button
+              type="button"
+              className="btn btn-secondary w-full py-3 text-lg"
+              onClick={onWatchReplay}
+            >
+              Watch Replay
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary w-full py-3 text-lg"
@@ -226,13 +299,35 @@ export function GameResult({
             New Game
           </button>
           {!isMultiplayer && (
-            <button
-              type="button"
-              className="btn btn-ghost w-full py-2"
-              onClick={handleShare}
+            <div
+              // Side by side when they fit, stacked on the narrowest
+              // phones rather than wrapping a label mid-phrase.
+              className="flex flex-wrap justify-center gap-x-2 w-full"
             >
-              {copied ? "Copied!" : "Share Result"}
-            </button>
+              <button
+                type="button"
+                className={`btn btn-ghost py-2 px-3 whitespace-nowrap ${challengeLink ? "" : "w-full"}`}
+                onClick={handleShare}
+              >
+                {copied ? "Copied!" : "Share Result"}
+              </button>
+              {challengeLink && (
+                <button
+                  type="button"
+                  className="btn btn-ghost py-2 px-3"
+                  onClick={handleChallenge}
+                >
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-semibold text-accent">
+                    <Swords size={15} aria-hidden="true" />
+                    {challengeCopied
+                      ? "Link copied!"
+                      : challengeResult
+                        ? "Challenge back"
+                        : "Challenge a friend"}
+                  </span>
+                </button>
+              )}
+            </div>
           )}
         </div>
         {tip && (

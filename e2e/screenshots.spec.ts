@@ -10,6 +10,7 @@ import {
   preparePage,
   priorEasyStats,
   readBoard,
+  SOLVED_GRID,
   test,
 } from "./fixtures.ts";
 
@@ -172,7 +173,10 @@ test.describe("dark mode", () => {
     // - That cell becomes selected (cell-selected bg)
     // - Same-number cells get highlighted (cell-same-number bg)
     // - Row/col/box cells get highlighted (cell-highlight bg)
-    await page.locator('button[aria-label*="value"]').first().click();
+    await page
+      .locator('[role="gridcell"][aria-label*="value"]')
+      .first()
+      .click();
 
     await page.screenshot({
       path: screenshotPath("solo-cell-selected-dark", testInfo.project.name),
@@ -231,7 +235,10 @@ test("solo game - hold note charging in cell", async ({ page }, testInfo) => {
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
   // Select an empty cell so the hold has a meaningful target
-  await page.locator('button[aria-label*=", empty"]').first().click();
+  await page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first()
+    .click();
 
   // Hold a digit past the threshold so the note commits and the in-cell
   // charge glyph appears, then screenshot. Animations are disabled here,
@@ -263,7 +270,9 @@ test("solo game - drag from numpad mid-flight", async ({ page }, testInfo) => {
 
   // Find an empty cell roughly in the middle of the board to use as drop
   // target. The ghost will be rendered hovering over it.
-  const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+  const emptyCell = page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first();
   const cellBox = await emptyCell.boundingBox();
   if (!cellBox) throw new Error("empty cell not visible");
 
@@ -306,7 +315,9 @@ test("drag from numpad commits the digit on drop", async ({ page }) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+  const emptyCell = page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first();
   const cellPrefix = (await emptyCell.getAttribute("aria-label"))?.split(
     ",",
   )[0];
@@ -343,10 +354,12 @@ test("drag from numpad commits the digit on drop", async ({ page }) => {
   // The dropped 5 must land in the target cell as a value. Match the
   // specific cell and allow state suffixes (e.g. ", conflict") — the
   // board is random, so the dropped digit may legitimately conflict.
-  const dropped = page.locator(`button[aria-label^="${cellPrefix}, value 5"]`);
+  const dropped = page.locator(
+    `[role="gridcell"][aria-label^="${cellPrefix}, value 5"]`,
+  );
   if ((await dropped.count()) === 0) {
     const after = await page
-      .locator(`button[aria-label^="${cellPrefix},"]`)
+      .locator(`[role="gridcell"][aria-label^="${cellPrefix},"]`)
       .first()
       .getAttribute("aria-label");
     throw new Error(`drop did not commit a value; cell is now: ${after}`);
@@ -359,11 +372,15 @@ test("solo game - drag from a filled cell", async ({ page }, testInfo) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const sourceCell = page.locator('button[aria-label*=", value"]').first();
+  const sourceCell = page
+    .locator('[role="gridcell"][aria-label*=", value"]')
+    .first();
   const sourceBox = await sourceCell.boundingBox();
   if (!sourceBox) throw new Error("source cell not visible");
 
-  const emptyCell = page.locator('button[aria-label*=", empty"]').first();
+  const emptyCell = page
+    .locator('[role="gridcell"][aria-label*=", empty"]')
+    .first();
   const emptyBox = await emptyCell.boundingBox();
   if (!emptyBox) throw new Error("empty cell not visible");
 
@@ -400,7 +417,7 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const emptyCells = page.locator('button[aria-label*=", empty"]');
+  const emptyCells = page.locator('[role="gridcell"][aria-label*=", empty"]');
   const enabledNumpad = page.locator(
     '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
   );
@@ -413,7 +430,9 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
 
   // Add pencil notes to subsequent cells by holding numpad digits past
   // the threshold — hold = note.
-  const remainingEmpty = page.locator('button[aria-label*=", empty"]');
+  const remainingEmpty = page.locator(
+    '[role="gridcell"][aria-label*=", empty"]',
+  );
   for (let i = 0; i < 6; i++) {
     const count = await enabledNumpad.count();
     if (count < 2) break;
@@ -423,7 +442,7 @@ test("solo game - in progress with notes", async ({ page }, testInfo) => {
   }
 
   // Deselect by clicking a filled cell for cleaner screenshot
-  await page.locator('button[aria-label*="value"]').first().click();
+  await page.locator('[role="gridcell"][aria-label*="value"]').first().click();
 
   await page.screenshot({
     path: screenshotPath("solo-in-progress", testInfo.project.name),
@@ -447,7 +466,7 @@ test.describe("solo win modal", () => {
       '[role="group"][aria-label="Number pad"]:visible',
     );
 
-    await page.locator('button[aria-label*=", empty"]').click();
+    await page.locator('[role="gridcell"][aria-label*=", empty"]').click();
     await page.keyboard.press("5");
 
     const dialog = page.getByRole("dialog");
@@ -459,6 +478,69 @@ test.describe("solo win modal", () => {
     });
   });
 });
+
+// --- "Beat my time" async challenge ---
+//
+// A challenge link is the seeded solo URL plus ?t=<seconds>&by=<name>.
+// The in-progress scene opens a fresh seeded board from such a link;
+// the win scene reuses the one-cell-from-done save (03:42) against a
+// 4:32 challenger so the verdict reads "You beat Swift Fox by 0:50".
+
+const CHALLENGE_QUERY = "?t=272&by=Swift+Fox";
+
+for (const theme of ["light", "dark"] as const) {
+  const suffix = theme === "dark" ? "-dark" : "";
+
+  test.describe(`solo challenge (${theme})`, () => {
+    test.use({
+      storage: {
+        "sudoku_save_e2e-challenge-win": nearlyWonSave,
+        sudoku_stats: priorEasyStats,
+        sudoku_player_name: "Brave Otter",
+        ...(theme === "dark" ? { sudoku_theme: "dark" } : {}),
+      },
+    });
+
+    test(`solo game - challenge banner${suffix}`, async ({
+      page,
+    }, testInfo) => {
+      await page.goto(`/solo/easy/e2e-challenge${CHALLENGE_QUERY}`);
+      await page.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+      await page.getByText("Swift Fox's time").waitFor();
+      await page.screenshot({
+        path: screenshotPath(
+          `solo-challenge-banner${suffix}`,
+          testInfo.project.name,
+        ),
+      });
+    });
+
+    test(`solo game - challenge result${suffix}`, async ({
+      page,
+    }, testInfo) => {
+      await page.goto(`/solo/easy/e2e-challenge-win${CHALLENGE_QUERY}`);
+      await page.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+
+      await page.locator('button[aria-label*=", empty"]').click();
+      await page.keyboard.press("5");
+
+      const dialog = page.getByRole("dialog");
+      await dialog.getByText("You beat Swift Fox by 0:50").waitFor();
+      await dialog.getByRole("button", { name: "Challenge back" }).waitFor();
+
+      await page.screenshot({
+        path: screenshotPath(
+          `solo-challenge-result${suffix}`,
+          testInfo.project.name,
+        ),
+      });
+    });
+  });
+}
 
 // --- Multiplayer: real two-tab session ---
 //
@@ -575,6 +657,34 @@ test.describe("multiplayer session", () => {
       path: screenshotPath("multiplayer-opponent-finished-banner", project),
     });
 
+    // Host slips once, corrects it, and finishes: both replays now hold
+    // a real game, mistake included.
+    const slip = empties[5]!;
+    const wrong = `${solution.slice(0, slip)}${(Number(solution[slip]) % 9) + 1}${solution.slice(slip + 1)}`;
+    await fillCells(page, wrong, [slip]);
+    // Erase before refilling: the slip counts against its digit, and a
+    // digit placed nine times leaves the pad.
+    await page.getByRole("button", { name: "Erase" }).click();
+    await fillCells(page, solution, empties.slice(5));
+    await page.getByRole("dialog").getByText("Puzzle Complete!").waitFor();
+
+    // Scrub both replays to the middle of the race, where the boards
+    // differ most.
+    for (const [tab, name] of [
+      [page, "multiplayer-replay"],
+      [guest, "multiplayer-replay-dark"],
+    ] as const) {
+      await tab.getByRole("button", { name: "Watch Replay" }).click();
+      await tab
+        .getByRole("group", { name: /^Board: / })
+        .first()
+        .waitFor();
+      const scrubber = tab.getByLabel("Replay time");
+      const max = Number(await scrubber.getAttribute("max"));
+      await scrubber.fill(String(Math.round(max * 0.55)));
+      await tab.screenshot({ path: screenshotPath(name, project) });
+    }
+
     await guest.close();
   });
 });
@@ -636,9 +746,52 @@ test.describe("landing with games in progress", () => {
   });
 });
 
+/**
+ * A lost duel's archived replay for the Stats scene: the opponent fills
+ * every blank at a steady clip, we pencil a few notes and fall behind.
+ */
+function archivedDuelReplay() {
+  const blanks = [
+    0, 2, 4, 10, 12, 14, 20, 22, 24, 30, 32, 34, 40, 42, 44, 50, 52, 54, 60, 62,
+  ];
+  const puzzle = [...SOLVED_GRID]
+    .map((ch, i) => (blanks.includes(i) ? "." : ch))
+    .join("");
+  const place = (i: number) => Number(SOLVED_GRID[i]);
+  const noteMask = (digits: number[]) =>
+    digits.reduce((m, d) => m | (1 << (d - 1)), 0) << 4;
+  return JSON.stringify([
+    {
+      roomId: "room-4",
+      gameNumber: 1,
+      puzzle,
+      solution: SOLVED_GRID,
+      me: {
+        name: "You",
+        color: "#3B82F6",
+        won: false,
+        frames: [
+          [4_000, 60, noteMask([1, 3, 9])],
+          [7_000, 62, noteMask([2, 8])],
+          ...blanks
+            .slice(0, 9)
+            .map((i, k) => [12_000 + k * 9_000, i, place(i)]),
+        ],
+      },
+      opponent: {
+        name: "Lucky Bear",
+        color: "#EF4444",
+        won: true,
+        frames: blanks.map((i, k) => [3_000 + k * 5_500, i, place(i)]),
+      },
+    },
+  ]);
+}
+
 test.describe("stats with multiplayer history", () => {
   test.use({
     storage: {
+      sudoku_mp_replays: archivedDuelReplay(),
       sudoku_stats: JSON.stringify([
         {
           difficulty: "easy",
@@ -758,6 +911,18 @@ test.describe("stats with multiplayer history", () => {
       fullPage: true,
     });
   });
+
+  test("stats page - duel replay", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /stats/i }).click();
+    await page.getByRole("button", { name: "Replay vs Lucky Bear" }).click();
+    const scrubber = page.getByLabel("Replay time");
+    const max = Number(await scrubber.getAttribute("max"));
+    await scrubber.fill(String(Math.round(max * 0.5)));
+    await page.screenshot({
+      path: screenshotPath("stats-replay", testInfo.project.name),
+    });
+  });
 });
 
 // --- Digit color modes ---
@@ -781,10 +946,15 @@ async function playValuesAndNotes(page: Page) {
     '[role="group"][aria-label="Number pad"]:visible button:not([disabled])',
   );
   for (let i = 0; i < 5; i++) {
-    await page.locator('button[aria-label*=", empty"]').nth(0).click();
+    await page
+      .locator('[role="gridcell"][aria-label*=", empty"]')
+      .nth(0)
+      .click();
     await page.keyboard.press(String((i % 9) + 1));
   }
-  const remainingEmpty = page.locator('button[aria-label*=", empty"]');
+  const remainingEmpty = page.locator(
+    '[role="gridcell"][aria-label*=", empty"]',
+  );
   for (let i = 0; i < 6; i++) {
     const count = await enabledNumpad.count();
     if (count < 2) break;
@@ -792,7 +962,7 @@ async function playValuesAndNotes(page: Page) {
     await holdNumpadDigit(page, enabledNumpad.nth(i % count));
     await holdNumpadDigit(page, enabledNumpad.nth((i + 1) % count));
   }
-  await page.locator('button[aria-label*="value"]').first().click();
+  await page.locator('[role="gridcell"][aria-label*="value"]').first().click();
 }
 
 test.describe("digit colors tinted", () => {
@@ -853,7 +1023,7 @@ test.describe("digit colors interactions", () => {
 
     // Drag across two cells to arm a multi-cell selection, which flips
     // the pad into note mode and swaps in the pencil-mark key faces.
-    const cells = page.locator('button[aria-label*=", empty"]');
+    const cells = page.locator('[role="gridcell"][aria-label*=", empty"]');
     const from = await cells.nth(0).boundingBox();
     const to = await cells.nth(1).boundingBox();
     if (!from || !to) throw new Error("cells not visible");
@@ -873,7 +1043,10 @@ test.describe("digit colors interactions", () => {
     page,
   }, testInfo) => {
     await startEasy(page);
-    await page.locator('button[aria-label*=", empty"]').first().click();
+    await page
+      .locator('[role="gridcell"][aria-label*=", empty"]')
+      .first()
+      .click();
 
     const digit = page
       .locator(
@@ -898,7 +1071,7 @@ test.describe("digit colors interactions", () => {
     await startEasy(page);
 
     const cellBox = await page
-      .locator('button[aria-label*=", empty"]')
+      .locator('[role="gridcell"][aria-label*=", empty"]')
       .first()
       .boundingBox();
     if (!cellBox) throw new Error("empty cell not visible");

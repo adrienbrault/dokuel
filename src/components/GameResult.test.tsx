@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildShareText, GameResult } from "./GameResult.tsx";
 
 describe("GameResult", () => {
@@ -93,6 +93,92 @@ describe("GameResult", () => {
     expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument();
   });
 
+  it("shows the verdict against a challenger, with any hint note", () => {
+    render(
+      <GameResult
+        isWinner={true}
+        time="03:51"
+        onNewGame={vi.fn()}
+        challengeResult={{
+          outcome: "won",
+          headline: "You beat Swift Fox by 0:41",
+          hintNote: "You used hints",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("You beat Swift Fox by 0:41")).toBeInTheDocument();
+    expect(screen.getByText("You used hints")).toBeInTheDocument();
+  });
+
+  describe("challenge share", () => {
+    const link = {
+      url: "https://dokuel.com/solo/easy/k3y?t=231&by=Brave+Otter",
+      text: "Can you beat my 3:51 on this Easy Dokuel sudoku?",
+    };
+
+    afterEach(() => {
+      Object.assign(navigator, { share: undefined });
+    });
+
+    it("hands the link to the Web Share sheet", async () => {
+      const share = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { share });
+      render(
+        <GameResult
+          isWinner={true}
+          time="03:51"
+          onNewGame={vi.fn()}
+          challengeLink={link}
+        />,
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Challenge a friend" }),
+      );
+      expect(share).toHaveBeenCalledWith(link);
+    });
+
+    it("copies text and link when the share sheet is unavailable", async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText } });
+      render(
+        <GameResult
+          isWinner={true}
+          time="03:51"
+          onNewGame={vi.fn()}
+          challengeLink={link}
+        />,
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Challenge a friend" }),
+      );
+      expect(writeText).toHaveBeenCalledWith(`${link.text} ${link.url}`);
+      expect(await screen.findByText("Link copied!")).toBeInTheDocument();
+    });
+
+    it("offers to challenge back after playing someone else's challenge", () => {
+      render(
+        <GameResult
+          isWinner={true}
+          time="03:51"
+          onNewGame={vi.fn()}
+          challengeLink={link}
+          challengeResult={{
+            outcome: "lost",
+            headline: "Swift Fox was 0:12 faster",
+            hintNote: null,
+          }}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Challenge back" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("shows stats grid when stats prop provided", () => {
     render(
       <GameResult
@@ -121,6 +207,26 @@ describe("GameResult", () => {
     );
 
     expect(screen.getByText(/new personal best/i)).toBeInTheDocument();
+  });
+
+  it("offers the match replay when one is available", async () => {
+    const onWatchReplay = vi.fn();
+    const { rerender } = render(
+      <GameResult isWinner={true} time="03:00" onNewGame={vi.fn()} />,
+    );
+    expect(screen.queryByText("Watch Replay")).not.toBeInTheDocument();
+
+    rerender(
+      <GameResult
+        isWinner={true}
+        time="03:00"
+        onNewGame={vi.fn()}
+        onWatchReplay={onWatchReplay}
+      />,
+    );
+    await userEvent.click(screen.getByText("Watch Replay"));
+
+    expect(onWatchReplay).toHaveBeenCalled();
   });
 
   it("shows Play Again in solo mode and Rematch in multiplayer", () => {

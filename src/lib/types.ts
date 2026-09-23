@@ -106,6 +106,16 @@ export type DigitStyle = {
 
 // --- Numpad ---
 
+/**
+ * An async "beat my time" challenge carried by a solo board URL: who
+ * set the time, how long it took, and whether hints helped.
+ */
+export type Challenge = {
+  name: string;
+  seconds: number;
+  hinted: boolean;
+};
+
 export type NumPadPosition = "bottom" | "left" | "right";
 
 /**

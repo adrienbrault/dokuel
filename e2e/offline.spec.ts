@@ -46,7 +46,9 @@ test("a solo game starts after reloading with no network", async ({
   await expect(
     page.locator('[role="group"][aria-label="Number pad"]:visible'),
   ).toBeVisible();
-  await expect(page.locator('button[aria-label^="Cell row"]')).toHaveCount(81);
+  await expect(
+    page.locator('[role="gridcell"][aria-label^="Cell row"]'),
+  ).toHaveCount(81);
 });
 
 test("a deep link to the daily challenge opens offline", async ({
@@ -59,5 +61,7 @@ test("a deep link to the daily challenge opens offline", async ({
   // Never visited before: served by the cached shell, routed client side.
   await page.goto("/daily");
 
-  await expect(page.locator('button[aria-label^="Cell row"]')).toHaveCount(81);
+  await expect(
+    page.locator('[role="gridcell"][aria-label^="Cell row"]'),
+  ).toHaveCount(81);
 });
