@@ -1,0 +1,343 @@
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { DigitDragState } from "../hooks/useDigitDrag.ts";
+import { liftForPointerType } from "../hooks/useDigitDrag.ts";
+import { DIGITS } from "../lib/constants.ts";
+import {
+  type FingerStroke,
+  fingerStroke,
+  fingerTravel,
+  type Point,
+} from "../lib/finger-motion.ts";
+import {
+  type DemoFrame,
+  demoFrame,
+  LANDING_DEMO_PUZZLE,
+  LANDING_DEMO_SCRIPT,
+  LANDING_DEMO_STILL_STEP,
+  LANDING_DEMO_SUMMARY,
+} from "../lib/landing-demo.ts";
+import { Board } from "./Board.tsx";
+import { NumPad } from "./NumPad.tsx";
+
+const SCRIPT = LANDING_DEMO_SCRIPT;
+const noop = () => {};
+
+// A fingertip in stage pixels: about one numpad key wide, like a thumb.
+const FINGER_PX = 60;
+// A touch drag aims above the fingertip (see useDigitDrag); the demo
+// finger sits that far below the cell it is dropping on, like a real one.
+const TOUCH_LIFT_PX = liftForPointerType("touch");
+
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+/** Tracks the OS "reduce motion" setting, live. */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia?.(REDUCED_MOTION).matches ?? false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia?.(REDUCED_MOTION);
+    if (!mq) return;
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
+
+/**
+ * Whether anyone can see `ref`'s element: the tab is visible and the
+ * element is on screen. Assumes it is on screen until told otherwise.
+ */
+function useIsSeen(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [tabVisible, setTabVisible] = useState(() => !document.hidden);
+  const [onScreen, setOnScreen] = useState(true);
+  useEffect(() => {
+    const onChange = () => setTabVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      setOnScreen(entries.some((entry) => entry.isIntersecting));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+  return tabVisible && onScreen;
+}
+
+function remainingCounts(frame: DemoFrame): Record<number, number> {
+  const counts: Record<number, number> = {};
+  for (const n of DIGITS) counts[n] = 9;
+  for (const row of frame.board) {
+    for (const cell of row) {
+      if (cell.value !== null) counts[cell.value] = counts[cell.value]! - 1;
+    }
+  }
+  return counts;
+}
+
+function dragStateOf(frame: DemoFrame): DigitDragState | null {
+  if (!frame.drag) return null;
+  const { digit, row, col, mode } = frame.drag;
+  return {
+    digit,
+    source: { kind: "numpad" },
+    x: 0,
+    y: 0,
+    target: { row, col },
+    invalidTarget: false,
+    mode,
+    lift: TOUCH_LIFT_PX,
+  };
+}
+
+/**
+ * Where the finger should sit for a frame, in unscaled stage pixels,
+ * or null before layout (jsdom, first paint).
+ */
+function fingerPoint(
+  stage: HTMLElement,
+  frame: DemoFrame,
+): { x: number; y: number } | null {
+  const { finger } = frame;
+  const target =
+    finger.kind === "key"
+      ? stage.querySelector(`[data-numpad-digit="${finger.digit}"]`)
+      : stage.querySelector(
+          `[data-row="${finger.row}"][data-col="${finger.col}"]`,
+        );
+  if (!target) return null;
+  const stageRect = stage.getBoundingClientRect();
+  const scale = stageRect.width / (stage.offsetWidth || 1);
+  if (!scale) return null;
+  const rect = target.getBoundingClientRect();
+  const x = (rect.left - stageRect.left + rect.width / 2) / scale;
+  let y = (rect.top - stageRect.top + rect.height / 2) / scale;
+  if (finger.kind === "cell" && finger.half) {
+    const quarter = rect.height / 4 / scale;
+    y += (finger.half === "top" ? -quarter : quarter) + TOUCH_LIFT_PX;
+  }
+  return { x, y };
+}
+
+/**
+ * The landing's self-playing tutorial: the real Board and NumPad,
+ * scaled down and inert, driven by LANDING_DEMO_SCRIPT while a soft
+ * fingertip shows each gesture and a caption names it.
+ *
+ * It never takes input: the stage is inert and pointer-transparent, so
+ * no gesture hook fires (no sounds, no haptics) and nothing is saved.
+ */
+export function LandingDemo() {
+  const still = usePrefersReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+  // Nobody watching, no timers: the loop costs nothing in a background
+  // tab or scrolled away, and resumes on the step it was showing.
+  const playing = useIsSeen(cardRef) && !still;
+  const [playhead, setStep] = useState(0);
+  const step = still ? LANDING_DEMO_STILL_STEP : playhead;
+  // The step the board shows: it catches up with `step` only once the
+  // finger has reached its target, so a tap changes the board at
+  // touchdown instead of while the finger is still on its way.
+  const [landedStep, setLandedStep] = useState(step);
+  const shownStep = still ? step : landedStep;
+  const landed = shownStep === step;
+  const frame = useMemo(
+    () => demoFrame(SCRIPT, LANDING_DEMO_PUZZLE, step),
+    [step],
+  );
+  const shown = useMemo(
+    () => demoFrame(SCRIPT, LANDING_DEMO_PUZZLE, shownStep),
+    [shownStep],
+  );
+
+  // The dwell starts once the gesture has landed, so each step gets its
+  // full reading time after the effect, whatever the trip took.
+  useEffect(() => {
+    if (!playing || !landed) return;
+    const id = setTimeout(
+      () => setStep((s) => (s + 1) % SCRIPT.length),
+      SCRIPT[step]!.ms,
+    );
+    return () => clearTimeout(id);
+  }, [step, playing, landed]);
+
+  // Scale the full-size stage into the card's box. Measured, not fixed:
+  // the real components pick their own layout per breakpoint.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<{ scale: number; height: number } | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const stage = stageRef.current;
+    if (!box || !stage) return;
+    const update = () => {
+      const w = stage.offsetWidth;
+      if (!w || !box.clientWidth) return;
+      const scale = box.clientWidth / w;
+      setFit({ scale, height: stage.offsetHeight * scale });
+    };
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    observer.observe(box);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  const fingerRef = useRef<HTMLDivElement>(null);
+  const fingerAt = useRef<Point | null>(null);
+  const previousStep = useRef(step);
+  const [stroke, setStroke] = useState<FingerStroke>("touch");
+  useLayoutEffect(() => {
+    const from = previousStep.current;
+    previousStep.current = step;
+    const land = () => setLandedStep(step);
+    const stage = stageRef.current;
+    const finger = fingerRef.current;
+    const point = stage && finger && fit ? fingerPoint(stage, frame) : null;
+    if (!finger || !point) {
+      land();
+      return;
+    }
+    const place = (p: Point) =>
+      `translate(${p.x - FINGER_PX / 2}px, ${p.y - FINGER_PX / 2}px)`;
+    const start = fingerAt.current;
+    fingerAt.current = point;
+    finger.style.opacity = "1";
+    finger.style.transform = place(point);
+    if (!start || still || typeof finger.animate !== "function") {
+      land();
+      return;
+    }
+    const kind = fingerStroke(SCRIPT[from]!.action, SCRIPT[step]!.action);
+    setStroke(kind);
+    const { points, ms } = fingerTravel(start, point, kind);
+    const trip = finger.animate(
+      points.map((p) => ({ transform: place(p) })),
+      { duration: ms, easing: "linear" },
+    );
+    let cancelled = false;
+    trip.finished.then(
+      () => {
+        if (!cancelled) land();
+      },
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+      trip.cancel();
+    };
+  }, [step, frame, fit, still]);
+
+  // Lifted while travelling between separate touches; pressed into the
+  // glass once landed on a key, holding, or dragging a digit.
+  const lifted = !landed && stroke === "touch";
+  const holding = landed && shown.chargingDigit !== null;
+  const pressing =
+    !lifted && (shown.drag !== null || frame.finger.kind === "key");
+
+  return (
+    <div
+      ref={cardRef}
+      data-demo-step={step}
+      data-demo-landed={landed}
+      className="card w-full flex items-center gap-3.5 p-3 short:p-2.5 lg:flex-col lg:items-stretch"
+    >
+      <div
+        ref={boxRef}
+        className="relative shrink-0 w-36 short:w-28 [@media(max-height:600px)]:w-24 sm:w-40 lg:w-60 lg:self-center overflow-hidden rounded-lg pointer-events-none"
+        style={{ height: fit?.height ?? 0 }}
+        aria-hidden="true"
+        inert
+      >
+        <div
+          ref={stageRef}
+          className="absolute top-0 left-0 origin-top-left flex flex-col lg:flex-row items-center gap-2 lg:gap-4 w-max p-1"
+          style={{
+            transform: `scale(${fit?.scale ?? 0})`,
+          }}
+        >
+          {/* The width a phone/tablet/desktop game board really has,
+              so the viewport-sized digits keep their real proportions. */}
+          <div className="w-[22rem] sm:w-[30rem] lg:w-[26rem]">
+            <Board
+              board={shown.board}
+              selectedCell={shown.selectedCell}
+              conflicts={shown.conflicts}
+              highlightedDigit={shown.highlightedDigit}
+              onSelectCell={noop}
+              chargingDigit={shown.chargingDigit}
+              dragState={dragStateOf(shown)}
+            />
+          </div>
+          <NumPad
+            position="bottom"
+            remainingCounts={remainingCounts(shown)}
+            selectedValue={shown.activeKey}
+            showRemainingCounts={false}
+            disableCompleted
+            onTapNumber={noop}
+          />
+          <div
+            ref={fingerRef}
+            data-testid="landing-demo-finger"
+            className="absolute top-0 left-0 rounded-full transition-opacity duration-300 opacity-0"
+            style={{ width: FINGER_PX, height: FINGER_PX }}
+          >
+            <span
+              className={`absolute inset-0 rounded-full border-[3px] border-accent ring-2 ring-bg-primary/80 transition-[transform,background-color,box-shadow] ${holding ? "duration-700 scale-[0.82] bg-accent/45" : pressing ? "duration-100 scale-90 bg-accent/35" : lifted ? "duration-200 scale-110 bg-accent/20 shadow-xl shadow-accent/30" : "duration-200 scale-100 bg-accent/30 shadow-lg shadow-accent/40"}`}
+            />
+            {/* One ripple per touchdown: slides and drags stay silent. */}
+            {landed && stroke === "touch" && (
+              <span
+                key={step}
+                className="absolute inset-0 rounded-full border-[3px] border-accent animate-demo-tap"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        <span className="label">How to play</span>
+        {still ? (
+          <ul className="flex flex-col gap-0.5 text-xs leading-tight text-text-secondary">
+            {LANDING_DEMO_SUMMARY.map(([gesture, effect]) => (
+              <li key={gesture}>
+                <span className="font-semibold text-text-primary">
+                  {gesture}
+                </span>{" "}
+                {effect}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <p
+              data-testid="landing-demo-caption"
+              className="text-sm font-semibold leading-snug text-balance text-text-primary min-h-[2lh]"
+              aria-hidden="true"
+            >
+              {frame.caption}
+            </p>
+            <span
+              className="h-1 w-full rounded-full bg-bg-inset overflow-hidden"
+              aria-hidden="true"
+            >
+              <span
+                className="block h-full rounded-full bg-accent transition-[width] duration-300"
+                style={{ width: `${((step + 1) / SCRIPT.length) * 100}%` }}
+              />
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

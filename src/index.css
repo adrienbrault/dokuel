@@ -572,6 +572,22 @@ body {
 /* Drop landing: the receiving cell's digit gets the existing
    .animate-pop-in via the Cell render path; nothing extra needed. */
 
+/* Landing demo fingertip: one soft ripple each time the scripted
+   finger touches down, so a tap reads as a tap. */
+@keyframes demo-tap {
+  from {
+    transform: scale(0.6);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+.animate-demo-tap {
+  animation: demo-tap 0.6s ease-out both;
+}
+
 /* ─── Design System: Component Classes ─── */
 
 /* Buttons */

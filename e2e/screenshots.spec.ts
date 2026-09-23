@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
+import { LANDING_DEMO_SCRIPT } from "../src/lib/landing-demo.ts";
 import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
   fillCells,
@@ -21,8 +22,39 @@ function screenshotPath(name: string, project: string) {
   return join(SCREENSHOT_DIR, `${name}--${project.replace(/\s+/g, "-")}.png`);
 }
 
-test("landing page", async ({ page }, testInfo) => {
+// The landing demo loops on timers; a paused clock keeps each landing
+// scene on a known frame instead of wherever the script happened to be.
+async function gotoLandingPaused(page: Page) {
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1000);
   await page.goto("/");
+}
+
+// Replays the demo script up to the frame where a dragged 7 hovers the
+// bottom half of its cell: the preview, stacked notes and the skim's
+// highlight are all on screen at once.
+async function gotoLandingDemoMidDrag(page: Page) {
+  await gotoLandingPaused(page);
+  const toBottomHalf = LANDING_DEMO_SCRIPT.findIndex(
+    (step) => step.action.kind === "drag" && step.action.mode === "note",
+  );
+  // The finger travels on real animation time while the clock is
+  // paused, and a step's dwell only starts once it has landed: wait for
+  // each landing before running that step's dwell.
+  for (const [i, step] of LANDING_DEMO_SCRIPT.slice(
+    0,
+    toBottomHalf,
+  ).entries()) {
+    await page
+      .locator(`[data-demo-step="${i}"][data-demo-landed="true"]`)
+      .waitFor();
+    await page.clock.runFor(step.ms);
+  }
+  await page.getByText("Bottom half pencils a note").waitFor();
+}
+
+test("landing page", async ({ page }, testInfo) => {
+  await gotoLandingPaused(page);
   await page.screenshot({
     path: screenshotPath("landing", testInfo.project.name),
   });
@@ -116,7 +148,7 @@ test.describe("dark mode", () => {
   test.use({ storage: { sudoku_theme: "dark" } });
 
   test("landing page - dark mode", async ({ page }, testInfo) => {
-    await page.goto("/");
+    await gotoLandingPaused(page);
     await page.screenshot({
       path: screenshotPath("landing-dark", testInfo.project.name),
     });
@@ -509,7 +541,7 @@ for (const theme of ["light", "dark"] as const) {
         '[role="group"][aria-label="Number pad"]:visible',
       );
 
-      await page.locator('button[aria-label*=", empty"]').click();
+      await page.locator('[role="gridcell"][aria-label*=", empty"]').click();
       await page.keyboard.press("5");
 
       const dialog = page.getByRole("dialog");
@@ -684,6 +716,51 @@ test("solo game - settings popover open", async ({ page }, testInfo) => {
 
   await page.screenshot({
     path: screenshotPath("solo-settings-popover", testInfo.project.name),
+  });
+});
+
+test("landing - gesture demo mid-drag", async ({ page }, testInfo) => {
+  await gotoLandingDemoMidDrag(page);
+  await page.screenshot({
+    path: screenshotPath("landing-demo", testInfo.project.name),
+  });
+});
+
+test.describe("landing demo in dark mode", () => {
+  test.use({ storage: { sudoku_theme: "dark" } });
+
+  test("landing - gesture demo mid-drag (dark mode)", async ({
+    page,
+  }, testInfo) => {
+    await gotoLandingDemoMidDrag(page);
+    await page.screenshot({
+      path: screenshotPath("landing-demo-dark", testInfo.project.name),
+    });
+  });
+});
+
+// Reduced motion: one still frame beside the full list of gestures.
+test("landing - gesture demo under reduced motion", async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByText("pencils a note").waitFor();
+  await page.screenshot({
+    path: screenshotPath("landing-demo-still", testInfo.project.name),
+  });
+});
+
+// Once a game is finished the demo is gone: the actions come first.
+test.describe("landing for a returning player", () => {
+  test.use({ storage: { sudoku_stats: priorEasyStats } });
+
+  test("landing - returning player", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Start Solo" }).waitFor();
+    await page.screenshot({
+      path: screenshotPath("landing-returning", testInfo.project.name),
+    });
   });
 });
 

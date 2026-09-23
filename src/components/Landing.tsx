@@ -1,22 +1,20 @@
 import {
-  CalendarDays,
   CalendarHeart,
   ChartColumn,
   Check,
   ChevronRight,
   Flame,
-  Globe,
   LogIn,
   Play,
   Swords,
   Trash2,
-  Zap,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { todayLocalISO } from "../lib/date.ts";
 import { formatShortDate, formatTime } from "../lib/format.ts";
+import { hasFinishedAGame } from "../lib/game-history.ts";
 import {
   deleteGame,
   listSavedGames,
@@ -24,7 +22,7 @@ import {
   pruneAbandonedSaves,
   type SavedGameSummary,
 } from "../lib/game-storage.ts";
-import { getStats } from "../lib/stats.ts";
+import { LandingDemo } from "./LandingDemo.tsx";
 
 // Past this many, the continue rows stop reading as a menu and start
 // reading as a log. The rest stay one tap away.
@@ -79,10 +77,9 @@ export function Landing({
     deleteGame(key);
     setSavedGames((prev) => prev.filter((g) => g.key !== key));
   }, []);
-  const isReturningUser = useMemo(
-    () => savedGames.length > 0 || getStats().length > 0,
-    [savedGames],
-  );
+  // Until a game is finished the landing teaches the gestures;
+  // afterwards it goes straight to the actions.
+  const isFirstTimer = useMemo(() => !hasFinishedAGame(), []);
 
   const dailySub = completed
     ? `${formatShortDate(today)} · completed`
@@ -101,20 +98,13 @@ export function Landing({
         </p>
       </header>
 
-      {!isReturningUser && (
-        <div className="flex flex-col gap-2.5 w-full">
-          <FeatureRow
-            icon={<Zap size={16} aria-hidden="true" />}
-            text="Race a friend in real time, peer-to-peer"
-          />
-          <FeatureRow
-            icon={<CalendarDays size={16} aria-hidden="true" />}
-            text="A fresh daily challenge for everyone"
-          />
-          <FeatureRow
-            icon={<Globe size={16} aria-hidden="true" />}
-            text="Mobile & desktop — dark mode, haptics, sounds"
-          />
+      {isFirstTimer && (
+        // A first game already under way pushes the actions down; on a
+        // short screen the actions win and the demo steps aside.
+        <div
+          className={`w-full ${savedGames.length > 0 ? "short:hidden" : ""}`}
+        >
+          <LandingDemo />
         </div>
       )}
 
@@ -198,20 +188,6 @@ export function Landing({
           <span>Open source</span>
         </a>
       </div>
-    </div>
-  );
-}
-
-function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span
-        className="icon-chip w-8 h-8 bg-accent-light text-accent"
-        aria-hidden="true"
-      >
-        {icon}
-      </span>
-      <span className="text-sm text-text-secondary">{text}</span>
     </div>
   );
 }
