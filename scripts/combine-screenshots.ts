@@ -111,6 +111,16 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
     ],
   },
   {
+    name: "challenge",
+    title: "Beat my time challenge",
+    scenes: [
+      "solo-challenge-banner",
+      "solo-challenge-banner-dark",
+      "solo-challenge-result",
+      "solo-challenge-result-dark",
+    ],
+  },
+  {
     name: "numpad",
     title: "Numpad positions",
     scenes: ["solo-game", "solo-numpad-left", "solo-numpad-right"],
@@ -125,6 +135,9 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
       "multiplayer-progress-bars-dark",
       "multiplayer-progress-hidden",
       "multiplayer-settings-toggle",
+      "multiplayer-replay",
+      "multiplayer-replay-dark",
+      "stats-replay",
     ],
   },
   {

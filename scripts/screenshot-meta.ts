@@ -99,6 +99,13 @@ export function sceneLabel(scene: string): string {
     "multiplayer-progress-bars-dark": "Multiplayer · progress bars (dark)",
     "multiplayer-progress-hidden": "Multiplayer · progress hidden",
     "multiplayer-settings-toggle": "Multiplayer · settings toggle",
+    "solo-challenge-banner": "Challenge · banner",
+    "solo-challenge-banner-dark": "Challenge · banner (dark)",
+    "solo-challenge-result": "Challenge · result",
+    "solo-challenge-result-dark": "Challenge · result (dark)",
+    "multiplayer-replay": "Multiplayer · match replay",
+    "multiplayer-replay-dark": "Multiplayer · match replay (dark)",
+    "stats-replay": "Stats · duel replay",
   };
   return overrides[scene] ?? titleCase(scene);
 }

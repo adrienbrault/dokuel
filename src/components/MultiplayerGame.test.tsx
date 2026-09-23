@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getArchivedReplay } from "../lib/replay-archive.ts";
 import type { RoomState } from "../lib/types.ts";
 import { MultiplayerGame } from "./MultiplayerGame.tsx";
 
@@ -61,6 +62,8 @@ function makeMp() {
     setAssistLevel: vi.fn(),
     setDifficulty: vi.fn(),
     setDigitStyle: vi.fn(),
+    sendReplay: vi.fn(),
+    replays: {} as Record<string, number[][]>,
   };
 }
 
@@ -243,6 +246,48 @@ describe("MultiplayerGame disconnect overlay", () => {
     mockMp.gameOver = { winnerId: "me", winnerName: "Me" };
     renderGame();
     expect(screen.queryByText("Opponent disconnected")).not.toBeInTheDocument();
+  });
+});
+
+describe("MultiplayerGame replay", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+  });
+
+  it("shares our replay with the room once the game is over", () => {
+    mockMp.gameOver = { winnerId: "opp", winnerName: "Opponent" };
+    renderGame();
+
+    expect(mockMp.sendReplay).toHaveBeenCalledWith([]);
+  });
+
+  it("archives the finished match for the Stats screen", () => {
+    mockMp.gameOver = { winnerId: "me", winnerName: "Me" };
+    mockMp.replays = { me: [[1_000, 0, 5]], opp: [[2_000, 1, 9]] };
+    renderGame();
+
+    expect(getArchivedReplay("test-room", 1)?.opponent?.name).toBe("Opponent");
+  });
+
+  it("replays the opponent's board from the room", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.gameOver = { winnerId: "me", winnerName: "Me" };
+      mockMp.replays = { me: [[1_000, 0, 5]], opp: [[2_000, 1, 9]] };
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      fireEvent.click(screen.getByText("Watch Replay"));
+
+      expect(
+        screen.getByRole("group", { name: "Board: Opponent" }),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

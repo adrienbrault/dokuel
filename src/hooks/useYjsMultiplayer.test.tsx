@@ -213,6 +213,10 @@ describe("useYjsMultiplayer", () => {
       result.current.sendComplete(solution);
     });
     expect(doc.getMap("room").get("winnerId")).toBe("p1");
+    act(() => {
+      result.current.sendReplay([[0, 2, 4]]);
+    });
+    expect(result.current.replays).toEqual({ p1: [[0, 2, 4]] });
 
     act(() => {
       result.current.sendProgress(7, 91);

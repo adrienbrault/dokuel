@@ -91,6 +91,23 @@ settings popover):
   localStorage, kept per assist level
 - Win modal with stats summary, personal best indicator, and share button
 - Confetti celebration animation on completion
+- "Beat my time" async challenges, for when a live 1v1 is not practical:
+  - The win modal offers "Challenge a friend", which shares the board URL
+    plus the finisher's time and name (`/solo/<difficulty>/<key>?t=<seconds>&by=<name>`,
+    `&h=1` when hints were used) through the Web Share API, falling back
+    to copying the invite line and link to the clipboard
+  - Opening such a link shows a small "<name>'s time 4:32" pill under the
+    header while playing; the challenge is saved with the game, so it
+    survives a refresh or a resume from the landing list
+  - On the win the result compares: "You beat <name> by 0:41",
+    "<name> was 0:12 faster" or "Dead heat with <name>", notes who used
+    hints if anyone did, and offers "Challenge back" with the player's
+    own time
+  - Link values are untrusted: the time is clamped (1 second to just under
+    a day), the name trimmed, stripped of control characters and capped;
+    a link without a usable time is a plain solo board
+  - Not offered on the daily challenge: `/daily` resolves to the viewer's
+    local date, so a link opened later could land on a different board
 
 ### Daily Challenge
 - Same puzzle for everyone, every day

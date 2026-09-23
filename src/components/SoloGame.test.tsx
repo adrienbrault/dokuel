@@ -43,6 +43,25 @@ describe("SoloGame numpad selection", () => {
     expect(document.activeElement).toBe(gear);
   });
 
+  it("announces completion to screen readers when the last digit lands", () => {
+    const oneLeft = `${SOLVED.slice(0, 8)}.${SOLVED.slice(9)}`;
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={oneLeft} onBack={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 9, empty/));
+    const two = screen.getByRole("button", { name: /^2\b/ });
+    fireEvent.pointerDown(two, { pointerType: "touch" });
+    fireEvent.pointerUp(two, { pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
+      "Puzzle complete",
+    );
+  });
+
   it("places a value and keeps the cell selected after a numpad tap", () => {
     render(
       <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
@@ -217,5 +236,114 @@ describe("SoloGame numpad selection", () => {
     expect(screen.queryByTestId("digit-drag-indicator")).toBeNull();
     expect(five.className).toContain("bg-accent");
     expect(three.className).not.toContain("bg-accent");
+  });
+});
+
+describe("SoloGame challenge", () => {
+  const fox = { name: "Swift Fox", seconds: 272, hinted: false };
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("shows the challenger's time to beat while playing", () => {
+    render(
+      <SoloGame
+        difficulty="easy"
+        initialPuzzle={PUZZLE}
+        challenge={fox}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Swift Fox's time")).toBeInTheDocument();
+    expect(screen.getByText("4:32")).toBeInTheDocument();
+  });
+
+  describe("on the win", () => {
+    // One cell short of solved at 3:51, so a single keypress wins.
+    const nearlyWon = {
+      puzzle: `.${SOLVED.slice(1)}`,
+      values: ".".repeat(81),
+      notes: Array.from({ length: 81 }, () => []),
+      timer: 231,
+      difficulty: "easy",
+      assistLevel: "standard",
+      hintsUsed: 0,
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      localStorage.setItem("sudoku_player_name", "Brave Otter");
+      localStorage.setItem("sudoku_save_k3y", JSON.stringify(nearlyWon));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      Object.assign(navigator, { share: undefined });
+    });
+
+    function win() {
+      fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+      fireEvent.keyDown(document, { key: "5" });
+      act(() => {
+        vi.advanceTimersByTime(400);
+      });
+    }
+
+    it("compares against the challenger and offers to challenge back", async () => {
+      const share = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { share });
+      render(
+        <SoloGame
+          difficulty="easy"
+          gameKey="k3y"
+          challenge={fox}
+          onBack={vi.fn()}
+        />,
+      );
+      win();
+
+      expect(
+        screen.getByText("You beat Swift Fox by 0:41"),
+      ).toBeInTheDocument();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Challenge back" }));
+      });
+      expect(share).toHaveBeenCalledWith({
+        text: "Can you beat my 3:51 on this Easy Dokuel sudoku?",
+        url: `${window.location.origin}/solo/easy/k3y?t=231&by=Brave+Otter`,
+      });
+    });
+
+    it("offers a fresh challenge after an unchallenged win", () => {
+      render(<SoloGame difficulty="easy" gameKey="k3y" onBack={vi.fn()} />);
+      win();
+
+      expect(
+        screen.getByRole("button", { name: "Challenge a friend" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/You beat|was \S+ faster|Dead heat/),
+      ).toBeNull();
+    });
+
+    it("keeps challenge links off the daily, whose board depends on the date", () => {
+      render(
+        <SoloGame
+          difficulty="easy"
+          gameKey="k3y"
+          isDaily={true}
+          onBack={vi.fn()}
+        />,
+      );
+      win();
+
+      expect(screen.getByText("You Won!")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /challenge/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

@@ -7,7 +7,7 @@ import {
 } from "../lib/game-completion.ts";
 import { loadGame, type SavedGame, saveGame } from "../lib/game-storage.ts";
 import { generatePuzzleWithSolution, solvePuzzle } from "../lib/sudoku.ts";
-import type { AssistLevel, Cell, Difficulty } from "../lib/types.ts";
+import type { AssistLevel, Cell, Challenge, Difficulty } from "../lib/types.ts";
 import { useSudoku } from "./useSudoku.ts";
 
 type UseResumableSudokuOptions = {
@@ -27,6 +27,9 @@ type UseResumableSudokuOptions = {
   onComplete?:
     | ((timeSeconds: number, result: GameCompletionResult) => void)
     | undefined;
+  /** A "beat my time" challenge from the URL. Wins over the saved one
+   *  (a fresher link), which in turn covers a resume without the URL. */
+  challenge?: Challenge | null | undefined;
 };
 
 /**
@@ -46,6 +49,7 @@ export function useResumableSudoku({
   getTimerSeconds,
   dailyDate,
   onComplete,
+  challenge: linkChallenge,
 }: UseResumableSudokuOptions) {
   // Resolve puzzle + solution + save together: a saved or provided
   // puzzle that fails to solve is treated as corrupt and discarded
@@ -88,6 +92,10 @@ export function useResumableSudoku({
   const [assistLevel, setAssistLevel] = useState<AssistLevel>(
     saved?.assistLevel ?? initialAssistLevel,
   );
+  // Fixed for the life of the board: the component remounts per gameKey.
+  const [challenge] = useState<Challenge | null>(
+    () => linkChallenge ?? saved?.challenge ?? null,
+  );
 
   // Callers pass inline closures (new identity per render); read via a
   // ref so the save effect keys on game state, not render churn — with
@@ -108,6 +116,7 @@ export function useResumableSudoku({
       difficulty,
       assistLevel,
       hintsUsed: game.hintsUsed,
+      challenge,
     };
     saveGame(gameKey, data);
   }, [
@@ -118,6 +127,7 @@ export function useResumableSudoku({
     puzzle,
     difficulty,
     assistLevel,
+    challenge,
   ]);
 
   // Flush on pagehide/tab-hide: the effect above only fires on state
@@ -136,6 +146,7 @@ export function useResumableSudoku({
         difficulty,
         assistLevel,
         hintsUsed: game.hintsUsed,
+        challenge,
       });
     };
     const onVisibility = () => {
@@ -155,6 +166,7 @@ export function useResumableSudoku({
     puzzle,
     difficulty,
     assistLevel,
+    challenge,
   ]);
 
   // On completion: orchestrate side effects via completeGame, notify caller.
@@ -195,5 +207,6 @@ export function useResumableSudoku({
     initialTimerSeconds: saved?.timer ?? 0,
     assistLevel,
     setAssistLevel,
+    challenge,
   };
 }

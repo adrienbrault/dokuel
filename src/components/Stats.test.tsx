@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { saveMultiplayerGameResult } from "../lib/multiplayer-stats.ts";
+import { saveArchivedReplay } from "../lib/replay-archive.ts";
 import { saveGameResult } from "../lib/stats.ts";
 import { Stats } from "./Stats.tsx";
 
@@ -124,6 +125,57 @@ describe("Stats page — history section", () => {
     expect(within(row).getByText(/brave otter/i)).toBeTruthy();
     expect(within(row).getByText("04:05")).toBeTruthy();
     expect(within(row).getByText(/won/i)).toBeTruthy();
+  });
+
+  it("replays a duel whose moves were archived", () => {
+    const duel = {
+      difficulty: "hard" as const,
+      assistLevel: "standard" as const,
+      time: 245,
+      date: "2026-05-19",
+      won: true,
+      opponentName: "Brave Otter",
+    };
+    saveMultiplayerGameResult({
+      ...duel,
+      timestamp: 1,
+      roomId: "room-old",
+      gameNumber: 1,
+    });
+    saveMultiplayerGameResult({
+      ...duel,
+      timestamp: 2,
+      roomId: "room-1",
+      gameNumber: 1,
+    });
+    saveArchivedReplay({
+      roomId: "room-1",
+      gameNumber: 1,
+      puzzle: `.${"1".repeat(80)}`,
+      solution: null,
+      me: { name: "You", color: "#3B82F6", won: true, frames: [[0, 0, 2]] },
+      opponent: {
+        name: "Brave Otter",
+        color: "#EF4444",
+        won: false,
+        frames: [[900, 0, 3]],
+      },
+    });
+    render(<Stats onBack={vi.fn()} />);
+
+    // Only the archived duel offers one: older matches were never recorded.
+    const replayButtons = screen.getAllByRole("button", { name: /^Replay/ });
+    expect(replayButtons).toHaveLength(1);
+    fireEvent.click(replayButtons[0]!);
+
+    expect(
+      screen.getByRole("group", { name: "Board: Brave Otter" }),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Stats/ }));
+    expect(
+      screen.queryByRole("group", { name: "Board: Brave Otter" }),
+    ).toBeNull();
   });
 
   it("logs solo wins and duels together, newest first", () => {
