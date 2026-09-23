@@ -235,6 +235,10 @@ Each feature sheet shows related scenes across all 4 devices (devices as rows).
 #### Dark-mode pairs (difficulty & multiplayer)
 
 <a href="https://adrienbrault.github.io/dokuel/combined/feature--dark-mode-b.png"><img src="https://adrienbrault.github.io/dokuel/combined/feature--dark-mode-b.png" width="800" alt="Dark-mode pairs (difficulty & multiplayer)" /></a>
+
+#### challenge
+
+<a href="https://adrienbrault.github.io/dokuel/combined/feature--challenge.png"><img src="https://adrienbrault.github.io/dokuel/combined/feature--challenge.png" width="800" alt="challenge" /></a>
 <!-- screenshot-matrix:end -->
 
 ## License
