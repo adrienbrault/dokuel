@@ -445,6 +445,69 @@ test.describe("solo win modal", () => {
   });
 });
 
+// --- "Beat my time" async challenge ---
+//
+// A challenge link is the seeded solo URL plus ?t=<seconds>&by=<name>.
+// The in-progress scene opens a fresh seeded board from such a link;
+// the win scene reuses the one-cell-from-done save (03:42) against a
+// 4:32 challenger so the verdict reads "You beat Swift Fox by 0:50".
+
+const CHALLENGE_QUERY = "?t=272&by=Swift+Fox";
+
+for (const theme of ["light", "dark"] as const) {
+  const suffix = theme === "dark" ? "-dark" : "";
+
+  test.describe(`solo challenge (${theme})`, () => {
+    test.use({
+      storage: {
+        "sudoku_save_e2e-challenge-win": nearlyWonSave,
+        sudoku_stats: priorEasyStats,
+        sudoku_player_name: "Brave Otter",
+        ...(theme === "dark" ? { sudoku_theme: "dark" } : {}),
+      },
+    });
+
+    test(`solo game - challenge banner${suffix}`, async ({
+      page,
+    }, testInfo) => {
+      await page.goto(`/solo/easy/e2e-challenge${CHALLENGE_QUERY}`);
+      await page.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+      await page.getByText("Swift Fox's time").waitFor();
+      await page.screenshot({
+        path: screenshotPath(
+          `solo-challenge-banner${suffix}`,
+          testInfo.project.name,
+        ),
+      });
+    });
+
+    test(`solo game - challenge result${suffix}`, async ({
+      page,
+    }, testInfo) => {
+      await page.goto(`/solo/easy/e2e-challenge-win${CHALLENGE_QUERY}`);
+      await page.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+
+      await page.locator('button[aria-label*=", empty"]').click();
+      await page.keyboard.press("5");
+
+      const dialog = page.getByRole("dialog");
+      await dialog.getByText("You beat Swift Fox by 0:50").waitFor();
+      await dialog.getByRole("button", { name: "Challenge back" }).waitFor();
+
+      await page.screenshot({
+        path: screenshotPath(
+          `solo-challenge-result${suffix}`,
+          testInfo.project.name,
+        ),
+      });
+    });
+  });
+}
+
 // --- Multiplayer: real two-tab session ---
 //
 // y-webrtc syncs same-origin tabs over a BroadcastChannel, so two pages

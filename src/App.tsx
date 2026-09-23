@@ -9,10 +9,11 @@ import { SoundToggle } from "./components/SoundToggle.tsx";
 import { Stats } from "./components/Stats.tsx";
 import { MAX_ROOM_KEY_LENGTH } from "./hooks/mp-connection.ts";
 import { useDarkMode } from "./hooks/useDarkMode.ts";
+import { parseChallenge } from "./lib/challenge.ts";
 import { generateId } from "./lib/id.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
-import type { AssistLevel, Difficulty } from "./lib/types.ts";
+import type { AssistLevel, Challenge, Difficulty } from "./lib/types.ts";
 import "./index.css";
 
 // The multiplayer screen pulls in yjs + y-webrtc + y-indexeddb —
@@ -32,6 +33,8 @@ type Screen =
       difficulty: Difficulty;
       gameKey: string;
       assistLevel: AssistLevel;
+      /** A "beat my time" challenge the board was opened with. */
+      challenge?: Challenge | null;
     }
   | { name: "daily" }
   | {
@@ -74,7 +77,7 @@ export function screenToPath(screen: Screen): string {
   }
 }
 
-export function pathToScreen(pathname: string): Screen {
+export function pathToScreen(pathname: string, search = ""): Screen {
   const path = pathname.replace(/^\/+|\/+$/g, "");
 
   if (path === "") return { name: "landing" };
@@ -92,6 +95,7 @@ export function pathToScreen(pathname: string): Screen {
         difficulty: difficulty as Difficulty,
         gameKey,
         assistLevel: "standard",
+        challenge: parseChallenge(search),
       };
     }
     return { name: "landing" };
@@ -116,7 +120,7 @@ export function pathToScreen(pathname: string): Screen {
 
 function App() {
   const [screen, setScreen] = useState<Screen>(() =>
-    pathToScreen(window.location.pathname),
+    pathToScreen(window.location.pathname, window.location.search),
   );
 
   const navigate = useCallback(
@@ -134,7 +138,7 @@ function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setScreen(pathToScreen(window.location.pathname));
+      setScreen(pathToScreen(window.location.pathname, window.location.search));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -223,6 +227,7 @@ function App() {
           difficulty={screen.difficulty}
           gameKey={screen.gameKey}
           assistLevel={screen.assistLevel}
+          challenge={screen.challenge}
           onBack={() => navigate({ name: "landing" })}
           onRematch={() => {
             navigate(

@@ -198,6 +198,33 @@ describe("useResumableSudoku", () => {
     expect(resumed.current.game.hintsUsed).toBe(1);
   });
 
+  it("keeps the challenge through a resume that no longer has it in the URL", () => {
+    const challenge = { name: "Swift Fox", seconds: 272, hinted: false };
+    const puzzle = `..${SOLVED.slice(2)}`;
+    const { result, unmount } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "challenge-key",
+        initialPuzzle: puzzle,
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+        challenge,
+      }),
+    );
+    expect(result.current.challenge).toEqual(challenge);
+    unmount();
+
+    const { result: resumed } = renderHook(() =>
+      useResumableSudoku({
+        gameKey: "challenge-key",
+        difficulty: "easy",
+        initialAssistLevel: "standard",
+        getTimerSeconds: () => 0,
+      }),
+    );
+    expect(resumed.current.challenge).toEqual(challenge);
+  });
+
   it("falls back to initialPuzzle when gameKey has no saved game", () => {
     const puzzle = puzzleMissingOneCell();
     const { result } = renderHook(() =>
