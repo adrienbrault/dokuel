@@ -525,7 +525,7 @@ for (const theme of ["light", "dark"] as const) {
         '[role="group"][aria-label="Number pad"]:visible',
       );
 
-      await page.locator('button[aria-label*=", empty"]').click();
+      await page.locator('[role="gridcell"][aria-label*=", empty"]').click();
       await page.keyboard.press("5");
 
       const dialog = page.getByRole("dialog");
