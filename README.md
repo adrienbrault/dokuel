@@ -216,6 +216,10 @@ Each feature sheet shows related scenes across all 4 devices (devices as rows).
 
 <a href="https://adrienbrault.github.io/dokuel/combined/feature--onboarding.png"><img src="https://adrienbrault.github.io/dokuel/combined/feature--onboarding.png" width="800" alt="Onboarding & landing" /></a>
 
+#### Landing gesture demo (first-timers vs returning)
+
+<a href="https://adrienbrault.github.io/dokuel/combined/feature--landing-demo.png"><img src="https://adrienbrault.github.io/dokuel/combined/feature--landing-demo.png" width="800" alt="Landing gesture demo (first-timers vs returning)" /></a>
+
 #### Solo gameplay
 
 <a href="https://adrienbrault.github.io/dokuel/combined/feature--solo.png"><img src="https://adrienbrault.github.io/dokuel/combined/feature--solo.png" width="800" alt="Solo gameplay" /></a>
