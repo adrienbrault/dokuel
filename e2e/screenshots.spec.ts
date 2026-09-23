@@ -37,7 +37,16 @@ async function gotoLandingDemoMidDrag(page: Page) {
   const toBottomHalf = LANDING_DEMO_SCRIPT.findIndex(
     (step) => step.action.kind === "drag" && step.action.mode === "note",
   );
-  for (const step of LANDING_DEMO_SCRIPT.slice(0, toBottomHalf)) {
+  // The finger travels on real animation time while the clock is
+  // paused, and a step's dwell only starts once it has landed: wait for
+  // each landing before running that step's dwell.
+  for (const [i, step] of LANDING_DEMO_SCRIPT.slice(
+    0,
+    toBottomHalf,
+  ).entries()) {
+    await page
+      .locator(`[data-demo-step="${i}"][data-demo-landed="true"]`)
+      .waitFor();
     await page.clock.runFor(step.ms);
   }
   await page.getByText("Bottom half pencils a note").waitFor();

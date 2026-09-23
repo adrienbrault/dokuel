@@ -246,6 +246,8 @@ export function LandingDemo() {
   return (
     <div
       ref={cardRef}
+      data-demo-step={step}
+      data-demo-landed={landed}
       className="card w-full flex items-center gap-3.5 p-3 short:p-2.5 lg:flex-col lg:items-stretch"
     >
       <div
