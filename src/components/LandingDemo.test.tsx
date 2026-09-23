@@ -121,4 +121,44 @@ describe("LandingDemo", () => {
     expect(caption()).toBe(SECOND.caption);
     vi.unstubAllGlobals();
   });
+  it("fills the cell only once the finger has touched down on the key", async () => {
+    // A real layout and animation clock, which jsdom lacks: the stage
+    // measures, and each finger trip finishes when the test says so.
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(300);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(300);
+    vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(100);
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: 0, width: 100, height: 100 }),
+    );
+    const trips: (() => void)[] = [];
+    Element.prototype.animate = vi.fn(() => {
+      let land = () => {};
+      const finished = new Promise<void>((resolve) => {
+        land = resolve;
+      });
+      trips.push(land);
+      return { finished, cancel: () => {} } as unknown as Animation;
+    });
+    const { container } = render(<LandingDemo />);
+    const tapped = () =>
+      container
+        .querySelector('[data-row="2"][data-col="0"]')
+        ?.getAttribute("aria-label");
+    await act(async () => {
+      trips.shift()?.();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(FIRST.ms);
+    });
+    expect(caption()).toBe(SECOND.caption);
+    expect(tapped()).not.toContain("value 1");
+
+    await act(async () => {
+      trips.shift()?.();
+    });
+    expect(tapped()).toContain("value 1");
+    // @ts-expect-error restoring jsdom's missing API
+    delete Element.prototype.animate;
+  });
 });
