@@ -37,7 +37,7 @@ test.describe("game completion", () => {
     page,
   }) => {
     await page.goto("/solo/easy/e2e-done");
-    await page.locator('button[aria-label*=", empty"]').click();
+    await page.locator('[role="gridcell"][aria-label*=", empty"]').click();
     await page.keyboard.press("5");
 
     const dialog = page.getByRole("dialog");
@@ -65,20 +65,20 @@ test("an in-progress solo game survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const cell = page.locator('button[aria-label*=", empty"]').first();
+  const cell = page.locator('[role="gridcell"][aria-label*=", empty"]').first();
   const label = await cell.getAttribute("aria-label");
   const prefix = label?.split(",")[0];
   if (!prefix) throw new Error("empty cell has no accessible name");
   await cell.click();
   await page.keyboard.press("7");
   await expect(
-    page.locator(`button[aria-label^="${prefix}, value 7"]`),
+    page.locator(`[role="gridcell"][aria-label^="${prefix}, value 7"]`),
   ).toBeVisible();
 
   // The URL carries the game key, so a reload must restore the board.
   await page.reload();
   await expect(
-    page.locator(`button[aria-label^="${prefix}, value 7"]`),
+    page.locator(`[role="gridcell"][aria-label^="${prefix}, value 7"]`),
   ).toBeVisible();
 });
 
@@ -123,7 +123,7 @@ test("tapping a digit notes a drag-selected range, then hands off to highlights"
   if (start === -1) throw new Error("no adjacent empty pair on easy board");
   const cellAt = (idx: number) =>
     page.locator(
-      `button[aria-label^="Cell row ${Math.floor(idx / 9) + 1} column ${(idx % 9) + 1},"]`,
+      `[role="gridcell"][aria-label^="Cell row ${Math.floor(idx / 9) + 1} column ${(idx % 9) + 1},"]`,
     );
   const boxA = await cellAt(start).boundingBox();
   const boxB = await cellAt(start + 1).boundingBox();
@@ -191,7 +191,7 @@ test("holding a numpad digit writes a pencil note", async ({ page }) => {
   await page.getByRole("button", { name: "Easy" }).click();
   await page.waitForSelector('[role="group"][aria-label="Number pad"]:visible');
 
-  const cell = page.locator('button[aria-label*=", empty"]').first();
+  const cell = page.locator('[role="gridcell"][aria-label*=", empty"]').first();
   const label = await cell.getAttribute("aria-label");
   const prefix = label?.split(",")[0];
   if (!prefix) throw new Error("empty cell has no accessible name");
@@ -205,6 +205,8 @@ test("holding a numpad digit writes a pencil note", async ({ page }) => {
   await holdNumpadDigit(page, digit);
 
   await expect(
-    page.locator(`button[aria-label^="${prefix},"][aria-label*="notes"]`),
+    page.locator(
+      `[role="gridcell"][aria-label^="${prefix},"][aria-label*="notes"]`,
+    ),
   ).toBeVisible();
 });

@@ -15,6 +15,8 @@ const NOTE_GRID_FRACTION = 100 / 3;
 const NOTE_OFFSETS = ["-33.333%", "0%", "33.333%"] as const;
 
 type CellProps = {
+  /** DOM id, referenced by the owning ARIA row's aria-owns. */
+  id?: string | undefined;
   cell: CellType;
   row: number;
   col: number;
@@ -23,6 +25,11 @@ type CellProps = {
   isHighlighted: boolean;
   isSameNumber: boolean;
   isConflict: boolean;
+  /**
+   * True for the one cell the grid's roving tabindex lets Tab land on.
+   * Defaults to true so a Cell rendered on its own stays reachable.
+   */
+  isTabStop?: boolean | undefined;
   isHintRelated?: boolean | undefined;
   isSameNumberRowCol?: boolean | undefined;
   assistLevel?: AssistLevel | undefined;
@@ -50,6 +57,7 @@ type CellProps = {
 };
 
 export const Cell = memo(function Cell({
+  id,
   cell,
   row,
   col,
@@ -58,6 +66,7 @@ export const Cell = memo(function Cell({
   isHighlighted,
   isSameNumber,
   isConflict,
+  isTabStop = true,
   isHintRelated,
   isSameNumberRowCol,
   assistLevel = "standard",
@@ -109,8 +118,14 @@ export const Cell = memo(function Cell({
   }
 
   return (
-    <button
-      type="button"
+    <div
+      id={id}
+      role="gridcell"
+      aria-rowindex={row + 1}
+      aria-colindex={col + 1}
+      aria-selected={isSelected || isMultiSelected}
+      aria-readonly={cell.isGiven || undefined}
+      aria-invalid={(isConflict && cell.value !== null) || undefined}
       className={`
 					relative flex items-center justify-center
 					aspect-square w-full
@@ -133,7 +148,16 @@ export const Cell = memo(function Cell({
       data-drop-mode={
         dropTargetState === "valid" ? (dropMode ?? undefined) : undefined
       }
+      tabIndex={isTabStop ? 0 : -1}
       onClick={() => onSelect(row, col)}
+      onKeyDown={(e) => {
+        // Keep the activation keys the old <button> had, so a keyboard
+        // user who tabs onto a cell can still select it.
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(row, col);
+        }
+      }}
       aria-label={labelParts.join(", ")}
     >
       {cell.value ? (
@@ -228,6 +252,6 @@ export const Cell = memo(function Cell({
           </span>
         </span>
       )}
-    </button>
+    </div>
   );
 });

@@ -204,6 +204,7 @@ export function SoloGame({
             chargingDigit={paused ? null : chargingDigit}
             dragState={paused ? null : dragState}
             onStartCellDrag={paused ? undefined : startCellDrag}
+            completed={game.status === "completed"}
           />
           <DigitDragIndicator state={paused ? null : dragState} />
           {paused && (

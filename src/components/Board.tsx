@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
+import { useGridFocus } from "../hooks/useGridFocus.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
   Board as BoardType,
   Position,
 } from "../lib/types.ts";
+import { BoardAnnouncer } from "./BoardAnnouncer.tsx";
 import { Cell } from "./Cell.tsx";
 
 type BoardProps = {
@@ -54,6 +56,8 @@ type BoardProps = {
         pointerType: string;
       }) => void)
     | undefined;
+  /** True once the puzzle is solved; the live region announces it. */
+  completed?: boolean | undefined;
 };
 
 export function Board({
@@ -70,6 +74,7 @@ export function Board({
   chargingDigit,
   dragState,
   onStartCellDrag,
+  completed,
 }: BoardProps) {
   const isPaper = assistLevel === "paper";
   const isFull = assistLevel === "full";
@@ -153,6 +158,7 @@ export function Board({
     el.addEventListener("touchstart", handler, { passive: false });
     return () => el.removeEventListener("touchstart", handler);
   }, []);
+  const { cellId, tabStop } = useGridFocus(gridRef, selectedCell);
 
   return (
     <div
@@ -168,8 +174,11 @@ export function Board({
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
         }}
         className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
-        role="region"
+        role="grid"
         aria-label="Sudoku board"
+        aria-rowcount={9}
+        aria-colcount={9}
+        aria-multiselectable={onSetSelectedCells ? true : undefined}
         data-board-glow
         onPointerDown={
           onSetSelectedCells ? dragHandlers.onPointerDown : undefined
@@ -182,6 +191,23 @@ export function Board({
           onSetSelectedCells ? dragHandlers.onClickCapture : undefined
         }
       >
+        {/* The DOM groups cells by 3x3 box so the nested CSS grids can
+            paint thin in-box and thick between-box gaps. Rows cut across
+            three boxes, so each ARIA row adopts its cells via aria-owns
+            and the box wrappers are presentational. The row nodes are
+            out of flow (sr-only) so they never take a grid slot. */}
+        {Array.from({ length: 9 }, (_, r) => (
+          // biome-ignore lint/a11y/useFocusableInteractive: grid rows are structural; focus lives on the gridcells (roving tabindex)
+          <div
+            key={`row-${r}`}
+            role="row"
+            aria-rowindex={r + 1}
+            aria-owns={Array.from({ length: 9 }, (_, c) => cellId(r, c)).join(
+              " ",
+            )}
+            className="sr-only"
+          />
+        ))}
         {Array.from({ length: 9 }, (_, boxIdx) => {
           const boxRow = Math.floor(boxIdx / 3);
           const boxCol = boxIdx % 3;
@@ -193,6 +219,7 @@ export function Board({
                 gridTemplateRows: `repeat(3, ${cellPx}px)`,
               }}
               className="grid gap-px bg-border-default"
+              role="none"
             >
               {Array.from({ length: 9 }, (_, cellIdx) => {
                 const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
@@ -255,6 +282,7 @@ export function Board({
                 return (
                   <Cell
                     key={cellKey(rowIdx, colIdx)}
+                    id={cellId(rowIdx, colIdx)}
                     cell={cell}
                     row={rowIdx}
                     col={colIdx}
@@ -266,6 +294,7 @@ export function Board({
                     isHintRelated={isHintRelated}
                     isSameNumberRowCol={isSameNumberRowCol}
                     assistLevel={assistLevel}
+                    isTabStop={tabStop.row === rowIdx && tabStop.col === colIdx}
                     onSelect={onSelectCell}
                     revealDelay={
                       animateReveal && cell.isGiven
@@ -288,6 +317,11 @@ export function Board({
           );
         })}
       </div>
+      <BoardAnnouncer
+        board={board}
+        conflicts={conflicts}
+        completed={completed}
+      />
     </div>
   );
 }
