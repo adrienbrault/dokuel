@@ -94,6 +94,7 @@
       "e2e/**",
       "!e2e/results",
       "!e2e/screenshots",
+      "!!.claude/worktrees",
       "*.ts",
       "*.json"
     ]
