@@ -86,6 +86,7 @@ const DEVICE_PART_TITLES = {
 
 const FEATURE_TITLES: Record<string, string> = {
   onboarding: "Onboarding & landing",
+  "landing-demo": "Landing gesture demo (first-timers vs returning)",
   solo: "Solo gameplay",
   numpad: "Numpad positions",
   multiplayer: "Multiplayer",

@@ -89,6 +89,18 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
     ],
   },
   {
+    name: "landing-demo",
+    title: "Landing gesture demo (first-timers vs returning)",
+    scenes: [
+      "landing",
+      "landing-demo",
+      "landing-demo-dark",
+      "landing-demo-still",
+      "landing-returning",
+      "landing-continue",
+    ],
+  },
+  {
     name: "solo",
     title: "Solo gameplay",
     scenes: [

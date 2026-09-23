@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getGameHistory } from "./game-history.ts";
+import { getGameHistory, hasFinishedAGame } from "./game-history.ts";
 import { saveMultiplayerGameResult } from "./multiplayer-stats.ts";
 import { saveGameResult } from "./stats.ts";
 
@@ -70,5 +70,23 @@ describe("game-history", () => {
       "hard",
       "easy",
     ]);
+  });
+
+  describe("hasFinishedAGame", () => {
+    it("is false on a device that has never finished a game", () => {
+      expect(hasFinishedAGame()).toBe(false);
+    });
+
+    it("counts a lost duel as a finished game", () => {
+      saveDuel("2026-01-02", false);
+
+      expect(hasFinishedAGame()).toBe(true);
+    });
+
+    it("counts a solo or daily win as a finished game", () => {
+      saveGameResult("medium", "standard", 300, true);
+
+      expect(hasFinishedAGame()).toBe(true);
+    });
   });
 });

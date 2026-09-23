@@ -27,6 +27,31 @@ Plus contextual entries:
 - **View Stats** — per-difficulty solo stats and multiplayer match history
 - Current daily streak indicator
 
+**Gesture demo (first-timers only)** — a small card above the actions
+that plays a game by itself on the real board and numpad, scaled down
+and non-interactive, with a fingertip and a one-line caption per step.
+It is how new players learn the numpad (there is no separate
+tutorial). One loop of the script (`src/lib/landing-demo.ts`, about
+16 seconds):
+1. Tap a cell to select it, then tap a number to fill it in
+2. Hold a number to pencil a note, hold another to stack a second note
+3. Slide along the pad: each digit is highlighted board-wide
+4. Slide up off the pad into a drag: hovering a cell's top half
+   previews the value, the bottom half previews a note; letting go on
+   the top half places it
+5. Tap a wrong number: the clash turns red (soft validation)
+
+Every step runs through the same digit rules as a real game, so the
+demo cannot show a gesture that behaves differently in play. Rules:
+- Shown until the device has finished any game (solo, daily or duel,
+  won or lost); returning players go straight to the actions
+- On short screens (iPhone SE class) it hides while a first game is in
+  progress, so Continue and the four actions stay above the fold
+- `prefers-reduced-motion`: one still frame beside a terse list of
+  every gesture
+- Pauses (no timers) while the tab is hidden or the card is off screen;
+  no sounds, haptics or storage writes
+
 Offline, Create Game and Join Game are dimmed and disabled with the
 sublabel "Offline: needs internet"; everything else works as usual.
 
