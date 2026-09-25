@@ -112,3 +112,22 @@ export function getMultiplayerStatsForDifficulty(
     bestWinTime,
   };
 }
+
+export type RoomScore = { wins: number; losses: number };
+
+/**
+ * Our running score against the opponent in one room, counting the
+ * game that just ended from its live outcome rather than from its
+ * record: the record may not be written yet, or may predate a
+ * photo-finish that settled the other way.
+ */
+export function getRoomScore(
+  roomId: string,
+  current: { gameNumber: number; won: boolean },
+): RoomScore {
+  const earlier = getMultiplayerStats().filter(
+    (r) => r.roomId === roomId && r.gameNumber !== current.gameNumber,
+  );
+  const wins = earlier.filter((r) => r.won).length + (current.won ? 1 : 0);
+  return { wins, losses: earlier.length + 1 - wins };
+}

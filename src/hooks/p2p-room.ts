@@ -320,6 +320,39 @@ export function requestRematch(room: P2PRoom, difficulty?: Difficulty): void {
   startGame(room, difficulty);
 }
 
+/**
+ * Ask for a rematch of the current game on the current difficulty.
+ * Votes live in their own map, one key per player: two players voting
+ * at the same instant write different keys and both votes survive the
+ * merge, where a shared list would keep only one of them.
+ */
+export function voteRematch(room: P2PRoom, playerId: string): void {
+  const roomMap = room.doc.getMap("room");
+  room.doc.transact(() => {
+    room.doc.getMap("rematch").set(playerId, {
+      gameNumber: (roomMap.get("gameNumber") as number) || 0,
+      difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
+    });
+  });
+}
+
+/** Who asked for a rematch of THIS game on THIS difficulty. */
+function getRematchVotes(
+  room: P2PRoom,
+  gameNumber: number,
+  difficulty: Difficulty,
+): string[] {
+  const votes: string[] = [];
+  for (const [id, raw] of room.doc.getMap("rematch")) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const vote = raw as { gameNumber?: unknown; difficulty?: unknown };
+    if (vote.gameNumber === gameNumber && vote.difficulty === difficulty) {
+      votes.push(id);
+    }
+  }
+  return votes.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
 export function getRoomStatus(room: P2PRoom): string {
   return room.doc.getMap("room").get("status") as string;
 }
@@ -366,10 +399,12 @@ export function getRoomState(room: P2PRoom): RoomState | null {
   const players = getPlayers(room);
   if (players.length === 0) return null;
 
+  const difficulty = (roomMap.get("difficulty") as Difficulty) || "medium";
+  const gameNumber = (roomMap.get("gameNumber") as number) || 0;
   return {
     roomId: room.roomId,
     status: status as RoomState["status"],
-    difficulty: (roomMap.get("difficulty") as Difficulty) || "medium",
+    difficulty,
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
     hostId: (roomMap.get("hostId") as string) || "",
     players,
@@ -384,8 +419,9 @@ export function getRoomState(room: P2PRoom): RoomState | null {
     // a board — a reader must not judge it a forfeit while the writer
     // judges it forged.
     winnerBoard: projectWinnerBoard(roomMap.get("winnerBoard")),
-    gameNumber: (roomMap.get("gameNumber") as number) || 0,
+    gameNumber,
     digitStyle: projectDigitStyle(roomMap.get("digitStyle")),
+    rematchVotes: getRematchVotes(room, gameNumber, difficulty),
   };
 }
 
@@ -399,11 +435,14 @@ export function observeRoomChanges(
 ): () => void {
   const roomMap = room.doc.getMap("room");
   const playersMap = room.doc.getMap("players");
+  const rematchMap = room.doc.getMap("rematch");
   roomMap.observe(callback);
   playersMap.observeDeep(callback);
+  rematchMap.observe(callback);
   return () => {
     roomMap.unobserve(callback);
     playersMap.unobserveDeep(callback);
+    rematchMap.unobserve(callback);
   };
 }
 

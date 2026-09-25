@@ -3,6 +3,7 @@ import {
   getMultiplayerStats,
   getMultiplayerStatsForDifficulty,
   getMultiplayerSummary,
+  getRoomScore,
   saveMultiplayerGameResult,
 } from "./multiplayer-stats.ts";
 
@@ -191,6 +192,42 @@ describe("multiplayer-stats", () => {
         losses: 1,
         winRate: 0,
         bestWinTime: null,
+      });
+    });
+  });
+
+  describe("getRoomScore", () => {
+    it("tallies the games played in this room only", () => {
+      saveMultiplayerGameResult({ ...BASE_RECORD, gameNumber: 1, won: true });
+      saveMultiplayerGameResult({ ...BASE_RECORD, gameNumber: 2, won: false });
+      saveMultiplayerGameResult({ ...BASE_RECORD, gameNumber: 3, won: true });
+      saveMultiplayerGameResult({ ...BASE_RECORD, roomId: "other", won: true });
+
+      expect(getRoomScore("room-abc", { gameNumber: 3, won: true })).toEqual({
+        wins: 2,
+        losses: 1,
+      });
+    });
+
+    it("counts the game that just ended before it is recorded", () => {
+      // The result modal can render in the same commit as the game-over
+      // that the record is written from.
+      saveMultiplayerGameResult({ ...BASE_RECORD, gameNumber: 1, won: true });
+
+      expect(getRoomScore("room-abc", { gameNumber: 2, won: false })).toEqual({
+        wins: 1,
+        losses: 1,
+      });
+    });
+
+    it("lets the live outcome win over a stale record of the same game", () => {
+      // A photo-finish can settle the other way after the optimistic
+      // record was written.
+      saveMultiplayerGameResult({ ...BASE_RECORD, gameNumber: 1, won: true });
+
+      expect(getRoomScore("room-abc", { gameNumber: 1, won: false })).toEqual({
+        wins: 0,
+        losses: 1,
       });
     });
   });

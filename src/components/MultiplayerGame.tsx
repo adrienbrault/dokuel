@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useArchiveMatchReplay } from "../hooks/useArchiveMatchReplay.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
-import type { DigitStyle, Player } from "../lib/types.ts";
+import type { Difficulty, DigitStyle, Player } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
+import type { RematchState } from "./MatchResult.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
 import { Toast } from "./Toast.tsx";
 
@@ -11,7 +12,7 @@ type MultiplayerGameProps = {
   playerId: string;
   playerName: string;
   roomId: string;
-  difficulty: import("../lib/types.ts").Difficulty | null;
+  difficulty: Difficulty | null;
   onRename?: (name: string) => void;
   onBack: () => void;
 };
@@ -37,9 +38,21 @@ export function MultiplayerGame({
   // just fight over it and the guest joined the host's board.
   const lastDigitStyle = useRef<DigitStyle | null>(null);
   const isHost = useRef(false);
+  // Once a game is over the room's difficulty is the NEXT game's, which
+  // the host may change from the result: the board keeps the one its
+  // own game was dealt on.
+  const gameDifficulty = useRef<{ game: number; level: Difficulty } | null>(
+    null,
+  );
   if (mp.roomState) {
     lastDigitStyle.current = mp.roomState.digitStyle;
     isHost.current = mp.roomState.hostId === playerId;
+    if (gameDifficulty.current?.game !== mp.roomState.gameNumber) {
+      gameDifficulty.current = {
+        game: mp.roomState.gameNumber,
+        level: mp.roomState.difficulty,
+      };
+    }
   }
   // Outlives the room: Stats replays the match from this copy.
   useArchiveMatchReplay({
@@ -103,6 +116,12 @@ export function MultiplayerGame({
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
     const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
+    const votes = mp.roomState?.rematchVotes ?? [];
+    const rematch: RematchState = votes.includes(playerId)
+      ? "waiting"
+      : opponent && votes.includes(opponent.id)
+        ? "invited"
+        : "idle";
     return (
       <>
         <MultiplayerBoard
@@ -111,7 +130,7 @@ export function MultiplayerGame({
           solution={mp.solution}
           gameNumber={mp.roomState?.gameNumber ?? 0}
           playerId={playerId}
-          difficulty={mp.roomState?.difficulty ?? "medium"}
+          difficulty={gameDifficulty.current?.level ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
           opponentName={opponent?.name ?? ""}
           opponentProgress={mp.opponentProgress}
@@ -130,7 +149,12 @@ export function MultiplayerGame({
           }}
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
-          onRematch={mp.sendRematch}
+          next={{
+            rematch,
+            difficulty: mp.roomState?.difficulty ?? "medium",
+            onDifficultyChange: isHost.current ? mp.setDifficulty : undefined,
+            onRematch: mp.sendRematch,
+          }}
           onBack={onBack}
         />
         {/* opponentDisconnected is awareness-based — the only signal

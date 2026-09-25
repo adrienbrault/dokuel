@@ -37,6 +37,7 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
     winnerBoard: null,
     gameNumber: 1,
     digitStyle: null,
+    rematchVotes: [],
     ...overrides,
   };
 }

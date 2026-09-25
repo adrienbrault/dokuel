@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getArchivedReplay } from "../lib/replay-archive.ts";
@@ -39,6 +39,7 @@ const roomState: RoomState = {
   winnerBoard: null,
   gameNumber: 1,
   digitStyle: null,
+  rematchVotes: [],
 };
 
 function makeMp() {
@@ -73,16 +74,20 @@ vi.mock("../hooks/useYjsMultiplayer.ts", () => ({
   useYjsMultiplayer: () => mockMp,
 }));
 
-function renderGame() {
-  return render(
+function gameElement() {
+  return (
     <MultiplayerGame
       playerId="me"
       playerName="Me"
       roomId="test-room"
       difficulty={null}
       onBack={() => {}}
-    />,
+    />
   );
+}
+
+function renderGame() {
+  return render(gameElement());
 }
 
 describe("MultiplayerGame full room", () => {
@@ -358,5 +363,86 @@ describe("MultiplayerGame shared digit style", () => {
       emojiTheme: "vehicles",
     });
     expect(localStorage.getItem("sudoku_digit_color_mode")).toBe("off");
+  });
+});
+
+describe("MultiplayerGame rematch", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+  });
+
+  function renderFinished(state: Partial<RoomState>) {
+    mockMp.gameOver = { winnerId: "opp", winnerName: "Opponent" };
+    mockMp.roomState = {
+      ...roomState,
+      status: "finished",
+      winnerId: "opp",
+      winnerName: "Opponent",
+      ...state,
+    };
+    rerenderGame = renderGame().rerender.bind(null, gameElement());
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+  }
+  let rerenderGame: () => void;
+
+  it("invites us to accept once the opponent asked", () => {
+    vi.useFakeTimers();
+    try {
+      renderFinished({ rematchVotes: ["opp"] });
+
+      fireEvent.click(screen.getByRole("button", { name: /accept rematch/i }));
+
+      expect(mockMp.sendRematch).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows we are waiting once we asked", () => {
+    vi.useFakeTimers();
+    try {
+      renderFinished({ rematchVotes: ["me"] });
+
+      expect(
+        screen.getByRole("button", { name: /waiting for opponent/i }),
+      ).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("sends the host's next difficulty to the room", () => {
+    vi.useFakeTimers();
+    try {
+      renderFinished({ hostId: "me" });
+
+      fireEvent.click(screen.getByRole("radio", { name: /expert/i }));
+
+      expect(mockMp.setDifficulty).toHaveBeenCalledWith("expert");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps labelling the finished game with its own difficulty", () => {
+    // Once the host picks the next game's difficulty, the room's
+    // difficulty is no longer the one this game was dealt on.
+    vi.useFakeTimers();
+    try {
+      renderFinished({ hostId: "opp" });
+      mockMp.roomState = { ...mockMp.roomState!, difficulty: "expert" };
+      rerenderGame();
+
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByText("Medium")).toBeInTheDocument();
+      expect(within(dialog).getByText(/next game/i)).toHaveTextContent(
+        /expert/i,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

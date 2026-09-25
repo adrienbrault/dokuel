@@ -1,5 +1,6 @@
 import { Swords } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useDialogFocus } from "../hooks/useDialogFocus.ts";
 import type { ChallengeComparison } from "../lib/challenge.ts";
 import {
   DIFFICULTY_BADGE_CLASSES,
@@ -13,11 +14,8 @@ type GameResultProps = {
   time: string;
   timeSeconds?: number | undefined;
   difficulty?: Difficulty | undefined;
-  isMultiplayer?: boolean | undefined;
   onRematch?: (() => void) | undefined;
   onNewGame: () => void;
-  /** Multiplayer: opens the replay of both boards. */
-  onWatchReplay?: (() => void) | undefined;
   stats?: { gamesPlayed: number; bestTime: number; averageTime: number } | null;
   isNewPB?: boolean | undefined;
   hintsUsed?: number | undefined;
@@ -64,10 +62,8 @@ export function GameResult({
   isWinner,
   time,
   difficulty,
-  isMultiplayer,
   onRematch,
   onNewGame,
-  onWatchReplay,
   stats,
   isNewPB,
   hintsUsed,
@@ -92,37 +88,7 @@ export function GameResult({
     [],
   );
 
-  // Modal focus management: move focus onto the primary action when the
-  // result opens (this is also what makes screen readers announce the
-  // outcome), restore it when the dialog goes away, and keep Tab
-  // cycling inside — without this, Tab walked the covered board.
-  const panelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const previouslyFocused = document.activeElement;
-    const primary = panelRef.current?.querySelector<HTMLElement>("button");
-    primary?.focus();
-    return () => {
-      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
-    };
-  }, []);
-  const trapTab = (e: React.KeyboardEvent) => {
-    if (e.key !== "Tab") return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    const focusable = Array.from(
-      panel.querySelectorAll<HTMLElement>("button, [href], [tabindex]"),
-    ).filter((el) => !el.hasAttribute("disabled"));
-    if (focusable.length === 0) return;
-    const first = focusable[0]!;
-    const last = focusable[focusable.length - 1]!;
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
+  const { panelRef, trapTab } = useDialogFocus();
 
   const handleShare = () => {
     const text = buildShareText({
@@ -227,7 +193,7 @@ export function GameResult({
           <span className="text-5xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
             {time}
           </span>
-          {isNewPB && !isMultiplayer && (
+          {isNewPB && (
             <span className="text-sm font-bold text-accent">
               New Personal Best!
             </span>
@@ -252,7 +218,7 @@ export function GameResult({
           )}
         </div>
 
-        {stats && !isMultiplayer && (
+        {stats && (
           <div className="grid grid-cols-3 gap-2.5 w-full text-center">
             <StatTile label="Played" value={String(stats.gamesPlayed)} />
             <StatTile label="Best" value={formatTime(stats.bestTime)} />
@@ -279,16 +245,7 @@ export function GameResult({
               className="btn btn-primary w-full py-3 text-lg"
               onClick={onRematch}
             >
-              {isMultiplayer ? "Rematch" : "Play Again"}
-            </button>
-          )}
-          {onWatchReplay && (
-            <button
-              type="button"
-              className="btn btn-secondary w-full py-3 text-lg"
-              onClick={onWatchReplay}
-            >
-              Watch Replay
+              Play Again
             </button>
           )}
           <button
@@ -298,37 +255,35 @@ export function GameResult({
           >
             New Game
           </button>
-          {!isMultiplayer && (
-            <div
-              // Side by side when they fit, stacked on the narrowest
-              // phones rather than wrapping a label mid-phrase.
-              className="flex flex-wrap justify-center gap-x-2 w-full"
+          <div
+            // Side by side when they fit, stacked on the narrowest
+            // phones rather than wrapping a label mid-phrase.
+            className="flex flex-wrap justify-center gap-x-2 w-full"
+          >
+            <button
+              type="button"
+              className={`btn btn-ghost py-2 px-3 whitespace-nowrap ${challengeLink ? "" : "w-full"}`}
+              onClick={handleShare}
             >
+              {copied ? "Copied!" : "Share Result"}
+            </button>
+            {challengeLink && (
               <button
                 type="button"
-                className={`btn btn-ghost py-2 px-3 whitespace-nowrap ${challengeLink ? "" : "w-full"}`}
-                onClick={handleShare}
+                className="btn btn-ghost py-2 px-3"
+                onClick={handleChallenge}
               >
-                {copied ? "Copied!" : "Share Result"}
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-semibold text-accent">
+                  <Swords size={15} aria-hidden="true" />
+                  {challengeCopied
+                    ? "Link copied!"
+                    : challengeResult
+                      ? "Challenge back"
+                      : "Challenge a friend"}
+                </span>
               </button>
-              {challengeLink && (
-                <button
-                  type="button"
-                  className="btn btn-ghost py-2 px-3"
-                  onClick={handleChallenge}
-                >
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-semibold text-accent">
-                    <Swords size={15} aria-hidden="true" />
-                    {challengeCopied
-                      ? "Link copied!"
-                      : challengeResult
-                        ? "Challenge back"
-                        : "Challenge a friend"}
-                  </span>
-                </button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
         {tip && (
           <button

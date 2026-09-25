@@ -141,6 +141,16 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
     ],
   },
   {
+    name: "multiplayer-post-game",
+    title: "Multiplayer post-game & rematch",
+    scenes: [
+      "multiplayer-result-unfinished",
+      "multiplayer-opponent-finished-banner",
+      "multiplayer-rematch-invite",
+      "multiplayer-rematch-waiting-dark",
+    ],
+  },
+  {
     name: "dark-mode-a",
     title: "Dark-mode pairs (landing & solo)",
     scenes: ["landing", "landing-dark", "solo-game", "solo-game-dark"],
