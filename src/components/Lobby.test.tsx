@@ -27,6 +27,7 @@ const BASE_STATE: RoomState = {
   winnerBoard: null,
   gameNumber: 0,
   digitStyle: null,
+  rematchVotes: [],
 };
 
 describe("Lobby", () => {

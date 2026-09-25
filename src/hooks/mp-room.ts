@@ -27,13 +27,13 @@ import {
   MAX_PLAYERS,
   observeRoomChanges,
   publishReplay,
-  requestRematch,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
   setDigitStyle as setRoomDigitStyle,
   startGame,
   updatePlayerName,
   updateProgress,
+  voteRematch,
 } from "./p2p-room.ts";
 
 /**
@@ -189,7 +189,12 @@ export type Room = {
   claimForfeit(options: { hasOtherPeer: boolean }): void;
   /** Deal a new board. Raises an error instead while the room is alone. */
   start(): void;
-  /** Same, for a room that already finished a game. */
+  /**
+   * Ask for another game in a room that just finished one. The board is
+   * only dealt once every seated player asked, on the same difficulty:
+   * a one-sided rematch would yank the opponent out of their replay or
+   * off the board they are still finishing.
+   */
   rematch(): void;
   progress(cellsRemaining: number, completionPercent: number): void;
   updateName(name: string): void;
@@ -453,6 +458,23 @@ export function createRoom({
     }
     trackReplays();
     publish();
+    if (state?.hostId === playerId) dealRematchIfAgreed();
+  }
+
+  /**
+   * Deal the rematch once every seated player asked for it. The player
+   * whose vote completes the set deals in the same transaction; the
+   * host also deals on observing it, which covers two votes crossing
+   * on the wire, where neither voter saw the other's.
+   */
+  function dealRematchIfAgreed(): void {
+    const state = getRoomState(p2p);
+    if (!state || state.status !== "finished") return;
+    const seated = state.players.slice(0, MAX_PLAYERS);
+    if (seated.length < MAX_PLAYERS) return;
+    if (seated.every((p) => state.rematchVotes.includes(p.id))) {
+      startGame(p2p);
+    }
   }
 
   function publish(): void {
@@ -553,7 +575,15 @@ export function createRoom({
       startGame(p2p);
     },
     rematch() {
-      requestRematch(p2p);
+      const state = getRoomState(p2p);
+      if (!state || state.status !== "finished") return;
+      // One transaction for the vote and the deal it completes: the
+      // host deals on seeing every vote, and must never see ours
+      // without the board it already brought along.
+      p2p.doc.transact(() => {
+        voteRematch(p2p, playerId);
+        dealRematchIfAgreed();
+      });
     },
     progress(cellsRemaining, completionPercent) {
       updateProgress(p2p, playerId, cellsRemaining, completionPercent);

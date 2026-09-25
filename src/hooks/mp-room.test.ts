@@ -11,6 +11,7 @@ import {
   publishReplay,
   startGame,
   updateProgress,
+  voteRematch,
 } from "./p2p-room.ts";
 
 const ROOM_ID = "test-room";
@@ -643,6 +644,9 @@ describe("commands", () => {
     joinRoom(p2p, "p2", "Bob");
     room.setDifficulty("expert");
     room.start();
+    const solution = doc.getMap("room").get("solution") as string;
+    claimWinner(p2p, "p2", "Bob", solution);
+    voteRematch(p2p, "p2");
 
     room.rematch();
 
@@ -735,6 +739,79 @@ describe("replays", () => {
     startGame(p2p);
 
     expect(room.snapshot().replays).toEqual({});
+  });
+});
+
+describe("rematch", () => {
+  it("waits for the opponent instead of dealing a new board alone", () => {
+    // A one-sided rematch yanked the opponent out of the replay they
+    // were watching, or off the board they were still finishing.
+    const { doc, p2p, room, solution } = setupStartedGame();
+    claimWinner(p2p, "p2", "Bob", solution);
+
+    room.rematch();
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+    expect(room.snapshot().roomState?.rematchVotes).toEqual(["p1"]);
+  });
+
+  it("deals the next board when the second player asks", () => {
+    const { doc, p2p, room, solution } = setupStartedGame();
+    claimWinner(p2p, "p2", "Bob", solution);
+    voteRematch(p2p, "p2");
+
+    room.rematch();
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(2);
+    expect(room.snapshot().gameOver).toBeNull();
+  });
+
+  it("deals as host when both requests cross on the wire", () => {
+    // Neither voter saw the other's vote, so neither dealt: the host
+    // is the one who deals on seeing both.
+    const { doc, p2p, room, solution } = setupStartedGame();
+    claimWinner(p2p, "p2", "Bob", solution);
+    voteRematch(p2p, "p1");
+
+    voteRematch(p2p, "p2");
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(2);
+  });
+
+  it("leaves dealing to the host when it is not us", () => {
+    const { doc, p2p, room, solution } = setupStartedGame();
+    doc.getMap("room").set("hostId", "p2");
+    claimWinner(p2p, "p2", "Bob", solution);
+    voteRematch(p2p, "p1");
+
+    voteRematch(p2p, "p2");
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+    expect(room.snapshot().roomState?.rematchVotes).toEqual(["p1", "p2"]);
+  });
+
+  it("drops a request made for another difficulty", () => {
+    // Agreeing to a rematch is agreeing to its difficulty: the host
+    // switching to expert must not drag the opponent along.
+    const { doc, p2p, room, solution } = setupStartedGame();
+    claimWinner(p2p, "p2", "Bob", solution);
+    voteRematch(p2p, "p2");
+    room.setDifficulty("expert");
+
+    room.rematch();
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+    expect(room.snapshot().roomState?.rematchVotes).toEqual(["p1"]);
+  });
+
+  it("ignores a rematch request while the game is still on", () => {
+    const { doc, p2p, room } = setupStartedGame();
+    voteRematch(p2p, "p2");
+
+    room.rematch();
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+    expect(room.snapshot().roomState?.rematchVotes).toEqual(["p2"]);
   });
 });
 

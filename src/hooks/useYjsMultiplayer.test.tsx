@@ -8,6 +8,7 @@ import {
   initializeRoom,
   joinRoom,
   startGame,
+  voteRematch,
 } from "./p2p-room.ts";
 import { useYjsMultiplayer } from "./useYjsMultiplayer.ts";
 
@@ -219,6 +220,7 @@ describe("useYjsMultiplayer", () => {
     expect(result.current.replays).toEqual({ p1: [[0, 2, 4]] });
 
     act(() => {
+      voteRematch({ doc, roomId: "room-commands" }, "p2");
       result.current.sendProgress(7, 91);
       result.current.sendRematch();
     });

@@ -169,4 +169,11 @@ export type RoomState = {
    * the point ("we both play with the vehicles").
    */
   digitStyle: DigitStyle | null;
+  /**
+   * Players who asked for a rematch of the game that just ended, on the
+   * room's current difficulty. The next board is dealt once every
+   * seated player is in here; a vote for an earlier game or another
+   * difficulty no longer counts.
+   */
+  rematchVotes: string[];
 };

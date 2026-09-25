@@ -39,6 +39,7 @@ const roomState: RoomState = {
   winnerBoard: null,
   gameNumber: 1,
   digitStyle: null,
+  rematchVotes: [],
 };
 
 function makeMp() {
