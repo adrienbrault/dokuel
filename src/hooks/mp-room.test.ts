@@ -769,7 +769,7 @@ describe("rematch", () => {
   it("deals as host when both requests cross on the wire", () => {
     // Neither voter saw the other's vote, so neither dealt: the host
     // is the one who deals on seeing both.
-    const { doc, p2p, room, solution } = setupStartedGame();
+    const { doc, p2p, solution } = setupStartedGame();
     claimWinner(p2p, "p2", "Bob", solution);
     voteRematch(p2p, "p1");
 
