@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { LANDING_DEMO_SCRIPT } from "../src/lib/landing-demo.ts";
 import { solvePuzzle } from "../src/lib/sudoku.ts";
 import {
@@ -663,11 +663,18 @@ test.describe("multiplayer session", () => {
     await page.getByRole("switch", { name: "Opponent bar" }).click();
     await page.keyboard.press("Escape");
 
-    // Guest completes their board: the guest gets the real result
-    // dialog, and the host sees the real finished-first banner while
-    // their own board stays playable.
+    // Guest completes their board: both tabs get the real result
+    // dialog at once — the host mid-board, with a way back to it.
     await fillCells(guest, solution, empties.slice(12));
-    await guest.getByRole("dialog").getByText("You Won!").waitFor();
+    await guest.getByRole("dialog", { name: "You won!" }).waitFor();
+    await page.getByRole("dialog", { name: "Brave Otter won" }).waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-result-unfinished", project),
+    });
+
+    // The host keeps solving: the dialog steps aside for the
+    // finished-first banner while their own board stays playable.
+    await page.getByRole("button", { name: "Keep solving" }).click();
     await page.getByText(/finished first/).waitFor();
     await page.screenshot({
       path: screenshotPath("multiplayer-opponent-finished-banner", project),
@@ -682,7 +689,7 @@ test.describe("multiplayer session", () => {
     // digit placed nine times leaves the pad.
     await page.getByRole("button", { name: "Erase" }).click();
     await fillCells(page, solution, empties.slice(5));
-    await page.getByRole("dialog").getByText("Puzzle Complete!").waitFor();
+    await page.getByRole("dialog", { name: "Brave Otter won" }).waitFor();
 
     // Scrub both replays to the middle of the race, where the boards
     // differ most.
@@ -699,7 +706,38 @@ test.describe("multiplayer session", () => {
       const max = Number(await scrubber.getAttribute("max"));
       await scrubber.fill(String(Math.round(max * 0.55)));
       await tab.screenshot({ path: screenshotPath(name, project) });
+      await tab.getByRole("button", { name: /Results/ }).click();
     }
+
+    // The host picks the next difficulty, the guest asks for a rematch
+    // on it, and the host is invited to accept.
+    await page.getByRole("radio", { name: "Medium" }).click({ force: true });
+    await guest
+      .getByText(/Next game:/)
+      .getByText("Medium")
+      .waitFor();
+    await guest.getByRole("button", { name: "Rematch" }).click();
+    await guest
+      .getByRole("button", { name: "Waiting for Clever Fox…" })
+      .waitFor();
+    await page.getByText("Brave Otter wants a rematch!").waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-rematch-invite", project),
+    });
+    await guest.screenshot({
+      path: screenshotPath("multiplayer-rematch-waiting-dark", project),
+    });
+
+    // Accepting deals the next board to both tabs, in the same room.
+    await page.getByRole("button", { name: "Accept rematch" }).click();
+    for (const tab of [page, guest]) {
+      await tab.getByRole("dialog").waitFor({ state: "hidden" });
+      await tab.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+    }
+    expect(await readBoard(guest)).not.toBe(puzzle);
+    expect(new URL(guest.url()).pathname).toBe(`/${roomId}`);
 
     await guest.close();
   });
