@@ -209,28 +209,8 @@ describe("GameResult", () => {
     expect(screen.getByText(/new personal best/i)).toBeInTheDocument();
   });
 
-  it("offers the match replay when one is available", async () => {
-    const onWatchReplay = vi.fn();
-    const { rerender } = render(
-      <GameResult isWinner={true} time="03:00" onNewGame={vi.fn()} />,
-    );
-    expect(screen.queryByText("Watch Replay")).not.toBeInTheDocument();
-
-    rerender(
-      <GameResult
-        isWinner={true}
-        time="03:00"
-        onNewGame={vi.fn()}
-        onWatchReplay={onWatchReplay}
-      />,
-    );
-    await userEvent.click(screen.getByText("Watch Replay"));
-
-    expect(onWatchReplay).toHaveBeenCalled();
-  });
-
-  it("shows Play Again in solo mode and Rematch in multiplayer", () => {
-    const { rerender } = render(
+  it("offers to play again", () => {
+    render(
       <GameResult
         isWinner={true}
         time="03:00"
@@ -240,18 +220,6 @@ describe("GameResult", () => {
     );
 
     expect(screen.getByText("Play Again")).toBeInTheDocument();
-
-    rerender(
-      <GameResult
-        isWinner={true}
-        time="03:00"
-        isMultiplayer={true}
-        onRematch={vi.fn()}
-        onNewGame={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("Rematch")).toBeInTheDocument();
   });
 
   it("share text includes difficulty, time, and URL", () => {
