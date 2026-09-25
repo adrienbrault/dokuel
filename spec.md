@@ -225,11 +225,21 @@ Gesture model (`tap = enter · hold = note · drag = place`):
   is ignored
 
 ### Post-Game
-- Winner announcement with confetti celebration
-- Stats: time, personal best indicator
-- Share result button
-- "Rematch" button (same players, new puzzle, same difficulty)
-- "New Game" button (back to landing)
+- The match result opens for BOTH players as soon as the game is decided,
+  winner with confetti; the loser sees how far they got
+- "Keep solving" lets a loser who wants to finish set the result aside; a
+  banner brings it back, and it returns on its own once their board is done
+- Running score for the room ("2–1 vs Brave Otter"), from the local match
+  history plus the game that just ended
+- Rematch is a handshake: the first tap asks ("Waiting for Bob…"), the
+  opponent sees "Bob wants a rematch!" and "Accept rematch", and the board
+  is dealt to both once both asked. Votes are per player in their own Yjs
+  map (crossing taps both survive), tied to the game number and difficulty
+  they were cast for; the vote completing the set deals in the same
+  transaction, and the host also deals on seeing all votes
+- The host picks the next game's difficulty right in the result (the guest
+  sees it read-only); changing it asks both players to agree again
+- Watch the replay of both boards; "Leave room" goes back to landing
 - Match recorded to multiplayer history (opponent, outcome, time) shown on
   the Stats screen
 
