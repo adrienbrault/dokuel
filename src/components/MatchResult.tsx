@@ -67,7 +67,7 @@ export function MatchResult({
   const { rematch } = next;
 
   return (
-    <div className="modal-overlay p-6">
+    <div className="modal-overlay p-4">
       {won && (
         <div className="confetti-container">
           <span />
@@ -88,11 +88,12 @@ export function MatchResult({
         aria-labelledby="match-result-title"
         onKeyDown={trapTab}
         ref={panelRef}
-        className="modal-panel gap-4 max-w-sm sm:max-w-md w-full relative"
+        // Scrolls rather than clipping its title on the shortest phones.
+        className="modal-panel gap-4 px-5 py-6 sm:p-8 max-w-sm sm:max-w-md w-full max-h-full overflow-y-auto relative"
       >
         <div className="flex flex-col items-center gap-2">
           <span
-            className={`flex items-center justify-center w-14 h-14 rounded-full text-3xl animate-emoji-bounce ${
+            className={`flex items-center justify-center w-12 h-12 rounded-full text-2xl animate-emoji-bounce ${
               won ? "bg-accent-light" : "bg-bg-inset"
             }`}
           >
@@ -126,7 +127,7 @@ export function MatchResult({
               {score.wins}–{score.losses}
             </span>
             <span className="text-xs text-text-muted truncate px-2">
-              You vs {opponent}
+              vs {opponent}
             </span>
           </div>
         </div>
@@ -161,7 +162,11 @@ export function MatchResult({
           )}
           <button
             type="button"
-            className="btn btn-primary w-full py-3 text-lg"
+            className={`btn w-full py-3 text-lg ${
+              rematch === "waiting"
+                ? "btn-secondary text-text-secondary"
+                : "btn-primary"
+            }`}
             onClick={next.onRematch}
             disabled={rematch === "waiting"}
           >
@@ -176,23 +181,27 @@ export function MatchResult({
               {opponent} seems to have left the room.
             </p>
           )}
-          {onKeepSolving && (
-            <button
-              type="button"
-              className="btn btn-secondary w-full py-3 text-lg"
-              onClick={onKeepSolving}
-            >
-              Keep solving
-            </button>
-          )}
-          {onWatchReplay && (
-            <button
-              type="button"
-              className="btn btn-secondary w-full py-3 text-lg"
-              onClick={onWatchReplay}
-            >
-              Watch Replay
-            </button>
+          {(onKeepSolving || onWatchReplay) && (
+            <div className="flex gap-2.5 w-full">
+              {onKeepSolving && (
+                <button
+                  type="button"
+                  className="btn btn-secondary flex-1 py-2.5 px-2 text-sm whitespace-nowrap"
+                  onClick={onKeepSolving}
+                >
+                  Keep solving
+                </button>
+              )}
+              {onWatchReplay && (
+                <button
+                  type="button"
+                  className="btn btn-secondary flex-1 py-2.5 px-2 text-sm whitespace-nowrap"
+                  onClick={onWatchReplay}
+                >
+                  Watch Replay
+                </button>
+              )}
+            </div>
           )}
           <button
             type="button"
