@@ -350,7 +350,7 @@ function getRematchVotes(
       votes.push(id);
     }
   }
-  return votes.sort();
+  return votes.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 export function getRoomStatus(room: P2PRoom): string {
