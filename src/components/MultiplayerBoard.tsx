@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useMatchResult } from "../hooks/useMatchResult.ts";
 import { useMultiplayerAutosave } from "../hooks/useMultiplayerAutosave.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
@@ -15,11 +16,12 @@ import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
+import type { NextGame } from "./MatchResult.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
 import {
   MultiplayerResult,
+  matchReplay,
   type ReplaySource,
-  replayPlayers,
 } from "./MultiplayerResult.tsx";
 import { NumPad } from "./NumPad.tsx";
 import { TimerPill } from "./TimerPill.tsx";
@@ -66,7 +68,8 @@ export type MultiplayerBoardProps = {
   replay?: ReplaySource | undefined;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
-  onRematch: () => void;
+  /** The room's side of the rematch the result offers. */
+  next: NextGame;
   onBack: () => void;
 };
 
@@ -87,7 +90,7 @@ export function MultiplayerBoard({
   replay,
   onProgress,
   onComplete,
-  onRematch,
+  next,
   onBack,
 }: MultiplayerBoardProps) {
   // Scope the autosave key by room + puzzle so a rematch in the same room
@@ -130,11 +133,15 @@ export function MultiplayerBoard({
   const timerSecondsRef = useRef(initialTimerSeconds);
   const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
-  // The loser keeps playing after the opponent wins; only show the result
-  // modal once they've actually finished their own board (or won themselves).
   const iWon = gameOver?.winnerId === playerId;
   const iFinished = iWon || game.status === "completed";
-  const showResult = useDelayedFlag(iFinished, 300);
+  const result = useMatchResult({
+    roomId,
+    gameNumber,
+    decided: gameOver !== null,
+    won: iWon,
+    finished: iFinished,
+  });
 
   const myPercent = useMemo(() => {
     const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
@@ -146,12 +153,9 @@ export function MultiplayerBoard({
   useEffect(() => {
     if (prevCellsRef.current !== game.cellsRemaining) {
       prevCellsRef.current = game.cellsRemaining;
-      const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-      const filled = total - game.cellsRemaining;
-      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-      onProgress(game.cellsRemaining, percent);
+      onProgress(game.cellsRemaining, myPercent);
     }
-  }, [game.cellsRemaining, onProgress, puzzle]);
+  }, [game.cellsRemaining, onProgress, myPercent]);
 
   // Check completion — the claim ships the actual filled board so the
   // opponent's client can verify it against the room's solution.
@@ -278,29 +282,34 @@ export function MultiplayerBoard({
           opponentProgress={opponentProgress}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
+          rematch={next.rematch}
+          onShowResult={result.bringBack}
         />
       }
       footer={
-        showResult && gameOver && iFinished ? (
+        result.visible && gameOver ? (
           <MultiplayerResult
             // A rematch closes the replay of the game it replaced.
             key={gameNumber}
-            isWinner={iWon}
-            time={formatTime(timerSecondsRef.current)}
+            won={iWon}
+            opponentName={opponentName}
+            time={iFinished ? formatTime(timerSecondsRef.current) : null}
+            progressPercent={myPercent}
             difficulty={difficulty}
-            onNewGame={onBack}
-            onRematch={onRematch}
+            score={result.score}
+            next={next}
+            opponentAway={opponentDisconnected}
+            onKeepSolving={result.setAside}
+            onLeave={onBack}
             replay={
-              replay && {
+              replay &&
+              matchReplay(replay, {
                 puzzle,
                 solution,
-                players: replayPlayers(
-                  replay,
-                  playerId,
-                  opponentName,
-                  gameOver,
-                ),
-              }
+                playerId,
+                opponentName,
+                gameOver,
+              })
             }
           />
         ) : undefined

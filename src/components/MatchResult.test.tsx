@@ -4,23 +4,37 @@ import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { MatchResult } from "./MatchResult.tsx";
 
-function renderResult(overrides: Partial<ComponentProps<typeof MatchResult>>) {
-  const props: ComponentProps<typeof MatchResult> = {
+type Props = ComponentProps<typeof MatchResult>;
+
+function renderResult(
+  overrides: Partial<Omit<Props, "next">> & Partial<Props["next"]>,
+) {
+  const {
+    rematch = "idle",
+    difficulty: nextDifficulty = "medium",
+    onDifficultyChange,
+    onRematch = vi.fn(),
+    ...rest
+  } = overrides;
+  const props: Props = {
     won: true,
     opponentName: "Bob",
     time: "04:12",
     progressPercent: 100,
     difficulty: "medium",
     score: { wins: 1, losses: 0 },
-    nextDifficulty: "medium",
-    rematch: "idle",
     opponentAway: false,
-    onRematch: vi.fn(),
     onLeave: vi.fn(),
-    ...overrides,
+    ...rest,
+    next: {
+      rematch,
+      difficulty: nextDifficulty,
+      onDifficultyChange,
+      onRematch,
+    },
   };
   render(<MatchResult {...props} />);
-  return props;
+  return { ...props, onRematch };
 }
 
 describe("MatchResult", () => {
@@ -86,14 +100,14 @@ describe("MatchResult", () => {
 
   it("lets the host pick the next game's difficulty", async () => {
     const onNextDifficultyChange = vi.fn();
-    renderResult({ onNextDifficultyChange });
+    renderResult({ onDifficultyChange: onNextDifficultyChange });
 
     await userEvent.click(screen.getByRole("radio", { name: /hard/i }));
     expect(onNextDifficultyChange).toHaveBeenCalledWith("hard");
   });
 
   it("shows the guest which difficulty comes next", () => {
-    renderResult({ nextDifficulty: "expert" });
+    renderResult({ difficulty: "expert" });
 
     expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
     expect(screen.getByText(/next game/i)).toHaveTextContent(/expert/i);

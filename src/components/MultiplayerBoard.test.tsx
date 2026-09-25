@@ -36,7 +36,11 @@ function baseProps() {
     gameOver: null,
     onProgress: vi.fn(),
     onComplete: vi.fn(),
-    onRematch: vi.fn(),
+    next: {
+      rematch: "idle" as const,
+      difficulty: "easy" as const,
+      onRematch: vi.fn(),
+    },
     onBack: vi.fn(),
   };
 }
@@ -583,28 +587,62 @@ describe("MultiplayerBoard after opponent wins", () => {
       ).toBeTruthy();
 
       fireEvent.click(screen.getByRole("button", { name: /Results/ }));
-      expect(screen.getByText("You Won!")).toBeTruthy();
+      expect(screen.getByText("You won!")).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("does not show the result modal to the loser while they keep playing", () => {
+  it("offers the loser the result right away, and their board back", () => {
+    // Having to finish a lost board before a rematch was even on offer
+    // is what made playing on together tedious.
     vi.useFakeTimers();
     try {
       const props = {
         ...baseProps(),
-        gameOver: { winnerId: "p2", winnerName: "Opponent" },
+        gameOver: { winnerId: "p2", winnerName: "Brave Otter" },
       };
       render(<MultiplayerBoard {...props} />);
-
-      // Even after the delayed-flag window elapses, the loser sees no
-      // "Puzzle Complete!" modal — they are still mid-puzzle.
       act(() => {
         vi.advanceTimersByTime(1000);
       });
-      expect(screen.queryByText(/Puzzle Complete!/)).toBeNull();
-      expect(screen.queryByText(/You Won!/)).toBeNull();
+      expect(
+        screen.getByRole("dialog", { name: /brave otter won/i }),
+      ).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: /keep solving/i }));
+      expect(screen.queryByRole("dialog")).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "Results" }));
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("brings the result back once the loser finishes their board", () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        ...baseProps(),
+        puzzle: `.${SOLVED.slice(1)}`,
+        gameOver: { winnerId: "p2", winnerName: "Brave Otter" },
+      };
+      render(<MultiplayerBoard {...props} />);
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      fireEvent.click(screen.getByRole("button", { name: /keep solving/i }));
+
+      fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+      const five = screen.getAllByLabelText("5")[0]!;
+      fireEvent.pointerDown(five, { pointerType: "touch" });
+      fireEvent.pointerUp(five, { pointerType: "touch" });
+
+      expect(screen.getByRole("dialog")).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: /keep solving/i }),
+      ).toBeNull();
     } finally {
       vi.useRealTimers();
     }

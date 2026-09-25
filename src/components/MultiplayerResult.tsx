@@ -1,15 +1,13 @@
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 import type { ReplayFrame } from "../lib/replay.ts";
-import type { Difficulty, Player } from "../lib/types.ts";
-import { GameResult } from "./GameResult.tsx";
+import type { Player } from "../lib/types.ts";
 import { MatchReplay, type ReplayPlayer } from "./MatchReplay.tsx";
+import { MatchResult } from "./MatchResult.tsx";
 
-type MultiplayerResultProps = {
-  isWinner: boolean;
-  time: string;
-  difficulty: Difficulty;
-  onNewGame: () => void;
-  onRematch: () => void;
+type MultiplayerResultProps = Omit<
+  ComponentProps<typeof MatchResult>,
+  "onWatchReplay"
+> & {
   /** What the replay needs; omitted, the modal offers no replay. */
   replay?:
     | {
@@ -22,25 +20,16 @@ type MultiplayerResultProps = {
 
 /** The end of a match: the result modal, and the replay it leads to. */
 export function MultiplayerResult({
-  isWinner,
-  time,
-  difficulty,
-  onNewGame,
-  onRematch,
   replay,
+  ...result
 }: MultiplayerResultProps) {
   const [watching, setWatching] = useState(false);
   if (watching && replay) {
     return <MatchReplay {...replay} onClose={() => setWatching(false)} />;
   }
   return (
-    <GameResult
-      isWinner={isWinner}
-      time={time}
-      difficulty={difficulty}
-      isMultiplayer
-      onNewGame={onNewGame}
-      onRematch={onRematch}
+    <MatchResult
+      {...result}
       onWatchReplay={replay ? () => setWatching(true) : undefined}
     />
   );
@@ -57,6 +46,29 @@ export type ReplaySource = {
   /** Hands our recording to the room; called only once the game is over. */
   share: (frames: ReplayFrame[]) => void;
 };
+
+/** What the replay of the game that just ended needs. */
+export function matchReplay(
+  source: ReplaySource,
+  game: {
+    puzzle: string;
+    solution: string | null;
+    playerId: string;
+    opponentName: string;
+    gameOver: { winnerId: string };
+  },
+): NonNullable<MultiplayerResultProps["replay"]> {
+  return {
+    puzzle: game.puzzle,
+    solution: game.solution,
+    players: replayPlayers(
+      source,
+      game.playerId,
+      game.opponentName,
+      game.gameOver,
+    ),
+  };
+}
 
 /** Us on the left of the compare divider, the opponent on the right. */
 export function replayPlayers(

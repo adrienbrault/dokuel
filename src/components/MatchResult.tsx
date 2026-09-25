@@ -14,6 +14,16 @@ import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
  */
 export type RematchState = "idle" | "waiting" | "invited";
 
+/** Everything the result needs to get both players into the next game. */
+export type NextGame = {
+  rematch: RematchState;
+  /** The difficulty the rematch will be dealt on. */
+  difficulty: Difficulty;
+  /** Host only: omitted, the next difficulty is shown read-only. */
+  onDifficultyChange?: ((level: Difficulty) => void) | undefined;
+  onRematch: () => void;
+};
+
 type MatchResultProps = {
   won: boolean;
   opponentName: string;
@@ -24,14 +34,9 @@ type MatchResultProps = {
   /** The difficulty of the game that just ended. */
   difficulty: Difficulty;
   score: RoomScore;
-  /** The difficulty the rematch will be dealt on. */
-  nextDifficulty: Difficulty;
-  /** Host only: omitted, the next difficulty is shown read-only. */
-  onNextDifficultyChange?: ((level: Difficulty) => void) | undefined;
-  rematch: RematchState;
+  next: NextGame;
   /** The opponent's presence is gone, so a rematch may never come. */
   opponentAway: boolean;
-  onRematch: () => void;
   /** Omitted, the modal offers no replay. */
   onWatchReplay?: (() => void) | undefined;
   /** Offered to a player who lost before finishing their own board. */
@@ -51,17 +56,15 @@ export function MatchResult({
   progressPercent,
   difficulty,
   score,
-  nextDifficulty,
-  onNextDifficultyChange,
-  rematch,
+  next,
   opponentAway,
-  onRematch,
   onWatchReplay,
   onKeepSolving,
   onLeave,
 }: MatchResultProps) {
   const { panelRef, trapTab } = useDialogFocus();
   const opponent = opponentName || "Opponent";
+  const { rematch } = next;
 
   return (
     <div className="modal-overlay p-6">
@@ -129,13 +132,13 @@ export function MatchResult({
         </div>
 
         <div className="flex flex-col gap-2 w-full">
-          {onNextDifficultyChange ? (
+          {next.onDifficultyChange ? (
             <>
               <span className="label">Next game</span>
               <SlidingRadioGroup
                 options={DIFFICULTY_OPTIONS}
-                value={nextDifficulty}
-                onChange={onNextDifficultyChange}
+                value={next.difficulty}
+                onChange={next.onDifficultyChange}
                 name="next-difficulty"
                 ariaLabel="Next game difficulty"
               />
@@ -144,7 +147,7 @@ export function MatchResult({
             <p className="caption text-center">
               Next game:{" "}
               <span className="font-semibold text-text-primary">
-                {DIFFICULTY_LABELS[nextDifficulty]}
+                {DIFFICULTY_LABELS[next.difficulty]}
               </span>
             </p>
           )}
@@ -159,7 +162,7 @@ export function MatchResult({
           <button
             type="button"
             className="btn btn-primary w-full py-3 text-lg"
-            onClick={onRematch}
+            onClick={next.onRematch}
             disabled={rematch === "waiting"}
           >
             {rematch === "waiting"
