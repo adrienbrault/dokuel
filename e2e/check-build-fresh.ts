@@ -4,7 +4,13 @@ import { join } from "node:path";
 // Everything vite build consumes. A change to the HTML shell, static
 // assets, or the build config produces a different bundle just as
 // surely as a src/ edit does.
-const INPUTS = ["src", "index.html", "public", "vite.config.ts"];
+const INPUTS = [
+  "src",
+  "index.html",
+  "public",
+  "vite.config.ts",
+  "scripts/vite-sw-plugin.ts",
+];
 const DIST_INDEX = "dist/index.html";
 
 function maxMtime(dir: string): number {

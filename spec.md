@@ -52,6 +52,9 @@ demo cannot show a gesture that behaves differently in play. Rules:
 - Pauses (no timers) while the tab is hidden or the card is off screen;
   no sounds, haptics or storage writes
 
+Offline, Create Game and Join Game are dimmed and disabled with the
+sublabel "Offline: needs internet"; everything else works as usual.
+
 ### Difficulty Selection
 Available before every game (solo or multiplayer):
 - Easy (~45 clues)
@@ -283,6 +286,35 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 - Vitest for testing
 - Strict TDD: every feature gets tests first
 
+## Offline Play
+
+After one online visit, solo, daily, stats and resuming a saved game
+work with no network. Multiplayer needs a connection and says so.
+
+A hand-written service worker (`src/sw.ts`, emitted as `/sw.js` by a
+small Vite plugin in production builds only) caches the app shell.
+Its request rules (`src/lib/sw-routing.ts`):
+
+- **Never intercepted**: any cross-origin request (the signaling
+  server, TURN, websockets), non-GET requests, and same-origin API
+  paths (`/turn-credentials`, `/events`). Live rooms see exactly the
+  network they had before the worker existed.
+- **Page loads** (same-origin navigations, any SPA path): network
+  first, falling back to the cached shell after a failure or 4s, so a
+  fresh deploy is picked up whenever the network answers.
+- **Build files** (hashed JS/CSS, fonts, icons, manifest, and the shell
+  cached as `/`): cache first. Anything else goes to the network.
+
+Updates:
+
+- Each build gets its own cache, versioned by a hash of the precached
+  files; activation deletes older caches.
+- A new version waits instead of taking over. A non-blocking "Update
+  available, Reload" toast offers it on menu screens only (landing,
+  difficulty, join, stats, 404), never over a solo, daily or
+  multiplayer board. Nothing reloads without the player's tap.
+- `sw.js` is served with `Cache-Control: no-cache` (`public/_headers`).
+
 ## Backlog
 
 Speced or desired, deliberately not built yet:
@@ -291,9 +323,6 @@ Speced or desired, deliberately not built yet:
   player offers their filled cells; on accept they become given cells on
   BOTH boards (notes not shared). One-sentence pitch: "Share your filled
   cells as hints for both players."
-- **Service worker / offline play** — the manifest already makes the app
-  installable; offline caching needs careful interplay with live WebRTC
-  rooms before it ships
 - **Technique-graded easy** — medium, hard, and expert are graded by
   the techniques they require (see Difficulty Selection); easy still
   relies on its clue band alone, which in practice already yields

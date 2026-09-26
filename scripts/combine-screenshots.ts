@@ -81,6 +81,7 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
       "landing",
       "landing-dark",
       "landing-continue",
+      "landing-offline",
       "difficulty",
       "difficulty-dark",
       "daily-challenge",

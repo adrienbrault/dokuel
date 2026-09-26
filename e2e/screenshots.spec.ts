@@ -60,6 +60,22 @@ test("landing page", async ({ page }, testInfo) => {
   });
 });
 
+test("landing page - offline", async ({ page, context }, testInfo) => {
+  await page.goto("/");
+  // Fonts load lazily; cutting the network first would capture the
+  // fallback face (service workers are blocked in this suite).
+  await page.evaluate(() => document.fonts.ready);
+  // The browser's offline event flips the multiplayer rows live.
+  await context.setOffline(true);
+  await page
+    .getByRole("button", { name: /Create Game/ })
+    .and(page.locator(":disabled"))
+    .waitFor();
+  await page.screenshot({
+    path: screenshotPath("landing-offline", testInfo.project.name),
+  });
+});
+
 test("solo game", async ({ page }, testInfo) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Start Solo" }).click();

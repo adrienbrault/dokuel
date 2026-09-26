@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useOnlineStatus } from "../hooks/useOnlineStatus.ts";
 import { DIFFICULTY_LABELS } from "../lib/constants.ts";
 import { getDailyStreak, isDailyCompleted } from "../lib/daily-streak.ts";
 import { todayLocalISO } from "../lib/date.ts";
@@ -27,6 +28,8 @@ import { LandingDemo } from "./LandingDemo.tsx";
 // Past this many, the continue rows stop reading as a menu and start
 // reading as a log. The rest stay one tap away.
 const VISIBLE_SAVED_GAMES = 3;
+
+const OFFLINE_SUBLABEL = "Offline: needs internet";
 
 type LandingProps = {
   onSolo: () => void;
@@ -46,6 +49,9 @@ export function Landing({
   onStats,
 }: LandingProps) {
   const today = useMemo(() => todayLocalISO(), []);
+  // Rooms need the signaling server. Solo and daily run from the
+  // offline cache, so only the multiplayer rows react to this.
+  const online = useOnlineStatus();
   const completed = useMemo(() => isDailyCompleted(today), [today]);
   const streak = useMemo(() => getDailyStreak(), []);
   // Sweep before listing: the saves this drops are the ones the list
@@ -158,14 +164,16 @@ export function Landing({
         <ActionRow
           icon={<Swords size={20} aria-hidden="true" />}
           label="Create Game"
-          sublabel="Host a 1v1 room"
+          sublabel={online ? "Host a 1v1 room" : OFFLINE_SUBLABEL}
           onClick={onCreate}
+          disabled={!online}
         />
         <ActionRow
           icon={<LogIn size={20} aria-hidden="true" />}
           label="Join Game"
-          sublabel="Enter a friend's room code"
+          sublabel={online ? "Enter a friend's room code" : OFFLINE_SUBLABEL}
           onClick={onJoin}
+          disabled={!online}
         />
       </div>
 
@@ -199,6 +207,7 @@ function ActionRow({
   onClick,
   variant,
   accessory,
+  disabled = false,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -206,13 +215,15 @@ function ActionRow({
   onClick: () => void;
   variant?: "primary" | undefined;
   accessory?: React.ReactNode;
+  disabled?: boolean;
 }) {
   const primary = variant === "primary";
   return (
     <button
       type="button"
-      className={`btn ${primary ? "btn-primary" : "btn-secondary"} w-full flex items-center gap-3.5 px-3.5 py-3 text-left`}
+      className={`btn ${primary ? "btn-primary" : "btn-secondary"} w-full flex items-center gap-3.5 px-3.5 py-3 text-left disabled:opacity-55 disabled:pointer-events-none`}
       onClick={onClick}
+      disabled={disabled}
     >
       <span
         className={`icon-chip w-11 h-11 ${primary ? "bg-white/20 text-text-on-accent" : "bg-accent-light text-accent"}`}

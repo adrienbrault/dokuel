@@ -2,3 +2,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
+
+# The service worker script must be revalidated on every check, or a
+# stale edge/browser copy delays (or blocks) every future deploy.
+/sw.js
+  Cache-Control: no-cache

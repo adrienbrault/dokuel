@@ -79,6 +79,7 @@ export function sceneLabel(scene: string): string {
   const overrides: Record<string, string> = {
     landing: "Landing",
     "landing-dark": "Landing (dark)",
+    "landing-offline": "Landing (offline)",
     "landing-demo": "Landing · gesture demo",
     "landing-demo-dark": "Landing · gesture demo (dark)",
     "landing-demo-still": "Landing · gesture demo (reduced motion)",

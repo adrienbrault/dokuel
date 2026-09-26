@@ -115,3 +115,25 @@ describe("Landing — gesture demo", () => {
     expect(screen.queryByText("How to play")).not.toBeInTheDocument();
   });
 });
+
+describe("Landing — offline", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("disables multiplayer and says why, while solo and daily stay open", () => {
+    // Rooms need the signaling server; without a connection, the
+    // player should learn that here, not after a spinner times out.
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+
+    renderLanding();
+
+    expect(screen.getByRole("button", { name: /Create Game/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Join Game/ })).toBeDisabled();
+    expect(screen.getAllByText("Offline: needs internet")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /Start Solo/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /Daily Challenge/ }),
+    ).toBeEnabled();
+  });
+});
