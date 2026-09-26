@@ -5,11 +5,13 @@ import { awarenessPresence } from "./mp-connection.presence.ts";
 import {
   type Connection,
   createIceServerResolver,
+  type IceRoute,
   type OpenConnection,
   type OpenOptions,
   roomDatabaseName,
   signalingUrl,
 } from "./mp-connection.ts";
+import { selectedIceRoute } from "./mp-ice-route.ts";
 
 /**
  * Production adapter for the {@link Connection} seam: y-webrtc for the
@@ -46,6 +48,35 @@ export type WebrtcInternals = {
     iceServers: RTCIceServer[] | null,
   ) => WebrtcProvider;
 };
+
+/**
+ * The slice of y-webrtc's (untyped) internals the ICE route reads: the
+ * provider's room holds one WebrtcConn per remote peer, each wrapping a
+ * simple-peer whose `_pc` is the RTCPeerConnection. Private fields of
+ * two libraries, so every step is optional and a miss means "unknown",
+ * never an error.
+ */
+type WebrtcInternalsView = {
+  room?: {
+    webrtcConns?: Map<
+      string,
+      { connected?: boolean; peer?: { _pc?: RTCPeerConnection } }
+    >;
+  } | null;
+};
+
+async function readIceRoute(
+  provider: WebrtcProvider,
+): Promise<IceRoute | null> {
+  const conns = (provider as unknown as WebrtcInternalsView).room?.webrtcConns;
+  for (const conn of conns?.values() ?? []) {
+    const pc = conn.peer?._pc;
+    if (!conn.connected || !pc) continue;
+    const route = selectedIceRoute(await pc.getStats());
+    if (route) return route;
+  }
+  return null;
+}
 
 export function createWebrtcConnectionOpener({
   resolveIceServers,
@@ -118,6 +149,7 @@ export function createWebrtcConnectionOpener({
       connect() {
         provider.connect();
       },
+      iceRoute: () => readIceRoute(provider),
       disconnect() {
         provider.disconnect();
       },

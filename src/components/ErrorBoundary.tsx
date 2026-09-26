@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { pageErrorReporter } from "../lib/error-reporting.ts";
 import { clearAllSavedGames } from "../lib/game-storage.ts";
 
 type ErrorBoundaryProps = {
@@ -23,6 +24,10 @@ export class ErrorBoundary extends Component<
 
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true };
+  }
+
+  override componentDidCatch(error: unknown): void {
+    pageErrorReporter.report(error, "boundary");
   }
 
   override render(): ReactNode {

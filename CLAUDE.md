@@ -41,6 +41,8 @@ The frontend deploys automatically on push to `main`. Multiplayer uses WebRTC pe
 - **Build**: `bun install && bun run build` → `dist/`
 - **URL**: https://dokuel.com (custom domain), https://sudoku-4cc.pages.dev (default)
 - Deploys are triggered automatically by GitHub pushes (Cloudflare Pages GitHub integration)
+- **Web Analytics**: `VITE_CF_BEACON_TOKEN` (Pages env var) injects the Cloudflare Web Analytics beacon at build time; unset means no script
+- **Telemetry**: deployed builds (not dev, tests or localhost previews) send anonymous error and multiplayer connection events to the signaling worker; `VITE_TELEMETRY_URL` overrides the endpoint (`off` disables)
 
 ### Signaling Server (Cloudflare Worker)
 - **Project**: `dokuel-signaling` Worker with Durable Objects
@@ -48,6 +50,7 @@ The frontend deploys automatically on push to `main`. Multiplayer uses WebRTC pe
 - **Deploy**: Auto-deploys via GitHub Actions on push to `main` when `signaling/` changes
 - **Secrets**: `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in GitHub repo secrets
 - **TURN relay**: `GET /turn-credentials` mints ephemeral Cloudflare Realtime TURN credentials; requires `TURN_KEY_ID` + `TURN_KEY_API_TOKEN` Worker secrets (`wrangler secret put`), 404s into a STUN-only client fallback without them
+- **Telemetry intake**: `POST /events` validates event batches (`signaling/src/events.ts`) and writes them to the `dokuel_events` Analytics Engine dataset (`EVENTS` binding); accepts and drops without the binding
 - See `signaling/README.md` for full setup instructions
 
 ### DNS (Cloudflare)

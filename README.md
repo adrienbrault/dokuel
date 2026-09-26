@@ -167,6 +167,15 @@ Both the frontend and signaling server deploy automatically on push to `main`.
 | Frontend | Cloudflare Pages | [dokuel.com](https://dokuel.com) |
 | Signaling | Cloudflare Worker | [signal.dokuel.com](https://signal.dokuel.com) |
 
+Anonymous analytics (see the Telemetry section of `spec.md`):
+
+- **Page views**: set `VITE_CF_BEACON_TOKEN` to the Cloudflare Web Analytics
+  site token in the Cloudflare Pages project (Settings → Environment
+  variables). Builds without it ship no analytics script.
+- **Errors and multiplayer connection events**: sent by deployed builds to
+  the signaling worker's `POST /events` and stored in Workers Analytics
+  Engine. See `signaling/README.md` for the one-time setup and queries.
+
 ## Screenshots
 
 Every scene captured across iPhone SE, iPhone 14, iPad Mini, and Desktop viewports. PNGs are deployed to GitHub Pages by the screenshots workflow and never land in `main`'s history. Click any thumbnail for the full-size image.

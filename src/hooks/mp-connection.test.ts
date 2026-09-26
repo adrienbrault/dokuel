@@ -6,6 +6,7 @@ import {
 } from "y-protocols/awareness";
 import { WebrtcProvider } from "y-webrtc";
 import { Doc } from "yjs";
+import { recordTelemetry } from "../lib/telemetry.fake.ts";
 import {
   createFakeConnections,
   type FakeConnection,
@@ -142,6 +143,30 @@ describe("createIceServerResolver", () => {
     expect(await resolve()).toBeNull();
 
     expect(await resolve()).toEqual(MINTED);
+  });
+
+  it("reports where each resolution's relay config came from", async () => {
+    // Whether a player had a relay at all is the first question when a
+    // match never connects.
+    const telemetry = recordTelemetry();
+    const resolve = createIceServerResolver(
+      vi.fn().mockResolvedValueOnce(null).mockResolvedValue(MINTED),
+    );
+
+    await resolve();
+    await resolve();
+    await resolve();
+    vi.stubEnv("VITE_TURN_URL", "turn:turn.example.com:3478");
+    await resolve();
+
+    expect(telemetry.events()).toEqual(
+      ["none", "minted", "cached", "env"].map((source) => ({
+        name: "mp_ice_servers",
+        source,
+        ms: expect.any(Number),
+      })),
+    );
+    telemetry.stop();
   });
 });
 

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { recordTelemetry } from "../lib/telemetry.fake.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 
 function Boom(): never {
@@ -31,6 +32,28 @@ describe("ErrorBoundary", () => {
     );
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reload" })).toBeInTheDocument();
+  });
+
+  it("reports the caught render error", () => {
+    const telemetry = recordTelemetry();
+    function BoomWithMessage(): never {
+      throw new Error("boundary telemetry probe");
+    }
+
+    render(
+      <ErrorBoundary reload={() => {}}>
+        <BoomWithMessage />
+      </ErrorBoundary>,
+    );
+
+    expect(telemetry.events()).toContainEqual(
+      expect.objectContaining({
+        name: "error",
+        source: "boundary",
+        message: "boundary telemetry probe",
+      }),
+    );
+    telemetry.stop();
   });
 
   it("reload button calls the reload handler", async () => {

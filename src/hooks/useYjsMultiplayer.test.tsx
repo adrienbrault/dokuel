@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Doc, encodeStateAsUpdate } from "yjs";
+import { recordTelemetry } from "../lib/telemetry.fake.ts";
 import type { Difficulty } from "../lib/types.ts";
 import { createFakeConnections } from "./mp-connection.fake.ts";
 import {
@@ -129,6 +130,55 @@ describe("useYjsMultiplayer", () => {
     await flushSync();
 
     expect(connections.last?.doc).toBe(docBefore);
+  });
+
+  it("reports each room mount with its count for the last hour", async () => {
+    const telemetry = recordTelemetry();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    renderRoom({
+      roomId: "room-mount-telemetry",
+      difficulty: "easy",
+    }).unmount();
+    renderRoom({ roomId: "room-mount-telemetry", difficulty: null });
+    await flushSync();
+
+    expect(
+      telemetry.events().filter((event) => event.name === "mp_room_mount"),
+    ).toEqual([
+      { name: "mp_room_mount", count: 1 },
+      { name: "mp_room_mount", count: 2 },
+    ]);
+    telemetry.stop();
+  });
+
+  it("reports when the opponent first becomes reachable", async () => {
+    const telemetry = recordTelemetry();
+    const { unmount } = renderRoom({
+      roomId: "room-first-peer-telemetry",
+      difficulty: null,
+    });
+    await flushSync();
+    const { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } =
+      await import("y-protocols/awareness");
+    const otherDoc = new Doc();
+    const otherAwareness = new Awareness(otherDoc);
+    otherAwareness.setLocalStateField("user", { id: "p2", name: "Bob" });
+
+    act(() => {
+      applyAwarenessUpdate(
+        connections.last!.awareness,
+        encodeAwarenessUpdate(otherAwareness, [otherDoc.clientID]),
+        "test",
+      );
+    });
+
+    expect(
+      telemetry.events().filter((event) => event.name === "mp_first_peer"),
+    ).toEqual([{ name: "mp_first_peer", ms: expect.any(Number) }]);
+    unmount();
+    otherAwareness.destroy();
+    telemetry.stop();
   });
 
   it("reports the transport's connection status", async () => {

@@ -1,4 +1,5 @@
 import type { Doc } from "yjs";
+import { type IceServersSource, track } from "../lib/telemetry.ts";
 
 /**
  * The Connection: how a room's state reaches its peers and survives
@@ -51,6 +52,12 @@ export function signalingUrl(roomId: string): string {
  * signaling/src/index.ts) so nothing secret ships in the client bundle.
  */
 export const TURN_CREDENTIALS_URL = `https://${SIGNALING_HOST}/turn-credentials`;
+
+/**
+ * Anonymous telemetry intake (error reports, connection events), served
+ * by the same worker (see signaling/src/events.ts).
+ */
+export const TELEMETRY_EVENTS_URL = `https://${SIGNALING_HOST}/events`;
 
 // Bound the wait: opening a connection blocks on ICE resolution, and a
 // slow/broken endpoint must degrade to STUN-only, not a hung lobby.
@@ -108,10 +115,25 @@ export function createIceServerResolver(
 ): () => Promise<RTCIceServer[] | null> {
   let minted: RTCIceServer[] | null = null;
   return async () => {
+    const startedAt = performance.now();
+    const report = (source: IceServersSource) => {
+      track({
+        name: "mp_ice_servers",
+        source,
+        ms: Math.round(performance.now() - startedAt),
+      });
+    };
     const configured = configuredIceServers();
-    if (configured) return configured;
-    if (minted) return minted;
+    if (configured) {
+      report("env");
+      return configured;
+    }
+    if (minted) {
+      report("cached");
+      return minted;
+    }
     minted = await fetchIceServers();
+    report(minted ? "minted" : "none");
     return minted;
   };
 }
@@ -160,7 +182,16 @@ export type Connection = {
   connect(): void;
   disconnect(): void;
   close(): void;
+  /**
+   * Diagnostics only, and optional: the ICE candidate types of the
+   * selected pair on some live peer connection, or null when there is
+   * none (no peer yet, or the peer is reached over BroadcastChannel).
+   */
+  iceRoute?(): Promise<IceRoute | null>;
 };
+
+/** Candidate types ("host", "srflx", "prflx", "relay") of a live pair. */
+export type IceRoute = { local: string; remote: string };
 
 /** What a caller may ask of an {@link OpenConnection}. */
 export type OpenOptions = {

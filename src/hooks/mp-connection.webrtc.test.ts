@@ -27,6 +27,7 @@ const captured = vi.hoisted(() => ({
   providerOptions: null as Record<string, unknown> | null,
   persistenceName: null as string | null,
   persistenceDoc: null as unknown,
+  webrtcConns: new Map<string, unknown>(),
 }));
 
 vi.mock("y-webrtc", async () => {
@@ -42,6 +43,10 @@ vi.mock("y-webrtc", async () => {
       captured.providerOptions = options;
       this.awareness = new Awareness(doc);
     }
+    // y-webrtc's own shape: the room keyed by name, holding one
+    // WebrtcConn (wrapping a simple-peer, wrapping the
+    // RTCPeerConnection) per remote peer.
+    room = { webrtcConns: captured.webrtcConns };
     on() {}
     off() {}
     connect() {}
@@ -106,6 +111,7 @@ beforeEach(() => {
   captured.providerOptions = null;
   captured.persistenceName = null;
   captured.persistenceDoc = null;
+  captured.webrtcConns.clear();
 });
 
 afterEach(() => {
@@ -168,6 +174,50 @@ describe("openWebrtcConnection", () => {
 
     expect(captured.persistenceName).toBe(roomDatabaseName("brave-otter-1a2b"));
     expect(captured.persistenceDoc).toBe(connection.doc);
+    connection.close();
+  });
+
+  it("reads the ICE route off a connected peer's stats", async () => {
+    stubMint(null);
+    const stats = new Map<string, Record<string, unknown>>([
+      ["T", { id: "T", type: "transport", selectedCandidatePairId: "P" }],
+      [
+        "P",
+        {
+          id: "P",
+          type: "candidate-pair",
+          localCandidateId: "L",
+          remoteCandidateId: "R",
+        },
+      ],
+      ["L", { id: "L", type: "local-candidate", candidateType: "relay" }],
+      ["R", { id: "R", type: "remote-candidate", candidateType: "host" }],
+    ]);
+    const unusable = () => Promise.reject(new Error("not connected"));
+    captured.webrtcConns.set("still-dialing", {
+      connected: false,
+      peer: { _pc: { getStats: unusable } },
+    });
+    captured.webrtcConns.set("live", {
+      connected: true,
+      peer: { _pc: { getStats: () => Promise.resolve(stats) } },
+    });
+
+    const connection = await openRoom("route-room");
+
+    expect(await connection.iceRoute?.()).toEqual({
+      local: "relay",
+      remote: "host",
+    });
+    connection.close();
+  });
+
+  it("has no ICE route without a connected WebRTC peer", async () => {
+    stubMint(null);
+
+    const connection = await openRoom("no-route-room");
+
+    expect(await connection.iceRoute?.()).toBeNull();
     connection.close();
   });
 });
