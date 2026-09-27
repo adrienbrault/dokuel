@@ -37,4 +37,27 @@ describe("diffBoardForAmbiance", () => {
       { type: "conflict", row: 1, col: 1 },
     ]);
   });
+
+  it("reports every row, column and box the placement completes", () => {
+    const prev = solvedExcept([4, 4]);
+    const next = withValue(prev, 4, 4, 5);
+
+    expect(diffBoardForAmbiance(prev, next, new Set())).toEqual([
+      { type: "place", row: 4, col: 4, digit: 5 },
+      { type: "unit", kind: "row", index: 4 },
+      { type: "unit", kind: "col", index: 4 },
+      { type: "unit", kind: "box", index: 4 },
+    ]);
+  });
+
+  it("does not count a full unit that still holds a conflict", () => {
+    const prev = solvedExcept([4, 4], [4, 5]);
+    const next = withValue(withValue(prev, 4, 4, 5), 4, 5, 5);
+
+    const events = diffBoardForAmbiance(prev, next, new Set([4 * 9 + 5]));
+
+    expect(events.filter((e) => e.type === "unit")).toEqual([
+      { type: "unit", kind: "col", index: 4 },
+    ]);
+  });
 });
