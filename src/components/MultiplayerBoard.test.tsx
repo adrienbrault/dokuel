@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AmbianceEvent, ambiance } from "../lib/ambiance.ts";
 import { loadGame } from "../lib/game-storage.ts";
 import { getMultiplayerStats } from "../lib/multiplayer-stats.ts";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
@@ -845,5 +846,36 @@ describe("MultiplayerBoard digit drag", () => {
     expect(screen.queryByTestId("digit-drag-indicator")).toBeNull();
     expect(five.className).toContain("bg-accent");
     expect(three.className).not.toContain("bg-accent");
+  });
+});
+
+describe("MultiplayerBoard ambiance", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("ripples the world for both players' moves", () => {
+    const events: AmbianceEvent[] = [];
+    const unsubscribe = ambiance.subscribe((e) => events.push(e));
+    const props = baseProps();
+    const { rerender } = render(
+      <MultiplayerBoard
+        {...props}
+        opponentProgress={{ cellsRemaining: 30, completionPercent: 10 }}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+    const five = screen.getByRole("button", { name: "5" });
+    fireEvent.pointerDown(five, { pointerType: "touch" });
+    fireEvent.pointerUp(five, { pointerType: "touch" });
+    rerender(
+      <MultiplayerBoard
+        {...props}
+        opponentProgress={{ cellsRemaining: 29, completionPercent: 12 }}
+      />,
+    );
+    unsubscribe();
+
+    expect(events).toContainEqual({ type: "place", row: 0, col: 0, digit: 5 });
+    expect(events).toContainEqual({ type: "rival" });
   });
 });
