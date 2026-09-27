@@ -48,4 +48,14 @@ describe("GameLayout", () => {
 
     expect(ambiance.getState().scene).toBe("menu");
   });
+
+  it("offers the 3D world toggle in the game settings", async () => {
+    renderLayout();
+
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(
+      screen.getByRole("button", { name: "3D world" }),
+    ).toBeInTheDocument();
+  });
 });
