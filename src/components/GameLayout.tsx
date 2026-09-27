@@ -10,6 +10,7 @@ import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
+import { ambiance } from "../lib/ambiance.ts";
 import { describeDigitStyle } from "../lib/digit-style.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type {
@@ -17,6 +18,7 @@ import type {
   DigitStyle,
   NumPadPosition,
 } from "../lib/types.ts";
+import { AmbianceToggle } from "./AmbianceToggle.tsx";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { DigitColorPicker } from "./DigitColorPicker.tsx";
 import { EmojiThemePicker } from "./EmojiThemePicker.tsx";
@@ -69,6 +71,13 @@ export function GameLayout({
   digitStyle,
   onDigitStyleChange,
 }: GameLayoutProps) {
+  // A board on screen: the world looks down on it instead of framing
+  // the menu, and goes back when the board leaves.
+  useEffect(() => {
+    ambiance.setScene("game");
+    return () => ambiance.setScene("menu");
+  }, []);
+
   const handleBackgroundPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (!onDeselectCell) return;
     const target = e.target as HTMLElement;
@@ -78,7 +87,7 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="game-screen flex flex-col items-center min-h-dvh py-4 px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
@@ -303,6 +312,10 @@ function SettingsButton({
                 setSoundEnabled(next);
               }}
             />
+          </div>
+          <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
+            <p className="text-xs text-text-muted font-medium">3D world</p>
+            <AmbianceToggle />
           </div>
           {extra && (
             <div className="mt-3 pt-3 border-t border-border-default">

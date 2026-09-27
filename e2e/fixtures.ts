@@ -25,7 +25,11 @@ export async function preparePage(
     (url) => !["localhost", "127.0.0.1"].includes(url.hostname),
     (route) => route.abort(),
   );
-  const entries = Object.entries(storage);
+  // The 3D world renders in software on GPU-less runners, where the
+  // first frame alone blocks the page for seconds. Tests opt in to it
+  // explicitly (see the "3D world" screenshots); everything else checks
+  // the app on its flat backdrop.
+  const entries = Object.entries({ dokuel_ambiance: "false", ...storage });
   if (entries.length > 0) {
     await page.addInitScript((items: [string, string][]) => {
       for (const [k, v] of items) {

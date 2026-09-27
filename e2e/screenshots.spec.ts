@@ -1235,3 +1235,84 @@ test.describe("emoji theme settings", () => {
     });
   });
 });
+
+// --- 3D world ---
+//
+// Every other scene runs with the world off (see fixtures.ts): on a
+// GPU-less runner it renders through SwiftShader and its first frame
+// blocks the page for seconds. These opt in, wait for the engine to mark
+// the page, then give it a few frames to settle. Under Playwright the
+// engine skips its intro and never degrades, so the framing is stable.
+async function waitForWorld(page: Page) {
+  await page
+    .locator('html[data-ambiance="on"]')
+    .waitFor({ state: "attached", timeout: 30_000 });
+  await page.waitForTimeout(1500);
+}
+
+for (const theme of ["dark", "light"] as const) {
+  test.describe(`3D world ${theme}`, () => {
+    test.describe.configure({ timeout: 90_000 });
+    test.beforeEach(({ page }) => page.setDefaultTimeout(30_000));
+    test.use({
+      storage: {
+        dokuel_ambiance: "true",
+        sudoku_theme: theme,
+        "sudoku_save_e2e-world": inProgressSave({
+          difficulty: "medium",
+          timer: 312,
+          blanks: 44,
+          filled: 30,
+          updatedAt: Date.parse("2026-05-19T20:00:00Z"),
+        }),
+      },
+    });
+
+    test(`landing - 3D world ${theme}`, async ({ page }, testInfo) => {
+      await page.goto("/");
+      await waitForWorld(page);
+      await page.screenshot({
+        path: screenshotPath(`world-landing-${theme}`, testInfo.project.name),
+      });
+    });
+
+    test(`solo game - 3D world ${theme}`, async ({ page }, testInfo) => {
+      await page.goto("/solo/medium/e2e-world");
+      await page.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+      await waitForWorld(page);
+      await page.screenshot({
+        path: screenshotPath(`world-solo-${theme}`, testInfo.project.name),
+      });
+    });
+  });
+}
+
+test.describe("3D world win", () => {
+  test.describe.configure({ timeout: 90_000 });
+  test.beforeEach(({ page }) => page.setDefaultTimeout(30_000));
+  test.use({
+    storage: {
+      dokuel_ambiance: "true",
+      sudoku_theme: "dark",
+      "sudoku_save_e2e-win": nearlyWonSave,
+      sudoku_stats: priorEasyStats,
+    },
+  });
+
+  test("solo win - 3D world", async ({ page }, testInfo) => {
+    await page.goto("/solo/easy/e2e-win");
+    await page.waitForSelector(
+      '[role="group"][aria-label="Number pad"]:visible',
+    );
+    await waitForWorld(page);
+    await page.locator('[role="gridcell"][aria-label*=", empty"]').click();
+    await page.keyboard.press("5");
+    await page.getByRole("dialog").getByText("You Won!").waitFor();
+    await page.waitForTimeout(1500);
+    await page.screenshot({
+      path: screenshotPath("world-win", testInfo.project.name),
+    });
+  });
+});

@@ -267,6 +267,27 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 - Installable: web app manifest + home-screen icons; invite links unfurl
   with a rich preview card (og:image)
 
+### 3D World
+- Every screen sits in one persistent three.js world, mounted once at the
+  app root: an endless floor of sudoku grids fading into fog, obsidian
+  (dark) or porcelain (light) digit tiles orbiting the board, dust in a
+  shaft of light, monoliths on the skyline, bloom and a film grade
+- Navigating is a camera move, not a page swap: menus frame the world at
+  eye level, a board on screen tilts the camera down and calms the scene
+- The world reacts to play: a ripple from the cell a value lands in,
+  every tile of that digit flaring, a light sweep over each completed
+  row/column/box, a red ripple on a conflict the player can see, a gold
+  surge on a win; in a duel the rival's moves ripple their board beside
+  the player's
+- The board stays opaque; menus, chrome and dialogs turn to smoked glass
+- Never blocks: three.js loads lazily after first paint; without WebGL2,
+  on a lost GPU context, or with the "3D world" toggle off (landing and
+  game settings, persisted), the flat CSS backdrop remains
+- Budgeted: quality tier from the device, frames paced at 30fps during a
+  game on touch devices, resolution then bloom shed when frames run
+  slow, nothing rendered while the tab is hidden, a single still frame
+  per screen under `prefers-reduced-motion`
+
 ### Color Palette
 - Warm neutral backgrounds (cream light theme, deep charcoal dark theme)
 - Teal accent for selection/highlights and primary actions
@@ -278,6 +299,7 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 - Bun runtime
 - Vite + React 19 + Tailwind CSS 4
 - Yjs + y-webrtc for peer-to-peer multiplayer
+- three.js for the 3D world (lazy-loaded chunk)
 - Deploy to Cloudflare Pages
 - Biome for lint/format
 - Vitest for testing

@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { AmbianceBackdrop } from "./components/AmbianceBackdrop.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import {
   sweepStaleRoomDatabases,
@@ -12,6 +13,7 @@ if (!root) throw new Error("Root element not found");
 createRoot(root).render(
   <StrictMode>
     <ErrorBoundary>
+      <AmbianceBackdrop />
       <App />
     </ErrorBoundary>
   </StrictMode>,

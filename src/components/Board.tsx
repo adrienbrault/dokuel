@@ -173,7 +173,7 @@ export function Board({
           gridTemplateColumns: `repeat(3, ${boxPx}px)`,
           gridTemplateRows: `repeat(3, ${boxPx}px)`,
         }}
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+        className="board-frame grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
         role="grid"
         aria-label="Sudoku board"
         aria-rowcount={9}

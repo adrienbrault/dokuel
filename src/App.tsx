@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { AmbianceToggle } from "./components/AmbianceToggle.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
@@ -162,6 +163,11 @@ function App() {
     case "landing":
       return (
         <div className="screen relative">
+          {/* Its own corner: a third button on the right runs into the
+              title on the narrowest phones. */}
+          <div className="absolute top-4 left-4 z-10">
+            <AmbianceToggle />
+          </div>
           <div className="absolute top-4 right-4 flex gap-2 z-10">
             <SoundToggle
               enabled={soundOn}

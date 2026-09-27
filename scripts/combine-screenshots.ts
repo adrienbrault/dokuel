@@ -151,6 +151,17 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
     ],
   },
   {
+    name: "world",
+    title: "3D world (dark & light, menu, board, win)",
+    scenes: [
+      "world-landing-dark",
+      "world-solo-dark",
+      "world-win",
+      "world-landing-light",
+      "world-solo-light",
+    ],
+  },
+  {
     name: "dark-mode-a",
     title: "Dark-mode pairs (landing & solo)",
     scenes: ["landing", "landing-dark", "solo-game", "solo-game-dark"],

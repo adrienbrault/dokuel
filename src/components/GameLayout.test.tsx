@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
+import { ambiance } from "../lib/ambiance.ts";
 import { GameLayout } from "./GameLayout.tsx";
 
 function renderLayout(props: Partial<Parameters<typeof GameLayout>[0]> = {}) {
@@ -37,5 +38,24 @@ describe("GameLayout", () => {
     expect(
       screen.queryByRole("radiogroup", { name: "Digit colors" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("points the ambiance at the board while it is on screen", () => {
+    const { unmount } = renderLayout();
+    expect(ambiance.getState().scene).toBe("game");
+
+    unmount();
+
+    expect(ambiance.getState().scene).toBe("menu");
+  });
+
+  it("offers the 3D world toggle in the game settings", async () => {
+    renderLayout();
+
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(
+      screen.getByRole("button", { name: "3D world" }),
+    ).toBeInTheDocument();
   });
 });

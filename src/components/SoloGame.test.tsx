@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AmbianceEvent, ambiance } from "../lib/ambiance.ts";
 import { SoloGame } from "./SoloGame.tsx";
 
 // A solved grid; the puzzle blanks all of row 0 so every numpad digit
@@ -60,6 +61,22 @@ describe("SoloGame numpad selection", () => {
     expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
       "Puzzle complete",
     );
+  });
+
+  it("lights the ambiance from the cell a value lands in", () => {
+    const events: AmbianceEvent[] = [];
+    const unsubscribe = ambiance.subscribe((e) => events.push(e));
+    render(
+      <SoloGame difficulty="easy" initialPuzzle={PUZZLE} onBack={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByLabelText(/^Cell row 1 column 1, empty/));
+    const five = screen.getByRole("button", { name: "5" });
+    fireEvent.pointerDown(five, { pointerType: "touch" });
+    fireEvent.pointerUp(five, { pointerType: "touch" });
+    unsubscribe();
+
+    expect(events).toContainEqual({ type: "place", row: 0, col: 0, digit: 5 });
   });
 
   it("places a value and keeps the cell selected after a numpad tap", () => {

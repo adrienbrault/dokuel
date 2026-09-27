@@ -1,5 +1,6 @@
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { pathToScreen, screenToPath } from "./App.tsx";
+import App, { pathToScreen, screenToPath } from "./App.tsx";
 
 describe("pathToScreen", () => {
   it("maps the static screens", () => {
@@ -91,5 +92,16 @@ describe("screenToPath", () => {
   it("round-trips a multiplayer room", () => {
     const screen = pathToScreen("/calm-lamb-g4bb");
     expect(screenToPath(screen)).toBe("/calm-lamb-g4bb");
+  });
+});
+
+describe("landing screen", () => {
+  it("offers the 3D world toggle beside sound and theme", () => {
+    window.history.replaceState(null, "", "/");
+    render(<App />);
+
+    expect(
+      screen.getByRole("button", { name: "3D world" }),
+    ).toBeInTheDocument();
   });
 });
