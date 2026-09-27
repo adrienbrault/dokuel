@@ -193,6 +193,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/components/Atmosphere.test.tsx"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "useLiteralKeys": "off"
+          }
+        }
+      }
     }
   ]
 }
