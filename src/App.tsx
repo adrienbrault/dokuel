@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { AmbianceToggle } from "./components/AmbianceToggle.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
@@ -163,6 +164,7 @@ function App() {
       return (
         <div className="screen relative">
           <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <AmbianceToggle />
             <SoundToggle
               enabled={soundOn}
               onToggle={() => {
