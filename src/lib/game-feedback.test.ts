@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { subscribeAtmosphere, type AtmosphereEvent } from "./atmosphere.ts";
 import { gameFeedback } from "./game-feedback.ts";
 
 describe("gameFeedback", () => {
@@ -31,5 +32,27 @@ describe("gameFeedback", () => {
     gameFeedback.onComplete();
 
     expect(vibrate).toHaveBeenCalledTimes(6);
+  });
+
+  it("emits an atmosphere cue for each game event", () => {
+    const seen: AtmosphereEvent[] = [];
+    const unsub = subscribeAtmosphere((e) => seen.push(e));
+
+    gameFeedback.onPlace();
+    gameFeedback.onErase();
+    gameFeedback.onToggleNotes();
+    gameFeedback.onHint();
+    gameFeedback.onConflict();
+    gameFeedback.onComplete();
+    unsub();
+
+    expect(seen.map((e) => (e.kind === "cue" ? e.cue : e.kind))).toEqual([
+      "place",
+      "erase",
+      "note",
+      "hint",
+      "conflict",
+      "complete",
+    ]);
   });
 });
