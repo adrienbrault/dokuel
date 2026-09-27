@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { subscribeAtmosphere, type AtmosphereEvent } from "./atmosphere.ts";
+import { type AtmosphereEvent, subscribeAtmosphere } from "./atmosphere.ts";
 import { gameFeedback } from "./game-feedback.ts";
 
 describe("gameFeedback", () => {
