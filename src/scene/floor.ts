@@ -113,23 +113,27 @@ export function createFloor(palette: ScenePalette) {
 
         float gridLevel = (0.3 + 0.7 * uEnergy) * (falloff * 0.35 + boards) * focus;
         col = composite(col, uMinor, minor * 0.55 * gridLevel);
-        col = composite(col, uMajor, max(major * 0.7, board) * gridLevel * (0.8 + 0.4 * uProgress));
+        col = composite(col, uMajor, max(major * 0.7, board) * gridLevel * (0.75 + 0.25 * uProgress));
+
+        // Effects accumulate into one light, then get soft-clamped: a
+        // late-game move can close a row, a column and a box at once,
+        // and stacked glows must stay a highlight, not a white-out.
+        vec3 fx = vec3(0.0);
 
         // Ripples: a ring that lights the grid lines as it passes, and a
         // brief glow filling the cell it started from.
         for (int i = 0; i < ${MAX_RIPPLES}; i++) {
           vec4 r = uRipples[i];
           float age = uTime - r.z;
-          if (age < 0.0 || age > 5.0 || r.w <= 0.0) continue;
+          if (age < 0.0 || age > 3.5 || r.w <= 0.0) continue;
           vec2 dp = p - r.xy;
           float d = length(dp);
-          float radius = age * 6.5;
-          float width = 0.35 + age * 0.55;
-          float ring = exp(-pow((d - radius) / width, 2.0)) * exp(-age * 0.85);
+          float radius = age * 5.0;
+          float width = 0.3 + age * 0.4;
+          float ring = exp(-pow((d - radius) / width, 2.0)) * exp(-age * 1.4);
           vec2 cd = abs(dp);
-          float cell = (1.0 - smoothstep(0.36, 0.5, max(cd.x, cd.y))) * exp(-age * 2.2);
-          float amount = r.w * (ring * (0.12 + lineMask * 1.6) + cell * 0.9);
-          col = composite(col, uRippleColors[i], amount);
+          float cell = (1.0 - smoothstep(0.36, 0.5, max(cd.x, cd.y))) * exp(-age * 2.5);
+          fx += uRippleColors[i] * r.w * (ring * (0.03 + lineMask * 0.55) + cell * 0.35);
         }
 
         // Sweeps: a completed row/column/box glows, and a bright band
@@ -137,7 +141,7 @@ export function createFloor(palette: ScenePalette) {
         for (int i = 0; i < ${MAX_SWEEPS}; i++) {
           vec2 info = uSweepInfo[i];
           float age = uTime - info.x;
-          if (age < 0.0 || age > 3.5 || info.y <= 0.0) continue;
+          if (age < 0.0 || age > 3.0 || info.y <= 0.0) continue;
           vec4 b = uSweeps[i];
           vec2 c = (b.xy + b.zw) * 0.5;
           vec2 h = (b.zw - b.xy) * 0.5;
@@ -147,10 +151,15 @@ export function createFloor(palette: ScenePalette) {
           float along = h.x >= h.y
             ? (p.x - b.x) / max(b.z - b.x, 1e-3)
             : (p.y - b.y) / max(b.w - b.y, 1e-3);
-          float band = exp(-pow((along - age * 1.4 + 0.1) * 5.0, 2.0)) * inside;
-          float glow = (inside * 0.5 + exp(-outside * 2.5) * 0.35) * exp(-age * 1.3);
-          float amount = info.y * (glow * (0.25 + lineMask * 1.8) + band * 1.2);
-          col = composite(col, uSweepColors[i], amount);
+          float band = exp(-pow((along - age * 1.4 + 0.1) * 6.0, 2.0)) * inside;
+          float glow = (inside * 0.07 + exp(-outside * 3.0) * 0.05) * exp(-age * 1.6);
+          fx += uSweepColors[i] * info.y * (glow * (0.4 + lineMask * 1.5) + band * 0.35);
+        }
+
+        float fxLevel = max(fx.r, max(fx.g, fx.b));
+        float fxCapped = fxLevel / (1.0 + fxLevel * 0.8);
+        if (fxLevel > 1e-4) {
+          col = composite(col, fx / fxLevel, fxCapped);
         }
 
         // Grazing angles pick up the horizon, like a polished floor.

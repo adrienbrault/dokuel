@@ -76,12 +76,12 @@ export function createChoreography(floor: Floor, tiles: Tiles) {
         }
         case "conflict": {
           const [x, z] = cellToFloor(event.row, event.col);
-          floor.ripple(x, z, p.conflict, 1.3, time);
+          floor.ripple(x, z, p.conflict, 0.8, time);
           flashTo(p.conflict, p.additive ? 0.05 : 0.08);
           return;
         }
         case "unit":
-          floor.sweep(unitRect(event.kind, event.index), p.accentHot, 1, time);
+          floor.sweep(unitRect(event.kind, event.index), p.accent, 1, time);
           tiles.flashAll(0.45);
           kick(0.5);
           return;
