@@ -73,8 +73,8 @@ describe("atmosphere director", () => {
 
     const rings = d.takeRings();
     expect(rings).toHaveLength(1);
-    expect(rings[0].strength).toBeGreaterThan(0);
-    expect(rings[0].hue).toBe("accent");
+    expect(rings[0]?.strength).toBeGreaterThan(0);
+    expect(rings[0]?.hue).toBe("accent");
   });
 
   it("draining rings empties the queue", () => {
@@ -107,7 +107,7 @@ describe("atmosphere director", () => {
     expect(d.read().shake).toBeGreaterThan(0.3);
 
     const rings = d.takeRings();
-    expect(rings[0].hue).toBe("danger");
+    expect(rings[0]?.hue).toBe("danger");
   });
 
   it("flash and shake decay to rest", () => {
