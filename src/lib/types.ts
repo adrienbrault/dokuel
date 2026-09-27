@@ -14,6 +14,24 @@ export type Board = Cell[][];
 
 export type Position = { row: number; col: number };
 
+/**
+ * Everything a renderer needs to paint one cell: its contents plus the
+ * highlight states derived from selection, conflicts, hints and drags.
+ */
+export type CellVisual = {
+  isSelected: boolean;
+  isMultiSelected: boolean;
+  isHighlighted: boolean;
+  isSameNumber: boolean;
+  isConflict: boolean;
+  isHintRelated: boolean;
+  isSameNumberRowCol: boolean;
+  isDragSource: boolean;
+  dropTargetState: "valid" | "invalid" | null;
+  dropMode: "value" | "note" | undefined;
+  dropDigit: number | undefined;
+};
+
 // --- Game State ---
 
 export type ClearedNote = { row: number; col: number; note: number };

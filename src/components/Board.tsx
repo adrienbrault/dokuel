@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { useGridFocus } from "../hooks/useGridFocus.ts";
+import { computeCellVisuals } from "../lib/cell-visuals.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type {
   AssistLevel,
@@ -76,39 +77,16 @@ export function Board({
   onStartCellDrag,
   completed,
 }: BoardProps) {
-  const isPaper = assistLevel === "paper";
-  const isFull = assistLevel === "full";
-  const selectedValue =
-    selectedCell !== null
-      ? board[selectedCell.row]![selectedCell.col]!.value
-      : (highlightedDigit ?? null);
-
-  // In full assist mode, collect rows/cols/boxes of all cells matching the
-  // active value (the selected cell's value, or the numpad-highlighted digit)
-  // for the "where this digit can't go" cross-highlight. The selected cell
-  // itself is excluded so its own row/col/box don't double-up over the
-  // selection halo.
-  const matchRowColSet = (() => {
-    if (!isFull || selectedValue === null) return null;
-    const rows = new Set<number>();
-    const cols = new Set<number>();
-    const boxes = new Set<number>();
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (
-          board[r]![c]!.value === selectedValue &&
-          !(selectedCell?.row === r && selectedCell?.col === c)
-        ) {
-          rows.add(r);
-          cols.add(c);
-          boxes.add(Math.floor(r / 3) * 3 + Math.floor(c / 3));
-        }
-      }
-    }
-    return rows.size > 0 || cols.size > 0 || boxes.size > 0
-      ? { rows, cols, boxes }
-      : null;
-  })();
+  const visuals = computeCellVisuals({
+    board,
+    selectedCell,
+    selectedCells,
+    conflicts,
+    hintCells,
+    highlightedDigit,
+    assistLevel,
+    dragState,
+  });
 
   const dragHandlers = useDragSelect({
     board,
@@ -225,59 +203,19 @@ export function Board({
                 const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
                 const colIdx = boxCol * 3 + (cellIdx % 3);
                 const cell = board[rowIdx]![colIdx]!;
-                const isSelected =
-                  selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
-                const isHighlighted =
-                  !isPaper &&
-                  selectedCell !== null &&
-                  (selectedCell.row === rowIdx ||
-                    selectedCell.col === colIdx ||
-                    (Math.floor(selectedCell.row / 3) ===
-                      Math.floor(rowIdx / 3) &&
-                      Math.floor(selectedCell.col / 3) ===
-                        Math.floor(colIdx / 3)));
-                const isSameNumber =
-                  !isPaper &&
-                  !isSelected &&
-                  selectedValue !== null &&
-                  cell.value !== null &&
-                  cell.value === selectedValue;
-                const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
-                const isMultiSelected =
-                  !isSelected &&
-                  (selectedCells?.size ?? 0) > 1 &&
-                  (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isHintRelated =
-                  !isSelected &&
-                  (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isSameNumberRowCol =
-                  matchRowColSet !== null &&
-                  !isSelected &&
-                  !isSameNumber &&
-                  (matchRowColSet.rows.has(rowIdx) ||
-                    matchRowColSet.cols.has(colIdx) ||
-                    matchRowColSet.boxes.has(
-                      Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
-                    ));
-
-                // Drag-related render flags
-                const isDragSource =
-                  dragState?.source.kind === "cell" &&
-                  dragState.source.row === rowIdx &&
-                  dragState.source.col === colIdx;
-                const isDropTarget =
-                  dragState?.target?.row === rowIdx &&
-                  dragState?.target?.col === colIdx;
-                const dropTargetState =
-                  isDropTarget && dragState
-                    ? dragState.invalidTarget
-                      ? "invalid"
-                      : "valid"
-                    : null;
-                const dropMode =
-                  dropTargetState === "valid" ? dragState?.mode : undefined;
-                const dropDigit =
-                  dropTargetState === "valid" ? dragState?.digit : undefined;
+                const {
+                  isSelected,
+                  isMultiSelected,
+                  isHighlighted,
+                  isSameNumber,
+                  isConflict,
+                  isHintRelated,
+                  isSameNumberRowCol,
+                  isDragSource,
+                  dropTargetState,
+                  dropMode,
+                  dropDigit,
+                } = visuals[cellKey(rowIdx, colIdx)]!;
 
                 return (
                   <Cell
@@ -288,7 +226,7 @@ export function Board({
                     col={colIdx}
                     isSelected={isSelected}
                     isMultiSelected={isMultiSelected}
-                    isHighlighted={isHighlighted && !isSelected}
+                    isHighlighted={isHighlighted}
                     isSameNumber={isSameNumber}
                     isConflict={isConflict}
                     isHintRelated={isHintRelated}
