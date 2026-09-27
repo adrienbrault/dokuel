@@ -351,6 +351,14 @@ describe("Atmosphere", () => {
     expect(container.querySelector("canvas")).toBe(rendererAt(0).domElement);
   });
 
+  it("advertises the current mood on the layer element", () => {
+    const { container, rerender } = renderAtmosphere("menu");
+    expect(container.firstElementChild).toHaveAttribute("data-mood", "menu");
+
+    rerender(<Atmosphere mood="game" />);
+    expect(container.firstElementChild).toHaveAttribute("data-mood", "game");
+  });
+
   it("starts the render loop and renders on every frame", () => {
     renderAtmosphere();
     expect(mocks.rafCallbacks.length).toBe(1);
