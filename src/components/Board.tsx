@@ -69,6 +69,12 @@ type BoardProps = {
     | undefined;
   /** True once the puzzle is solved; the live region announces it. */
   completed?: boolean | undefined;
+  /**
+   * Opt in to the WebGL board (when the player's preference and the
+   * browser allow it). Game screens opt in; decorative boards such as
+   * the landing demo stay DOM-only and never load three.js.
+   */
+  threeD?: boolean | undefined;
 };
 
 export function Board({
@@ -86,6 +92,7 @@ export function Board({
   dragState,
   onStartCellDrag,
   completed,
+  threeD = false,
 }: BoardProps) {
   const visuals = computeCellVisuals({
     board,
@@ -156,7 +163,8 @@ export function Board({
   // The scene chunk can arrive after the reveal window has closed; it
   // still owes the board the entrance the player would have seen.
   const [revealOnMount] = useState(animateReveal ?? false);
-  const show3d = board3d.active && drawn3d;
+  const use3d = threeD && board3d.active;
+  const show3d = use3d && drawn3d;
 
   return (
     <div
@@ -164,7 +172,7 @@ export function Board({
       className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
     >
       <div className="relative isolate">
-        {board3d.active && (
+        {use3d && (
           <Suspense fallback={null}>
             <BoardSceneLayer
               gridRef={gridRef}
