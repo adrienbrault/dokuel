@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
+import {
+  useAmbianceBoard,
+  useAmbianceRival,
+} from "../hooks/useAmbianceBoard.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useMatchResult } from "../hooks/useMatchResult.ts";
 import { useMultiplayerAutosave } from "../hooks/useMultiplayerAutosave.ts";
@@ -118,6 +122,9 @@ export function MultiplayerBoard({
       timerSecondsRef.current = 0;
     },
   });
+  const clashes = assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS;
+  useAmbianceBoard(game.board, clashes, game.status);
+  useAmbianceRival(opponentProgress?.cellsRemaining ?? null);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
@@ -239,7 +246,7 @@ export function MultiplayerBoard({
             selectedCell={game.selectedCell}
             selectedCells={game.selectedCells}
             assistLevel={assistLevel}
-            conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
+            conflicts={clashes}
             highlightedDigit={highlight.highlightedDigit}
             onSelectCell={highlight.selectCell}
             onSetSelectedCells={highlight.setSelectedCells}
