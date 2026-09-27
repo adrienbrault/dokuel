@@ -21,6 +21,11 @@ export default defineConfig({
         "src/test-setup.ts",
         "src/lib/types.ts",
         "src/lib/constants.ts",
+        // The WebGL board renderer draws through a GPU context and 2D
+        // canvases, neither of which jsdom provides. It is exercised by
+        // the Playwright screenshots; its pure logic (spring, board
+        // diffs, layout, cell visuals) lives in tested modules.
+        "src/lib/board-scene/!(spring).ts",
       ],
       // Branch threshold reflects useYjsMultiplayer being measured: the
       // suite genuinely covers ~85% of branches with it included, which
