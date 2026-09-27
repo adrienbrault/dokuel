@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBoard3D } from "../hooks/useBoard3D.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
@@ -79,7 +80,13 @@ export function SoloGame({
 
   const { position, setPosition } = useNumPadPosition();
   const revealed = useDelayedFlag(true, 600);
-  const showResult = useDelayedFlag(game.status === "completed", 300);
+  // The 3D board plays a victory wave; hold the result back until it
+  // has had its moment instead of covering it straight away.
+  const board3d = useBoard3D();
+  const showResult = useDelayedFlag(
+    game.status === "completed",
+    board3d.active ? 1600 : 300,
+  );
   const [paused, setPaused] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem("sudoku_numpad_tip_dismissed") === "1",
