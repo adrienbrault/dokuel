@@ -43,8 +43,11 @@ export function diffBoardForAmbiance(
   const touched: [number, number][] = [];
   for (let row = 0; row < 9; row++) {
     for (let col = 0; col < 9; col++) {
-      const value = next[row]?.[col]?.value ?? null;
-      if (value === null || value === prev[row]?.[col]?.value) continue;
+      const cell = next[row]?.[col];
+      const value = cell?.value ?? null;
+      // Givens arrive with the puzzle, not from the player.
+      if (value === null || cell?.isGiven) continue;
+      if (value === prev[row]?.[col]?.value) continue;
       touched.push([row, col]);
       events.push(
         conflicts.has(row * 9 + col)
