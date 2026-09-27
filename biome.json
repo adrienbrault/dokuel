@@ -183,6 +183,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/components/atmosphere-scene.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
     }
   ]
 }
