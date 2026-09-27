@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type AmbianceEvent, ambiance } from "../lib/ambiance.ts";
 import { parsePuzzle } from "../lib/sudoku.ts";
 import type { Board, GameStatus } from "../lib/types.ts";
-import { useAmbianceBoard } from "./useAmbianceBoard.ts";
+import { useAmbianceBoard, useAmbianceRival } from "./useAmbianceBoard.ts";
 
 const SOLUTION =
   "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
@@ -85,5 +85,28 @@ describe("useAmbianceBoard", () => {
     rerender({ board: withValue(start, 0, 0, 5) });
 
     expect(ambiance.getState().progress).toBe(0.25);
+  });
+});
+
+describe("useAmbianceRival", () => {
+  it("ripples once for each cell the opponent fills, never for undo", () => {
+    const { events, unsubscribe } = listen();
+    const { rerender } = renderHook(
+      ({ remaining }: { remaining: number | null }) =>
+        useAmbianceRival(remaining),
+      { initialProps: { remaining: null as number | null } },
+    );
+
+    rerender({ remaining: 40 });
+    rerender({ remaining: 39 });
+    rerender({ remaining: 37 });
+    rerender({ remaining: 38 });
+    unsubscribe();
+
+    expect(events).toEqual([
+      { type: "rival" },
+      { type: "rival" },
+      { type: "rival" },
+    ]);
   });
 });
