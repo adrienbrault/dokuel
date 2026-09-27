@@ -163,8 +163,12 @@ function App() {
     case "landing":
       return (
         <div className="screen relative">
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
+          {/* Its own corner: a third button on the right runs into the
+              title on the narrowest phones. */}
+          <div className="absolute top-4 left-4 z-10">
             <AmbianceToggle />
+          </div>
+          <div className="absolute top-4 right-4 flex gap-2 z-10">
             <SoundToggle
               enabled={soundOn}
               onToggle={() => {
