@@ -300,5 +300,8 @@ export class BoardScene {
     this.glyphs.dispose();
     this.scene.environment?.dispose();
     this.renderer.dispose();
+    // The canvas is thrown away with the scene; free its context now
+    // rather than at GC, since browsers cap how many can be alive.
+    this.renderer.forceContextLoss();
   }
 }
