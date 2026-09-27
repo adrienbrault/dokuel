@@ -6,7 +6,12 @@ import type { Board } from "./types.ts";
 const SOLVED =
   "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
 
-function withValue(board: Board, row: number, col: number, value: number | null) {
+function withValue(
+  board: Board,
+  row: number,
+  col: number,
+  value: number | null,
+) {
   const next = board.map((r) => r.map((c) => ({ ...c })));
   next[row]![col]!.value = value;
   return next;
@@ -37,9 +42,9 @@ describe("diffBoards", () => {
     const solved = parsePuzzle(SOLVED);
     const before = withValue(solved, 0, 0, null);
     // Filling r1c1 completes row 1, column 1 and box 1 at once.
-    expect(diffBoards(before, solved).completedUnits.sort((x, y) => x - y)).toEqual([
-      0, 9, 18,
-    ]);
+    expect(
+      diffBoards(before, solved).completedUnits.sort((x, y) => x - y),
+    ).toEqual([0, 9, 18]);
   });
 
   it("does not celebrate a full house that repeats a digit", () => {
