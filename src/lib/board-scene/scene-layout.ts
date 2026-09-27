@@ -14,6 +14,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { boardSizePx, cellOffsetPx } from "../board-layout.ts";
 import { shadowTexture } from "./effects.ts";
+import type { BoardTheme } from "./theme.ts";
 import type { Tile } from "./tile.ts";
 
 type BoardParts = { tiles: Tile[]; plates: Mesh[]; base: Mesh; shadow: Mesh };
@@ -115,4 +116,19 @@ export function layoutBoard(parts: BoardParts, cellPx: number, d: number) {
   parts.base.position.z = -d * 1.3;
   parts.shadow.scale.setScalar(boardPx * 1.2);
   parts.shadow.position.set(0, -cellPx * 0.25, -d * 2.2);
+}
+
+/** Recolors the board body and retunes tile finish for a theme. */
+export function paintTheme(parts: BoardParts, theme: BoardTheme) {
+  (parts.base.material as MeshStandardMaterial).color.copy(theme.boardBorder);
+  for (const p of parts.plates) {
+    (p.material as MeshStandardMaterial).color.copy(theme.borderDefault);
+  }
+  (parts.shadow.material as MeshBasicMaterial).opacity = theme.isDark
+    ? 0.55
+    : 0.22;
+  for (const t of parts.tiles) {
+    t.shadowStrength = theme.isDark ? 0.7 : 0.32;
+    t.material.clearcoat = theme.isDark ? 0.3 : 0.55;
+  }
 }

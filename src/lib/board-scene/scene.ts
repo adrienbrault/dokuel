@@ -5,8 +5,6 @@ import {
   type Material,
   MathUtils,
   type Mesh,
-  type MeshBasicMaterial,
-  type MeshStandardMaterial,
   PerspectiveCamera,
   PlaneGeometry,
   Scene,
@@ -21,6 +19,7 @@ import {
   createBoardParts,
   createRenderer,
   layoutBoard,
+  paintTheme,
 } from "./scene-layout.ts";
 import { applyState, type BoardSceneState } from "./scene-state.ts";
 import { Spring } from "./spring.ts";
@@ -173,23 +172,16 @@ export class BoardScene {
   }
 
   private applyTheme() {
-    const theme = this.stage.theme;
-    (this.base.material as MeshStandardMaterial).color.copy(theme.boardBorder);
-    for (const p of this.plates) {
-      (p.material as MeshStandardMaterial).color.copy(theme.borderDefault);
-    }
-    (this.shadow.material as MeshBasicMaterial).opacity = theme.isDark
-      ? 0.55
-      : 0.22;
+    const { theme, tiles, particles } = this.stage;
+    paintTheme(
+      { tiles, plates: this.plates, base: this.base, shadow: this.shadow },
+      theme,
+    );
     this.cursor.setColor(theme.accent);
     // Reflections lift every surface by a constant amount, which is
     // gloss on a pale tile but grey haze on a near-black one.
     this.scene.environmentIntensity = theme.isDark ? 0.05 : 0.3;
-    for (const t of this.stage.tiles) {
-      t.shadowStrength = theme.isDark ? 0.7 : 0.32;
-      t.material.clearcoat = theme.isDark ? 0.3 : 0.55;
-    }
-    this.stage.particles.setBlending(theme.isDark);
+    particles.setBlending(theme.isDark);
   }
 
   update(state: BoardSceneState, animate = true) {
@@ -288,8 +280,8 @@ export class BoardScene {
     cancelAnimationFrame(this.raf);
     this.observer.disconnect();
     for (const t of this.stage.tiles) t.dispose();
-    this.stage.tiles[0]?.body.geometry.dispose();
-    this.stage.tiles[0]?.value.geometry.dispose();
+    const first = this.stage.tiles[0];
+    for (const g of [first?.body.geometry, first?.value.geometry]) g?.dispose();
     for (const p of [...this.plates, this.base, this.shadow]) {
       p.geometry.dispose();
       (p.material as Material).dispose();
@@ -300,8 +292,6 @@ export class BoardScene {
     this.glyphs.dispose();
     this.scene.environment?.dispose();
     this.renderer.dispose();
-    // The canvas is thrown away with the scene; free its context now
-    // rather than at GC, since browsers cap how many can be alive.
-    this.renderer.forceContextLoss();
+    this.renderer.forceContextLoss(); // browsers cap live contexts
   }
 }
