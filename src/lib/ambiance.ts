@@ -17,16 +17,37 @@ export type AmbianceEvent =
   /** The local board is solved. */
   | { type: "victory" };
 
+/** Menus frame the world wide; a game looks down on the board. */
+export type AmbianceScene = "menu" | "game";
+
+export type AmbianceState = {
+  scene: AmbianceScene;
+  /** Share of the empty cells filled so far, 0..1. */
+  progress: number;
+};
+
 type Listener = (event: AmbianceEvent) => void;
 
 export type AmbianceChannel = {
   emit: (event: AmbianceEvent) => void;
   subscribe: (listener: Listener) => () => void;
+  getState: () => AmbianceState;
+  setScene: (scene: AmbianceScene) => void;
+  setProgress: (progress: number) => void;
 };
 
 export function createAmbianceChannel(): AmbianceChannel {
   const listeners = new Set<Listener>();
+  let state: AmbianceState = { scene: "menu", progress: 0 };
   return {
+    getState: () => state,
+    setScene(scene) {
+      // A board's progress means nothing once the player leaves it.
+      state = { scene, progress: scene === "menu" ? 0 : state.progress };
+    },
+    setProgress(progress) {
+      state = { ...state, progress };
+    },
     emit(event) {
       for (const listener of listeners) listener(event);
     },
