@@ -10,6 +10,7 @@ import { useDarkMode } from "../hooks/useDarkMode.ts";
 import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
 import { KEYBOARD_SHORTCUTS } from "../hooks/useKeyboard.ts";
+import { ambiance } from "../lib/ambiance.ts";
 import { describeDigitStyle } from "../lib/digit-style.ts";
 import { getSoundEnabled, setSoundEnabled } from "../lib/sounds.ts";
 import type {
@@ -69,6 +70,13 @@ export function GameLayout({
   digitStyle,
   onDigitStyleChange,
 }: GameLayoutProps) {
+  // A board on screen: the world looks down on it instead of framing
+  // the menu, and goes back when the board leaves.
+  useEffect(() => {
+    ambiance.setScene("game");
+    return () => ambiance.setScene("menu");
+  }, []);
+
   const handleBackgroundPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (!onDeselectCell) return;
     const target = e.target as HTMLElement;
