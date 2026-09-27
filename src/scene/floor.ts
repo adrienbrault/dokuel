@@ -34,6 +34,7 @@ export function createFloor(palette: ScenePalette) {
     uEnergy: { value: 1 },
     uProgress: { value: 0 },
     uAdditive: { value: 1 },
+    uGridGain: { value: 1 },
     uBase: { value: new Color() },
     uMinor: { value: new Color() },
     uMajor: { value: new Color() },
@@ -61,6 +62,7 @@ export function createFloor(palette: ScenePalette) {
       uniform float uTime;
       uniform float uEnergy;
       uniform float uProgress;
+      uniform float uGridGain;
       uniform vec3 uBase;
       uniform vec3 uMinor;
       uniform vec3 uMajor;
@@ -111,7 +113,7 @@ export function createFloor(palette: ScenePalette) {
         float pool = exp(-dot(p, p) * 0.018);
         col = composite(col, uAccent, pool * (0.05 + 0.08 * uEnergy + 0.18 * uProgress) * uAdditive);
 
-        float gridLevel = (0.3 + 0.7 * uEnergy) * (falloff * 0.35 + boards) * focus;
+        float gridLevel = (0.3 + 0.7 * uEnergy) * (falloff * 0.35 + boards) * focus * uGridGain;
         col = composite(col, uMinor, minor * 0.55 * gridLevel);
         col = composite(col, uMajor, max(major * 0.7, board) * gridLevel * (0.75 + 0.25 * uProgress));
 
@@ -189,6 +191,7 @@ export function createFloor(palette: ScenePalette) {
     uniforms.uFog.value.copy(p.fog);
     uniforms.uHorizon.value.copy(p.horizonGlow);
     uniforms.uFogDensity.value = p.fogDensity;
+    uniforms.uGridGain.value = p.gridGain;
     uniforms.uAdditive.value = p.additive ? 1 : 0;
   }
   setPalette(palette);

@@ -27,6 +27,7 @@ export function createSky(palette: ScenePalette) {
     uHorizon: { value: new Color() },
     uGlow: { value: new Color() },
     uStars: { value: 0 },
+    uRise: { value: 0.6 },
   };
   const material = new ShaderMaterial({
     uniforms: uniforms,
@@ -45,6 +46,7 @@ export function createSky(palette: ScenePalette) {
       uniform vec3 uHorizon;
       uniform vec3 uGlow;
       uniform float uStars;
+      uniform float uRise;
       varying vec3 vDir;
 
       float hash(vec3 p) {
@@ -56,7 +58,7 @@ export function createSky(palette: ScenePalette) {
       void main() {
         vec3 d = normalize(vDir);
         float h = d.y;
-        vec3 col = mix(uHorizon, uZenith, smoothstep(-0.02, 0.6, h));
+        vec3 col = mix(uHorizon, uZenith, smoothstep(-0.02, uRise, h));
         col += uGlow * exp(-abs(h - 0.015) * 16.0) * 0.9;
         if (uStars > 0.0) {
           vec3 cell = floor(d * 240.0);
@@ -84,6 +86,7 @@ export function createSky(palette: ScenePalette) {
     uniforms.uHorizon.value.copy(p.skyHorizon);
     uniforms.uGlow.value.copy(p.horizonGlow);
     uniforms.uStars.value = p.stars;
+    uniforms.uRise.value = p.skyRise;
   }
   setPalette(palette);
 

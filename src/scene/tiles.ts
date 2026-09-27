@@ -219,7 +219,7 @@ export async function createTiles(count: number, palette: ScenePalette) {
     bodyMaterial.metalness = p.tileMetalness;
     bodyMaterial.roughness = p.tileRoughness;
     glyphUniforms.uColor.value.copy(p.tileGlyph);
-    glyphUniforms.uHot.value.copy(p.accentHot);
+    glyphUniforms.uHot.value.copy(p.tileGlow);
     glyphUniforms.uFogDensity.value = p.fogDensity;
     glyphUniforms.uAdditive.value = p.additive ? 1 : 0;
     glyphMaterial.blending = p.additive ? AdditiveBlending : NormalBlending;
