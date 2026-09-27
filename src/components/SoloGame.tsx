@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAmbianceBoard } from "../hooks/useAmbianceBoard.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useKeyboard } from "../hooks/useKeyboard.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
@@ -76,6 +77,9 @@ export function SoloGame({
   if (timerSecondsRef.current === 0 && initialTimerSeconds > 0) {
     timerSecondsRef.current = initialTimerSeconds;
   }
+
+  const clashes = assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS;
+  useAmbianceBoard(game.board, clashes, game.status);
 
   const { position, setPosition } = useNumPadPosition();
   const revealed = useDelayedFlag(true, 600);
@@ -195,7 +199,7 @@ export function SoloGame({
             selectedCell={paused ? null : game.selectedCell}
             selectedCells={paused ? undefined : game.selectedCells}
             assistLevel={assistLevel}
-            conflicts={assistLevel !== "paper" ? game.errors : EMPTY_CONFLICTS}
+            conflicts={clashes}
             hintCells={hintCells}
             highlightedDigit={paused ? null : highlight.highlightedDigit}
             onSelectCell={paused ? () => {} : highlight.selectCell}
