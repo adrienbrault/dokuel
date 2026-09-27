@@ -39,12 +39,12 @@ const MATRIX_START = "<!-- screenshot-matrix:start -->";
 const MATRIX_END = "<!-- screenshot-matrix:end -->";
 
 const HERO_SCENES: { scene: string; device: string; alt: string }[] = [
-  { scene: "landing", device: "iPhone-14", alt: "Landing page" },
-  { scene: "solo-game", device: "iPhone-14", alt: "Solo game" },
+  { scene: "world-landing-dark", device: "iPhone-14", alt: "Landing page" },
+  { scene: "world-solo-dark", device: "iPhone-14", alt: "Solo game" },
   {
-    scene: "solo-game-dark",
+    scene: "world-solo-light",
     device: "iPhone-14",
-    alt: "Solo game in dark mode",
+    alt: "Solo game in light mode",
   },
 ];
 
