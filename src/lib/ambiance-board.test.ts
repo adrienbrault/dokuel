@@ -28,4 +28,13 @@ describe("diffBoardForAmbiance", () => {
       { type: "place", row: 1, col: 1, digit: 7 },
     ]);
   });
+
+  it("reports a value that lands in conflict as a conflict instead", () => {
+    const prev = solvedExcept([1, 1], [1, 2], [2, 1]);
+    const next = withValue(prev, 1, 1, 3);
+
+    expect(diffBoardForAmbiance(prev, next, new Set([1 * 9 + 1]))).toEqual([
+      { type: "conflict", row: 1, col: 1 },
+    ]);
+  });
 });
