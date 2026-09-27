@@ -15,9 +15,10 @@ describe("board layout", () => {
 
   it("finds the cell under a point, and none over the outer padding", () => {
     expect(cellAtPx(2, 2, 40)).toEqual({ row: 0, col: 0 });
-    expect(cellAtPx(cellOffsetPx(4, 40) + 5, cellOffsetPx(7, 40), 40)).toEqual(
-      { row: 7, col: 4 },
-    );
+    expect(cellAtPx(cellOffsetPx(4, 40) + 5, cellOffsetPx(7, 40), 40)).toEqual({
+      row: 7,
+      col: 4,
+    });
     expect(cellAtPx(1, 50, 40)).toBeNull();
     expect(cellAtPx(50, boardSizePx(40), 40)).toBeNull();
   });
