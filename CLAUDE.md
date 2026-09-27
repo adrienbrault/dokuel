@@ -27,6 +27,7 @@ Hooks in `.claude/settings.json` automate quality checks — **do not duplicate 
 
 - **Frontend**: Vite + React 19 + Tailwind CSS 4
 - **Multiplayer**: Peer-to-peer via Yjs + y-webrtc (no server needed)
+- **3D world**: three.js, lazy-loaded behind every screen (`src/scene/`)
 - **Testing**: Vitest + React Testing Library
 - **Lint/Format**: Biome (2-space indent, double quotes, semicolons)
 
@@ -182,6 +183,7 @@ Follow the TDD skill in `.claude/skills/tdd/SKILL.md`. Key rules:
 ### File Structure
 - Components: `src/components/` — React functional components (Board, Cell, NumPad, NumPadPositionToggle, SoloGame, MultiplayerGame, MultiplayerBoard, Lobby, Landing, GameLayout, GameControls, GameResult, Stats, DifficultyPicker, Timer, DarkModeToggle, SoundToggle, ToggleSwitch, Toast)
 - Hooks: `src/hooks/` — custom React hooks (useSudoku, useYjsMultiplayer, useKeyboard, useNumPadPosition, useDarkMode)
+- Scene: `src/scene/` — the three.js world (engine, rig, floor, tiles, atmosphere, post). WebGL only, so it is verified with screenshots, not unit tests; keep testable decisions (quality tiers, board diffs, preferences) in `src/lib/ambiance*.ts`
 - Library: `src/lib/` — pure logic, no React dependency (sudoku engine, types, p2p-room, room-code, daily challenge, daily-streak, stats, game-storage, name-generator, haptics, sounds, format, constants)
 - Tests: colocated as `*.test.ts` / `*.test.tsx`
 
@@ -288,6 +290,7 @@ You cannot judge visual quality from code alone. **Always screenshot, always rev
 - **Game persistence**: Auto-save in-progress games to localStorage. Resume on return.
 - **Hints**: Reveal one cell's correct value (solo only). Hint-assisted games excluded from PB tracking.
 - **Sound effects**: Synthesized via Web Audio API, toggleable.
+- **3D world**: One persistent three.js scene behind all screens (`AmbianceBackdrop` in `main.tsx`). Game code never imports three: it emits on the `ambiance` channel (`src/lib/ambiance.ts`) via `useAmbianceBoard` / `useAmbianceRival`, and `GameLayout` switches the scene to "game". Screens stay opaque until `<html data-ambiance="on">`, so no WebGL = the flat CSS look. Toggleable ("3D world"). Under Playwright (`navigator.webdriver`) the intro is skipped and quality never degrades, so screenshots are deterministic.
 
 <!-- rtk-instructions v2 -->
 # RTK — Always Prefix Shell Commands
