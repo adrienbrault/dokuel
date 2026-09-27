@@ -126,6 +126,7 @@ export function Atmosphere({ mood }: { mood: AtmosphereMood }) {
       aria-hidden="true"
       className="atmosphere-layer"
       data-atmosphere
+      data-mood={mood}
     />
   );
 }
