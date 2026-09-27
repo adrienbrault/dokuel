@@ -253,13 +253,17 @@ export class BoardScene {
     }
     this.root.rotation.x = this.tiltX.value;
     this.root.rotation.y = this.tiltY.value;
+    // Reduced motion freezes the pulse clock: glows hold steady, and
+    // with nothing breathing the loop can go idle between changes.
+    const clock = s.reducedMotion ? 0 : this.time;
     let pulsing = false;
     for (const tile of s.tiles) {
-      if (tile.step(dt, this.time, s.cellPx * 0.08)) busy = true;
+      if (tile.step(dt, clock, s.cellPx * 0.08)) busy = true;
       if (tile.pulse !== "none") pulsing = true;
     }
-    if (this.cursor.step(dt, this.time)) busy = true;
+    if (this.cursor.step(dt, clock)) busy = true;
     if (this.cursor.mesh.visible) pulsing = true;
+    if (s.reducedMotion) pulsing = false;
     s.ripples.step(dt);
     s.particles.update(dt);
     if (s.ripples.alive || s.particles.alive) busy = true;
