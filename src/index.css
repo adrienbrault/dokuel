@@ -671,6 +671,9 @@ body {
   );
   animation: screen-enter 0.2s ease-out;
 }
+.game-screen {
+  background-color: var(--color-bg-primary);
+}
 .screen-content {
   @apply flex flex-col items-center w-full max-w-sm px-6;
 }
@@ -876,4 +879,32 @@ body {
    — a form cue rather than one more color among the symbols. */
 [data-digit-color="emoji"] .digit-ink[data-digit][data-conflict]::before {
   box-shadow: 0 0 0 2px var(--color-cell-conflict);
+}
+
+/* --- 3D ambiance ----------------------------------------------------
+   The WebGL world sits behind the app. #root isolates a stacking
+   context so the canvas at z-index -1 paints above the page background
+   but below every screen. Screens keep their opaque CSS backdrop until
+   the first frame is up (data-ambiance on <html>), so a slow GPU or a
+   missing WebGL never shows the player an empty page. */
+#root {
+  isolation: isolate;
+}
+.ambiance-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100lvh;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+[data-ambiance="on"] .ambiance-canvas {
+  opacity: 1;
+}
+[data-ambiance="on"] .screen,
+[data-ambiance="on"] .game-screen {
+  background: transparent;
 }

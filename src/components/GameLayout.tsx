@@ -78,7 +78,7 @@ export function GameLayout({
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh bg-bg-primary py-4 px-4 animate-screen-enter"
+      className="game-screen flex flex-col items-center min-h-dvh py-4 px-4 animate-screen-enter"
       onPointerDown={handleBackgroundPointerDown}
     >
       {title && (
