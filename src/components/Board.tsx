@@ -153,6 +153,9 @@ export function Board({
   // failed context never leaves the player with a blank board.
   const board3d = useBoard3D();
   const [drawn3d, setDrawn3d] = useState(false);
+  // The scene chunk can arrive after the reveal window has closed; it
+  // still owes the board the entrance the player would have seen.
+  const [revealOnMount] = useState(animateReveal ?? false);
   const show3d = board3d.active && drawn3d;
 
   return (
@@ -171,7 +174,7 @@ export function Board({
                 visuals,
                 completed: completed ?? false,
                 paper: assistLevel === "paper",
-                reveal: animateReveal ?? false,
+                reveal: revealOnMount,
               }}
               onActiveChange={setDrawn3d}
             />
