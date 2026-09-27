@@ -6,6 +6,7 @@ import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
+import { useRematchReset } from "../hooks/useRematchReset.ts";
 import { useReplayRecorder } from "../hooks/useReplayRecorder.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { serializeBoard } from "../lib/board-engine.ts";
@@ -105,27 +106,18 @@ export function MultiplayerBoard({
     [saved],
   );
   const game = useSudoku(puzzle, solution ?? undefined, savedBoard);
-  // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
-  // Reset the reducer in-place rather than remount the whole subtree:
-  // keeps the timer ref, num-pad position, and any other UI state alive.
-  // The puzzle is tracked too: after a concurrent start/rematch merge
-  // the number can stay put while the puzzle changes under us.
-  const prevGameNumberRef = useRef(gameNumber);
-  const prevPuzzleRef = useRef(puzzle);
-  useEffect(() => {
-    if (
-      gameNumber === prevGameNumberRef.current &&
-      puzzle === prevPuzzleRef.current
-    ) {
-      return;
-    }
-    prevGameNumberRef.current = gameNumber;
-    prevPuzzleRef.current = puzzle;
-    game.reset(puzzle, solution ?? undefined, savedBoard);
+  useRematchReset({
+    gameNumber,
+    puzzle,
+    solution,
+    savedBoard,
+    reset: game.reset,
     // The new game starts from zero; without this the recorded match
     // time for game 2 includes game 1's clock.
-    timerSecondsRef.current = 0;
-  }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
+    onReset: () => {
+      timerSecondsRef.current = 0;
+    },
+  });
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
