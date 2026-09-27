@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { digitButtonAt, skimDigitOf } from "../lib/numpad-gesture.ts";
+import { resolveCellHit } from "../lib/pointer-cell.ts";
 import type { NumPadGesturePoint, Position } from "../lib/types.ts";
 
 export type DigitDragSource =
@@ -79,13 +80,25 @@ function cellHitFromPoint(
   const x = pointerX;
   const y = pointerY - lift;
   const el = document.elementFromPoint(x, y);
-  if (!el) return null;
-  const btn = (el as HTMLElement).closest?.("[data-row]") as HTMLElement | null;
-  if (!btn) return null;
-  const row = Number(btn.dataset.row);
-  const col = Number(btn.dataset.col);
-  if (Number.isNaN(row) || Number.isNaN(col)) return null;
-  return { position: { row, col }, mode: cellModeAt(btn, x, y) };
+  const btn = el
+    ? ((el as HTMLElement).closest?.("[data-row]") as HTMLElement | null)
+    : null;
+  if (btn) {
+    const row = Number(btn.dataset.row);
+    const col = Number(btn.dataset.col);
+    if (Number.isNaN(row) || Number.isNaN(col)) return null;
+    return { position: { row, col }, mode: cellModeAt(btn, x, y) };
+  }
+  // A WebGL board paints over the grid, so the browser reports the
+  // canvas and there is no cell element to walk up to. The live scene
+  // resolves the cell instead, reporting where inside it the pointer
+  // landed so the value/note split still applies.
+  const hit = resolveCellHit(x, y);
+  if (!hit) return null;
+  return {
+    position: { row: hit.row, col: hit.col },
+    mode: hit.localY < 0.5 ? "value" : "note",
+  };
 }
 
 function cellModeAt(cell: HTMLElement, _x: number, y: number): DigitDropMode {
