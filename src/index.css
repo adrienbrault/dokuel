@@ -877,3 +877,25 @@ body {
 [data-digit-color="emoji"] .digit-ink[data-digit][data-conflict]::before {
   box-shadow: 0 0 0 2px var(--color-cell-conflict);
 }
+
+/* --- 3D board ------------------------------------------------------
+   While the WebGL board is on screen underneath, the DOM grid stays on
+   top for every gesture, focus ring and screen reader, but paints none
+   of its own surfaces or ink: the tiles and glyphs are drawn in 3D.
+   Drop previews and the note-charge flourish carry no data-ink, so
+   they keep drawing over the scene. */
+[data-board-3d] {
+  background-color: transparent;
+  box-shadow: none;
+  animation: none;
+}
+[data-board-3d] > [role="none"],
+[data-board-3d] [role="gridcell"] {
+  background-color: transparent;
+}
+[data-board-3d] [role="gridcell"]:not(:focus-visible) {
+  box-shadow: none;
+}
+[data-board-3d] [data-ink] {
+  opacity: 0;
+}

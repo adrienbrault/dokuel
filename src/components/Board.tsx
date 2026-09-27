@@ -1,4 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { useBoard3D } from "../hooks/useBoard3D.ts";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { useGridFocus } from "../hooks/useGridFocus.ts";
@@ -11,6 +19,8 @@ import type {
 } from "../lib/types.ts";
 import { BoardAnnouncer } from "./BoardAnnouncer.tsx";
 import { Cell } from "./Cell.tsx";
+
+const BoardSceneLayer = lazy(() => import("./BoardSceneLayer.tsx"));
 
 type BoardProps = {
   board: BoardType;
@@ -138,122 +148,152 @@ export function Board({
   }, []);
   const { cellId, tabStop } = useGridFocus(gridRef, selectedCell);
 
+  // The WebGL board draws under the grid; the grid only goes see-through
+  // once a first frame is actually on screen, so a slow chunk or a
+  // failed context never leaves the player with a blank board.
+  const board3d = useBoard3D();
+  const [drawn3d, setDrawn3d] = useState(false);
+  const show3d = board3d.active && drawn3d;
+
   return (
     <div
       ref={containerRef}
       className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
     >
-      <div
-        ref={gridRef}
-        style={{
-          width: boardPx,
-          height: boardPx,
-          gridTemplateColumns: `repeat(3, ${boxPx}px)`,
-          gridTemplateRows: `repeat(3, ${boxPx}px)`,
-        }}
-        className="grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
-        role="grid"
-        aria-label="Sudoku board"
-        aria-rowcount={9}
-        aria-colcount={9}
-        aria-multiselectable={onSetSelectedCells ? true : undefined}
-        data-board-glow
-        onPointerDown={
-          onSetSelectedCells ? dragHandlers.onPointerDown : undefined
-        }
-        onPointerMove={
-          onSetSelectedCells ? dragHandlers.onPointerMove : undefined
-        }
-        onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
-        onClickCapture={
-          onSetSelectedCells ? dragHandlers.onClickCapture : undefined
-        }
-      >
-        {/* The DOM groups cells by 3x3 box so the nested CSS grids can
+      <div className="relative isolate">
+        {board3d.active && (
+          <Suspense fallback={null}>
+            <BoardSceneLayer
+              gridRef={gridRef}
+              cellPx={cellPx}
+              state={{
+                board,
+                visuals,
+                completed: completed ?? false,
+                paper: assistLevel === "paper",
+                reveal: animateReveal ?? false,
+              }}
+              onActiveChange={setDrawn3d}
+            />
+          </Suspense>
+        )}
+        <div
+          ref={gridRef}
+          style={{
+            width: boardPx,
+            height: boardPx,
+            gridTemplateColumns: `repeat(3, ${boxPx}px)`,
+            gridTemplateRows: `repeat(3, ${boxPx}px)`,
+          }}
+          className="relative grid gap-[2px] bg-board-border p-[2px] shadow-lg shadow-black/8 dark:shadow-black/25 touch-none"
+          data-board-3d={show3d ? "" : undefined}
+          role="grid"
+          aria-label="Sudoku board"
+          aria-rowcount={9}
+          aria-colcount={9}
+          aria-multiselectable={onSetSelectedCells ? true : undefined}
+          data-board-glow
+          onPointerDown={
+            onSetSelectedCells ? dragHandlers.onPointerDown : undefined
+          }
+          onPointerMove={
+            onSetSelectedCells ? dragHandlers.onPointerMove : undefined
+          }
+          onPointerUp={
+            onSetSelectedCells ? dragHandlers.onPointerUp : undefined
+          }
+          onClickCapture={
+            onSetSelectedCells ? dragHandlers.onClickCapture : undefined
+          }
+        >
+          {/* The DOM groups cells by 3x3 box so the nested CSS grids can
             paint thin in-box and thick between-box gaps. Rows cut across
             three boxes, so each ARIA row adopts its cells via aria-owns
             and the box wrappers are presentational. The row nodes are
             out of flow (sr-only) so they never take a grid slot. */}
-        {Array.from({ length: 9 }, (_, r) => (
-          // biome-ignore lint/a11y/useFocusableInteractive: grid rows are structural; focus lives on the gridcells (roving tabindex)
-          <div
-            key={`row-${r}`}
-            role="row"
-            aria-rowindex={r + 1}
-            aria-owns={Array.from({ length: 9 }, (_, c) => cellId(r, c)).join(
-              " ",
-            )}
-            className="sr-only"
-          />
-        ))}
-        {Array.from({ length: 9 }, (_, boxIdx) => {
-          const boxRow = Math.floor(boxIdx / 3);
-          const boxCol = boxIdx % 3;
-          return (
+          {Array.from({ length: 9 }, (_, r) => (
+            // biome-ignore lint/a11y/useFocusableInteractive: grid rows are structural; focus lives on the gridcells (roving tabindex)
             <div
-              key={boxIdx}
-              style={{
-                gridTemplateColumns: `repeat(3, ${cellPx}px)`,
-                gridTemplateRows: `repeat(3, ${cellPx}px)`,
-              }}
-              className="grid gap-px bg-border-default"
-              role="none"
-            >
-              {Array.from({ length: 9 }, (_, cellIdx) => {
-                const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
-                const colIdx = boxCol * 3 + (cellIdx % 3);
-                const cell = board[rowIdx]![colIdx]!;
-                const {
-                  isSelected,
-                  isMultiSelected,
-                  isHighlighted,
-                  isSameNumber,
-                  isConflict,
-                  isHintRelated,
-                  isSameNumberRowCol,
-                  isDragSource,
-                  dropTargetState,
-                  dropMode,
-                  dropDigit,
-                } = visuals[cellKey(rowIdx, colIdx)]!;
+              key={`row-${r}`}
+              role="row"
+              aria-rowindex={r + 1}
+              aria-owns={Array.from({ length: 9 }, (_, c) => cellId(r, c)).join(
+                " ",
+              )}
+              className="sr-only"
+            />
+          ))}
+          {Array.from({ length: 9 }, (_, boxIdx) => {
+            const boxRow = Math.floor(boxIdx / 3);
+            const boxCol = boxIdx % 3;
+            return (
+              <div
+                key={boxIdx}
+                style={{
+                  gridTemplateColumns: `repeat(3, ${cellPx}px)`,
+                  gridTemplateRows: `repeat(3, ${cellPx}px)`,
+                }}
+                className="grid gap-px bg-border-default"
+                role="none"
+              >
+                {Array.from({ length: 9 }, (_, cellIdx) => {
+                  const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
+                  const colIdx = boxCol * 3 + (cellIdx % 3);
+                  const cell = board[rowIdx]![colIdx]!;
+                  const {
+                    isSelected,
+                    isMultiSelected,
+                    isHighlighted,
+                    isSameNumber,
+                    isConflict,
+                    isHintRelated,
+                    isSameNumberRowCol,
+                    isDragSource,
+                    dropTargetState,
+                    dropMode,
+                    dropDigit,
+                  } = visuals[cellKey(rowIdx, colIdx)]!;
 
-                return (
-                  <Cell
-                    key={cellKey(rowIdx, colIdx)}
-                    id={cellId(rowIdx, colIdx)}
-                    cell={cell}
-                    row={rowIdx}
-                    col={colIdx}
-                    isSelected={isSelected}
-                    isMultiSelected={isMultiSelected}
-                    isHighlighted={isHighlighted}
-                    isSameNumber={isSameNumber}
-                    isConflict={isConflict}
-                    isHintRelated={isHintRelated}
-                    isSameNumberRowCol={isSameNumberRowCol}
-                    assistLevel={assistLevel}
-                    isTabStop={tabStop.row === rowIdx && tabStop.col === colIdx}
-                    onSelect={onSelectCell}
-                    revealDelay={
-                      animateReveal && cell.isGiven
-                        ? (rowIdx * 9 + colIdx) * 6
-                        : undefined
-                    }
-                    chargingDigit={
-                      isSelected && chargingDigit != null
-                        ? chargingDigit
-                        : undefined
-                    }
-                    isDragSource={isDragSource}
-                    dropTargetState={dropTargetState}
-                    dropMode={dropMode}
-                    dropDigit={dropDigit}
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
+                  return (
+                    <Cell
+                      key={cellKey(rowIdx, colIdx)}
+                      id={cellId(rowIdx, colIdx)}
+                      cell={cell}
+                      row={rowIdx}
+                      col={colIdx}
+                      isSelected={isSelected}
+                      isMultiSelected={isMultiSelected}
+                      isHighlighted={isHighlighted}
+                      isSameNumber={isSameNumber}
+                      isConflict={isConflict}
+                      isHintRelated={isHintRelated}
+                      isSameNumberRowCol={isSameNumberRowCol}
+                      assistLevel={assistLevel}
+                      isTabStop={
+                        tabStop.row === rowIdx && tabStop.col === colIdx
+                      }
+                      onSelect={onSelectCell}
+                      revealDelay={
+                        animateReveal && cell.isGiven
+                          ? (rowIdx * 9 + colIdx) * 6
+                          : undefined
+                      }
+                      chargingDigit={
+                        isSelected && chargingDigit != null
+                          ? chargingDigit
+                          : undefined
+                      }
+                      isDragSource={isDragSource}
+                      dropTargetState={dropTargetState}
+                      dropMode={dropMode}
+                      dropDigit={dropDigit}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
       <BoardAnnouncer
         board={board}

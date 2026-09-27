@@ -164,6 +164,7 @@ export const Cell = memo(function Cell({
         <span
           key={cell.value}
           data-digit={cell.value}
+          data-ink
           data-given={cell.isGiven ? "true" : "false"}
           data-conflict={isConflict ? "true" : undefined}
           className={`digit-ink text-[clamp(1.2578125rem,5.75vw,2.15625rem)] leading-none ${textClass} ${!cell.isGiven ? "animate-pop-in" : ""}`}
@@ -171,7 +172,10 @@ export const Cell = memo(function Cell({
           {cell.value}
         </span>
       ) : cell.notes.size > 0 ? (
-        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]">
+        <div
+          data-ink
+          className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[1px]"
+        >
           {DIGITS.map((n) => {
             const shown = cell.notes.has(n) && chargingDigit !== n;
             return (
