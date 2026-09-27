@@ -188,10 +188,12 @@ export async function createAmbianceEngine(
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   canvas.addEventListener("webglcontextlost", onContextLost);
 
-  // Compile every material up front so the first frames do not hitch.
   step(0);
   if (options.settled) rig.snap(options.getState().scene, time);
-  renderer.compile(world.scene, camera);
+  // Link every program before the first frame, off the main thread where
+  // the browser supports parallel shader compilation. A synchronous
+  // compile stalls the page right as the player makes their first tap.
+  await renderer.compileAsync(world.scene, camera);
 
   if (options.reducedMotion) {
     paintStill();
