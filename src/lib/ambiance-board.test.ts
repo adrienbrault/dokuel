@@ -60,4 +60,11 @@ describe("diffBoardForAmbiance", () => {
       { type: "unit", kind: "col", index: 4 },
     ]);
   });
+
+  it("ignores givens, so swapping in a new puzzle is not a burst of moves", () => {
+    const prev = solvedExcept([0, 0], [0, 1], [1, 0]);
+    const next = parsePuzzle(`.${"9".repeat(80)}`);
+
+    expect(diffBoardForAmbiance(prev, next, new Set())).toEqual([]);
+  });
 });
