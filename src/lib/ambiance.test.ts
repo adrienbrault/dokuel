@@ -19,4 +19,24 @@ describe("ambiance channel", () => {
       digit: 7,
     });
   });
+
+  it("remembers the current scene and board progress for a late subscriber", () => {
+    const channel = createAmbianceChannel();
+    expect(channel.getState()).toEqual({ scene: "menu", progress: 0 });
+
+    channel.setScene("game");
+    channel.setProgress(0.4);
+
+    expect(channel.getState()).toEqual({ scene: "game", progress: 0.4 });
+  });
+
+  it("resets progress when the player leaves the board", () => {
+    const channel = createAmbianceChannel();
+    channel.setScene("game");
+    channel.setProgress(0.9);
+
+    channel.setScene("menu");
+
+    expect(channel.getState().progress).toBe(0);
+  });
 });
