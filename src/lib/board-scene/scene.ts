@@ -135,7 +135,7 @@ export class BoardScene {
     if (cellPx === this.stage.cellPx) return;
     const s = this.stage;
     s.cellPx = cellPx;
-    s.depth = Math.round(cellPx * 0.3);
+    s.depth = Math.max(3, Math.round(cellPx * 0.12));
     s.boardPx = boardSizePx(cellPx);
     const canvasPx = s.boardPx + SCENE_MARGIN * 2;
     this.renderer.setSize(canvasPx, canvasPx, false);
@@ -180,7 +180,7 @@ export class BoardScene {
     this.cursor.setColor(theme.accent);
     // Reflections lift every surface by a constant amount, which is
     // gloss on a pale tile but grey haze on a near-black one.
-    this.scene.environmentIntensity = theme.isDark ? 0.05 : 0.3;
+    this.scene.environmentIntensity = theme.isDark ? 0.03 : 0.12;
     particles.setBlending(theme.isDark);
   }
 

@@ -5,7 +5,7 @@ import {
   Group,
   Mesh,
   MeshBasicMaterial,
-  MeshPhysicalMaterial,
+  MeshStandardMaterial,
 } from "three";
 import { Spring } from "./spring.ts";
 
@@ -22,7 +22,7 @@ export class Tile {
   readonly index: number;
   readonly group = new Group();
   readonly body: Mesh;
-  readonly material: MeshPhysicalMaterial;
+  readonly material: MeshStandardMaterial;
   readonly value: Mesh;
   readonly valueMaterial: MeshBasicMaterial;
   readonly notes: Mesh;
@@ -64,12 +64,9 @@ export class Tile {
     shadowTexture: CanvasTexture,
   ) {
     this.index = index;
-    this.material = new MeshPhysicalMaterial({
-      roughness: 0.42,
+    this.material = new MeshStandardMaterial({
+      roughness: 0.88,
       metalness: 0,
-      clearcoat: 0.55,
-      clearcoatRoughness: 0.28,
-      sheen: 0.15,
     });
     this.body = new Mesh(bodyGeometry, this.material);
     this.valueMaterial = new MeshBasicMaterial({

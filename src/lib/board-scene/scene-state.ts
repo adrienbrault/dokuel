@@ -54,13 +54,13 @@ function surfaceFor(v: CellVisual, paper: boolean, theme: BoardTheme) {
 }
 
 function liftFor(v: CellVisual, hovered: boolean, depth: number) {
-  if (v.dropTargetState === "invalid") return -depth * 0.15;
-  if (v.isSelected) return depth * 0.9;
-  if (v.dropTargetState === "valid") return depth * 0.8;
-  if (v.isMultiSelected) return depth * 0.6;
-  if (v.isSameNumber) return depth * 0.4;
-  if (hovered) return depth * 0.35;
-  if (v.isHighlighted) return depth * 0.08;
+  if (v.dropTargetState === "invalid") return -depth * 0.3;
+  if (v.isSelected) return depth * 2.2;
+  if (v.dropTargetState === "valid") return depth * 2;
+  if (v.isMultiSelected) return depth * 1.4;
+  if (v.isSameNumber) return depth * 0.9;
+  if (hovered) return depth * 0.8;
+  if (v.isHighlighted) return depth * 0.25;
   return 0;
 }
 

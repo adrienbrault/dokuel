@@ -38,9 +38,9 @@ export function createRenderer(
   // Tuned so a tile's flat top renders close to its CSS token (the
   // lights sum to ~1 facing the camera) while bevels facing away from
   // the upper-left key fall into shade: that contrast is the depth.
-  const hemi = new HemisphereLight(0xffffff, 0x8a8f99, 0.45);
-  const key = new DirectionalLight(0xffffff, 0.7);
-  key.position.set(-1, 1.3, 2.4);
+  const hemi = new HemisphereLight(0xffffff, 0xb0b4bc, 1.05);
+  const key = new DirectionalLight(0xffffff, 2.2);
+  key.position.set(-0.5, 0.8, 3);
   scene.add(hemi, key);
   return renderer;
 }
@@ -75,11 +75,11 @@ export function createBoardParts() {
 export function layoutBoard(parts: BoardParts, cellPx: number, d: number) {
   const boardPx = boardSizePx(cellPx);
   const tileGeometry = new RoundedBoxGeometry(
-    cellPx - 1,
-    cellPx - 1,
+    cellPx,
+    cellPx,
     d,
-    4,
-    Math.min(cellPx * 0.13, d * 0.45),
+    3,
+    Math.min(cellPx * 0.07, d * 0.48),
   );
   const oldGlyph = parts.tiles[0]?.value.geometry;
   const glyphGeometry = new PlaneGeometry(cellPx, cellPx);
@@ -129,6 +129,5 @@ export function paintTheme(parts: BoardParts, theme: BoardTheme) {
     : 0.22;
   for (const t of parts.tiles) {
     t.shadowStrength = theme.isDark ? 0.7 : 0.32;
-    t.material.clearcoat = theme.isDark ? 0.3 : 0.55;
   }
 }
