@@ -30,8 +30,23 @@ export function subscribeBoard3D(listener: () => void): () => void {
 let webglSupport: boolean | null = null;
 
 /**
- * Whether this browser can draw the WebGL board. Checked once: the
- * probe context is thrown away, and browsers cap live contexts.
+ * "force" in storage accepts a software-rendered context. Only for
+ * capturing the 3D board in headless browsers; players never set it.
+ */
+function softwareAllowed(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "force";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether this browser can draw the WebGL board smoothly. Checked once:
+ * the probe context is thrown away, and browsers cap live contexts.
+ * A software-only context (no GPU, blocklisted driver, headless) is
+ * refused: it renders the scene on the main thread and makes the board
+ * stall taps, so those players keep the DOM board.
  */
 export function supportsWebGL(): boolean {
   if (webglSupport !== null) return webglSupport;
@@ -43,7 +58,9 @@ export function supportsWebGL(): boolean {
   }
   try {
     const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2");
+    const gl = canvas.getContext("webgl2", {
+      failIfMajorPerformanceCaveat: !softwareAllowed(),
+    });
     webglSupport = gl !== null;
     gl?.getExtension("WEBGL_lose_context")?.loseContext();
   } catch {
