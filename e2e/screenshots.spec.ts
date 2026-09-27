@@ -1235,3 +1235,41 @@ test.describe("emoji theme settings", () => {
     });
   });
 });
+
+// --- 3D board ---
+//
+// Headless Chromium only has a software WebGL context, which the app
+// refuses for players (it stalls the main thread). "force" opts back
+// in so the WebGL board can be captured here, settled with a cell
+// selected so the lift, cursor and same-number tint all show. Reduced
+// motion skips the entrance flip, which software rendering plays too
+// slowly to have finished by capture time.
+
+for (const theme of ["light", "dark"] as const) {
+  const suffix = theme === "dark" ? "-dark" : "";
+
+  test.describe(`3D board (${theme})`, () => {
+    test.use({
+      storage: {
+        sudoku_board_3d: "force",
+        ...(theme === "dark" ? { sudoku_theme: "dark" } : {}),
+      },
+    });
+
+    test(`solo game - 3D board${suffix}`, async ({ page }, testInfo) => {
+      test.slow();
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto("/solo/easy/e2e-3d");
+      await page.locator("[data-board-3d]").waitFor({ timeout: 15_000 });
+      await page
+        .locator('[role="gridcell"][aria-label*="value"]')
+        .first()
+        .click({ timeout: 15_000 });
+      await page.waitForTimeout(2500);
+      await page.screenshot({
+        path: screenshotPath(`solo-3d-board${suffix}`, testInfo.project.name),
+        timeout: 15_000,
+      });
+    });
+  });
+}
