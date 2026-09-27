@@ -17,6 +17,7 @@ import type {
   DigitStyle,
   NumPadPosition,
 } from "../lib/types.ts";
+import { BoardDepthToggle } from "./BoardDepthToggle.tsx";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { DigitColorPicker } from "./DigitColorPicker.tsx";
 import { EmojiThemePicker } from "./EmojiThemePicker.tsx";
@@ -304,6 +305,7 @@ function SettingsButton({
               }}
             />
           </div>
+          <BoardDepthToggle />
           {extra && (
             <div className="mt-3 pt-3 border-t border-border-default">
               {extra}
