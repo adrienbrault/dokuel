@@ -49,7 +49,7 @@ export class BoardScene {
   private readonly shadow: Mesh;
   private readonly tiltX = new Spring(0, 60, 12);
   private readonly tiltY = new Spring(0, 60, 12);
-  private readonly glyphs: GlyphCache;
+  readonly glyphs: GlyphCache;
   private readonly observer: MutationObserver;
   readonly stage: Stage;
   readonly cursor = new Cursor();
@@ -124,10 +124,6 @@ export class BoardScene {
     });
     // Glyphs drawn before the web font arrives use a fallback face.
     document.fonts?.ready.then(() => this.refreshTheme());
-  }
-
-  get glyphCache() {
-    return this.glyphs;
   }
 
   /** The color a cell's digit is drawn in, for effects to echo. */

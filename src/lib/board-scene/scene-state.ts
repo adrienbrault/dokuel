@@ -97,7 +97,7 @@ function paintTile(
   if (cell.value !== null) {
     const key = `${cell.value}:${cell.isGiven}`;
     if (tile.shownKey !== key) {
-      tile.valueMaterial.map = scene.glyphCache.value(cell.value, cell.isGiven);
+      tile.valueMaterial.map = scene.glyphs.value(cell.value, cell.isGiven);
       tile.valueMaterial.needsUpdate = true;
       tile.shownKey = key;
       tile.shownDigit = cell.value;
@@ -114,7 +114,7 @@ function paintTile(
   const notesKey =
     cell.value === null ? [...cell.notes].sort((a, b) => a - b).join("") : "";
   if (notesKey !== tile.notesKey) {
-    if (notesKey) scene.glyphCache.drawNotes(tile.notesTexture, cell.notes);
+    if (notesKey) scene.glyphs.drawNotes(tile.notesTexture, cell.notes);
     if (animate && notesKey.length > tile.notesKey.length) {
       tile.notesPop.value = 0.82;
     }
