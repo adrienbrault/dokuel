@@ -5,15 +5,17 @@ const MAX_STEP = 1 / 120;
  * so an animation interrupted by the next tap flows into the new one.
  */
 export class Spring {
+  value: number;
   velocity = 0;
   target: number;
+  stiffness: number;
+  damping: number;
 
-  constructor(
-    public value: number,
-    public stiffness = 170,
-    public damping = 20,
-  ) {
+  constructor(value: number, stiffness = 170, damping = 20) {
+    this.value = value;
     this.target = value;
+    this.stiffness = stiffness;
+    this.damping = damping;
   }
 
   /** Adds velocity without changing where the spring comes to rest. */
