@@ -18,6 +18,7 @@ import type {
   DigitStyle,
   NumPadPosition,
 } from "../lib/types.ts";
+import { AmbianceToggle } from "./AmbianceToggle.tsx";
 import { DarkModeToggle } from "./DarkModeToggle.tsx";
 import { DigitColorPicker } from "./DigitColorPicker.tsx";
 import { EmojiThemePicker } from "./EmojiThemePicker.tsx";
@@ -311,6 +312,10 @@ function SettingsButton({
                 setSoundEnabled(next);
               }}
             />
+          </div>
+          <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
+            <p className="text-xs text-text-muted font-medium">3D world</p>
+            <AmbianceToggle />
           </div>
           {extra && (
             <div className="mt-3 pt-3 border-t border-border-default">
