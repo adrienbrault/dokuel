@@ -2,6 +2,7 @@ import { act, render, renderHook, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import type { BoardScene, createBoardScene } from "../three/board-scene.ts";
 import type { SceneSnapshot } from "../three/scene-state.ts";
+import type { SceneEnv } from "./useBoardScene.ts";
 import { useBoardScene } from "./useBoardScene.ts";
 
 function snapshot(over: Partial<SceneSnapshot> = {}): SceneSnapshot {
@@ -32,32 +33,38 @@ function fakeScene(): FakeScene {
   };
 }
 
+const noopBuild = (): SceneSnapshot => snapshot();
+
 let handle: ReturnType<typeof useBoardScene>;
 
 function Harness({
   boardPx,
-  snapshot: snap,
+  build,
   create,
   enabled = true,
 }: {
   boardPx: number;
-  snapshot: SceneSnapshot;
+  build: (env: SceneEnv) => SceneSnapshot;
   create: (..._args: Parameters<typeof createBoardScene>) => BoardScene | null;
   enabled?: boolean;
 }) {
-  handle = useBoardScene({ enabled, boardPx, snapshot: snap, create });
+  handle = useBoardScene({ enabled, boardPx, build, create });
   return <canvas ref={handle.canvasRef} data-testid="board-canvas" />;
 }
 
 function renderHarness(
   create: (..._args: Parameters<typeof createBoardScene>) => BoardScene | null,
-  props: { boardPx?: number; snapshot?: SceneSnapshot; enabled?: boolean } = {},
+  props: {
+    boardPx?: number;
+    build?: (env: SceneEnv) => SceneSnapshot;
+    enabled?: boolean;
+  } = {},
 ) {
   return render(
     <Harness
       create={create}
       boardPx={props.boardPx ?? 300}
-      snapshot={props.snapshot ?? snapshot()}
+      build={props.build ?? noopBuild}
       enabled={props.enabled ?? true}
     />,
   );
@@ -73,7 +80,7 @@ function stubReducedMotion(matches: boolean) {
     addEventListener: (_: string, fn: (event: { matches: boolean }) => void) =>
       listeners.add(fn),
     removeEventListener: (
-      _: string,
+      _name: string,
       fn: (event: { matches: boolean }) => void,
     ) => listeners.delete(fn),
     addListener: () => {},
@@ -119,7 +126,10 @@ describe("useBoardScene", () => {
 
   it("leaves a paper board alone", () => {
     // Paper is a flat sheet to print, not an object to light.
-    const create = vi.fn(() => fakeScene() as BoardScene);
+    const create = vi.fn(
+      (..._args: Parameters<typeof createBoardScene>) =>
+        fakeScene() as BoardScene,
+    );
 
     renderHarness(create, { enabled: false });
 
@@ -130,8 +140,8 @@ describe("useBoardScene", () => {
   it("pushes every snapshot it is handed", () => {
     const scene = fakeScene();
     const first = snapshot();
-    const { rerender } = renderHarness(() => scene as BoardScene, {
-      snapshot: first,
+    const { rerender } = renderHarness((..._args) => scene as BoardScene, {
+      build: () => first,
     });
 
     const second = snapshot({ completed: true });
@@ -139,30 +149,58 @@ describe("useBoardScene", () => {
       <Harness
         create={(..._args) => scene as BoardScene}
         boardPx={300}
-        snapshot={second}
+        build={() => second}
       />,
     );
 
     expect(scene.setSnapshot).toHaveBeenLastCalledWith(second);
   });
 
+  it("builds snapshots with the digit mode and symbols in force", async () => {
+    // The mode lives on the root as a data attribute, not as a prop, so
+    // the snapshot has to be assembled from what the page actually says.
+    const scene = fakeScene();
+    const seen: SceneEnv[] = [];
+
+    renderHarness((..._args) => scene as BoardScene, {
+      build: (env) => {
+        seen.push(env);
+        return snapshot({ digitMode: env.digitMode });
+      },
+    });
+
+    expect(seen.at(-1)).toMatchObject({
+      digitMode: "off",
+      reducedMotion: false,
+    });
+    expect(seen.at(-1)!.emoji).toHaveLength(9);
+
+    await act(async () => {
+      document.documentElement.dataset.digitColor = "colors";
+    });
+
+    expect(seen.at(-1)).toMatchObject({ digitMode: "colors" });
+    expect(scene.setSnapshot).toHaveBeenLastCalledWith(
+      expect.objectContaining({ digitMode: "colors" }),
+    );
+  });
+
   it("reframes when the board's box changes size", () => {
     const scene = fakeScene();
-    const { rerender } = renderHarness(() => scene as BoardScene);
+    const { rerender } = renderHarness((..._args) => scene as BoardScene);
 
     rerender(
       <Harness
         create={(..._args) => scene as BoardScene}
         boardPx={420}
-        snapshot={snapshot()}
+        build={noopBuild}
       />,
     );
 
     expect(scene.resize).toHaveBeenLastCalledWith(420);
   });
 
-  it("re-reads colours and glyphs when the digit mode changes", async () => {
-    // The mode lives on the root as a data attribute, not as a prop.
+  it("re-reads glyphs when the digit mode changes", async () => {
     const scene = fakeScene();
     renderHarness((..._args) => scene as BoardScene);
     scene.setPalette.mockClear();
@@ -205,19 +243,19 @@ describe("useBoardScene", () => {
   it("releases the scene when the board goes away", () => {
     // A page that mounts and unmounts boards must not leak contexts.
     const scene = fakeScene();
-    const { unmount } = renderHarness(() => scene as BoardScene);
+    const { unmount } = renderHarness((..._args) => scene as BoardScene);
 
     unmount();
 
     expect(scene.dispose).toHaveBeenCalledTimes(1);
   });
 
-  it("reports the digit mode and symbols the snapshot needs", () => {
+  it("reports the environment a disabled board still needs", () => {
     const { result } = renderHook(() =>
       useBoardScene({
         enabled: false,
         boardPx: 300,
-        snapshot: snapshot(),
+        build: noopBuild,
         create: (..._args) => null,
       }),
     );
