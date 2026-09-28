@@ -17,11 +17,13 @@ import { GRAIN_SHADER } from "./shaders.ts";
 /** Bloom at rest; the completion moment pushes it past blowout. */
 export const BLOOM_STRENGTH = 0.32;
 /**
- * Bloom starts above the brightest a lit tile gets on its own, so a tile
- * never blooms for being bright - only a mark pushed into high dynamic
- * range by markGlow clears this and throws a halo.
+ * Bloom starts above the ceiling a fully lit tile reaches, so a tile never
+ * blooms for being bright - only a mark pushed into high dynamic range by
+ * markGlow clears this and throws a halo. A near-white tile lit enough to
+ * read as its own token lands around 1.3 in the linear buffer, so the
+ * window has to open above that or the whole board blooms as one.
  */
-export const BLOOM_THRESHOLD = 1;
+export const BLOOM_THRESHOLD = 1.6;
 /** Radius and strength of the halo a glowing tile throws. */
 const BLOOM_RADIUS = 0.7;
 
@@ -33,10 +35,13 @@ const BLOOM_RADIUS = 0.7;
  * a spark is near white, so one fixed intensity suits neither: the green
  * stays under the window and draws flat, the white saturates into a blob.
  * Scaling by the colour's luminance gives every mark the same headroom.
+ * That headroom is a fifth over the window: enough to extract cleanly, but
+ * under a doubling so a mark that is already near white still has shading
+ * left in it rather than clipping to a flat blob.
  */
 export function markGlow(colour: Color): number {
   const luma = 0.2126 * colour.r + 0.7152 * colour.g + 0.0722 * colour.b;
-  return (BLOOM_THRESHOLD * 1.4) / Math.max(luma, 0.05);
+  return (BLOOM_THRESHOLD * 1.2) / Math.max(luma, 0.05);
 }
 
 export type Pipeline = {
@@ -79,9 +84,11 @@ export function createPipeline(
   // A board whose colours come from design tokens has to keep them: the
   // filmic curve rolls a near-white tile down to grey and pulls the teal
   // and coral toward cream. The neutral curve leaves everything under
-  // 1.0 alone and only rolls off the marks pushed above it.
+  // 1.0 alone and only rolls off the marks pushed above it. The exposure
+  // sits a little over unity because that curve starts compressing below
+  // 1.0, which would land a token-white tile a visible shade grey.
   renderer.toneMapping = NeutralToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
 

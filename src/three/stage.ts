@@ -1,4 +1,5 @@
 import {
+  AmbientLight,
   Color,
   DirectionalLight,
   HemisphereLight,
@@ -61,6 +62,13 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
   const floor = slabTint(palette);
   const hemi = new HemisphereLight(palette.page, floor, 1.45);
   scene.add(hemi);
+
+  // A board this shallow has no geometry to bounce light off, so this
+  // fill stands in for the page throwing its own tone back into the
+  // recess. Without it a near-white tile greys to a mid-tone and the
+  // whole grid reads as dirty plastic rather than clean paper.
+  const bounce = new AmbientLight(palette.page, 1.5);
+  scene.add(bounce);
 
   // The key light is what lets a digit throw a shadow across its own
   // tile, which is most of what separates a raised mark from a decal.
@@ -155,6 +163,7 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
     },
     dispose() {
       hemi.dispose();
+      bounce.dispose();
       key.dispose();
       rim.dispose();
       flare.dispose();
