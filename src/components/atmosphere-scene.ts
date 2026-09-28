@@ -341,6 +341,30 @@ export function createEngine(
   renderer.domElement.style.display = "block";
   container.appendChild(renderer.domElement);
 
+  // Adaptive resolution: software rasterizers and weak integrated GPUs
+  // cannot hold 60fps at full resolution. We watch a smoothed frame time
+  // and, once, halve both the canvas buffer and the post-processing
+  // render targets when the machine proves it is falling behind. This
+  // keeps interaction and bloom alive instead of letting the whole
+  // world stall waiting on the GPU.
+  let frameMs = 16.7;
+  let framesSeen = 0;
+  let degradeScale = 1;
+  const measurePerformance = (dt: number) => {
+    frameMs += (dt * 1000 - frameMs) * 0.1;
+    framesSeen++;
+    if (degradeScale === 1 && framesSeen > 24 && frameMs > 33) {
+      degradeScale = 0.5;
+      const ratio = Math.max(1, pixelRatio * degradeScale);
+      renderer.setPixelRatio(ratio);
+      dustUniforms.uPixelRatio.value = ratio;
+      composer.setSize(
+        window.innerWidth * degradeScale,
+        window.innerHeight * degradeScale,
+      );
+    }
+  };
+
   const scene = new Scene();
   scene.fog = new FogExp2(DARK_PALETTE.fogColor, DARK_PALETTE.fogDensity);
   const camera = new PerspectiveCamera(
@@ -556,7 +580,7 @@ export function createEngine(
 
   const resize = (width: number, height: number) => {
     renderer.setSize(width, height);
-    composer.setSize(width, height);
+    composer.setSize(width * degradeScale, height * degradeScale);
     camera.aspect = width / Math.max(1, height);
     camera.updateProjectionMatrix();
     // Backdrop must always cover the frustum at its depth.
@@ -670,6 +694,7 @@ export function createEngine(
 
   const frame = (dt: number, time: number) => {
     const s = director.read();
+    measurePerformance(dt);
     updateBackdrop(s, time);
     updateGlyphs(s, dt, time);
     updateRings(director.takeRings(), dt);
