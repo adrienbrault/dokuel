@@ -112,6 +112,7 @@ export function createBoardScene(
 
   let snapshot: SceneSnapshot | null = null;
   const pointer = { x: 0, y: 0, present: false };
+  let painted = false;
 
   function setSnapshot(next: SceneSnapshot) {
     snapshot = next;
@@ -121,6 +122,14 @@ export function createBoardScene(
       elapsed,
       onPlace: (row, col, colour) => sparkCell(row, col, colour),
     });
+    // The loop only paints on an animation tick, so a board handed its
+    // first state would sit blank until one arrives - which never
+    // happens while the tab is hidden or the frame clock is stalled. The
+    // state that arrives first paints the frame it describes.
+    if (!painted) {
+      painted = true;
+      frame();
+    }
   }
 
   function pulseCell(row: number, col: number, bright: boolean) {
