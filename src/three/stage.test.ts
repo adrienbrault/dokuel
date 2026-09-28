@@ -1,5 +1,6 @@
 import {
   type AmbientLight,
+  Color,
   type MeshStandardMaterial,
   Scene,
   type ShaderMaterial,
@@ -50,6 +51,14 @@ function darkest(c: { r: number; g: number; b: number }) {
   return Math.min(c.r, c.g, c.b);
 }
 
+/**
+ * What the curve leaves of a surface that paints itself rather than
+ * catching light: its colour goes into the buffer already composed.
+ */
+function shown(c: { r: number; g: number; b: number }) {
+  return neutralOut(darkest(c));
+}
+
 describe("createStage", () => {
   it("carries the palette into the slab, the lights and the backdrop", () => {
     // A theme flip is a re-read of the tokens, so every surface the stage
@@ -94,6 +103,19 @@ describe("createStage", () => {
     // material has to carry the inverse of what the curve will do to it.
     const { stage, palette, slab } = stageFor("#0f0e0d", "#2a2724", "#808080");
     expect(luma(slab.color)).toBeGreaterThan(luma(palette.slab));
+    stage.dispose();
+  });
+
+  it("keeps the page behind the board on its own tone", () => {
+    // The backdrop is the app's background painted into an opaque canvas, so
+    // it has to match the page the canvas sits in. It is not lit: its colour
+    // enters the buffer the curve is applied to as it stands, which leaves a
+    // dark page as a bruise unless the endpoints carry the inverse.
+    const { stage, palette } = stageFor("#0f0e0d", "#2a2724");
+    const page = stage.page.material as ShaderMaterial;
+    const centre = (page.uniforms["centre"] as { value: Color }).value;
+    const intent = palette.page.clone().lerp(new Color(1, 1, 1), 0.22);
+    expect(shown(centre)).toBeCloseTo(darkest(intent), 3);
     stage.dispose();
   });
 
