@@ -59,7 +59,7 @@ export type Stage = {
  */
 export function createStage(scene: Scene, palette: BoardPalette): Stage {
   const floor = slabTint(palette);
-  const hemi = new HemisphereLight(palette.page, floor, 1.1);
+  const hemi = new HemisphereLight(palette.page, floor, 1.45);
   scene.add(hemi);
 
   // The key light is what lets a digit throw a shadow across its own
