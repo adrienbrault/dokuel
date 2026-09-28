@@ -17,6 +17,26 @@ import { BACKDROP_SHADER } from "./shaders.ts";
 /** Half-angle of the board's field of view, for the backdrop's coverage. */
 const HALF_FOV_RAD = (15 * Math.PI) / 180;
 
+/** Perceptual weight of a colour, used to order the surfaces a board stands on. */
+function luma(c: Color): number {
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+}
+
+/**
+ * The floor the tiles stand in.
+ *
+ * A light theme's border token is already a recess, so it passes through.
+ * A dark theme's is a rim - right for the hairline around a flat cell,
+ * wrong for the wide gap between two raised tiles, where it reads as a
+ * grid of concrete. There the page's own tone takes over, and the board
+ * reads as cut out of the page rather than laid on top of it.
+ */
+function slabTint(palette: BoardPalette): Color {
+  return luma(palette.slab) > luma(palette.cell)
+    ? palette.page.clone()
+    : palette.slab.clone();
+}
+
 export type Stage = {
   /** The page the board stands on, painted to match the app's own background. */
   page: Mesh;
@@ -38,7 +58,8 @@ export type Stage = {
  * around a glowing tile is impossible to hide.
  */
 export function createStage(scene: Scene, palette: BoardPalette): Stage {
-  const hemi = new HemisphereLight(palette.page, palette.slab, 1.1);
+  const floor = slabTint(palette);
+  const hemi = new HemisphereLight(palette.page, floor, 1.1);
   scene.add(hemi);
 
   // The key light is what lets a digit throw a shadow across its own
@@ -94,7 +115,7 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
     0.22,
   );
   const slabMaterial = new MeshStandardMaterial({
-    color: palette.slab,
+    color: floor,
     roughness: 0.5,
     metalness: 0.08,
   });
@@ -118,11 +139,12 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
       pageUniforms.time.value = elapsed;
     },
     setPalette(next) {
+      const tint = slabTint(next);
       hemi.color.copy(next.page);
-      hemi.groundColor.copy(next.slab);
+      hemi.groundColor.copy(tint);
       rim.color.copy(next.accent);
       flare.color.copy(next.accentBright);
-      slabMaterial.color.copy(next.slab);
+      slabMaterial.color.copy(tint);
       pageUniforms.centre.value.copy(
         next.page.clone().lerp(new Color(1, 1, 1), 0.22),
       );
