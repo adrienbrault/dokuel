@@ -14,6 +14,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { BOARD_SPAN } from "./layout.ts";
 import type { BoardPalette } from "./palette.ts";
 import { BACKDROP_SHADER } from "./shaders.ts";
+import { toeCompensate } from "./tone.ts";
 
 /** Half-angle of the board's field of view, for the backdrop's coverage. */
 const HALF_FOV_RAD = (15 * Math.PI) / 180;
@@ -123,7 +124,10 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
     0.22,
   );
   const slabMaterial = new MeshStandardMaterial({
-    color: floor,
+    // The recess between tiles is the biggest surface the board shows, and
+    // the curve's toe takes a dark floor to a black hole, so it is handed
+    // the albedo that arrives as the tint rather than the tint itself.
+    color: toeCompensate(floor),
     roughness: 0.5,
     metalness: 0.08,
   });
@@ -153,7 +157,7 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
       hemi.groundColor.copy(tint);
       rim.color.copy(next.accent);
       flare.color.copy(next.accentBright);
-      slabMaterial.color.copy(tint);
+      slabMaterial.color.copy(toeCompensate(tint));
       pageUniforms.centre.value.copy(
         next.page.clone().lerp(new Color(1, 1, 1), 0.22),
       );

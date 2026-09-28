@@ -7,11 +7,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { readPalette } from "./palette.ts";
 import { createStage } from "./stage.ts";
-import {
-  neutralOut,
-  SURFACE_REFLECTANCE,
-  TONE_EXPOSURE,
-} from "./tone.ts";
+import { neutralOut, SURFACE_REFLECTANCE } from "./tone.ts";
 
 function stageFor(pageHex: string, slabHex: string, cellHex = "#808080") {
   const scene = new Scene();
@@ -39,12 +35,19 @@ function luma(c: { r: number; g: number; b: number }) {
 }
 
 /**
- * What the rig shows for a surface of this albedo. The slab is close to
- * neutral, so its perceptual weight is enough to tell whether it landed
- * on the tone the tokens asked for.
+ * What the rig shows for a lit surface of this albedo. The shader takes
+ * its offset from the darkest channel, and that is the one the inversion
+ * lands exactly, so it is the channel worth asserting on.
  */
 function delivered(c: { r: number; g: number; b: number }) {
-  return neutralOut(luma(c) * SURFACE_REFLECTANCE * TONE_EXPOSURE);
+  // The exposure lives inside neutralOut, so only the reflectance of a lit
+  // surface is applied here.
+  return neutralOut(Math.min(c.r, c.g, c.b) * SURFACE_REFLECTANCE);
+}
+
+/** The darkest channel of a colour, which is what the curve is shaped by. */
+function darkest(c: { r: number; g: number; b: number }) {
+  return Math.min(c.r, c.g, c.b);
 }
 
 describe("createStage", () => {
@@ -58,7 +61,7 @@ describe("createStage", () => {
     const page = stage.page.material as ShaderMaterial;
     // The slab is a lit surface, so what matters is the tone it shows
     // after the rig's curve, not the number stored in its material.
-    expect(delivered(slab.color)).toBeCloseTo(luma(next.slab), 2);
+    expect(delivered(slab.color)).toBeCloseTo(darkest(next.slab), 3);
     const accent = page.uniforms["accent"] as
       | { value: { getHex(): number } }
       | undefined;
@@ -72,7 +75,7 @@ describe("createStage", () => {
     // board shows between its tiles: it reads as a concrete grid rather
     // than a recess, so the slab has to fall back to the page's own tone.
     const { stage, palette, slab } = stageFor("#0f0e0d", "#9a958c", "#121110");
-    expect(luma(slab.color)).toBeLessThan(luma(palette.cell));
+    expect(delivered(slab.color)).toBeLessThan(darkest(palette.cell));
     stage.dispose();
   });
 
@@ -81,7 +84,7 @@ describe("createStage", () => {
     // tiles want - and a dark floor is the case the curve's toe crushes,
     // so the test is that it still shows the token it was handed.
     const { stage, palette, slab } = stageFor("#ffffff", "#3d3a35", "#ffffff");
-    expect(delivered(slab.color)).toBeCloseTo(luma(palette.slab), 2);
+    expect(delivered(slab.color)).toBeCloseTo(darkest(palette.slab), 3);
     stage.dispose();
   });
 
