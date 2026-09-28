@@ -925,3 +925,10 @@ body {
 [data-board3d="off"] .board-canvas {
   display: none;
 }
+
+/* The drag preview and the numpad-hold overlay describe the same two
+   moments the scene now shows with a disc and a lifting glyph. Left
+   painted, they would double the mark on the tile. */
+[data-board3d="active"] .scene-hidden {
+  visibility: hidden;
+}
