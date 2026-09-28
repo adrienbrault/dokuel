@@ -446,6 +446,15 @@ describe("Atmosphere", () => {
 
     expect(container.querySelector("canvas")).toBeNull();
     expect(mocks.rafCallbacks).toHaveLength(0);
+    // The CSS ambient glow only stands in when flagged as fallback —
+    // on live WebGL it would double-wash the shader's own sky.
+    expect(container.firstChild).toHaveAttribute("data-atmosphere", "fallback");
+  });
+
+  it("flags the layer as webgl when the engine boots", () => {
+    const { container } = renderAtmosphere();
+
+    expect(container.firstChild).toHaveAttribute("data-atmosphere", "webgl");
   });
 
   it("renders a single still frame under prefers-reduced-motion", () => {
