@@ -1,4 +1,4 @@
-import { CanvasTexture, Group } from "three";
+import { CanvasTexture, Group, MeshStandardMaterial } from "three";
 import { describe, expect, it } from "vitest";
 import { createCellKit, type CellKitContext } from "./cell-objects.ts";
 import { atlasSymbols, type GlyphAtlas, glyphRects } from "./glyph-atlas.ts";
@@ -85,6 +85,20 @@ describe("createCellKit", () => {
     kit.apply([visual({ value: 5, isGiven: true, ink: "given" })], context(palette));
     const material = kit.cells[0]?.valueMaterial;
     expect(material?.color.r).toBeGreaterThan(palette.given.r);
+    kit.dispose();
+  });
+
+  it("hands a note the albedo that lands it on its token", () => {
+    // Notes are the quietest ink on the board, and the toe was taking
+    // their soft grey down to a smudge.
+    const palette = readPalette((name) =>
+      name === "--color-text-secondary" ? "#4a4640" : "#808080",
+    );
+    const kit = createCellKit(new Group(), palette, atlas());
+    kit.apply([visual({ notes: [3, 7] })], context(palette));
+    const note = kit.cells[0]?.notes[0];
+    const material = note?.material as MeshStandardMaterial | undefined;
+    expect(material?.color.r).toBeGreaterThan(palette.note.r);
     kit.dispose();
   });
 
