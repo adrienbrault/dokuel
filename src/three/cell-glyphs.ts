@@ -221,7 +221,9 @@ export function createGlyphKit(
         ring = new Mesh(
           conflictRingGeometry,
           new MeshStandardMaterial({
-            color: palette.conflict,
+            // The ring is the alarm, so it has to keep its hue; only
+            // the fill is inverted, never the emissive that glows.
+            color: toeCompensate(palette.conflict),
             emissive: palette.conflict,
             emissiveIntensity: 0.5,
             transparent: true,
