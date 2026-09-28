@@ -152,14 +152,18 @@ export function createCellKit(
       if (objects.value) objects.value.visible = false;
       const swatch = glyphs.ensureSwatch(objects, cell.isGiven);
       swatch.visible = true;
-      objects.swatchMaterial!.color.copy(ctx.palette.digits[value - 1]!);
+      objects.swatchMaterial!.color.copy(
+        toeCompensate(ctx.palette.digits[value - 1]!),
+      );
       glyphs.applyConflictRing(objects, cell, ctx.palette);
     } else {
       if (objects.swatch) objects.swatch.visible = false;
       const mesh = glyphs.ensureValue(objects, cell.emoji ?? String(value));
       mesh.visible = true;
       const material = objects.valueMaterial!;
-      material.color.copy(ink);
+      // A digit is tinted, not painted, so it goes through the curve the
+      // tile under it goes through - and the same inversion applies.
+      material.color.copy(toeCompensate(ink));
       // Emoji are painted into their texture with their own colours, so
       // tinting them would flatten them, and tone mapping would shift
       // them away from the swatch the picker shows.
