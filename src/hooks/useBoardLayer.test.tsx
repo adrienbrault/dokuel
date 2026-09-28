@@ -34,17 +34,21 @@ function Harness({
   completed,
   scene,
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   completed: boolean;
   scene: FakeScene | null;
 }) {
   build = vi.fn((_env: SceneEnv, _hover: number | null) => snapshot);
+  const buildSnapshot = build as unknown as (
+    env: SceneEnv,
+    hover: number | null,
+  ) => SceneSnapshot;
   layer = useBoardLayer({
     enabled: true,
     boardPx: 300,
     completed,
     onSelectCell: vi.fn(),
-    build,
+    build: buildSnapshot,
     create: () => scene as unknown as BoardScene | null,
   });
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useBoardLayer } from "../hooks/useBoardLayer.ts";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { useGridFocus } from "../hooks/useGridFocus.ts";
@@ -8,6 +9,7 @@ import type {
   Board as BoardType,
   Position,
 } from "../lib/types.ts";
+import { buildSceneSnapshot } from "../three/scene-state.ts";
 import { BoardAnnouncer } from "./BoardAnnouncer.tsx";
 import { Cell } from "./Cell.tsx";
 import { cellPresentation, exclusionBands } from "./cell-presentation.ts";
@@ -124,6 +126,29 @@ export function Board({
   const boxPx = cellPx * 3 + 2;
   const boardPx = cellPx * 9 + 14;
 
+  const { canvasRef, active, pointer } = useBoardLayer({
+    enabled: assistLevel !== "paper",
+    boardPx,
+    completed: completed ?? false,
+    onSelectCell,
+    build: (env, hover) =>
+      buildSceneSnapshot({
+        board,
+        selectedCell,
+        selectedCells,
+        conflicts,
+        hintCells,
+        highlightedDigit,
+        assistLevel,
+        animateReveal,
+        chargingDigit,
+        dragState,
+        completed,
+        hover,
+        ...env,
+      }),
+  });
+
   // Block iOS Safari's swipe-from-edge back gesture for drags that
   // originate inside the board. touch-action: none on the cell isn't
   // reliable at the screen edge — Safari often ignores it for the
@@ -132,7 +157,7 @@ export function Board({
   // passive (preventDefault is a no-op), so we attach it natively.
   const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const el = gridRef.current;
+    const el = containerRef.current;
     if (!el) return;
     const handler = (e: TouchEvent) => e.preventDefault();
     el.addEventListener("touchstart", handler, { passive: false });
@@ -143,7 +168,18 @@ export function Board({
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
+      data-board3d={active ? "active" : "off"}
+      className="relative w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
+      onPointerDown={(e) => {
+        if (onSetSelectedCells) dragHandlers.onPointerDown(e);
+        pointer.onPointerDown(e);
+      }}
+      onPointerMove={(e) => {
+        if (onSetSelectedCells) dragHandlers.onPointerMove(e);
+        pointer.onPointerMove(e);
+      }}
+      onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
+      onPointerLeave={pointer.onPointerLeave}
     >
       <div
         ref={gridRef}
@@ -160,13 +196,6 @@ export function Board({
         aria-colcount={9}
         aria-multiselectable={onSetSelectedCells ? true : undefined}
         data-board-glow
-        onPointerDown={
-          onSetSelectedCells ? dragHandlers.onPointerDown : undefined
-        }
-        onPointerMove={
-          onSetSelectedCells ? dragHandlers.onPointerMove : undefined
-        }
-        onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
         onClickCapture={
           onSetSelectedCells ? dragHandlers.onClickCapture : undefined
         }
@@ -254,6 +283,14 @@ export function Board({
           );
         })}
       </div>
+      {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: the scene repeats what the grid below already exposes, so it stays out of the accessibility tree */}
+      <canvas
+        ref={canvasRef}
+        data-testid="board-canvas"
+        aria-hidden="true"
+        className="board-canvas"
+        style={{ width: boardPx, height: boardPx }}
+      />
       <BoardAnnouncer
         board={board}
         conflicts={conflicts}
