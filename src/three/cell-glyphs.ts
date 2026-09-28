@@ -20,6 +20,7 @@ import {
 } from "./layout.ts";
 import type { BoardPalette } from "./palette.ts";
 import type { CellVisual } from "./scene-state.ts";
+import { toeCompensate } from "./tone.ts";
 
 /** World size of a value glyph; the atlas fills 86% of its cell. */
 export const VALUE_SIZE = 0.84;
@@ -90,7 +91,9 @@ export function createGlyphKit(
 
   const noteMaterial = new MeshStandardMaterial({
     map: currentAtlas.ink,
-    color: currentPalette.note,
+    // Notes are the quietest ink here, and the curve's toe takes a soft
+    // grey down to a smudge unless it is handed the inverse token.
+    color: toeCompensate(currentPalette.note),
     transparent: true,
     opacity: 0.9,
     roughness: 0.6,
@@ -274,7 +277,7 @@ export function createGlyphKit(
     },
     setPalette(next) {
       currentPalette = next;
-      noteMaterial.color.copy(next.note);
+      noteMaterial.color.copy(toeCompensate(next.note));
       chargingMaterial.color.copy(next.accentBright);
       chargingMaterial.emissive.copy(next.accentBright);
     },
