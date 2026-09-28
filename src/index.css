@@ -879,13 +879,19 @@ body {
 }
 
 /* The WebGL board sits over the painted grid, centred on it, at exactly
-   the board's own box so its camera and the grid's cells agree. */
+   the board's own box so its camera and the grid's cells agree.
+
+   It is transparent to the pointer: the scene listens on the board
+   container and resolves a cell by geometry, while drag and value
+   placement still read the cell under the cursor from the DOM. The canvas
+   never steals a hit from the cell it is drawn over. */
 .board-canvas {
   position: absolute;
   left: 50%;
   top: 50%;
   translate: -50% -50%;
   display: block;
+  pointer-events: none;
 }
 
 /* While the WebGL board is live the painted grid becomes its invisible
@@ -910,14 +916,6 @@ body {
    a second one underneath. */
 [data-board3d="active"] :where(*) {
   animation-name: none;
-}
-
-/* The canvas is the pointer surface while the scene is live, so the grid
-   stops claiming hits and the scene's own hit test answers instead.
-   Keyboard focus is untouched: cells stay focusable, they simply no
-   longer receive the pointer. */
-[data-board3d="active"] [role="grid"] {
-  pointer-events: none;
 }
 
 /* Before a scene exists the canvas is an empty box laid over the board.
