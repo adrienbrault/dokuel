@@ -23,10 +23,10 @@ function atlas(): GlyphAtlas {
   };
 }
 
-/** A theme whose accent is the mid green the app actually ships with. */
-function theme(): ReturnType<typeof readPalette> {
+/** A theme whose accent is whichever colour the caller names. */
+function theme(accent: string): ReturnType<typeof readPalette> {
   return readPalette((name) =>
-    name === "--color-accent" ? "#229c7c" : "#808080",
+    name === "--color-accent" ? accent : "#808080",
   );
 }
 
@@ -34,10 +34,22 @@ describe("createCellKit", () => {
   it("builds a selection ring bright enough to bloom", () => {
     // The ring is the selection cue, and a ring that stays under the bloom
     // window draws as a flat outline with none of the glow that sells it.
-    const kit = createCellKit(new Group(), theme(), atlas());
+    const kit = createCellKit(new Group(), theme("#229c7c"), atlas());
     const ring = kit.cells[0]?.selectionMaterial;
     const glow = ring && luma(ring.emissive) * ring.emissiveIntensity;
     expect(glow).toBeGreaterThan(BLOOM_THRESHOLD);
+    kit.dispose();
+  });
+
+  it("keeps the ring blooming through a theme flip", () => {
+    // A flip writes the new accent into the ring's emissive, and an
+    // intensity chosen for the old colour no longer suits the new one.
+    const kit = createCellKit(new Group(), theme("#229c7c"), atlas());
+    kit.setPalette(theme("#f4d03f"));
+    const ring = kit.cells[0]?.selectionMaterial;
+    const glow = ring && luma(ring.emissive) * ring.emissiveIntensity;
+    expect(glow).toBeGreaterThan(BLOOM_THRESHOLD);
+    expect(glow).toBeLessThan(2);
     kit.dispose();
   });
 });
