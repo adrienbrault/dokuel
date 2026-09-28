@@ -877,3 +877,51 @@ body {
 [data-digit-color="emoji"] .digit-ink[data-digit][data-conflict]::before {
   box-shadow: 0 0 0 2px var(--color-cell-conflict);
 }
+
+/* The WebGL board sits over the painted grid, centred on it, at exactly
+   the board's own box so its camera and the grid's cells agree. */
+.board-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  display: block;
+}
+
+/* While the WebGL board is live the painted grid becomes its invisible
+   twin: the same roles, digits and hit areas that assistive tech, the
+   pointer hooks and the board's own queries still read, minus everything
+   the scene now draws. The attribute is only set once a scene actually
+   mounts, so a browser without WebGL keeps the painted board as it was. */
+[data-board3d="active"] :is([role="grid"], [role="none"], [role="gridcell"]) {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+/* Hides the numeral, its colours-mode disc and its emoji glyph alike —
+   the scene paints all three now — while the text node stays in the tree
+   for assistive tech and for queries that read a cell's value. */
+[data-board3d="active"] .digit-ink {
+  visibility: hidden;
+}
+
+/* The scene owns timing now: the shared glow pulse, the reveal wave, the
+   pop and the charge all run on one WebGL clock, so the DOM must not run
+   a second one underneath. */
+[data-board3d="active"] :where(*) {
+  animation-name: none;
+}
+
+/* The canvas is the pointer surface while the scene is live, so the grid
+   stops claiming hits and the scene's own hit test answers instead.
+   Keyboard focus is untouched: cells stay focusable, they simply no
+   longer receive the pointer. */
+[data-board3d="active"] [role="grid"] {
+  pointer-events: none;
+}
+
+/* Before a scene exists the canvas is an empty box laid over the board.
+   Hidden, so clicks still reach the painted cells. */
+[data-board3d="off"] .board-canvas {
+  display: none;
+}
