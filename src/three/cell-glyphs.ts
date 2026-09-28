@@ -7,7 +7,11 @@ import {
 } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { CellObjects } from "./cell-objects.ts";
-import { createGlyphGeometry, type GlyphAtlas } from "./glyph-atlas.ts";
+import {
+  createGlyphGeometry,
+  type GlyphAtlas,
+  glyphSymbol,
+} from "./glyph-atlas.ts";
 import {
   noteOffset,
   noteRowOffset,
@@ -149,11 +153,19 @@ export function createGlyphKit(
         continue;
       }
       let mesh = existing;
+      const symbol = glyphSymbol(digit, mono, currentAtlas.symbols);
       if (!mesh) {
-        mesh = new Mesh(geometry(String(slot + 1), NOTE_SIZE), noteMaterial);
-        mesh.userData.slot = slot;
+        mesh = new Mesh(geometry(symbol, NOTE_SIZE), noteMaterial);
+        mesh.userData.digit = digit;
+        mesh.userData.symbol = symbol;
         objects.notes[slot] = mesh;
         board.add(mesh);
+      } else if (mesh.userData.digit !== digit) {
+        // The note grid reuses a slot for whichever digit lands there,
+        // so a fresh digit needs a fresh glyph, not the old one.
+        mesh.userData.digit = digit;
+        mesh.userData.symbol = symbol;
+        mesh.geometry = geometry(symbol, NOTE_SIZE);
       }
       mesh.visible = true;
       mesh.material = cell.charging ? chargingMaterial : noteMaterial;
@@ -252,8 +264,16 @@ export function createGlyphKit(
           );
           value.castShadow = nextMono;
         }
-        for (const [slot, note] of objects.notes.entries()) {
-          if (note) note.geometry = geometry(String(slot + 1), NOTE_SIZE);
+        for (const note of objects.notes) {
+          if (!note) continue;
+          note.geometry = geometry(
+            glyphSymbol(
+              note.userData.digit as number,
+              nextMono,
+              atlas2.symbols,
+            ),
+            NOTE_SIZE,
+          );
         }
       }
     },

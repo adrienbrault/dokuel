@@ -181,4 +181,12 @@ describe("deriveCellVisuals", () => {
     const cells = base({ board });
     expect(cells[4 * 9 + 4]!.notes).toEqual([1, 5, 9]);
   });
+
+  it("keeps the emoji empty while digits draw as digits", () => {
+    // A cell that names an emoji in a numeral mode asks the atlas for a
+    // glyph it does not hold, and lands on the wrong character.
+    const cells = base({ digitMode: "off" });
+    expect(cells[4 * 9 + 4]!.value).toBe(5);
+    expect(cells[4 * 9 + 4]!.emoji).toBeNull();
+  });
 });

@@ -123,7 +123,12 @@ export function deriveCellVisuals(input: SceneSnapshotInput): CellVisual[] {
     dragState,
     hover,
     emoji,
+    digitMode,
   } = input;
+
+  // Only an emoji mode paints symbols; everywhere else a cell draws its
+  // own numeral, so it must not name a glyph the atlas does not hold.
+  const symbols = digitMode === "emoji" ? emoji : [];
 
   const isPaper = assistLevel === "paper";
   const isFull = assistLevel === "full";
@@ -217,7 +222,7 @@ export function deriveCellVisuals(input: SceneSnapshotInput): CellVisual[] {
         value: cell.value,
         isGiven: cell.isGiven,
         notes: sortedNotes(cell.notes),
-        emoji: cell.value !== null ? (emoji[cell.value - 1] ?? null) : null,
+        emoji: cell.value !== null ? (symbols[cell.value - 1] ?? null) : null,
         hover: hover === key,
         charging: isSelected && chargingDigit != null && !isPaper,
         dragSource: isDragSource,
