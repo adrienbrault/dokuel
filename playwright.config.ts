@@ -1,6 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const isCI = !!process.env.CI;
+// Headless Chromium picks a software rasteriser when it is not told
+// otherwise, and every page now carries a WebGL board. On the software path
+// a tablet-sized board costs half a second of main-thread time per frame -
+// enough to starve input handling and blow actionability timeouts on the
+// larger viewports, where the board is biggest. Where a real GPU is
+// reachable, ask ANGLE for it: the same hardware path the shipped app
+// takes, and the only way these shots show what a device actually paints.
+// Linux runners have no Metal, so they keep the software path and its
+// retries.
+const gpuArgs = process.platform === "darwin" ? ["--use-angle=metal"] : [];
 
 export default defineConfig({
   testDir: "./e2e",
@@ -20,6 +30,7 @@ export default defineConfig({
     actionTimeout: 5_000,
     navigationTimeout: 10_000,
     trace: isCI ? "on-first-retry" : "off",
+    launchOptions: { args: gpuArgs },
   },
   webServer: {
     command: "bunx vite preview --port 4173 --strictPort",
