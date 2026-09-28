@@ -9,6 +9,7 @@ import {
   FogExp2,
   Mesh,
   MeshBasicMaterial,
+  NormalBlending,
   PerspectiveCamera,
   PlaneGeometry,
   Points,
@@ -53,6 +54,7 @@ type Palette = {
   bloomBase: number;
   bloomThreshold: number;
   grain: number;
+  vignette: number;
 };
 
 const DARK_PALETTE: Palette = {
@@ -67,20 +69,25 @@ const DARK_PALETTE: Palette = {
   bloomBase: 0.5,
   bloomThreshold: 0.16,
   grain: 0.03,
+  vignette: 0.55,
 };
 
 const LIGHT_PALETTE: Palette = {
-  top: [0.996, 0.99, 0.976],
-  bottom: [0.826, 0.933, 0.902],
-  glow: [0.04, 0.5, 0.4],
+  top: [0.93, 0.96, 0.97],
+  bottom: [0.55, 0.86, 0.79],
+  glow: [0.02, 0.75, 0.62],
   grid: [0.05, 0.52, 0.44],
   dust: [0.16, 0.5, 0.44],
   glyphColor: 0x1f6f5f,
-  fogColor: 0xfdfbf9,
+  fogColor: 0xeef6f4,
   fogDensity: 0.018,
-  bloomBase: 0.2,
-  bloomThreshold: 0.78,
+  // The sky itself sits at ~0.95 luminance, so the bloom threshold
+  // must clear it — otherwise the whole frame blooms and washes the
+  // world out to flat white. Only flashes and victory can exceed it.
+  bloomBase: 0.35,
+  bloomThreshold: 0.95,
   grain: 0.012,
+  vignette: 0.28,
 };
 
 const FLASH_COLORS: Record<RingHue, Vec3> = {
@@ -565,6 +572,7 @@ export function createEngine(
   const gradeUniforms = grade.uniforms as {
     uTime: { value: number };
     uGrain: { value: number };
+    uVignette: { value: number };
     uFlash: { value: number };
     uFlashColor: { value: Color };
   };
@@ -607,6 +615,7 @@ export function createEngine(
     gridUniforms.uColor.value.setRGB(...p.grid);
     dustUniforms.uColor.value.setRGB(...p.dust);
     gradeUniforms.uGrain.value = p.grain;
+    gradeUniforms.uVignette.value = p.vignette;
     const fog = scene.fog;
     if (fog && "density" in fog) {
       fog.color.setHex(p.fogColor);
@@ -614,6 +623,21 @@ export function createEngine(
     }
     for (const glyph of glyphs) {
       glyph.sprite.material.color.setHex(p.glyphColor);
+    }
+    // Additive glow adds light to darkness — on a near-white sky it
+    // clamps to white and vanishes. Light theme swaps the same
+    // particles to normal blending so they read as ink, not glare.
+    const blend = isDark ? AdditiveBlending : NormalBlending;
+    const blended: Material[] = [
+      grid.material,
+      dust.material,
+      ...ringPool.map((slot) => slot.material),
+      ...glyphs.map((g) => g.sprite.material),
+      ...orbs.map((o) => o.sprite.material),
+    ];
+    for (const m of blended) {
+      m.blending = blend;
+      m.needsUpdate = true;
     }
   };
 
@@ -644,7 +668,7 @@ export function createEngine(
         g.baseY + Math.sin(time * g.speed + g.phase) * g.drift;
       g.sprite.material.rotation += dt * 0.06;
       g.sprite.material.opacity =
-        (dark ? 0.13 : 0.1) * (0.7 + 0.8 * s.ambient + 0.9 * s.victory);
+        (dark ? 0.13 : 0.18) * (0.7 + 0.8 * s.ambient + 0.9 * s.victory);
     }
     for (const orb of orbs) {
       const a = orb.phase + time * 0.06;
@@ -654,7 +678,7 @@ export function createEngine(
         -12 + Math.sin(a) * orb.radius * 0.4,
       );
       orb.sprite.material.opacity =
-        (dark ? 0.3 : 0.14) * (0.55 + 0.5 * s.ambient + 0.7 * s.victory);
+        (dark ? 0.3 : 0.22) * (0.55 + 0.5 * s.ambient + 0.7 * s.victory);
     }
   };
 
