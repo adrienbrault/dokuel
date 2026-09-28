@@ -4,11 +4,13 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  Vector3,
 } from "three";
 import { describe, expect, it } from "vitest";
 import { createGlyphKit } from "./cell-glyphs.ts";
 import type { CellObjects } from "./cell-objects.ts";
 import { atlasSymbols, type GlyphAtlas, glyphRects } from "./glyph-atlas.ts";
+import { TILE_DEPTH } from "./layout.ts";
 import { readPalette } from "./palette.ts";
 import type { CellVisual } from "./scene-state.ts";
 
@@ -91,5 +93,26 @@ describe("applyNotes", () => {
 
   it("draws the themed emoji for a note in emoji mode", () => {
     expect(paintedNotes(false, [3, 7])).toEqual(["🍇", "🍒"]);
+  });
+});
+
+describe("cell marks", () => {
+  it("ride the tile when it lifts", () => {
+    // A lifted tile that leaves its glyph behind buries the glyph inside
+    // the tile's own box, and the highlighted cell loses its digit.
+    const kit = createGlyphKit(fakeAtlas(true), palette);
+    const board = new Group();
+    const objects = emptyObjects();
+    board.add(objects.tile);
+    kit.ensureValue(board, objects, "5");
+    kit.applyNotes(board, objects, notesCell([3]), 0, 0);
+    objects.tile.position.z = 0.5;
+    board.updateMatrixWorld(true);
+    const value = objects.value!.getWorldPosition(new Vector3());
+    const note = objects.notes
+      .filter(Boolean)[0]!
+      .getWorldPosition(new Vector3());
+    expect(value.z).toBeCloseTo(0.5 + TILE_DEPTH / 2 + 0.02);
+    expect(note.z).toBeCloseTo(0.5 + TILE_DEPTH / 2 + 0.015);
   });
 });
