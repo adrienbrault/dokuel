@@ -12,14 +12,21 @@ function linearOf(r: number, g: number, b: number): Color {
   return new Color().setRGB(r, g, b, SRGBColorSpace);
 }
 
-/** What a lit surface hands back after the curve, given its albedo. */
+/**
+ * What a lit surface hands back after the curve, given its albedo.
+ *
+ * Restated here on purpose: the shader takes the offset from the
+ * channels' darkest member, so this is the shipped curve checked twice,
+ * not the production mirror reused.
+ */
 function lit(colour: Color): Color {
   const scale = SURFACE_REFLECTANCE * TONE_EXPOSURE;
-  return new Color(
-    neutralOut(colour.r * scale),
-    neutralOut(colour.g * scale),
-    neutralOut(colour.b * scale),
-  );
+  const r = colour.r * scale;
+  const g = colour.g * scale;
+  const b = colour.b * scale;
+  const darkest = Math.min(r, g, b);
+  const offset = darkest < 0.08 ? darkest - 6.25 * darkest * darkest : 0.04;
+  return new Color(r - offset, g - offset, b - offset);
 }
 
 describe("tone", () => {
@@ -62,13 +69,18 @@ describe("tone", () => {
   });
 
   it("lifts a crushed ink without inventing a hue", () => {
-    // --color-cell-conflict: a red whose blue channel sits under the knee.
+    // --color-cell-conflict: a red whose blue channel lands in the toe.
     const ink = linearOf(0.69, 0.29, 0.227);
     const compensated = toeCompensate(ink);
     expect(compensated.b).toBeGreaterThan(ink.b);
     expect(compensated.r).toBeGreaterThan(ink.r);
-    // Every channel gains the same offset, so the hue is untouched.
-    expect(compensated.r - ink.r).toBeCloseTo(compensated.b - ink.b, 6);
+    // The offset and the rig's gain are shared by every channel, so the
+    // channels keep their distances apart: a crushed red lifts into red.
+    const scale = SURFACE_REFLECTANCE * TONE_EXPOSURE;
+    expect(compensated.r - compensated.b).toBeCloseTo(
+      (ink.r - ink.b) / scale,
+      6,
+    );
   });
 
   it("leaves pure black alone", () => {
