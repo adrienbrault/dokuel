@@ -1,6 +1,6 @@
-import { CanvasTexture, Group, MeshStandardMaterial } from "three";
+import { CanvasTexture, Group, type MeshStandardMaterial } from "three";
 import { describe, expect, it } from "vitest";
-import { createCellKit, type CellKitContext } from "./cell-objects.ts";
+import { type CellKitContext, createCellKit } from "./cell-objects.ts";
 import { atlasSymbols, type GlyphAtlas, glyphRects } from "./glyph-atlas.ts";
 import { readPalette } from "./palette.ts";
 import { BLOOM_THRESHOLD } from "./pipeline.ts";
@@ -82,7 +82,10 @@ describe("createCellKit", () => {
       name === "--color-cell-given" ? "#1c1a17" : "#808080",
     );
     const kit = createCellKit(new Group(), palette, atlas());
-    kit.apply([visual({ value: 5, isGiven: true, ink: "given" })], context(palette));
+    kit.apply(
+      [visual({ value: 5, isGiven: true, ink: "given" })],
+      context(palette),
+    );
     const material = kit.cells[0]?.valueMaterial;
     expect(material?.color.r).toBeGreaterThan(palette.given.r);
     kit.dispose();
@@ -121,6 +124,26 @@ describe("createCellKit", () => {
     const glow = ring && luma(ring.emissive) * ring.emissiveIntensity;
     expect(glow).toBeGreaterThan(BLOOM_THRESHOLD);
     expect(glow).toBeLessThan(2);
+    kit.dispose();
+  });
+});
+
+describe("a conflict ring in a colour theme", () => {
+  it("hands the ring the albedo that lands it on its token", () => {
+    // The ring is drawn around a coloured swatch, and a red taken through
+    // the toe arrives black - a black ring reads as an outline, not an
+    // alarm.
+    const palette = readPalette((name) =>
+      name === "--color-cell-conflict" ? "#8c2b22" : "#808080",
+    );
+    const kit = createCellKit(new Group(), palette, atlas());
+    kit.apply([visual({ value: 4, isGiven: true, ink: "conflict" })], {
+      ...context(palette),
+      digitMode: "colors",
+    });
+    const ring = kit.cells[0]?.conflictRing;
+    const material = ring?.material as MeshStandardMaterial | undefined;
+    expect(material?.color.r).toBeGreaterThan(palette.conflict.r);
     kit.dispose();
   });
 });
