@@ -7,6 +7,11 @@ import {
 import { describe, expect, it } from "vitest";
 import { readPalette } from "./palette.ts";
 import { createStage } from "./stage.ts";
+import {
+  neutralOut,
+  SURFACE_REFLECTANCE,
+  TONE_EXPOSURE,
+} from "./tone.ts";
 
 function stageFor(pageHex: string, slabHex: string, cellHex = "#808080") {
   const scene = new Scene();
@@ -33,6 +38,15 @@ function luma(c: { r: number; g: number; b: number }) {
   return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
 }
 
+/**
+ * What the rig shows for a surface of this albedo. The slab is close to
+ * neutral, so its perceptual weight is enough to tell whether it landed
+ * on the tone the tokens asked for.
+ */
+function delivered(c: { r: number; g: number; b: number }) {
+  return neutralOut(luma(c) * SURFACE_REFLECTANCE * TONE_EXPOSURE);
+}
+
 describe("createStage", () => {
   it("carries the palette into the slab, the lights and the backdrop", () => {
     // A theme flip is a re-read of the tokens, so every surface the stage
@@ -42,7 +56,9 @@ describe("createStage", () => {
     stage.setPalette(next);
     const slab = stage.slab.material as MeshStandardMaterial;
     const page = stage.page.material as ShaderMaterial;
-    expect(slab.color.getHex()).toBe(next.slab.getHex());
+    // The slab is a lit surface, so what matters is the tone it shows
+    // after the rig's curve, not the number stored in its material.
+    expect(delivered(slab.color)).toBeCloseTo(luma(next.slab), 2);
     const accent = page.uniforms["accent"] as
       | { value: { getHex(): number } }
       | undefined;
@@ -62,9 +78,19 @@ describe("createStage", () => {
 
   it("keeps a border token that is already a recess", () => {
     // The light theme's border is dark, which is exactly the floor the
-    // tiles want, so it passes through untouched.
+    // tiles want - and a dark floor is the case the curve's toe crushes,
+    // so the test is that it still shows the token it was handed.
     const { stage, palette, slab } = stageFor("#ffffff", "#3d3a35", "#ffffff");
-    expect(luma(slab.color)).toBeCloseTo(luma(palette.slab), 3);
+    expect(delivered(slab.color)).toBeCloseTo(luma(palette.slab), 2);
+    stage.dispose();
+  });
+
+  it("hands a dark slab more albedo than its tint", () => {
+    // The recess between tiles is the largest surface the board shows, and
+    // the toe of the output curve turns a dark floor into a black hole. The
+    // material has to carry the inverse of what the curve will do to it.
+    const { stage, palette, slab } = stageFor("#0f0e0d", "#2a2724", "#808080");
+    expect(luma(slab.color)).toBeGreaterThan(luma(palette.slab));
     stage.dispose();
   });
 
