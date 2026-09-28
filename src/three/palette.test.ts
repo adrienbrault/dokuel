@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseCssColor, readEmojiSymbols, readPalette } from "./palette.ts";
+import {
+  createPaletteReader,
+  parseCssColor,
+  readEmojiSymbols,
+  readPalette,
+} from "./palette.ts";
 
 function closeTo(actual: number[], expected: number[]) {
   expect(actual).toHaveLength(3);
@@ -97,5 +102,19 @@ describe("readEmojiSymbols", () => {
     const symbols = readEmojiSymbols(() => "");
     expect(symbols).toHaveLength(9);
     expect(symbols.every((s) => s.length > 0)).toBe(true);
+  });
+});
+describe("createPaletteReader", () => {
+  it("reuses one probe, so repeated boards do not strand spans", () => {
+    const before = document.querySelectorAll('[aria-hidden="true"]').length;
+
+    const first = createPaletteReader();
+    const second = createPaletteReader();
+    first("--color-bg-primary");
+    second("--color-text-primary");
+
+    expect(document.querySelectorAll('[aria-hidden="true"]').length).toBe(
+      before + 1,
+    );
   });
 });
