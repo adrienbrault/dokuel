@@ -1,6 +1,6 @@
 import {
   ACESFilmicToneMapping,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   type PerspectiveCamera,
   type Scene,
   Vector2,
@@ -60,7 +60,7 @@ export function createPipeline(
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.shadowMap.type = PCFShadowMap;
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
