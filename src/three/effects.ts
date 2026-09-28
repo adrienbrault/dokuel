@@ -130,7 +130,7 @@ export function createSparkPool(
     );
     const material = new PointsMaterial({
       map: dot,
-      color: colour.clone(),
+      color: colour.clone().multiplyScalar(markGlow(colour)),
       size: 0.13,
       transparent: true,
       opacity: 0,
@@ -168,7 +168,7 @@ export function createSparkPool(
         burst.velocities[i * 3 + 2] = 0.7 + Math.random() * 1.5;
       }
       position.needsUpdate = true;
-      burst.material.color.copy(next);
+      burst.material.color.copy(next).multiplyScalar(markGlow(next));
       burst.material.opacity = 0.95;
       burst.points.visible = true;
       burst.life = 0;
@@ -200,7 +200,8 @@ export function createSparkPool(
       }
     },
     recolour(next) {
-      for (const burst of bursts) burst.material.color.copy(next);
+      for (const burst of bursts)
+        burst.material.color.copy(next).multiplyScalar(markGlow(next));
     },
     dispose() {
       for (const burst of bursts) {
