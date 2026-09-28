@@ -180,17 +180,34 @@ export function parseCssColor(value: string): Rgb | null {
  * the root — a dark-mode flip needs no re-plumbing, just a re-read.
  */
 export function createPaletteReader(): PaletteReader {
-  const probe = document.createElement("span");
-  probe.setAttribute("aria-hidden", "true");
-  probe.style.position = "absolute";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  document.body.appendChild(probe);
   return (name: string) => {
+    const probe = paletteProbe();
     probe.style.color = "";
     probe.style.color = `color-mix(in srgb, var(${name}, rgb(0 0 0)) 100%, rgb(0 0 0) 0%)`;
     return getComputedStyle(probe).color;
   };
+}
+
+/**
+ * One probe for the whole page.
+ *
+ * The tokens are global, so a second span resolves exactly what the
+ * first does — and a page that mounts and unmounts boards would
+ * otherwise strand an invisible span behind every scene it builds.
+ */
+let probe: HTMLElement | null = null;
+
+function paletteProbe(): HTMLElement {
+  if (!probe) {
+    const span = document.createElement("span");
+    span.setAttribute("aria-hidden", "true");
+    span.style.position = "absolute";
+    span.style.opacity = "0";
+    span.style.pointerEvents = "none";
+    document.body.appendChild(span);
+    probe = span;
+  }
+  return probe;
 }
 
 /** The scene's colour surface, one entry per thing it paints. */
