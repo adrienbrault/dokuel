@@ -13,6 +13,7 @@ import {
   type Texture,
 } from "three";
 import { clamp01, easeOutCubic } from "./easing.ts";
+import { markGlow } from "./pipeline.ts";
 
 function nearestFree<T extends { active: boolean }>(pool: T[]): T {
   for (const item of pool) if (!item.active) return item;
@@ -43,7 +44,7 @@ export function createRingPool(parent: Object3D, colour: Color): RingPool {
     const material = new MeshStandardMaterial({
       color: colour.clone(),
       emissive: colour.clone(),
-      emissiveIntensity: 2,
+      emissiveIntensity: markGlow(colour),
       transparent: true,
       opacity: 0,
       depthWrite: false,
@@ -62,6 +63,7 @@ export function createRingPool(parent: Object3D, colour: Color): RingPool {
       ring.mesh.scale.setScalar(0.4);
       ring.material.color.copy(next);
       ring.material.emissive.copy(next);
+      ring.material.emissiveIntensity = markGlow(next);
       ring.material.opacity = opacity;
       ring.mesh.visible = true;
       ring.life = 0;
@@ -84,6 +86,7 @@ export function createRingPool(parent: Object3D, colour: Color): RingPool {
       for (const ring of rings) {
         ring.material.color.copy(next);
         ring.material.emissive.copy(next);
+        ring.material.emissiveIntensity = markGlow(next);
       }
     },
     dispose() {
