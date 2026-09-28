@@ -1,9 +1,10 @@
 import { CanvasTexture, Group } from "three";
 import { describe, expect, it } from "vitest";
-import { createCellKit } from "./cell-objects.ts";
+import { createCellKit, type CellKitContext } from "./cell-objects.ts";
 import { atlasSymbols, type GlyphAtlas, glyphRects } from "./glyph-atlas.ts";
 import { readPalette } from "./palette.ts";
 import { BLOOM_THRESHOLD } from "./pipeline.ts";
+import type { CellVisual } from "./scene-state.ts";
 
 const EMOJI = ["🍎", "🍌", "🍇", "🍓", "🍊", "🍉", "🍒", "🥝", "🍍"];
 
@@ -30,7 +31,49 @@ function theme(accent: string): ReturnType<typeof readPalette> {
   );
 }
 
+/** A theme whose tiles are as dark as the dark-mode token. */
+function darkTheme(): ReturnType<typeof readPalette> {
+  return readPalette((name) =>
+    name === "--color-cell-bg" ? "#131110" : "#808080",
+  );
+}
+
+function visual(): CellVisual {
+  return {
+    row: 0,
+    col: 0,
+    state: "idle",
+    ink: "user",
+    value: null,
+    isGiven: false,
+    notes: [],
+    emoji: null,
+    hover: false,
+    charging: false,
+    dragSource: false,
+    dropTarget: null,
+    dropMode: "value",
+    dropDigit: null,
+    revealDelayMs: null,
+  };
+}
+
+function context(palette: ReturnType<typeof readPalette>): CellKitContext {
+  return { palette, digitMode: "off", elapsed: 0, onPlace: () => {} };
+}
+
 describe("createCellKit", () => {
+  it("hands a dark tile the albedo that lands it on its token", () => {
+    // The curve is quadratic near black, so a tile handed its own dark
+    // token arrives as charcoal - measured at rgb 9 for a token of 19.
+    const palette = darkTheme();
+    const kit = createCellKit(new Group(), palette, atlas());
+    kit.apply([visual()], context(palette));
+    const colour = kit.cells[0]?.colour;
+    expect(colour?.r).toBeGreaterThan(palette.cell.r);
+    kit.dispose();
+  });
+
   it("builds a selection ring bright enough to bloom", () => {
     // The ring is the selection cue, and a ring that stays under the bloom
     // window draws as a flat outline with none of the glow that sells it.
