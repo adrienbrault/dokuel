@@ -1,5 +1,6 @@
 import {
   ACESFilmicToneMapping,
+  type Color,
   PCFShadowMap,
   type PerspectiveCamera,
   type Scene,
@@ -16,9 +17,23 @@ import { GRAIN_SHADER } from "./shaders.ts";
 /** Bloom at rest; the completion moment pushes it past blowout. */
 export const BLOOM_STRENGTH = 0.32;
 /** Bloom starts well above the tile's own brightness, so only a glow blooms. */
-const BLOOM_THRESHOLD = 0.82;
+export const BLOOM_THRESHOLD = 0.82;
 /** Radius and strength of the halo a glowing tile throws. */
 const BLOOM_RADIUS = 0.7;
+
+/**
+ * The emissive intensity that puts a mark of this colour inside the bloom.
+ *
+ * Bloom reads the linear buffer before tone mapping, so a mark only glows
+ * if its own luminance clears the threshold. The accent is a mid green and
+ * a spark is near white, so one fixed intensity suits neither: the green
+ * stays under the window and draws flat, the white saturates into a blob.
+ * Scaling by the colour's luminance gives every mark the same headroom.
+ */
+export function markGlow(colour: Color): number {
+  const luma = 0.2126 * colour.r + 0.7152 * colour.g + 0.0722 * colour.b;
+  return (BLOOM_THRESHOLD * 1.4) / Math.max(luma, 0.05);
+}
 
 export type Pipeline = {
   renderer: WebGLRenderer;
