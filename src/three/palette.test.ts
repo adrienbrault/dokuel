@@ -118,3 +118,19 @@ describe("createPaletteReader", () => {
     );
   });
 });
+
+describe("readPalette", () => {
+  it("puts a token in the scene's working colour space", () => {
+    // Tokens are sRGB. Handed to a material as-is they are read as
+    // linear, so the output pass encodes them a second time and every
+    // surface - the slab especially - arrives far lighter than the page
+    // it is meant to match.
+    const palette = readPalette(() => "#808080");
+    expect(palette.cell.g).toBeCloseTo(0.2158, 3);
+  });
+
+  it("reads a fallback in the same space as a token", () => {
+    const palette = readPalette(() => "not-a-colour");
+    expect(palette.page.g).toBeCloseTo(0.9217, 3);
+  });
+});
