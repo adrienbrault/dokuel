@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildGlyphAtlas, glyphRects, remapPlaneUvs } from "./glyph-atlas.ts";
+import {
+  atlasSymbols,
+  buildGlyphAtlas,
+  glyphRects,
+  glyphSymbol,
+  remapPlaneUvs,
+} from "./glyph-atlas.ts";
+
+const EMOJI = ["🍎", "🍌", "🍇", "🍓", "🍊", "🍉", "🍒", "🥝", "🍍"];
 
 describe("glyphRects", () => {
   it("lays nine glyphs out on a 3×3 atlas in digit order", () => {
@@ -72,5 +80,57 @@ describe("buildGlyphAtlas", () => {
     // Headless runs have no 2D context; the caller needs the null so it
     // can keep the DOM board instead of rendering an empty scene.
     expect(buildGlyphAtlas(["1", "2", "3"], { mono: true })).toBeNull();
+  });
+});
+
+describe("atlasSymbols", () => {
+  it("holds numerals while digits are drawn as digits", () => {
+    // A value glyph asks for its numeral; an atlas of emoji has no such
+    // slot, so every digit would fall back to the same first cell.
+    expect(atlasSymbols(true, EMOJI)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+    ]);
+  });
+
+  it("holds the themed emoji when symbols are drawn as emoji", () => {
+    expect(atlasSymbols(false, EMOJI)).toEqual(EMOJI);
+  });
+
+  it("fills a nine-slot atlas even when the theme is short", () => {
+    // Digit-indexed lookup has to keep working, so a missing symbol
+    // takes its numeral rather than shifting every later glyph.
+    expect(atlasSymbols(false, ["", "🍌"])).toEqual([
+      "1",
+      "🍌",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+    ]);
+  });
+});
+
+describe("glyphSymbol", () => {
+  it("draws a digit's own numeral while digits are drawn as digits", () => {
+    expect(glyphSymbol(5, true, EMOJI)).toBe("5");
+  });
+
+  it("draws the themed emoji for a digit when symbols are emoji", () => {
+    expect(glyphSymbol(5, false, EMOJI)).toBe("🍊");
+  });
+
+  it("falls back to the numeral when the theme has no symbol", () => {
+    expect(glyphSymbol(5, false, [])).toBe("5");
   });
 });

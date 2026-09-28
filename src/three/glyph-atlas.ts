@@ -90,6 +90,40 @@ export type GlyphAtlasOptions = {
 const DEFAULT_FONT =
   '"DM Sans Variable", "DM Sans", system-ui, -apple-system, sans-serif';
 
+/** The nine numerals, in digit order. */
+export const DIGIT_SYMBOLS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+/**
+ * The glyphs an atlas has to hold for the current digit mode.
+ *
+ * A glyph is looked up by the symbol it draws, so the atlas and the
+ * board have to agree: painting emoji into an atlas the board reads as
+ * numerals leaves every digit sampling the same first cell.
+ */
+export function atlasSymbols(
+  mono: boolean,
+  emoji: readonly string[],
+): string[] {
+  if (mono) return DIGIT_SYMBOLS;
+  return Array.from({ length: 9 }, (_, i) => emoji[i] || DIGIT_SYMBOLS[i]!);
+}
+
+/**
+ * The glyph a digit draws: its own numeral, or the emoji themed for it.
+ *
+ * Notes are indexed by digit rather than by value, so this takes the
+ * digit and the atlas's own symbol list — which is the emoji set in
+ * emoji mode and the numerals otherwise.
+ */
+export function glyphSymbol(
+  digit: number,
+  mono: boolean,
+  symbols: readonly string[],
+): string {
+  const symbol = mono ? null : symbols[digit - 1];
+  return symbol || DIGIT_SYMBOLS[digit - 1] || String(digit);
+}
+
 /** Everything the painter needs, with every option already resolved. */
 type PaintOptions = {
   mono: boolean;

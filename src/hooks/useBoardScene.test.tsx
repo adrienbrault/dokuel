@@ -217,6 +217,23 @@ describe("useBoardScene", () => {
     );
   });
 
+  it("hands the atlas its numerals while digits draw as digits", async () => {
+    // An atlas of emoji has no slot for "7", so every digit would end up
+    // sampling the same glyph. The atlas is built from what is drawn.
+    const scene = fakeScene();
+    renderHarness((..._args) => scene as BoardScene);
+    scene.setGlyphs.mockClear();
+
+    await act(async () => {
+      document.documentElement.dataset.digitColor = "colors";
+    });
+
+    expect(scene.setGlyphs).toHaveBeenCalledWith(
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+      true,
+    );
+  });
+
   it("re-reads colours when the theme flips", async () => {
     const scene = fakeScene();
     renderHarness((..._args) => scene as BoardScene);

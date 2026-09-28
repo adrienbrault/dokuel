@@ -1,6 +1,7 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 import type { DigitColorMode } from "../lib/types.ts";
 import { type BoardScene, createBoardScene } from "../three/board-scene.ts";
+import { atlasSymbols } from "../three/glyph-atlas.ts";
 import {
   createPaletteReader,
   readEmojiSymbols,
@@ -122,11 +123,13 @@ export function useBoardScene({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const scene = create(canvas, readPalette(read), readEmojiSymbols(read), {
-      mono: digitMode !== "emoji",
-      boardPx,
-      reducedMotion,
-    });
+    const mono = digitMode !== "emoji";
+    const scene = create(
+      canvas,
+      readPalette(read),
+      atlasSymbols(mono, readEmojiSymbols(read)),
+      { mono, boardPx, reducedMotion },
+    );
     sceneRef.current = scene;
     if (!scene) {
       setActive(false);
@@ -142,9 +145,10 @@ export function useBoardScene({
     // baked, which would leave it drawn in a fallback face.
     document.fonts?.ready.then(() => {
       if (sceneRef.current !== scene) return;
+      const readyMono = latest.current.digitMode !== "emoji";
       scene.setGlyphs(
-        readEmojiSymbols(read),
-        latest.current.digitMode !== "emoji",
+        atlasSymbols(readyMono, readEmojiSymbols(read)),
+        readyMono,
       );
     });
 
@@ -187,7 +191,10 @@ export function useBoardScene({
       const symbols = readEmojiSymbols(read);
       const scene = sceneRef.current;
       scene?.setPalette(readPalette(read));
-      scene?.setGlyphs(symbols, mode !== "emoji");
+      scene?.setGlyphs(
+        atlasSymbols(mode !== "emoji", symbols),
+        mode !== "emoji",
+      );
       setDigitMode((current) => (current === mode ? current : mode));
       setEmoji((current) =>
         sameSymbols(current, symbols) ? current : symbols,
