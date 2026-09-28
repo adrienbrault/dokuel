@@ -14,6 +14,7 @@ import { cellPosition, TILE_DEPTH } from "./layout.ts";
 import type { BoardPalette } from "./palette.ts";
 import { markGlow } from "./pipeline.ts";
 import type { CellVisual, SceneSnapshot } from "./scene-state.ts";
+import { toeCompensate } from "./tone.ts";
 
 /** How long a digit springs after landing, in seconds. */
 const POP_DURATION = 0.45;
@@ -91,7 +92,9 @@ export function createCellKit(
     const [x, y] = cellPosition(row, col);
 
     const tileMaterial = new MeshStandardMaterial({
-      color: palette.cell.clone(),
+      // The curve that follows is quadratic near black, so a dark tile
+      // has to be handed the albedo that lands it back on its token.
+      color: toeCompensate(palette.cell),
       roughness: 0.62,
       metalness: 0.02,
       emissive: palette.accent.clone(),
@@ -131,7 +134,7 @@ export function createCellKit(
       selected: false,
       lift: 0,
       glow: 0,
-      colour: palette.cell.clone(),
+      colour: toeCompensate(palette.cell),
       popAt: -1,
       revealAt: -1,
       lastValue: null,
@@ -178,7 +181,7 @@ export function createCellKit(
       const target = resolveCellTarget(cell, ctx.palette);
       objects.lift = target.lift;
       objects.glow = target.glow;
-      objects.colour.copy(target.colour);
+      objects.colour.copy(toeCompensate(target.colour));
       objects.selected = cell.state === "selected";
 
       const drop = target.dropPreview;
