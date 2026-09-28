@@ -1235,3 +1235,67 @@ test.describe("emoji theme settings", () => {
     });
   });
 });
+
+// --- WebGL atmosphere world ---
+//
+// The fixture default stubs WebGL contexts so every other scene renders
+// the tested CSS fallback fast and deterministically (SwiftShader burns
+// 100ms+ per frame and a fake clock's runFor replays every queued rAF
+// tick synchronously). These scenarios opt into real WebGL: they double
+// as the regression that the canvas layer actually mounts, and their
+// stills are what gets reviewed for the world's look.
+async function captureAtmosphere(
+  page: Page,
+  mood: "menu" | "game",
+  name: string,
+  project: string,
+) {
+  await expect(page.locator(".atmosphere-layer canvas")).toBeVisible();
+  await expect(page.locator(".atmosphere-layer")).toHaveAttribute(
+    "data-mood",
+    mood,
+  );
+  // SwiftShader renders a frame every ~100ms; let the nebula drift,
+  // glyph fade-in and bloom actually compose before the still.
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: screenshotPath(name, project) });
+}
+
+for (const theme of ["light", "dark"] as const) {
+  const suffix = theme === "dark" ? "-dark" : "";
+
+  test.describe(`atmosphere world (${theme})`, () => {
+    test.use({
+      webgl: true,
+      storage: {
+        "sudoku_save_e2e-atmo": nearlyWonSave,
+        ...(theme === "dark" ? { sudoku_theme: "dark" } : {}),
+      },
+    });
+
+    test(`atmosphere - landing menu mood${suffix}`, async ({
+      page,
+    }, testInfo) => {
+      await page.goto("/");
+      await captureAtmosphere(
+        page,
+        "menu",
+        `atmosphere-landing${suffix}`,
+        testInfo.project.name,
+      );
+    });
+
+    test(`atmosphere - solo game mood${suffix}`, async ({ page }, testInfo) => {
+      await page.goto("/solo/easy/e2e-atmo");
+      await page.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+      await captureAtmosphere(
+        page,
+        "game",
+        `atmosphere-solo${suffix}`,
+        testInfo.project.name,
+      );
+    });
+  });
+}

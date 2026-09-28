@@ -151,6 +151,16 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
     ],
   },
   {
+    name: "atmosphere",
+    title: "WebGL atmosphere world (menu & game moods)",
+    scenes: [
+      "atmosphere-landing",
+      "atmosphere-landing-dark",
+      "atmosphere-solo",
+      "atmosphere-solo-dark",
+    ],
+  },
+  {
     name: "dark-mode-a",
     title: "Dark-mode pairs (landing & solo)",
     scenes: ["landing", "landing-dark", "solo-game", "solo-game-dark"],

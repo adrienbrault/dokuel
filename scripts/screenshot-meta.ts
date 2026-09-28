@@ -110,6 +110,10 @@ export function sceneLabel(scene: string): string {
     "multiplayer-rematch-invite": "Multiplayer · rematch invite",
     "multiplayer-rematch-waiting-dark": "Multiplayer · rematch waiting (dark)",
     "stats-replay": "Stats · duel replay",
+    "atmosphere-landing": "Atmosphere · menu mood",
+    "atmosphere-landing-dark": "Atmosphere · menu mood (dark)",
+    "atmosphere-solo": "Atmosphere · game mood",
+    "atmosphere-solo-dark": "Atmosphere · game mood (dark)",
   };
   return overrides[scene] ?? titleCase(scene);
 }
