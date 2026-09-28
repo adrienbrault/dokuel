@@ -210,6 +210,8 @@ export type BoardPalette = {
   accent: Color;
   accentBright: Color;
   enteredDisc: Color;
+  /** Pencil notes: the DOM grid paints them with secondary text. */
+  note: Color;
   /** Indexed by digit - 1. */
   digits: Color[];
 };
@@ -230,6 +232,7 @@ const TOKENS = {
   accent: "--color-accent",
   accentBright: "--color-accent-bright",
   enteredDisc: "--color-digit-entered",
+  note: "--color-text-secondary",
 } as const;
 
 /**
@@ -253,6 +256,7 @@ const FALLBACKS: Record<keyof typeof TOKENS, number> = {
   accent: 0x3f7a63,
   accentBright: 0x4f9a7d,
   enteredDisc: 0xd9ece4,
+  note: 0x6f6d68,
 };
 
 function toColor(read: PaletteReader, token: string, fallback: number): Color {

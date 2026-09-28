@@ -55,6 +55,7 @@ describe("readPalette", () => {
     expect(palette.cell.getHex()).toBe(0x000000);
     expect(palette.selected.getHex()).toBe(0x000000);
     expect(palette.conflict.getHex()).toBe(0x000000);
+    expect(palette.note.getHex()).toBe(0x000000);
     expect(palette.digits).toHaveLength(9);
     expect(palette.digits.every((c) => c.getHex() === 0x000000)).toBe(true);
   });
