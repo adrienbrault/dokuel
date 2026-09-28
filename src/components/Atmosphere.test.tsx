@@ -287,9 +287,9 @@ vi.mock("../lib/atmosphere.ts", async (importOriginal) => {
 
 // ── RAF harness ───────────────────────────────────────────────────────
 let nowMs = 0;
-function pumpFrames(count = 1) {
+function pumpFrames(count = 1, stepMs = 16.7) {
   for (let i = 0; i < count; i++) {
-    nowMs += 16.7;
+    nowMs += stepMs;
     const callbacks = mocks.rafCallbacks
       .splice(0, mocks.rafCallbacks.length)
       .filter((cb): cb is FrameRequestCallback => cb !== null);
@@ -466,6 +466,18 @@ describe("Atmosphere", () => {
 
     expect(mocks.composerRenders.length).toBeGreaterThanOrEqual(1);
     expect(mocks.rafCallbacks).toHaveLength(0);
+  });
+
+  it("drops to a cheaper render scale when frames keep missing 30fps", () => {
+    vi.stubGlobal("devicePixelRatio", 2);
+    renderAtmosphere();
+    pumpFrames(10);
+    expect(rendererAt(0).setPixelRatio).toHaveBeenLastCalledWith(2);
+
+    // 200ms frames: a weak GPU (integrated laptops, SwiftShader CI)
+    // must not be pinned at full resolution forever.
+    pumpFrames(40, 200);
+    expect(rendererAt(0).setPixelRatio).toHaveBeenLastCalledWith(1);
   });
 
   it("resizes the renderer when the window resizes", () => {
