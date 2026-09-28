@@ -14,7 +14,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { BOARD_SPAN } from "./layout.ts";
 import type { BoardPalette } from "./palette.ts";
 import { BACKDROP_SHADER } from "./shaders.ts";
-import { toeCompensate } from "./tone.ts";
+import { TONE_EXPOSURE, toeCompensate } from "./tone.ts";
 
 /** Half-angle of the board's field of view, for the backdrop's coverage. */
 const HALF_FOV_RAD = (15 * Math.PI) / 180;
@@ -37,6 +37,25 @@ function slabTint(palette: BoardPalette): Color {
   return luma(palette.slab) > luma(palette.cell)
     ? palette.page.clone()
     : palette.slab.clone();
+}
+
+/**
+ * The backdrop paints the page instead of catching light on it, so the
+ * output curve is the only thing standing between its colour and what the
+ * canvas shows - there is no reflectance to account for.
+ */
+function pageCentre(palette: BoardPalette): Color {
+  return toeCompensate(
+    palette.page.clone().lerp(new Color(1, 1, 1), 0.22),
+    TONE_EXPOSURE,
+  );
+}
+
+function pageEdge(palette: BoardPalette): Color {
+  return toeCompensate(
+    palette.page.clone().lerp(new Color(0, 0, 0), 0.2),
+    TONE_EXPOSURE,
+  );
 }
 
 export type Stage = {
@@ -100,8 +119,8 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
 
   const pageGeometry = new PlaneGeometry(1, 1);
   const pageUniforms = {
-    centre: { value: palette.page.clone().lerp(new Color(1, 1, 1), 0.22) },
-    edge: { value: palette.page.clone().lerp(new Color(0, 0, 0), 0.2) },
+    centre: { value: pageCentre(palette) },
+    edge: { value: pageEdge(palette) },
     accent: { value: palette.accent.clone() },
     time: { value: 0 },
   };
@@ -158,12 +177,8 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
       rim.color.copy(next.accent);
       flare.color.copy(next.accentBright);
       slabMaterial.color.copy(toeCompensate(tint));
-      pageUniforms.centre.value.copy(
-        next.page.clone().lerp(new Color(1, 1, 1), 0.22),
-      );
-      pageUniforms.edge.value.copy(
-        next.page.clone().lerp(new Color(0, 0, 0), 0.2),
-      );
+      pageUniforms.centre.value.copy(pageCentre(next));
+      pageUniforms.edge.value.copy(pageEdge(next));
       pageUniforms.accent.value.copy(next.accent);
     },
     dispose() {

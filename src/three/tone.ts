@@ -60,9 +60,16 @@ export function neutralOut(x: number, exposure = TONE_EXPOSURE): number {
  * reads that linear buffer - a board whose tiles clear the window blooms as
  * one flat sheet. The roll-off instead keeps a lit tile under it, so only
  * a mark ever throws a halo.
+ *
+ * `scale` is everything that stands between the stored colour and the
+ * curve. A lit surface returns most of its albedo into the buffer and the
+ * output pass then scales what it gets, so both factors belong; a surface
+ * that paints itself has no light to reflect and takes the exposure alone.
  */
-export function toeCompensate(colour: Color): Color {
-  const scale = SURFACE_REFLECTANCE * TONE_EXPOSURE;
+export function toeCompensate(
+  colour: Color,
+  scale = SURFACE_REFLECTANCE * TONE_EXPOSURE,
+): Color {
   const target = Math.min(colour.r, colour.g, colour.b);
   if (target === 0 || target >= SHOULDER_START) return colour.clone();
   // The two branches meet at the knee with the same value, so the swap is
