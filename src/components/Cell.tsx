@@ -195,7 +195,7 @@ export const Cell = memo(function Cell({
           data-testid="drop-zone"
           data-mode={dropMode}
           aria-hidden="true"
-          className="absolute inset-x-0 h-1/2 bg-accent/15 pointer-events-none animate-drop-preview"
+          className="scene-hidden absolute inset-x-0 h-1/2 bg-accent/15 pointer-events-none animate-drop-preview"
           style={{ top: dropMode === "value" ? "0%" : "50%" }}
         />
       )}
@@ -204,7 +204,7 @@ export const Cell = memo(function Cell({
           data-testid="drop-preview"
           data-mode={dropMode}
           aria-hidden="true"
-          className="absolute flex items-center justify-center font-bold leading-none text-accent pointer-events-none animate-drop-preview"
+          className="scene-hidden absolute flex items-center justify-center font-bold leading-none text-accent pointer-events-none animate-drop-preview"
           style={
             dropMode === "value"
               ? {
@@ -239,7 +239,7 @@ export const Cell = memo(function Cell({
         <span
           data-testid="note-charge"
           aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
+          className="scene-hidden absolute inset-0 flex items-center justify-center text-[clamp(1.2578125rem,5.75vw,2.15625rem)] font-semibold text-cell-user leading-none pointer-events-none animate-note-charge"
           style={
             {
               "--charge-dx": NOTE_OFFSETS[(chargingDigit - 1) % 3]!,

@@ -920,3 +920,43 @@ describe("Board live announcements", () => {
     expect(announcer()).toHaveTextContent("Puzzle complete");
   });
 });
+
+describe("Board WebGL layer", () => {
+  it("offers a canvas for the scene and stays painted without one", () => {
+    // jsdom has no WebGL, which is exactly the fallback this pins: the
+    // scene never mounts, so the painted grid keeps the floor.
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    const canvas = screen.getByTestId("board-canvas");
+    expect(canvas).toHaveAttribute("aria-hidden", "true");
+    expect(canvas.closest("[data-board3d]")).toHaveAttribute(
+      "data-board3d",
+      "off",
+    );
+  });
+
+  it("sizes the canvas to the board box, not the space around it", () => {
+    // The camera frames the board box and the hit test reads the canvas,
+    // so the two rectangles have to be the same one.
+    render(
+      <Board
+        board={makeBoard()}
+        selectedCell={null}
+        conflicts={new Set()}
+        onSelectCell={vi.fn()}
+      />,
+    );
+
+    const canvas = screen.getByTestId("board-canvas");
+    const grid = screen.getByRole("grid");
+    expect(canvas.style.width).toBe(grid.style.width);
+    expect(canvas.style.height).toBe(grid.style.height);
+  });
+});

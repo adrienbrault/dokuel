@@ -1,4 +1,5 @@
 import { type PointerEvent, useCallback, useRef } from "react";
+import { resolveCellHit } from "../lib/pointer-cell.ts";
 import { cellKey } from "../lib/sudoku.ts";
 import type { Board as BoardType, Position } from "../lib/types.ts";
 
@@ -68,13 +69,18 @@ function getCellFromPoint(
   y: number,
 ): { row: number; col: number } | null {
   const el = document.elementFromPoint(x, y);
-  if (!el) return null;
-  const btn = el.closest("[data-row]") as HTMLElement | null;
-  if (!btn) return null;
-  const row = Number(btn.dataset.row);
-  const col = Number(btn.dataset.col);
-  if (Number.isNaN(row) || Number.isNaN(col)) return null;
-  return { row, col };
+  const btn = el ? (el.closest("[data-row]") as HTMLElement | null) : null;
+  if (btn) {
+    const row = Number(btn.dataset.row);
+    const col = Number(btn.dataset.col);
+    if (Number.isNaN(row) || Number.isNaN(col)) return null;
+    return { row, col };
+  }
+  // Over a WebGL board the browser only sees the canvas, so the scene
+  // that is painting it decides which cell is under the pointer.
+  const hit = resolveCellHit(x, y);
+  if (!hit) return null;
+  return { row: hit.row, col: hit.col };
 }
 
 export function useDragSelect({

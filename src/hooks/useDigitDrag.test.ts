@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { registerCellHitResolver } from "../lib/pointer-cell.ts";
 import { useDigitDrag } from "./useDigitDrag.ts";
 
 function pointerEvent(type: string, init: Partial<PointerEvent> = {}) {
@@ -109,6 +110,38 @@ describe("useDigitDrag", () => {
     });
     expect(onDrop).toHaveBeenCalledTimes(1);
     expect(result.current.state).toBeNull();
+  });
+
+  it("resolves a cell through a registered resolver when the DOM has none", () => {
+    // A WebGL board paints over the grid, so the point under the finger
+    // is the canvas and the [data-row] walk finds nothing.
+    mockElementFromPoint(() => document.createElement("canvas"));
+    const unregister = registerCellHitResolver(() => ({
+      row: 6,
+      col: 2,
+      localY: 0.75,
+    }));
+    try {
+      const { result } = renderHook(() =>
+        useDigitDrag({ onDrop: vi.fn(), isDroppable: () => true }),
+      );
+      act(() => {
+        result.current.start(startParams({ digit: 9 }));
+      });
+      act(() => {
+        document.dispatchEvent(
+          pointerEvent("pointermove", { clientX: 10, clientY: 10 }),
+        );
+      });
+      expect(result.current.state).toMatchObject({
+        target: { row: 6, col: 2 },
+        // The lower half of a cell is the note zone, however the cell
+        // was found.
+        mode: "note",
+      });
+    } finally {
+      unregister();
+    }
   });
 
   it("activates a drag when start is called", () => {

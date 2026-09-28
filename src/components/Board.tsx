@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useBoardLayer } from "../hooks/useBoardLayer.ts";
 import type { DigitDragState } from "../hooks/useDigitDrag.ts";
 import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { useGridFocus } from "../hooks/useGridFocus.ts";
@@ -8,8 +9,10 @@ import type {
   Board as BoardType,
   Position,
 } from "../lib/types.ts";
+import { buildSceneSnapshot } from "../three/scene-state.ts";
 import { BoardAnnouncer } from "./BoardAnnouncer.tsx";
 import { Cell } from "./Cell.tsx";
+import { cellPresentation, exclusionBands } from "./cell-presentation.ts";
 
 type BoardProps = {
   board: BoardType;
@@ -76,39 +79,18 @@ export function Board({
   onStartCellDrag,
   completed,
 }: BoardProps) {
-  const isPaper = assistLevel === "paper";
   const isFull = assistLevel === "full";
-  const selectedValue =
+  const activeValue =
     selectedCell !== null
       ? board[selectedCell.row]![selectedCell.col]!.value
       : (highlightedDigit ?? null);
-
-  // In full assist mode, collect rows/cols/boxes of all cells matching the
-  // active value (the selected cell's value, or the numpad-highlighted digit)
-  // for the "where this digit can't go" cross-highlight. The selected cell
-  // itself is excluded so its own row/col/box don't double-up over the
-  // selection halo.
-  const matchRowColSet = (() => {
-    if (!isFull || selectedValue === null) return null;
-    const rows = new Set<number>();
-    const cols = new Set<number>();
-    const boxes = new Set<number>();
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (
-          board[r]![c]!.value === selectedValue &&
-          !(selectedCell?.row === r && selectedCell?.col === c)
-        ) {
-          rows.add(r);
-          cols.add(c);
-          boxes.add(Math.floor(r / 3) * 3 + Math.floor(c / 3));
-        }
-      }
-    }
-    return rows.size > 0 || cols.size > 0 || boxes.size > 0
-      ? { rows, cols, boxes }
+  // In full assist mode, where the digit in play already sits decides
+  // every unit shaded as "it cannot go here". The cell holding it is
+  // left out, since its own unit is already lit by the selection.
+  const bands =
+    isFull && activeValue !== null
+      ? exclusionBands(board, activeValue, selectedCell)
       : null;
-  })();
 
   const dragHandlers = useDragSelect({
     board,
@@ -144,6 +126,29 @@ export function Board({
   const boxPx = cellPx * 3 + 2;
   const boardPx = cellPx * 9 + 14;
 
+  const { canvasRef, active, pointer } = useBoardLayer({
+    enabled: assistLevel !== "paper",
+    boardPx,
+    completed: completed ?? false,
+    onSelectCell,
+    build: (env, hover) =>
+      buildSceneSnapshot({
+        board,
+        selectedCell,
+        selectedCells,
+        conflicts,
+        hintCells,
+        highlightedDigit,
+        assistLevel,
+        animateReveal,
+        chargingDigit,
+        dragState,
+        completed,
+        hover,
+        ...env,
+      }),
+  });
+
   // Block iOS Safari's swipe-from-edge back gesture for drags that
   // originate inside the board. touch-action: none on the cell isn't
   // reliable at the screen edge — Safari often ignores it for the
@@ -152,7 +157,7 @@ export function Board({
   // passive (preventDefault is a no-op), so we attach it natively.
   const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const el = gridRef.current;
+    const el = containerRef.current;
     if (!el) return;
     const handler = (e: TouchEvent) => e.preventDefault();
     el.addEventListener("touchstart", handler, { passive: false });
@@ -163,7 +168,18 @@ export function Board({
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
+      data-board3d={active ? "active" : "off"}
+      className="relative w-full max-w-none lg:max-w-lg aspect-square flex items-center justify-center"
+      onPointerDown={(e) => {
+        if (onSetSelectedCells) dragHandlers.onPointerDown(e);
+        pointer.onPointerDown(e);
+      }}
+      onPointerMove={(e) => {
+        if (onSetSelectedCells) dragHandlers.onPointerMove(e);
+        pointer.onPointerMove(e);
+      }}
+      onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
+      onPointerLeave={pointer.onPointerLeave}
     >
       <div
         ref={gridRef}
@@ -180,13 +196,6 @@ export function Board({
         aria-colcount={9}
         aria-multiselectable={onSetSelectedCells ? true : undefined}
         data-board-glow
-        onPointerDown={
-          onSetSelectedCells ? dragHandlers.onPointerDown : undefined
-        }
-        onPointerMove={
-          onSetSelectedCells ? dragHandlers.onPointerMove : undefined
-        }
-        onPointerUp={onSetSelectedCells ? dragHandlers.onPointerUp : undefined}
         onClickCapture={
           onSetSelectedCells ? dragHandlers.onClickCapture : undefined
         }
@@ -224,92 +233,49 @@ export function Board({
               {Array.from({ length: 9 }, (_, cellIdx) => {
                 const rowIdx = boxRow * 3 + Math.floor(cellIdx / 3);
                 const colIdx = boxCol * 3 + (cellIdx % 3);
-                const cell = board[rowIdx]![colIdx]!;
-                const isSelected =
-                  selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
-                const isHighlighted =
-                  !isPaper &&
-                  selectedCell !== null &&
-                  (selectedCell.row === rowIdx ||
-                    selectedCell.col === colIdx ||
-                    (Math.floor(selectedCell.row / 3) ===
-                      Math.floor(rowIdx / 3) &&
-                      Math.floor(selectedCell.col / 3) ===
-                        Math.floor(colIdx / 3)));
-                const isSameNumber =
-                  !isPaper &&
-                  !isSelected &&
-                  selectedValue !== null &&
-                  cell.value !== null &&
-                  cell.value === selectedValue;
-                const isConflict = conflicts.has(cellKey(rowIdx, colIdx));
-                const isMultiSelected =
-                  !isSelected &&
-                  (selectedCells?.size ?? 0) > 1 &&
-                  (selectedCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isHintRelated =
-                  !isSelected &&
-                  (hintCells?.has(cellKey(rowIdx, colIdx)) ?? false);
-                const isSameNumberRowCol =
-                  matchRowColSet !== null &&
-                  !isSelected &&
-                  !isSameNumber &&
-                  (matchRowColSet.rows.has(rowIdx) ||
-                    matchRowColSet.cols.has(colIdx) ||
-                    matchRowColSet.boxes.has(
-                      Math.floor(rowIdx / 3) * 3 + Math.floor(colIdx / 3),
-                    ));
-
-                // Drag-related render flags
-                const isDragSource =
-                  dragState?.source.kind === "cell" &&
-                  dragState.source.row === rowIdx &&
-                  dragState.source.col === colIdx;
-                const isDropTarget =
-                  dragState?.target?.row === rowIdx &&
-                  dragState?.target?.col === colIdx;
-                const dropTargetState =
-                  isDropTarget && dragState
-                    ? dragState.invalidTarget
-                      ? "invalid"
-                      : "valid"
-                    : null;
-                const dropMode =
-                  dropTargetState === "valid" ? dragState?.mode : undefined;
-                const dropDigit =
-                  dropTargetState === "valid" ? dragState?.digit : undefined;
+                const presentation = cellPresentation({
+                  board,
+                  row: rowIdx,
+                  col: colIdx,
+                  selectedCell,
+                  selectedCells,
+                  conflicts,
+                  hintCells,
+                  activeValue,
+                  bands,
+                  assistLevel,
+                  animateReveal,
+                  dragState,
+                });
 
                 return (
                   <Cell
                     key={cellKey(rowIdx, colIdx)}
                     id={cellId(rowIdx, colIdx)}
-                    cell={cell}
+                    cell={board[rowIdx]![colIdx]!}
                     row={rowIdx}
                     col={colIdx}
-                    isSelected={isSelected}
-                    isMultiSelected={isMultiSelected}
-                    isHighlighted={isHighlighted && !isSelected}
-                    isSameNumber={isSameNumber}
-                    isConflict={isConflict}
-                    isHintRelated={isHintRelated}
-                    isSameNumberRowCol={isSameNumberRowCol}
-                    assistLevel={assistLevel}
+                    isSelected={presentation.isSelected}
+                    isMultiSelected={presentation.isMultiSelected}
+                    isHighlighted={
+                      presentation.isHighlighted && !presentation.isSelected
+                    }
+                    isSameNumber={presentation.isSameNumber}
+                    isConflict={presentation.isConflict}
+                    isHintRelated={presentation.isHintRelated}
+                    isSameNumberRowCol={presentation.isSameNumberRowCol}
                     isTabStop={tabStop.row === rowIdx && tabStop.col === colIdx}
                     onSelect={onSelectCell}
-                    revealDelay={
-                      animateReveal && cell.isGiven
-                        ? (rowIdx * 9 + colIdx) * 6
-                        : undefined
-                    }
+                    revealDelay={presentation.revealDelay}
                     chargingDigit={
-                      isSelected && chargingDigit != null
+                      presentation.isSelected && chargingDigit != null
                         ? chargingDigit
                         : undefined
                     }
-                    isDragSource={isDragSource}
-                    dropTargetState={dropTargetState}
-                    dropMode={dropMode}
-                    dropDigit={dropDigit}
+                    isDragSource={presentation.isDragSource}
+                    dropTargetState={presentation.dropTargetState}
+                    dropMode={presentation.dropMode}
+                    dropDigit={presentation.dropDigit}
                   />
                 );
               })}
@@ -317,6 +283,14 @@ export function Board({
           );
         })}
       </div>
+      {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: the scene repeats what the grid below already exposes, so it stays out of the accessibility tree */}
+      <canvas
+        ref={canvasRef}
+        data-testid="board-canvas"
+        aria-hidden="true"
+        className="board-canvas"
+        style={{ width: boardPx, height: boardPx }}
+      />
       <BoardAnnouncer
         board={board}
         conflicts={conflicts}
