@@ -1,21 +1,20 @@
 import { Clock, type Color, Group, PerspectiveCamera, Scene } from "three";
 import { type CellHit, registerCellHitResolver } from "../lib/pointer-cell.ts";
+import { createCelebration } from "./celebration.ts";
 import { createCellKit } from "./cell-objects.ts";
-import { approach, clamp01, easeOutCubic } from "./easing.ts";
+import { approach } from "./easing.ts";
 import { createMotes, createRingPool, createSparkPool } from "./effects.ts";
 import { FOV, fitCamera, resolveCellHit, toNdc } from "./framing.ts";
 import { buildGlyphAtlas, type GlyphAtlas } from "./glyph-atlas.ts";
 import { BOARD_SPAN, cellPosition } from "./layout.ts";
 import type { BoardPalette } from "./palette.ts";
-import { BLOOM_STRENGTH, createPipeline } from "./pipeline.ts";
+import { createPipeline } from "./pipeline.ts";
 import type { SceneSnapshot } from "./scene-state.ts";
 import { createDotTexture } from "./shaders.ts";
 import { createStage } from "./stage.ts";
 
 /** A fraction of a degree of parallax, kept small enough that hit testing stays exact. */
 const SWAY = 0.012;
-/** How long the completion moment runs. */
-const CELEBRATION_DURATION = 2.6;
 /** Rate at which tiles chase their target height. */
 const POSE_RATE = 14;
 
@@ -104,20 +103,15 @@ export function createBoardScene(
     dotTexture,
     BOARD_SPAN / 2,
   );
-  const celebration = { active: false, time: 0 };
+  const moment = createCelebration({
+    bloom: pipeline.bloom,
+    flare: stage.flare,
+    board,
+    camera,
+  });
 
   let snapshot: SceneSnapshot | null = null;
   const pointer = { x: 0, y: 0, present: false };
-
-  /** A wave of lift spreading outward from the centre of a finished board. */
-  function celebrateLift(index: number) {
-    if (!celebration.active) return 0;
-    const row = Math.floor(index / 9);
-    const col = index % 9;
-    const distance = Math.hypot(col - 4, row - 4) / 8;
-    const wave = clamp01((celebration.time - distance) / 0.45);
-    return Math.sin(wave * Math.PI) * 0.45;
-  }
 
   function setSnapshot(next: SceneSnapshot) {
     snapshot = next;
@@ -148,8 +142,7 @@ export function createBoardScene(
 
   function celebrate() {
     if (state.reducedMotion) return;
-    celebration.active = true;
-    celebration.time = 0;
+    moment.start();
   }
 
   /**
@@ -161,14 +154,7 @@ export function createBoardScene(
   function setReducedMotion(next: boolean) {
     if (state.reducedMotion === next) return;
     state.reducedMotion = next;
-    if (next && celebration.active) {
-      celebration.active = false;
-      pipeline.bloom.strength = BLOOM_STRENGTH;
-      stage.flare.intensity = 0;
-      board.rotation.z = 0;
-      camera.position.set(0, 0, viewDistance);
-      camera.lookAt(0, 0, 0);
-    }
+    if (next) moment.settle(viewDistance);
     if (snapshot) setSnapshot(snapshot);
   }
 
@@ -195,7 +181,7 @@ export function createBoardScene(
         elapsed,
         motion,
         breathe: motion ? 0.5 + 0.5 * Math.sin(elapsed * Math.PI) : 0.5,
-        celebrateLift,
+        celebrateLift: (index) => moment.lift(index),
       });
     }
     rings.update(dt);
@@ -204,23 +190,8 @@ export function createBoardScene(
     stage.setTime(elapsed);
     pipeline.grain.uniforms.time!.value = elapsed % 100;
 
-    if (celebration.active) {
-      // The finished board breathes, the accent flare blows out through
-      // the bloom, and the camera eases back so the whole grid is in
-      // frame for the win.
-      celebration.time += dt;
-      const t = clamp01(celebration.time / CELEBRATION_DURATION);
-      pipeline.bloom.strength = BLOOM_STRENGTH + Math.sin(t * Math.PI) * 0.6;
-      stage.flare.intensity = 3 * (1 - t);
-      camera.position.z = viewDistance * (1 + easeOutCubic(t) * 0.14);
-      board.rotation.z = Math.sin(t * Math.PI * 3) * 0.014 * (1 - t);
-      if (t >= 1) {
-        celebration.active = false;
-        pipeline.bloom.strength = BLOOM_STRENGTH;
-        stage.flare.intensity = 0;
-        board.rotation.z = 0;
-        camera.position.z = viewDistance;
-      }
+    if (moment.active) {
+      moment.step(dt, viewDistance);
     } else if (motion) {
       // A fraction of a degree of parallax so the slab reads as solid.
       const sway = (pointer.present ? 1 : 0) * SWAY;
