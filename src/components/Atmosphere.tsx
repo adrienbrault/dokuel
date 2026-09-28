@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type AtmosphereDirector,
   type AtmosphereMood,
@@ -18,6 +18,9 @@ export function Atmosphere({ mood }: { mood: AtmosphereMood }) {
   const directorRef = useRef<AtmosphereDirector | null>(null);
   const moodRef = useRef(mood);
   moodRef.current = mood;
+  // Exposed so CSS can retire the fallback glow once the shader paints
+  // its own sky — the two washes would stack and flatten the world.
+  const [webglMode, setWebglMode] = useState<"webgl" | "fallback">("webgl");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -33,6 +36,7 @@ export function Atmosphere({ mood }: { mood: AtmosphereMood }) {
     } catch {
       // No WebGL on this machine — the CSS ambient glow stands in.
       directorRef.current = null;
+      setWebglMode("fallback");
       return;
     }
 
@@ -125,7 +129,7 @@ export function Atmosphere({ mood }: { mood: AtmosphereMood }) {
       ref={containerRef}
       aria-hidden="true"
       className="atmosphere-layer"
-      data-atmosphere
+      data-atmosphere={webglMode}
       data-mood={mood}
     />
   );

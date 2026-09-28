@@ -687,6 +687,12 @@ body {
   pointer-events: none;
   background-color: var(--color-bg-primary);
 }
+
+/* With live WebGL the shader paints its own sky and glow — the CSS
+ * wash would stack on top of it and flatten the world to a sheet. */
+[data-atmosphere="webgl"] ~ .screen {
+  background-image: none;
+}
 .atmosphere-layer canvas {
   display: block;
   width: 100%;
