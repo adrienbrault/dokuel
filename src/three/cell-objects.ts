@@ -263,6 +263,7 @@ export function createCellKit(
       for (const objects of cells) {
         objects.selectionMaterial.color.copy(next.accent);
         objects.selectionMaterial.emissive.copy(next.accent);
+        objects.selectionMaterial.emissiveIntensity = markGlow(next.accent);
         objects.tileMaterial.emissive.copy(next.accent);
       }
     },
