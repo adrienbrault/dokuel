@@ -38,13 +38,24 @@ export type BoardSceneHandle = {
   reducedMotion: boolean;
 };
 
+/**
+ * What the page currently says about digits and motion. The caller needs
+ * these to assemble a snapshot, and cannot know them before this hook has
+ * read them off the document root.
+ */
+export type SceneEnv = {
+  digitMode: DigitColorMode;
+  emoji: string[];
+  reducedMotion: boolean;
+};
+
 export type BoardSceneOptions = {
   /** False for a paper board, which stays a flat printed sheet. */
   enabled: boolean;
   /** The board's CSS box, in pixels, which the camera frames to. */
   boardPx: number;
-  /** Every cell's visual state, pushed to the scene as it changes. */
-  snapshot: SceneSnapshot;
+  /** Assembles the scene's view of the board from the live environment. */
+  build: (env: SceneEnv) => SceneSnapshot;
   create?: SceneFactory;
 };
 
@@ -80,7 +91,7 @@ function sameSymbols(a: string[], b: string[]): boolean {
 export function useBoardScene({
   enabled,
   boardPx,
-  snapshot,
+  build,
   create = createBoardScene,
 }: BoardSceneOptions): BoardSceneHandle {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -89,6 +100,12 @@ export function useBoardScene({
   const [reducedMotion, setReducedMotion] = useState(readReducedMotion);
   const [digitMode, setDigitMode] = useState(readDigitMode);
   const [emoji, setEmoji] = useState(() => readEmojiSymbols(read));
+
+  // Assembled here rather than handed in: the digit mode and the emoji
+  // theme are not props but facts about the page, and this hook is the
+  // first place that learns them. A caller that built the snapshot would
+  // always be describing the board as it was before the last repaint.
+  const snapshot = build({ digitMode, emoji, reducedMotion });
 
   // The freshest environment facts, for callbacks that outlive the render
   // that queued them — the font settling in, say.
