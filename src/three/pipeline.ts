@@ -16,8 +16,12 @@ import { GRAIN_SHADER } from "./shaders.ts";
 
 /** Bloom at rest; the completion moment pushes it past blowout. */
 export const BLOOM_STRENGTH = 0.32;
-/** Bloom starts well above the tile's own brightness, so only a glow blooms. */
-export const BLOOM_THRESHOLD = 0.82;
+/**
+ * Bloom starts above the brightest a lit tile gets on its own, so a tile
+ * never blooms for being bright - only a mark pushed into high dynamic
+ * range by markGlow clears this and throws a halo.
+ */
+export const BLOOM_THRESHOLD = 1;
 /** Radius and strength of the halo a glowing tile throws. */
 const BLOOM_RADIUS = 0.7;
 
