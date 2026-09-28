@@ -38,7 +38,7 @@ function darkTheme(): ReturnType<typeof readPalette> {
   );
 }
 
-function visual(): CellVisual {
+function visual(overrides: Partial<CellVisual> = {}): CellVisual {
   return {
     row: 0,
     col: 0,
@@ -55,6 +55,7 @@ function visual(): CellVisual {
     dropMode: "value",
     dropDigit: null,
     revealDelayMs: null,
+    ...overrides,
   };
 }
 
@@ -71,6 +72,19 @@ describe("createCellKit", () => {
     kit.apply([visual()], context(palette));
     const colour = kit.cells[0]?.colour;
     expect(colour?.r).toBeGreaterThan(palette.cell.r);
+    kit.dispose();
+  });
+
+  it("hands a dark digit the albedo that lands it on its ink token", () => {
+    // Digits are tinted, not painted, so they go through the same curve as
+    // the tile under them - and a soft near-black ink was arriving black.
+    const palette = readPalette((name) =>
+      name === "--color-cell-given" ? "#1c1a17" : "#808080",
+    );
+    const kit = createCellKit(new Group(), palette, atlas());
+    kit.apply([visual({ value: 5, isGiven: true, ink: "given" })], context(palette));
+    const material = kit.cells[0]?.valueMaterial;
+    expect(material?.color.r).toBeGreaterThan(palette.given.r);
     kit.dispose();
   });
 
