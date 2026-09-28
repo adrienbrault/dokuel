@@ -106,3 +106,24 @@ test("the WebGL board paints a tile the colour of its token", async ({
   );
   expect(drift).toBeLessThan(12);
 });
+
+test("a dark tile keeps its token too", async ({ page }) => {
+  // Dark mode flips every token, and the fill the tiles are lit with is
+  // the page's own tone - so the same drift that greys a light board
+  // would strand a dark one's tiles above their palette.
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Solo" }).click();
+  await page.getByRole("button", { name: "Easy" }).click();
+  await expect(page.locator("canvas.board-canvas")).toBeVisible();
+  await page.getByLabel("Settings").click();
+  await page.getByLabel("Switch to dark mode").click();
+  await page.getByLabel("Close settings").click();
+  await page.waitForTimeout(1200);
+
+  const { sample, token } = await tileSample(page);
+  const expected = srgbChannels(token);
+  const drift = Math.max(
+    ...sample.map((value, i) => Math.abs(value - (expected[i] ?? 0))),
+  );
+  expect(drift).toBeLessThan(12);
+});
