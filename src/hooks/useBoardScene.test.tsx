@@ -250,6 +250,22 @@ describe("useBoardScene", () => {
     expect(scene.dispose).toHaveBeenCalledTimes(1);
   });
 
+  it("hands the caller the snapshot it built", () => {
+    // The painted grid is the scene's twin, so it has to paint from the
+    // very same derivation rather than a second one of its own.
+    const built = snapshot({ digitMode: "digits" });
+    const { result } = renderHook(() =>
+      useBoardScene({
+        enabled: false,
+        boardPx: 300,
+        build: () => built,
+        create: (..._args) => null,
+      }),
+    );
+
+    expect(result.current.snapshot).toBe(built);
+  });
+
   it("reports the environment a disabled board still needs", () => {
     const { result } = renderHook(() =>
       useBoardScene({
