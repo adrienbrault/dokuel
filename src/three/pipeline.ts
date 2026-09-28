@@ -77,7 +77,10 @@ export function createPipeline(
   }
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio ?? 1, 2));
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  // ACES rolls a near-white surface well below the value it started at,
+  // which is why a tile painted with a token of 99% lightness came back
+  // pale grey. The exposure puts the token's own brightness back.
+  renderer.toneMappingExposure = 1.2;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
 
