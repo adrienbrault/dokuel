@@ -1,4 +1,4 @@
-import { Clock, type Color, Group, PerspectiveCamera, Scene } from "three";
+import { type Color, Group, PerspectiveCamera, Scene, Timer } from "three";
 import { type CellHit, registerCellHitResolver } from "../lib/pointer-cell.ts";
 import { createCelebration } from "./celebration.ts";
 import { createCellKit } from "./cell-objects.ts";
@@ -71,7 +71,7 @@ export function createBoardScene(
     reducedMotion: options.reducedMotion,
     boardPx: Math.max(1, options.boardPx),
   };
-  const clock = new Clock();
+  const timer = new Timer();
   const stage = createStage(scene, palette);
   let viewDistance = 10;
   let elapsed = 0;
@@ -171,7 +171,8 @@ export function createBoardScene(
   let running = false;
 
   function frame() {
-    const dt = Math.min(clock.getDelta(), 0.05);
+    timer.update();
+    const dt = Math.min(timer.getDelta(), 0.05);
     elapsed += dt;
     const motion = !state.reducedMotion;
 
@@ -207,7 +208,7 @@ export function createBoardScene(
   function start() {
     if (running) return;
     running = true;
-    clock.getDelta();
+    timer.update();
     renderer.setAnimationLoop(frame);
   }
 
