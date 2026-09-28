@@ -30,6 +30,8 @@ export type BoardSceneHandle = {
   scene: BoardScene | null;
   /** True when the scene is live and the DOM paint should step aside. */
   active: boolean;
+  /** What the scene was last told, so the painted grid can match it. */
+  snapshot: SceneSnapshot;
   /** Current digit palette mode, read off the document root. */
   digitMode: DigitColorMode;
   /** Nine emoji symbols indexed by digit - 1. */
@@ -206,6 +208,7 @@ export function useBoardScene({
     canvasRef,
     scene: sceneRef.current,
     active,
+    snapshot,
     digitMode,
     emoji,
     reducedMotion,
