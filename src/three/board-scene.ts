@@ -32,6 +32,8 @@ export type BoardScene = {
   hitTest(clientX: number, clientY: number): CellHit | null;
   /** Reframes after the board's CSS box changes size. */
   resize(boardPx: number): void;
+  /** Turns drift, particles and shake off without rebuilding the scene. */
+  setReducedMotion(reduced: boolean): void;
   /** Rings a cell, as when it is selected or a hint lands. */
   pulseCell(row: number, col: number, bright: boolean): void;
   /** Throws sparks from a cell. */
@@ -148,6 +150,26 @@ export function createBoardScene(
     if (state.reducedMotion) return;
     celebration.active = true;
     celebration.time = 0;
+  }
+
+  /**
+   * Switches motion without tearing the scene down. Preference changes
+   * are rare and the board must not flicker when one lands, so a running
+   * celebration is cut short back to its resting pose rather than left
+   * to finish at a reduced frame rate.
+   */
+  function setReducedMotion(next: boolean) {
+    if (state.reducedMotion === next) return;
+    state.reducedMotion = next;
+    if (next && celebration.active) {
+      celebration.active = false;
+      pipeline.bloom.strength = BLOOM_STRENGTH;
+      stage.flare.intensity = 0;
+      board.rotation.z = 0;
+      camera.position.set(0, 0, viewDistance);
+      camera.lookAt(0, 0, 0);
+    }
+    if (snapshot) setSnapshot(snapshot);
   }
 
   function resize(boardPx: number) {
@@ -286,6 +308,7 @@ export function createBoardScene(
     },
     hitTest: resolveFromCanvas,
     resize,
+    setReducedMotion,
     pulseCell,
     sparkCell,
     celebrate,
