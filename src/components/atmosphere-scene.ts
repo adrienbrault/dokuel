@@ -578,16 +578,23 @@ export function createEngine(
   let cameraY = 1.2;
   let cameraZ = 10;
 
+  // The camera drifts with mood and shake, so the backdrop must be
+  // re-fitted every frame against the live frustum — measuring from
+  // its own depth leaves the plane's edges visible as a hard rectangle.
+  const BACKDROP_DEPTH = 40;
+  const fitBackdrop = () => {
+    const distance = camera.position.z + BACKDROP_DEPTH;
+    const h = 2 * Math.tan((camera.fov * Math.PI) / 360) * distance;
+    backdrop.scale.set(h * camera.aspect * 1.3, h * 1.3, 1);
+  };
+  backdrop.position.set(0, 0, -BACKDROP_DEPTH);
+
   const resize = (width: number, height: number) => {
     renderer.setSize(width, height);
     composer.setSize(width * degradeScale, height * degradeScale);
     camera.aspect = width / Math.max(1, height);
     camera.updateProjectionMatrix();
-    // Backdrop must always cover the frustum at its depth.
-    const depth = 40;
-    const h = 2 * Math.tan((camera.fov * Math.PI) / 360) * depth;
-    backdrop.scale.set(h * camera.aspect * 1.08, h * 1.08, 1);
-    backdrop.position.set(0, 0, -depth);
+    fitBackdrop();
   };
   resize(window.innerWidth, window.innerHeight);
 
@@ -699,6 +706,7 @@ export function createEngine(
     updateGlyphs(s, dt, time);
     updateRings(director.takeRings(), dt);
     updateCamera(s.mood, s.shake, dt, time);
+    fitBackdrop();
 
     bloom.strength =
       (dark ? DARK_PALETTE.bloomBase : LIGHT_PALETTE.bloomBase) +
