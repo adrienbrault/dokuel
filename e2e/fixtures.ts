@@ -17,6 +17,7 @@ import { test as base, type Locator, type Page } from "@playwright/test";
 export async function preparePage(
   page: Page,
   storage: Record<string, string>,
+  webgl = false,
 ): Promise<void> {
   // The app is fully self-contained; any external request in a test
   // is a mistake (and a flake source on CI). Fail it fast instead of
@@ -25,6 +26,26 @@ export async function preparePage(
     (url) => !["localhost", "127.0.0.1"].includes(url.hostname),
     (route) => route.abort(),
   );
+  if (!webgl) {
+    // WebGL is a system boundary: SwiftShader software rendering burns
+    // 100ms+ per frame, and a fake clock's runFor() replays every
+    // queued rAF tick synchronously — enough to stall the page past
+    // test timeouts. Returning null for webgl contexts makes the
+    // atmosphere layer take its tested CSS-fallback path instead.
+    await page.addInitScript(() => {
+      const proto = HTMLCanvasElement.prototype;
+      const original = proto.getContext;
+      proto.getContext = function (
+        this: HTMLCanvasElement,
+        ...args: Parameters<HTMLCanvasElement["getContext"]>
+      ) {
+        if (args[0] === "webgl" || args[0] === "webgl2") return null;
+        return original.apply(this, args);
+        // Overloads are bivariant under a cast; the body delegates for
+        // every context id it does not stub.
+      } as typeof proto.getContext;
+    });
+  }
   const entries = Object.entries(storage);
   if (entries.length > 0) {
     await page.addInitScript((items: [string, string][]) => {
@@ -47,10 +68,14 @@ export async function preparePage(
   });
 }
 
-export const test = base.extend<{ storage: Record<string, string> }>({
+export const test = base.extend<{
+  storage: Record<string, string>;
+  webgl: boolean;
+}>({
   storage: [{}, { option: true }],
-  page: async ({ page, storage }, use) => {
-    await preparePage(page, storage);
+  webgl: [false, { option: true }],
+  page: async ({ page, storage, webgl }, use) => {
+    await preparePage(page, storage, webgl);
     await use(page);
   },
 });

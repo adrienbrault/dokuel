@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { Atmosphere } from "./components/Atmosphere.tsx";
 import { DailyGame } from "./components/DailyGame.tsx";
 import { DarkModeToggle } from "./components/DarkModeToggle.tsx";
 import { DifficultyPicker } from "./components/DifficultyPicker.tsx";
@@ -12,6 +13,7 @@ import { useDarkMode } from "./hooks/useDarkMode.ts";
 import { parseChallenge } from "./lib/challenge.ts";
 import { generateId } from "./lib/id.ts";
 import { generateRoomCode } from "./lib/room-code.ts";
+import { moodForScreen } from "./lib/screen-mood.ts";
 import { getSoundEnabled, setSoundEnabled } from "./lib/sounds.ts";
 import type { AssistLevel, Challenge, Difficulty } from "./lib/types.ts";
 import "./index.css";
@@ -158,159 +160,168 @@ function App() {
   const darkMode = useDarkMode();
   const [soundOn, setSoundOn] = useState(getSoundEnabled);
 
-  switch (screen.name) {
-    case "landing":
-      return (
-        <div className="screen relative">
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
-            <SoundToggle
-              enabled={soundOn}
-              onToggle={() => {
-                const next = !soundOn;
-                setSoundOn(next);
-                setSoundEnabled(next);
-              }}
-            />
-            <DarkModeToggle
-              isDark={darkMode.isDark}
-              onToggle={darkMode.toggle}
-            />
-          </div>
-          <Landing
-            onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
-            onDaily={() => navigate({ name: "daily" })}
-            onCreate={() => navigate({ name: "difficulty", mode: "create" })}
-            onJoin={() => navigate({ name: "join" })}
-            onStats={() => navigate({ name: "stats" })}
-            onContinue={(gameKey, difficulty) => {
-              navigate({
-                name: "solo",
-                difficulty: difficulty as Difficulty,
-                gameKey,
-                assistLevel: "standard",
-              });
-            }}
-          />
-        </div>
-      );
-
-    case "difficulty":
-      return (
-        <div className="screen">
-          <DifficultyPicker
-            onSelect={(difficulty, assistLevel) => {
-              if (screen.mode === "solo") {
+  const content = (() => {
+    switch (screen.name) {
+      case "landing":
+        return (
+          <div className="screen relative">
+            <div className="absolute top-4 right-4 flex gap-2 z-10">
+              <SoundToggle
+                enabled={soundOn}
+                onToggle={() => {
+                  const next = !soundOn;
+                  setSoundOn(next);
+                  setSoundEnabled(next);
+                }}
+              />
+              <DarkModeToggle
+                isDark={darkMode.isDark}
+                onToggle={darkMode.toggle}
+              />
+            </div>
+            <Landing
+              onSolo={() => navigate({ name: "difficulty", mode: "solo" })}
+              onDaily={() => navigate({ name: "daily" })}
+              onCreate={() => navigate({ name: "difficulty", mode: "create" })}
+              onJoin={() => navigate({ name: "join" })}
+              onStats={() => navigate({ name: "stats" })}
+              onContinue={(gameKey, difficulty) => {
                 navigate({
                   name: "solo",
-                  difficulty,
+                  difficulty: difficulty as Difficulty,
+                  gameKey,
+                  assistLevel: "standard",
+                });
+              }}
+            />
+          </div>
+        );
+
+      case "difficulty":
+        return (
+          <div className="screen">
+            <DifficultyPicker
+              onSelect={(difficulty, assistLevel) => {
+                if (screen.mode === "solo") {
+                  navigate({
+                    name: "solo",
+                    difficulty,
+                    gameKey: generateId(),
+                    assistLevel,
+                  });
+                } else {
+                  const roomId = generateRoomCode();
+                  navigate({
+                    name: "multiplayer",
+                    roomId,
+                    difficulty,
+                  });
+                }
+              }}
+              onBack={() => navigate({ name: "landing" })}
+            />
+          </div>
+        );
+
+      case "solo":
+        return (
+          <SoloGame
+            key={screen.gameKey}
+            difficulty={screen.difficulty}
+            gameKey={screen.gameKey}
+            assistLevel={screen.assistLevel}
+            challenge={screen.challenge}
+            onBack={() => navigate({ name: "landing" })}
+            onRematch={() => {
+              navigate(
+                {
+                  name: "solo",
+                  difficulty: screen.difficulty,
                   gameKey: generateId(),
-                  assistLevel,
-                });
-              } else {
-                const roomId = generateRoomCode();
-                navigate({
-                  name: "multiplayer",
-                  roomId,
-                  difficulty,
-                });
-              }
+                  assistLevel: screen.assistLevel,
+                },
+                { replace: true },
+              );
+            }}
+          />
+        );
+
+      case "daily":
+        return <DailyGame onBack={() => navigate({ name: "landing" })} />;
+
+      case "multiplayer":
+        return (
+          <Suspense
+            fallback={
+              <div className="screen">
+                <p className="caption">Connecting...</p>
+              </div>
+            }
+          >
+            <MultiplayerScreen
+              roomId={screen.roomId}
+              difficulty={screen.difficulty}
+              onBack={() => navigate({ name: "landing" })}
+            />
+          </Suspense>
+        );
+
+      case "stats":
+        return <Stats onBack={() => navigate({ name: "landing" })} />;
+
+      case "join":
+        return (
+          <JoinScreen
+            onJoin={(roomId) => {
+              navigate({
+                name: "multiplayer",
+                roomId,
+                difficulty: null,
+              });
             }}
             onBack={() => navigate({ name: "landing" })}
           />
-        </div>
-      );
+        );
 
-    case "solo":
-      return (
-        <SoloGame
-          key={screen.gameKey}
-          difficulty={screen.difficulty}
-          gameKey={screen.gameKey}
-          assistLevel={screen.assistLevel}
-          challenge={screen.challenge}
-          onBack={() => navigate({ name: "landing" })}
-          onRematch={() => {
-            navigate(
-              {
-                name: "solo",
-                difficulty: screen.difficulty,
-                gameKey: generateId(),
-                assistLevel: screen.assistLevel,
-              },
-              { replace: true },
-            );
-          }}
-        />
-      );
-
-    case "daily":
-      return <DailyGame onBack={() => navigate({ name: "landing" })} />;
-
-    case "multiplayer":
-      return (
-        <Suspense
-          fallback={
-            <div className="screen">
-              <p className="caption">Connecting...</p>
-            </div>
-          }
-        >
-          <MultiplayerScreen
-            roomId={screen.roomId}
-            difficulty={screen.difficulty}
-            onBack={() => navigate({ name: "landing" })}
-          />
-        </Suspense>
-      );
-
-    case "stats":
-      return <Stats onBack={() => navigate({ name: "landing" })} />;
-
-    case "join":
-      return (
-        <JoinScreen
-          onJoin={(roomId) => {
-            navigate({
-              name: "multiplayer",
-              roomId,
-              difficulty: null,
-            });
-          }}
-          onBack={() => navigate({ name: "landing" })}
-        />
-      );
-
-    case "notFound":
-      return (
-        <div className="screen">
-          <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
-            <h1 className="heading">Page not found</h1>
-            <p className="caption max-w-sm">
-              Nothing lives at{" "}
-              <span className="text-mono break-all">{screen.path}</span>. If a
-              friend sent you an invite, double-check the link or enter the room
-              code by hand.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                className="btn btn-lg btn-primary"
-                onClick={() => navigate({ name: "landing" })}
-              >
-                Go to Dokuel
-              </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => navigate({ name: "join" })}
-              >
-                Enter a room code
-              </button>
+      case "notFound":
+        return (
+          <div className="screen">
+            <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
+              <h1 className="heading">Page not found</h1>
+              <p className="caption max-w-sm">
+                Nothing lives at{" "}
+                <span className="text-mono break-all">{screen.path}</span>. If a
+                friend sent you an invite, double-check the link or enter the
+                room code by hand.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  className="btn btn-lg btn-primary"
+                  onClick={() => navigate({ name: "landing" })}
+                >
+                  Go to Dokuel
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => navigate({ name: "join" })}
+                >
+                  Enter a room code
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      );
-  }
+        );
+    }
+  })();
+
+  return (
+    <>
+      <Atmosphere mood={moodForScreen(screen.name)} />
+      {content}
+    </>
+  );
 }
 
 export default App;
