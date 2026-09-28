@@ -6,7 +6,7 @@ import {
   RingGeometry,
 } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { createGlyphKit } from "./cell-glyphs.ts";
+import { createGlyphKit, SELECTION_Z } from "./cell-glyphs.ts";
 import { inkColour, resolveCellTarget } from "./cell-targets.ts";
 import { approach, clamp01, easeOutCubic } from "./easing.ts";
 import type { GlyphAtlas } from "./glyph-atlas.ts";
@@ -112,9 +112,9 @@ export function createCellKit(
       toneMapped: false,
     });
     const selectionRing = new Mesh(selectionRingGeometry, selectionMaterial);
-    selectionRing.position.set(x, y, TILE_DEPTH + 0.004);
+    selectionRing.position.set(0, 0, SELECTION_Z);
     selectionRing.visible = false;
-    board.add(selectionRing);
+    tile.add(selectionRing);
 
     cells.push({
       tile,
@@ -141,27 +141,19 @@ export function createCellKit(
     objects: CellObjects,
     cell: CellVisual,
     value: number,
-    x: number,
-    y: number,
     ctx: CellKitContext,
   ) {
     const ink = inkColour(cell, ctx.palette, ctx.digitMode);
     if (ctx.digitMode === "colors") {
       if (objects.value) objects.value.visible = false;
-      const swatch = glyphs.ensureSwatch(board, objects, cell.isGiven);
+      const swatch = glyphs.ensureSwatch(objects, cell.isGiven);
       swatch.visible = true;
-      swatch.position.set(x, y, TILE_DEPTH + 0.02);
       objects.swatchMaterial!.color.copy(ctx.palette.digits[value - 1]!);
       glyphs.applyConflictRing(objects, cell, ctx.palette);
     } else {
       if (objects.swatch) objects.swatch.visible = false;
-      const mesh = glyphs.ensureValue(
-        board,
-        objects,
-        cell.emoji ?? String(value),
-      );
+      const mesh = glyphs.ensureValue(objects, cell.emoji ?? String(value));
       mesh.visible = true;
-      mesh.position.set(x, y, TILE_DEPTH + 0.02);
       const material = objects.valueMaterial!;
       material.color.copy(ink);
       // Emoji are painted into their texture with their own colours, so
@@ -182,7 +174,6 @@ export function createCellKit(
   function apply(next: CellVisual[], ctx: CellKitContext) {
     next.forEach((cell, index) => {
       const objects = cells[index]!;
-      const [x, y] = cellPosition(cell.row, cell.col);
       const target = resolveCellTarget(cell, ctx.palette);
       objects.lift = target.lift;
       objects.glow = target.glow;
@@ -191,11 +182,6 @@ export function createCellKit(
 
       const drop = target.dropPreview;
       objects.selectionRing.visible = objects.selected || drop;
-      objects.selectionRing.position.set(
-        x,
-        y,
-        TILE_DEPTH + 0.004 + target.lift,
-      );
       objects.selectionMaterial.opacity = drop
         ? 0.9
         : objects.selected
@@ -208,14 +194,14 @@ export function createCellKit(
 
       const value = cell.value;
       if (value !== null) {
-        applyValue(objects, cell, value, x, y, ctx);
+        applyValue(objects, cell, value, ctx);
       } else {
         if (objects.value) objects.value.visible = false;
         if (objects.swatch) objects.swatch.visible = false;
         if (objects.conflictRing) objects.conflictRing.visible = false;
         objects.lastValue = null;
       }
-      glyphs.applyNotes(board, objects, cell, x, y);
+      glyphs.applyNotes(objects, cell);
 
       // The given-reveal wave runs once when the board appears, so tiles
       // rise in reading order instead of all at once.

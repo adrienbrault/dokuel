@@ -78,9 +78,8 @@ function notesCell(notes: number[]): CellVisual {
 
 function paintedNotes(mono: boolean, notes: number[]) {
   const kit = createGlyphKit(fakeAtlas(mono), palette);
-  const board = new Group();
   const objects = emptyObjects();
-  kit.applyNotes(board, objects, notesCell(notes), 0, 0);
+  kit.applyNotes(objects, notesCell(notes));
   return objects.notes.filter(Boolean).map((note) => note!.userData.symbol);
 }
 
@@ -104,8 +103,8 @@ describe("cell marks", () => {
     const board = new Group();
     const objects = emptyObjects();
     board.add(objects.tile);
-    kit.ensureValue(board, objects, "5");
-    kit.applyNotes(board, objects, notesCell([3]), 0, 0);
+    kit.ensureValue(objects, "5");
+    kit.applyNotes(objects, notesCell([3]));
     objects.tile.position.z = 0.5;
     board.updateMatrixWorld(true);
     const value = objects.value!.getWorldPosition(new Vector3());

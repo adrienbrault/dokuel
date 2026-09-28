@@ -1,6 +1,5 @@
 import {
   CircleGeometry,
-  type Group,
   Mesh,
   MeshStandardMaterial,
   RingGeometry,
@@ -26,25 +25,25 @@ import type { CellVisual } from "./scene-state.ts";
 export const VALUE_SIZE = 0.84;
 /** World size of a pencilled note glyph. */
 export const NOTE_SIZE = noteSize() * 0.82;
+/** Height of a mark above the tile's face. The tile is the marks' parent,
+    so a lifted tile carries them with it instead of burying them. */
+export const MARK_Z = TILE_DEPTH / 2 + 0.02;
+export const NOTE_Z = TILE_DEPTH / 2 + 0.015;
+export const SELECTION_Z = TILE_DEPTH / 2 + 0.004;
+export const CONFLICT_Z = TILE_DEPTH / 2 + 0.06;
 
 export type GlyphKit = {
   /** The material a charging note wears, so a beat can be driven off it. */
   chargingMaterial: MeshStandardMaterial;
   isCharging(mesh: Mesh): boolean;
-  ensureValue(board: Group, objects: CellObjects, symbol: string): Mesh;
-  ensureSwatch(board: Group, objects: CellObjects, given: boolean): Mesh;
+  ensureValue(objects: CellObjects, symbol: string): Mesh;
+  ensureSwatch(objects: CellObjects, given: boolean): Mesh;
   applyConflictRing(
     objects: CellObjects,
     cell: CellVisual,
     palette: BoardPalette,
   ): void;
-  applyNotes(
-    board: Group,
-    objects: CellObjects,
-    cell: CellVisual,
-    x: number,
-    y: number,
-  ): void;
+  applyNotes(objects: CellObjects, cell: CellVisual): void;
   /** Points every glyph at a new atlas - a new emoji theme, or the webfont arriving. */
   setAtlas(atlas: GlyphAtlas, mono: boolean, cells: CellObjects[]): void;
   setPalette(palette: BoardPalette): void;
@@ -135,13 +134,7 @@ export function createGlyphKit(
     return material;
   }
 
-  function applyNotes(
-    board: Group,
-    objects: CellObjects,
-    cell: CellVisual,
-    x: number,
-    y: number,
-  ) {
+  function applyNotes(objects: CellObjects, cell: CellVisual) {
     // Notes only show on a cell with no value, exactly as the DOM grid
     // rules, and a charging digit hides its own notes while it charges.
     const show = cell.value === null && cell.notes.length > 0;
@@ -159,7 +152,7 @@ export function createGlyphKit(
         mesh.userData.digit = digit;
         mesh.userData.symbol = symbol;
         objects.notes[slot] = mesh;
-        board.add(mesh);
+        objects.tile.add(mesh);
       } else if (mesh.userData.digit !== digit) {
         // The note grid reuses a slot for whichever digit lands there,
         // so a fresh digit needs a fresh glyph, not the old one.
@@ -170,9 +163,9 @@ export function createGlyphKit(
       mesh.visible = true;
       mesh.material = cell.charging ? chargingMaterial : noteMaterial;
       mesh.position.set(
-        x + noteOffset(digit - 1) * TILE,
-        y - noteRowOffset(Math.floor((digit - 1) / 3)) * TILE,
-        TILE_DEPTH + 0.015,
+        noteOffset(digit - 1) * TILE,
+        -noteRowOffset(Math.floor((digit - 1) / 3)) * TILE,
+        NOTE_Z,
       );
     }
   }
@@ -180,7 +173,7 @@ export function createGlyphKit(
   return {
     chargingMaterial,
     isCharging: (mesh) => mesh.material === chargingMaterial,
-    ensureValue(board, objects, symbol) {
+    ensureValue(objects, symbol) {
       const existing = objects.value;
       if (existing) {
         if (existing.userData.symbol !== symbol) {
@@ -195,10 +188,11 @@ export function createGlyphKit(
       mesh.castShadow = mono;
       objects.value = mesh;
       objects.valueMaterial = material;
-      board.add(mesh);
+      mesh.position.set(0, 0, MARK_Z);
+      objects.tile.add(mesh);
       return mesh;
     },
-    ensureSwatch(board, objects, given) {
+    ensureSwatch(objects, given) {
       const existing = objects.swatch;
       if (existing) {
         const wanted = given ? swatchGeometry : discGeometry;
@@ -214,7 +208,8 @@ export function createGlyphKit(
       mesh.castShadow = true;
       objects.swatch = mesh;
       objects.swatchMaterial = material;
-      board.add(mesh);
+      mesh.position.set(0, 0, MARK_Z);
+      objects.tile.add(mesh);
       return mesh;
     },
     applyConflictRing(objects, cell, palette) {
@@ -231,11 +226,11 @@ export function createGlyphKit(
           }),
         );
         objects.conflictRing = ring;
-        // The ring is a child of the swatch, so it rides every lift and
-        // tilt the swatch takes without a second bookkeeping step.
-        objects.swatch!.add(ring);
+        // The ring is a child of the tile, so it rides every lift the
+        // tile takes without a second bookkeeping step.
+        objects.tile.add(ring);
       }
-      ring.position.set(0, 0, 0.04);
+      ring.position.set(0, 0, CONFLICT_Z);
       ring.visible = cell.ink === "conflict";
     },
     applyNotes,
