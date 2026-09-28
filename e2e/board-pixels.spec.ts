@@ -23,9 +23,14 @@ function srgbChannels(colour: string): number[] {
 async function tileSample(page: Page) {
   const canvas = page.locator("canvas.board-canvas");
   await expect(canvas).toBeVisible();
+  // The glyph atlas is rebuilt once the webfonts land, and that reflow
+  // shifts the board's box: a shot taken through the window it opens is
+  // taken of an element still moving, which Playwright refuses to draw.
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator("[data-board3d='active']")).toBeAttached();
   const canvasBox = await canvas.boundingBox();
   if (!canvasBox) throw new Error("the board canvas has no box");
-  const shot = await canvas.screenshot();
+  const shot = await canvas.screenshot({ timeout: 15_000 });
   const cell = page.locator('[role="gridcell"]:not(:has(.digit-ink))').first();
   const cellBox = await cell.boundingBox();
   if (!cellBox) throw new Error("the board has no empty cell");
