@@ -1,10 +1,10 @@
-import { Color } from "three";
+import { Color, SRGBColorSpace } from "three";
 import { EMOJI_THEMES } from "../lib/emoji-themes.ts";
 
 /** Reads one custom property (or any CSS value) as a raw string. */
 export type PaletteReader = (name: string) => string;
 
-/** `[r, g, b]` in 0..1 linear-ish sRGB, as Three consumes it. */
+/** `[r, g, b]` in 0..1 sRGB, as the browser writes it. */
 export type Rgb = [number, number, number];
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
@@ -278,9 +278,12 @@ const FALLBACKS: Record<keyof typeof TOKENS, number> = {
 
 function toColor(read: PaletteReader, token: string, fallback: number): Color {
   const parsed = parseCssColor(read(token));
+  const colour = new Color();
+  // Tokens are sRGB; naming the space is what converts them into the
+  // linear working space materials and the output pass both assume.
   return parsed
-    ? new Color(parsed[0], parsed[1], parsed[2])
-    : new Color(fallback);
+    ? colour.setRGB(parsed[0], parsed[1], parsed[2], SRGBColorSpace)
+    : colour.setHex(fallback, SRGBColorSpace);
 }
 
 /**
