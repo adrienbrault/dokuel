@@ -13,6 +13,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { GRAIN_SHADER } from "./shaders.ts";
+import { TONE_EXPOSURE } from "./tone.ts";
 
 /** Bloom at rest; the completion moment pushes it past blowout. */
 export const BLOOM_STRENGTH = 0.32;
@@ -88,7 +89,7 @@ export function createPipeline(
   // sits a little over unity because that curve starts compressing below
   // 1.0, which would land a token-white tile a visible shade grey.
   renderer.toneMapping = NeutralToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = TONE_EXPOSURE;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
 
