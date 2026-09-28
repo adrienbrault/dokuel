@@ -12,6 +12,7 @@ import { approach, clamp01, easeOutCubic } from "./easing.ts";
 import type { GlyphAtlas } from "./glyph-atlas.ts";
 import { cellPosition, TILE_DEPTH } from "./layout.ts";
 import type { BoardPalette } from "./palette.ts";
+import { markGlow } from "./pipeline.ts";
 import type { CellVisual, SceneSnapshot } from "./scene-state.ts";
 
 /** How long a digit springs after landing, in seconds. */
@@ -105,7 +106,7 @@ export function createCellKit(
     const selectionMaterial = new MeshStandardMaterial({
       color: palette.accent,
       emissive: palette.accent,
-      emissiveIntensity: 1.2,
+      emissiveIntensity: markGlow(palette.accent),
       transparent: true,
       opacity: 0,
       depthWrite: false,

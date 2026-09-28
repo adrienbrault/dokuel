@@ -1,9 +1,9 @@
-import { CanvasTexture, Group, SRGBColorSpace } from "three";
+import { CanvasTexture, Group } from "three";
 import { describe, expect, it } from "vitest";
 import { createCellKit } from "./cell-objects.ts";
 import { atlasSymbols, type GlyphAtlas, glyphRects } from "./glyph-atlas.ts";
 import { readPalette } from "./palette.ts";
-import { BLOOM_THRESHOLD, markGlow } from "./pipeline.ts";
+import { BLOOM_THRESHOLD } from "./pipeline.ts";
 
 const EMOJI = ["🍎", "🍌", "🍇", "🍓", "🍊", "🍉", "🍒", "🥝", "🍍"];
 
@@ -35,10 +35,9 @@ describe("createCellKit", () => {
     // The ring is the selection cue, and a ring that stays under the bloom
     // window draws as a flat outline with none of the glow that sells it.
     const kit = createCellKit(new Group(), theme(), atlas());
-    const ring = kit.cells[0].selectionMaterial;
-    expect(luma(ring.emissive) * ring.emissiveIntensity).toBeGreaterThan(
-      BLOOM_THRESHOLD,
-    );
+    const ring = kit.cells[0]?.selectionMaterial;
+    const glow = ring && luma(ring.emissive) * ring.emissiveIntensity;
+    expect(glow).toBeGreaterThan(BLOOM_THRESHOLD);
     kit.dispose();
   });
 });
