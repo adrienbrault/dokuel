@@ -1,6 +1,6 @@
 import {
-  ACESFilmicToneMapping,
   type Color,
+  NeutralToneMapping,
   PCFShadowMap,
   type PerspectiveCamera,
   type Scene,
@@ -76,11 +76,12 @@ export function createPipeline(
     return null;
   }
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio ?? 1, 2));
-  renderer.toneMapping = ACESFilmicToneMapping;
-  // ACES rolls a near-white surface well below the value it started at,
-  // which is why a tile painted with a token of 99% lightness came back
-  // pale grey. The exposure puts the token's own brightness back.
-  renderer.toneMappingExposure = 1.2;
+  // A board whose colours come from design tokens has to keep them: the
+  // filmic curve rolls a near-white tile down to grey and pulls the teal
+  // and coral toward cream. The neutral curve leaves everything under
+  // 1.0 alone and only rolls off the marks pushed above it.
+  renderer.toneMapping = NeutralToneMapping;
+  renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
 
