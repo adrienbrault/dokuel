@@ -3,17 +3,24 @@ import { describe, expect, it } from "vitest";
 import { readPalette } from "./palette.ts";
 import { createStage } from "./stage.ts";
 
-function stageFor(pageHex: string, slabHex: string) {
+function stageFor(pageHex: string, slabHex: string, cellHex = "#808080") {
   const scene = new Scene();
   const palette = readPalette((name) =>
     name === "--color-bg-primary"
       ? pageHex
       : name === "--color-board-border"
         ? slabHex
-        : "#808080",
+        : name === "--color-cell-bg"
+          ? cellHex
+          : "#808080",
   );
   const stage = createStage(scene, palette);
   return { stage, palette, slab: stage.slab.material as MeshStandardMaterial };
+}
+
+/** Perceptual weight of a colour, so surfaces can be ordered by depth. */
+function luma(c: { r: number; g: number; b: number }) {
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
 }
 
 describe("createStage", () => {
@@ -30,6 +37,24 @@ describe("createStage", () => {
       | { value: { getHex(): number } }
       | undefined;
     expect(accent?.value.getHex()).toBe(next.accent.getHex());
+    stage.dispose();
+  });
+
+  it("keeps the slab darker than the tiles standing in it", () => {
+    // The dark theme writes the border token as a light rim, which is right
+    // for a hairline around a DOM cell and wrong for the wide floor a 3D
+    // board shows between its tiles: it reads as a concrete grid rather
+    // than a recess, so the slab has to fall back to the page's own tone.
+    const { stage, palette, slab } = stageFor("#0f0e0d", "#9a958c", "#121110");
+    expect(luma(slab.color)).toBeLessThan(luma(palette.cell));
+    stage.dispose();
+  });
+
+  it("keeps a border token that is already a recess", () => {
+    // The light theme's border is dark, which is exactly the floor the
+    // tiles want, so it passes through untouched.
+    const { stage, palette, slab } = stageFor("#ffffff", "#3d3a35", "#ffffff");
+    expect(luma(slab.color)).toBeCloseTo(luma(palette.slab), 3);
     stage.dispose();
   });
 
