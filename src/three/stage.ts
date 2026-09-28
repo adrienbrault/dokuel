@@ -149,6 +149,7 @@ export function createStage(scene: Scene, palette: BoardPalette): Stage {
     setPalette(next) {
       const tint = slabTint(next);
       hemi.color.copy(next.page);
+      bounce.color.copy(next.page);
       hemi.groundColor.copy(tint);
       rim.color.copy(next.accent);
       flare.color.copy(next.accentBright);

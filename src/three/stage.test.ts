@@ -1,4 +1,9 @@
-import { type MeshStandardMaterial, Scene, type ShaderMaterial } from "three";
+import {
+  type AmbientLight,
+  type MeshStandardMaterial,
+  Scene,
+  type ShaderMaterial,
+} from "three";
 import { describe, expect, it } from "vitest";
 import { readPalette } from "./palette.ts";
 import { createStage } from "./stage.ts";
@@ -15,7 +20,12 @@ function stageFor(pageHex: string, slabHex: string, cellHex = "#808080") {
           : "#808080",
   );
   const stage = createStage(scene, palette);
-  return { stage, palette, slab: stage.slab.material as MeshStandardMaterial };
+  return {
+    scene,
+    stage,
+    palette,
+    slab: stage.slab.material as MeshStandardMaterial,
+  };
 }
 
 /** Perceptual weight of a colour, so surfaces can be ordered by depth. */
@@ -72,6 +82,19 @@ describe("createStage", () => {
     const { stage } = stageFor("#ffffff", "#3d3a35");
     stage.coverPage(1, 12);
     expect(stage.page.scale.x).toBeGreaterThan(2 * Math.tan(Math.PI / 12) * 12);
+    stage.dispose();
+  });
+  it("carries the flip into the bounce fill", () => {
+    // The fill stands in for light the page throws back into the recess,
+    // so it has to take the page's new tone. A dark theme holding on to a
+    // white bounce would keep lifting its tiles out of their own palette.
+    const { stage, scene } = stageFor("#ffffff", "#3d3a35");
+    const next = readPalette(() => "#0f0e0d");
+    stage.setPalette(next);
+    const bounce = scene.children.find(
+      (child) => (child as AmbientLight).isAmbientLight,
+    ) as AmbientLight;
+    expect(bounce.color.getHex()).toBe(next.page.getHex());
     stage.dispose();
   });
 });
