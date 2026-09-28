@@ -30,6 +30,14 @@ async function gotoLandingPaused(page: Page) {
   await page.goto("/");
 }
 
+// The board surfaces as a staggered reveal wave, so a clock frozen at
+// navigation catches it before any given has risen - the WebGL board
+// paints its tiles with every digit still collapsed. Running the clock
+// past the wave leaves the board settled on a frame the shot can show.
+async function letBoardRise(page: Page) {
+  await page.clock.runFor(600);
+}
+
 // Replays the demo script up to the frame where a dragged 7 hovers the
 // bottom half of its cell: the preview, stacked notes and the skim's
 // highlight are all on screen at once.
@@ -55,6 +63,7 @@ async function gotoLandingDemoMidDrag(page: Page) {
 
 test("landing page", async ({ page }, testInfo) => {
   await gotoLandingPaused(page);
+  await letBoardRise(page);
   await page.screenshot({
     path: screenshotPath("landing", testInfo.project.name),
   });
@@ -149,6 +158,7 @@ test.describe("dark mode", () => {
 
   test("landing page - dark mode", async ({ page }, testInfo) => {
     await gotoLandingPaused(page);
+    await letBoardRise(page);
     await page.screenshot({
       path: screenshotPath("landing-dark", testInfo.project.name),
     });
