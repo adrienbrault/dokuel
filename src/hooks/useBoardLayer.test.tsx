@@ -1,4 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { cellKey } from "../lib/sudoku.ts";
 import type { BoardScene } from "../three/board-scene.ts";
@@ -25,70 +26,94 @@ function fakeScene(): FakeScene {
 }
 
 const snapshot = { cells: [] } as unknown as SceneSnapshot;
+let layer: ReturnType<typeof useBoardLayer>;
+let build: ReturnType<typeof vi.fn>;
+
+function Harness({
+  children,
+  completed,
+  scene,
+}: {
+  children: ReactNode;
+  completed: boolean;
+  scene: FakeScene | null;
+}) {
+  build = vi.fn((_env: SceneEnv, _hover: number | null) => snapshot);
+  layer = useBoardLayer({
+    enabled: true,
+    boardPx: 300,
+    completed,
+    onSelectCell: vi.fn(),
+    build,
+    create: () => scene as unknown as BoardScene | null,
+  });
+  return (
+    <div>
+      <canvas ref={layer.canvasRef} data-testid="board-canvas" />
+      {children}
+    </div>
+  );
+}
 
 function renderLayer(scene: FakeScene | null, completed: boolean) {
-  const onSelectCell = vi.fn();
-  const build = vi.fn(() => snapshot);
-  const view = renderHook(
-    ({ done }: { done: boolean }) =>
-      useBoardLayer({
-        enabled: true,
-        boardPx: 300,
-        completed: done,
-        onSelectCell,
-        build: (_env: SceneEnv, _hover: number | null) => build(),
-        create: () => scene as unknown as BoardScene | null,
-      }),
-    { initialProps: { done: completed } },
-  );
-  return { ...view, scene, build, onSelectCell };
+  const view = render(<Harness completed={completed} scene={scene} />);
+  const canvas = screen.getByTestId("board-canvas");
+  return {
+    ...view,
+    canvas,
+    getScene: () => scene,
+    getBuild: () => build,
+    getLayer: () => layer,
+    rerender: (next: { completed: boolean; scene?: FakeScene | null }) =>
+      view.rerender(
+        <Harness completed={next.completed} scene={next.scene ?? scene} />,
+      ),
+  };
 }
 
 describe("useBoardLayer", () => {
   it("celebrates once the board is complete", () => {
-    const scene = fakeScene();
-    const { rerender } = renderLayer(scene, false);
+    const { rerender, getScene } = renderLayer(fakeScene(), false);
 
-    rerender({ done: true });
+    rerender({ completed: true });
 
-    expect(scene.celebrate).toHaveBeenCalledTimes(1);
+    expect(getScene()?.celebrate).toHaveBeenCalledTimes(1);
   });
 
   it("does not celebrate again while the board stays complete", () => {
-    const scene = fakeScene();
-    const { rerender } = renderLayer(scene, true);
+    const { rerender, getScene } = renderLayer(fakeScene(), true);
 
-    rerender({ done: true });
-    rerender({ done: true });
+    rerender({ completed: true });
+    rerender({ completed: true });
 
-    expect(scene.celebrate).toHaveBeenCalledTimes(1);
+    expect(getScene()?.celebrate).toHaveBeenCalledTimes(1);
   });
 
   it("celebrates again when a fresh board completes", () => {
-    const scene = fakeScene();
-    const { rerender } = renderLayer(scene, true);
+    const { rerender, getScene } = renderLayer(fakeScene(), true);
 
-    rerender({ done: false });
-    rerender({ done: true });
+    rerender({ completed: false });
+    rerender({ completed: true });
 
-    expect(scene.celebrate).toHaveBeenCalledTimes(2);
+    expect(getScene()?.celebrate).toHaveBeenCalledTimes(2);
   });
 
   it("hands the hovered cell to the snapshot builder", () => {
     const scene = fakeScene();
     scene.hitTest = vi.fn(() => ({ row: 2, col: 5, localY: 0.25 }));
-    const { result, build } = renderLayer(scene, false);
+    const { getLayer, getBuild } = renderLayer(scene, false);
 
-    act(() =>
-      result.current.pointer.onPointerMove({ clientX: 300, clientY: 120 }),
+    act(() => getLayer().pointer.onPointerMove({ clientX: 300, clientY: 120 }));
+
+    expect(getBuild()).toHaveBeenLastCalledWith(
+      expect.anything(),
+      cellKey(2, 5),
     );
-
-    expect(build).toHaveBeenLastCalledWith(expect.anything(), cellKey(2, 5));
   });
 
   it("stays inert without a scene", () => {
-    const { result } = renderLayer(null, false);
+    const { getLayer } = renderLayer(null, false);
 
-    expect(result.current.active).toBe(false);
+    expect(getLayer().active).toBe(false);
   });
 });
