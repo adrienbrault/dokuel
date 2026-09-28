@@ -1,6 +1,13 @@
-import { Color, Group, SRGBColorSpace } from "three";
+import {
+  Color,
+  Group,
+  type Points,
+  type PointsMaterial,
+  SRGBColorSpace,
+  Texture,
+} from "three";
 import { describe, expect, it } from "vitest";
-import { createRingPool } from "./effects.ts";
+import { createRingPool, createSparkPool } from "./effects.ts";
 import { BLOOM_THRESHOLD } from "./pipeline.ts";
 
 /** Perceptual weight of a linear colour - what the bloom pass compares to. */
@@ -41,6 +48,24 @@ describe("createRingPool", () => {
     expect(glows.length).toBeGreaterThan(0);
     for (const glow of glows)
       expect(luma(glow)).toBeGreaterThan(BLOOM_THRESHOLD);
+    pool.dispose();
+  });
+});
+
+describe("createSparkPool", () => {
+  it("throws sparks that clear the bloom window", () => {
+    // Sparks blend additively, so what they add to the buffer is their own
+    // colour: a coral digit paints them a mid tone and they read as dust
+    // rather than as the impact a placement is meant to land with.
+    const parent = new Group();
+    const pool = createSparkPool(parent, tone(0x229c7c), new Texture());
+    pool.spawn(0, 0, tone(0xe2593b));
+    const burst = parent.children.find((child) => child.visible) as
+      | Points
+      | undefined;
+    const material = burst?.material as PointsMaterial | undefined;
+    const glow = material && luma(material.color);
+    expect(glow).toBeGreaterThan(BLOOM_THRESHOLD);
     pool.dispose();
   });
 });
