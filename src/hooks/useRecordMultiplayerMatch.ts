@@ -10,6 +10,8 @@ type Options = {
   difficulty: Difficulty;
   assistLevel: AssistLevel;
   playerId: string;
+  /** Teammates whose win counts as ours. */
+  allies?: string[] | undefined;
   opponentName: string;
   /** Resolved when the effect fires so the recorded duration reflects
    *  the timer at game-over, not at mount. */
@@ -28,6 +30,7 @@ export function useRecordMultiplayerMatch({
   difficulty,
   assistLevel,
   playerId,
+  allies,
   opponentName,
   getTimeSeconds,
 }: Options) {
@@ -46,7 +49,9 @@ export function useRecordMultiplayerMatch({
       time: getTimeSeconds(),
       date: todayLocalISO(),
       timestamp: Date.now(),
-      won: gameOver.winnerId === playerId,
+      won:
+        gameOver.winnerId === playerId ||
+        (allies?.includes(gameOver.winnerId) ?? false),
       opponentName: opponentName || gameOver.winnerName,
       roomId,
       gameNumber,
@@ -58,6 +63,7 @@ export function useRecordMultiplayerMatch({
     difficulty,
     assistLevel,
     playerId,
+    allies,
     opponentName,
     getTimeSeconds,
   ]);

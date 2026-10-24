@@ -135,7 +135,10 @@ export function MultiplayerBoard({
   const initialTimerSeconds = saved?.timer ?? 0;
   const timerSecondsRef = useRef(initialTimerSeconds);
   const revealed = useDelayedFlag(true, 600);
-  const iWon = gameOver?.winnerId === playerId;
+  const iWon =
+    gameOver !== null &&
+    (gameOver.winnerId === playerId ||
+      !!team?.allies.includes(gameOver.winnerId));
   const iFinished = iWon || game.status === "completed";
   const result = useMatchResult({
     roomId,
@@ -185,6 +188,7 @@ export function MultiplayerBoard({
     difficulty,
     assistLevel,
     playerId,
+    allies: team?.allies,
     opponentName,
     getTimeSeconds: () => timerSecondsRef.current,
   });
