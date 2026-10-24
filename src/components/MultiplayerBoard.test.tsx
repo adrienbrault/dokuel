@@ -670,6 +670,21 @@ describe("MultiplayerBoard after opponent wins", () => {
     }
   });
 
+  it("shows a teammate's digit on our shared board", () => {
+    const cells: (number | null)[] = Array(81).fill(null);
+    cells[1] = 3;
+    render(
+      <MultiplayerBoard
+        {...baseProps()}
+        team={{ cells, setCell: vi.fn(), allies: ["p3"] }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("gridcell", { name: /^Cell row 1 column 2, value 3/ }),
+    ).toBeInTheDocument();
+  });
+
   it("shows one progress bar per opponent in a room of four", () => {
     localStorage.clear();
     render(
