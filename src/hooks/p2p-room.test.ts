@@ -641,6 +641,7 @@ describe("p2p-room", () => {
             color: "#3B82F6",
             cellsRemaining: 40,
             completionPercent: 50,
+            team: null,
           },
           {
             id: "p2",
@@ -648,6 +649,7 @@ describe("p2p-room", () => {
             color: "#EF4444",
             cellsRemaining: 30,
             completionPercent: 63,
+            team: null,
           },
         ],
         winnerId: null,

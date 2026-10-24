@@ -562,6 +562,7 @@ describe("MultiplayerBoard after opponent wins", () => {
                 color: "#3B82F6",
                 cellsRemaining: 0,
                 completionPercent: 100,
+                team: null,
               },
               {
                 id: "p2",
@@ -569,6 +570,7 @@ describe("MultiplayerBoard after opponent wins", () => {
                 color: "#EF4444",
                 cellsRemaining: 2,
                 completionPercent: 33,
+                team: null,
               },
             ],
             replays: { p1: [[1_000, 0, 5]], p2: [[2_000, 1, 3]] },

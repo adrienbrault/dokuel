@@ -24,6 +24,7 @@ const roomState: RoomState = {
       color: "#3B82F6",
       cellsRemaining: 55,
       completionPercent: 10,
+      team: null,
     },
     {
       id: "opp",
@@ -31,6 +32,7 @@ const roomState: RoomState = {
       color: "#EF4444",
       cellsRemaining: 60,
       completionPercent: 5,
+      team: null,
     },
   ],
   puzzle: PUZZLE,
@@ -179,6 +181,7 @@ describe("MultiplayerGame disconnect overlay", () => {
             color: "#10B981",
             cellsRemaining: 40,
             completionPercent: 30,
+            team: null,
           },
         ],
       };
@@ -454,6 +457,7 @@ describe("MultiplayerGame rematch", () => {
             color: "#10B981",
             cellsRemaining: 40,
             completionPercent: 30,
+            team: null,
           },
           {
             id: "dan",
@@ -461,6 +465,7 @@ describe("MultiplayerGame rematch", () => {
             color: "#F59E0B",
             cellsRemaining: 50,
             completionPercent: 20,
+            team: null,
           },
         ],
         rematchVotes: ["me", "opp"],

@@ -19,6 +19,7 @@ const BASE_STATE: RoomState = {
 
       cellsRemaining: 81,
       completionPercent: 0,
+      team: null,
     },
   ],
   puzzle: null,
@@ -52,6 +53,7 @@ describe("Lobby", () => {
 
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
         },
       ],
     };
@@ -74,6 +76,7 @@ describe("Lobby", () => {
           color: "#EF4444",
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
         },
         {
           id: "p3",
@@ -81,6 +84,7 @@ describe("Lobby", () => {
           color: "#10B981",
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
         },
       ],
     };
@@ -102,6 +106,7 @@ describe("Lobby", () => {
           color: "#EF4444",
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
         },
       ],
     };
@@ -124,6 +129,7 @@ describe("Lobby", () => {
 
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
         },
       ],
     };
@@ -209,6 +215,7 @@ describe("Lobby", () => {
 
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
         },
       ],
     };

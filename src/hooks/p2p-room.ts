@@ -10,6 +10,7 @@ import type {
   Player,
   RoomMode,
   RoomState,
+  Team,
 } from "../lib/types.ts";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 
@@ -185,6 +186,17 @@ export function updatePlayerName(
 
   room.doc.transact(() => {
     playerMap.set("name", newName);
+  });
+}
+
+/** One writer per seat: only its owner picks its team. */
+export function setTeam(room: P2PRoom, playerId: string, team: Team): void {
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!playerMap) return;
+  room.doc.transact(() => {
+    playerMap.set("team", team);
   });
 }
 
@@ -459,6 +471,10 @@ export function observeRoomChanges(
   };
 }
 
+function projectTeam(raw: unknown): Team | null {
+  return raw === "a" || raw === "b" ? raw : null;
+}
+
 export function getPlayers(room: P2PRoom): Player[] {
   const players = room.doc.getMap("players");
   const result: Player[] = [];
@@ -471,6 +487,7 @@ export function getPlayers(room: P2PRoom): Player[] {
       color: p.get("color") as string,
       cellsRemaining: p.get("cellsRemaining") as number,
       completionPercent: p.get("completionPercent") as number,
+      team: projectTeam(p.get("team")),
     });
   }
 
@@ -529,6 +546,8 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
       pm.set("cellsRemaining", p.cellsRemaining);
       pm.set("completionPercent", p.completionPercent);
       pm.set("joinOrder", joinOrder);
+      // Older snapshots predate teams.
+      if (p.team) pm.set("team", p.team);
       playersMap.set(p.id, pm);
     });
   });

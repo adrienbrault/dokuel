@@ -6,6 +6,7 @@ import type {
   DigitStyle,
   RoomMode,
   RoomState,
+  Team,
 } from "../lib/types.ts";
 import {
   clearSnapshot,
@@ -33,6 +34,7 @@ import {
   setDifficulty as setRoomDifficulty,
   setDigitStyle as setRoomDigitStyle,
   setMode as setRoomMode,
+  setTeam as setRoomTeam,
   startGame,
   updatePlayerName,
   updateProgress,
@@ -205,6 +207,8 @@ export type Room = {
   setDifficulty(level: Difficulty): void;
   /** Free-for-all, or two teams of two sharing a board each. */
   setMode(mode: RoomMode): void;
+  /** Pick our side for a teams game. */
+  setTeam(team: Team): void;
   /** Pin both boards to one palette, or null to free them again. */
   setDigitStyle(style: DigitStyle | null): void;
   /**
@@ -604,6 +608,9 @@ export function createRoom({
     },
     setMode(mode) {
       setRoomMode(p2p, mode);
+    },
+    setTeam(team) {
+      setRoomTeam(p2p, playerId, team);
     },
     setDigitStyle(style) {
       setRoomDigitStyle(p2p, style);

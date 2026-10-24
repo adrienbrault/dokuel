@@ -140,12 +140,16 @@ export type RoomStatus = "lobby" | "playing" | "finished";
 /** Everyone races alone, or two teams of two share a board each. */
 export type RoomMode = "ffa" | "teams";
 
+export type Team = "a" | "b";
+
 export type Player = {
   id: string;
   name: string;
   color: string;
   cellsRemaining: number;
   completionPercent: number;
+  /** The side picked in the lobby; null until the player picks one. */
+  team: Team | null;
 };
 
 export type RoomState = {

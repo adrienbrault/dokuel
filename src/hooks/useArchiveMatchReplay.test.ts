@@ -12,6 +12,7 @@ const players: Player[] = [
     color: "#3B82F6",
     cellsRemaining: 0,
     completionPercent: 100,
+    team: null,
   },
   {
     id: "p2",
@@ -19,6 +20,7 @@ const players: Player[] = [
     color: "#EF4444",
     cellsRemaining: 2,
     completionPercent: 33,
+    team: null,
   },
 ];
 
@@ -50,6 +52,7 @@ describe("useArchiveMatchReplay", () => {
       color: "#10B981",
       cellsRemaining: 0,
       completionPercent: 100,
+      team: null,
     };
     renderHook(() =>
       useArchiveMatchReplay(
