@@ -92,6 +92,12 @@ export function useSudoku(
 
   const dismissHint = useCallback(() => dispatch({ type: "DISMISS_HINT" }), []);
 
+  const applyRemote = useCallback(
+    (cells: { index: number; value: number | null }[]) =>
+      dispatch({ type: "APPLY_REMOTE", cells }),
+    [],
+  );
+
   const reset = useCallback(
     (nextPuzzle: string, nextSolution?: string, nextSaved?: SavedBoard) =>
       dispatch({
@@ -128,6 +134,7 @@ export function useSudoku(
     toggleNotesMode,
     hint,
     dismissHint,
+    applyRemote,
     reset,
   };
 }
