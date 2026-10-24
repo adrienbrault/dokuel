@@ -9,6 +9,7 @@ import { useRaceReporting } from "../hooks/useRaceReporting.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useReplayRecorder } from "../hooks/useReplayRecorder.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
+import { type TeamPlay, useTeamBoardSync } from "../hooks/useTeamBoardSync.ts";
 import { formatTime } from "../lib/format.ts";
 import { loadGame, MULTIPLAYER_KEY_PREFIX } from "../lib/game-storage.ts";
 import type { AssistLevel, DigitStyle } from "../lib/types.ts";
@@ -69,6 +70,8 @@ export type MultiplayerBoardProps = {
   onComplete: (board: string) => void;
   /** The room's side of the rematch the result offers. */
   next: NextGame;
+  /** In a teams game: our shared board and who we share it with. */
+  team?: TeamPlay | undefined;
   onBack: () => void;
 };
 
@@ -90,6 +93,7 @@ export function MultiplayerBoard({
   onProgress,
   onComplete,
   next,
+  team,
   onBack,
 }: MultiplayerBoardProps) {
   // Scope the autosave key by room + puzzle so a rematch in the same room
@@ -140,6 +144,8 @@ export function MultiplayerBoard({
     won: iWon,
     finished: iFinished,
   });
+
+  useTeamBoardSync(game, team);
 
   const myPercent = useRaceReporting({
     puzzle,

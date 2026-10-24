@@ -6,11 +6,13 @@ type Game = {
   applyRemote: (cells: { index: number; value: number | null }[]) => void;
 };
 
-type Options = {
-  game: Game;
-  /** Our team's shared board, or null outside a teams game. */
-  teamCells: TeamCells | null;
+/** What a teams game adds to a player's board. */
+export type TeamPlay = {
+  /** Our team's shared board; null until the room has one. */
+  cells: TeamCells | null;
   setCell: (index: number, value: number | null) => void;
+  /** Our teammates' ids: their win is ours. */
+  allies: string[];
 };
 
 /**
@@ -19,8 +21,10 @@ type Options = {
  * board instead would send back a teammate's digit that arrived in the
  * same render but has not reached our reducer yet, undoing their move.
  */
-export function useTeamBoardSync({ game, teamCells, setCell }: Options) {
+export function useTeamBoardSync(game: Game, team: TeamPlay | undefined) {
   const { board, applyRemote } = game;
+  const teamCells = team?.cells ?? null;
+  const setCell = team?.setCell;
   const lastBoard = useRef(board);
   const lastTeamCells = useRef<TeamCells | null>(null);
 
@@ -48,7 +52,7 @@ export function useTeamBoardSync({ game, teamCells, setCell }: Options) {
     const previous = lastBoard.current;
     lastBoard.current = board;
     const shared = lastTeamCells.current;
-    if (!shared || previous === board) return;
+    if (!shared || !setCell || previous === board) return;
     board.forEach((row, r) => {
       row.forEach((cell, c) => {
         const index = r * 9 + c;

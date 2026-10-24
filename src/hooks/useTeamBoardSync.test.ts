@@ -24,7 +24,7 @@ function setup() {
   const hook = renderHook(
     ({ teamCells }: { teamCells: TeamCells | null }) => {
       const game = useSudoku(PUZZLE, SOLVED);
-      useTeamBoardSync({ game, teamCells, setCell });
+      useTeamBoardSync(game, { cells: teamCells, setCell, allies: [] });
       return game;
     },
     { initialProps: { teamCells: blank() as TeamCells | null } },
@@ -53,4 +53,3 @@ describe("useTeamBoardSync", () => {
     expect(setCell).not.toHaveBeenCalled();
   });
 });
-
