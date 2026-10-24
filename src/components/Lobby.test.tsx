@@ -269,4 +269,22 @@ describe("Lobby teams", () => {
 
     expect(onModeChange).toHaveBeenCalledWith("teams");
   });
+
+  it("lets us pick our own team", async () => {
+    const onTeamChange = vi.fn();
+    render(
+      <Lobby
+        roomState={{ ...BASE_STATE, mode: "teams" }}
+        playerId="p1"
+        onTeamChange={onTeamChange}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: "Team B" }));
+
+    expect(onTeamChange).toHaveBeenCalledWith("b");
+  });
 });
+
