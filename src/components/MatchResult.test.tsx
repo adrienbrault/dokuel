@@ -65,6 +65,20 @@ describe("MatchResult", () => {
     expect(onKeepSolving).toHaveBeenCalledOnce();
   });
 
+  it("names the winner, not every opponent, in a bigger room", () => {
+    renderResult({
+      won: false,
+      time: null,
+      opponentName: "Bob, Carol & Dan",
+      winnerName: "Carol",
+    });
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Carol won");
+    expect(screen.getByLabelText("Score")).toHaveTextContent(
+      "vs Bob, Carol & Dan",
+    );
+  });
+
   it("asks for a rematch with the primary action", async () => {
     const props = renderResult({});
 
