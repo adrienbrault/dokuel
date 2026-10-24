@@ -48,6 +48,13 @@ export function useTeamMatch({
     [teams, cells, setCell, allies],
   );
 
+  // A replay sets us against one other board; a teammate's is ours.
+  const roomPlayers = room?.players;
+  const replayPlayers = useMemo(
+    () => (roomPlayers ?? []).filter((p) => !allies.includes(p.id)),
+    [roomPlayers, allies],
+  );
+
   const rivalName = formatNameList(rivals.map((p) => p.name));
   const bars: OpponentBar[] = teams
     ? [
@@ -67,6 +74,7 @@ export function useTeamMatch({
   return {
     bars,
     rivalName,
+    replayPlayers,
     team,
     gameOver: teams && gameOver ? teamGameOver(gameOver, players) : gameOver,
   };

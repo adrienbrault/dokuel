@@ -82,7 +82,7 @@ export function MultiplayerGame({
     gameNumber: mp.roomState?.gameNumber ?? 0,
     puzzle: mp.puzzle,
     solution: mp.solution,
-    players: mp.roomState?.players ?? NO_PLAYERS,
+    players: match.replayPlayers,
     replays: mp.replays,
     gameOver: mp.gameOver,
   });
@@ -169,7 +169,7 @@ export function MultiplayerGame({
               : undefined
           }
           replay={{
-            players: mp.roomState?.players ?? [],
+            players: match.replayPlayers,
             replays: mp.replays,
             share: mp.sendReplay,
           }}
