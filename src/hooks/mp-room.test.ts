@@ -9,6 +9,7 @@ import {
   initializeRoom,
   joinRoom,
   publishReplay,
+  setTeam,
   startGame,
   updateProgress,
   voteRematch,
@@ -891,4 +892,27 @@ describe("teams", () => {
       ["p2", null],
     ]);
   });
+
+  it("refuses to start teams that are not two against two", () => {
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    for (const id of ["p2", "p3", "p4"]) joinRoom(p2p, id, id);
+    room.setMode("teams");
+    room.setTeam("a");
+    setTeam(p2p, "p2", "a");
+    setTeam(p2p, "p3", "a");
+    setTeam(p2p, "p4", "b");
+
+    room.start();
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(0);
+    expect(room.snapshot().error?.message).toBe(
+      "Teams need two players each",
+    );
+
+    setTeam(p2p, "p3", "b");
+    room.start();
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+  });
 });
+
