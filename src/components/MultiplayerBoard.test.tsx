@@ -685,6 +685,27 @@ describe("MultiplayerBoard after opponent wins", () => {
     ).toBeInTheDocument();
   });
 
+  it("counts a teammate's win as ours", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <MultiplayerBoard
+          {...baseProps()}
+          gameOver={{ winnerId: "p3", winnerName: "Carol" }}
+          team={{ cells: null, setCell: vi.fn(), allies: ["p3"] }}
+        />,
+      );
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      expect(screen.getByRole("dialog")).toHaveAccessibleName("You won!");
+      expect(getMultiplayerStats()[0]?.won).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows one progress bar per opponent in a room of four", () => {
     localStorage.clear();
     render(
