@@ -568,5 +568,18 @@ describe("MultiplayerGame teams", () => {
       vi.useRealTimers();
     }
   });
-});
 
+  it("archives the match against a rival, never our teammate", () => {
+    mockMp.roomState = { ...teamsState, status: "finished" };
+    mockMp.gameOver = { winnerId: "carol", winnerName: "Carol" };
+    mockMp.replays = {
+      me: [[1_000, 0, 5]],
+      carol: [[1_500, 2, 4]],
+      opp: [[2_000, 1, 9]],
+      dan: [[2_500, 3, 1]],
+    };
+    renderGame();
+
+    expect(getArchivedReplay("test-room", 1)?.opponent?.name).toBe("Dan");
+  });
+});
