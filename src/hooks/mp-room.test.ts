@@ -144,11 +144,31 @@ describe("projection", () => {
 });
 
 describe("seats", () => {
+  it("seats up to four players in one room", () => {
+    const { p2p, room } = setup(null);
+    initializeRoom(p2p, "p2", "medium");
+    joinRoom(p2p, "p2", "Bob");
+    joinRoom(p2p, "p3", "Carol");
+    joinRoom(p2p, "p4", "Dan");
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(room.snapshot().roomFull).toBe(false);
+    expect(room.snapshot().roomState?.players.map((p) => p.id)).toEqual([
+      "p2",
+      "p3",
+      "p4",
+      "p1",
+    ]);
+  });
+
   it("flags roomFull for a player with no seat in a full room", () => {
     const { p2p, room } = setup();
     initializeRoom(p2p, "p2", "medium");
     joinRoom(p2p, "p2", "Bob");
     joinRoom(p2p, "p3", "Carol");
+    joinRoom(p2p, "p4", "Dan");
+    joinRoom(p2p, "p5", "Eve");
 
     expect(room.snapshot().roomFull).toBe(true);
   });
@@ -163,19 +183,19 @@ describe("seats", () => {
   });
 
   it("evicts itself from the players map after a concurrent-join overflow", () => {
-    // A concurrent-join merge can leave 3 entries even though joinRoom
+    // A concurrent-join merge can leave 5 entries even though joinRoom
     // capped locally. The overflow player (us, by deterministic seat
-    // sort) must delete its own entry — otherwise the two seated players
-    // stare at a lobby whose Start never enables.
+    // sort) must delete its own entry — otherwise the seated players
+    // stare at a ghost row that can never vote for a rematch.
     const { doc, p2p, room } = setup();
     initializeRoom(p2p, "a1", "medium");
     joinRoom(p2p, "p1", "Alice");
 
-    // The merged remote state: two players whose joinOrder/id sort ahead
-    // of ours ("a1"/"a2" < "p1" at joinOrder 0).
+    // The merged remote state: four players whose joinOrder/id sort
+    // ahead of ours ("a1".."a4" < "p1" at joinOrder 0).
     doc.transact(() => {
       const players = doc.getMap("players");
-      for (const id of ["a1", "a2"]) {
+      for (const id of ["a1", "a2", "a3", "a4"]) {
         const pm = new YMap<unknown>();
         pm.set("name", id);
         pm.set("color", "blue");
@@ -188,7 +208,7 @@ describe("seats", () => {
 
     expect(room.snapshot().roomFull).toBe(true);
     expect(doc.getMap("players").has("p1")).toBe(false);
-    expect(doc.getMap("players").size).toBe(2);
+    expect(doc.getMap("players").size).toBe(4);
   });
 });
 
@@ -472,11 +492,13 @@ describe("setup", () => {
     initializeRoom(p2p, "p2", "medium");
     joinRoom(p2p, "p2", "Bob");
     joinRoom(p2p, "p3", "Carol");
+    joinRoom(p2p, "p4", "Dan");
+    joinRoom(p2p, "p5", "Eve");
 
     room.apply({ type: "local-sync-complete", now: T0 });
 
     expect(room.snapshot().roomFull).toBe(true);
-    expect(room.snapshot().roomState?.players).toHaveLength(2);
+    expect(room.snapshot().roomState?.players).toHaveLength(4);
   });
 });
 
@@ -764,6 +786,24 @@ describe("rematch", () => {
 
     expect(doc.getMap("room").get("gameNumber")).toBe(2);
     expect(room.snapshot().gameOver).toBeNull();
+  });
+
+  it("waits for every seated player in a room of three", () => {
+    const { doc, p2p, room } = setup();
+    initializeRoom(p2p, "p1", "easy");
+    joinRoom(p2p, "p1", "Alice");
+    joinRoom(p2p, "p2", "Bob");
+    joinRoom(p2p, "p3", "Carol");
+    startGame(p2p);
+    const solution = doc.getMap("room").get("solution") as string;
+    claimWinner(p2p, "p2", "Bob", solution);
+    voteRematch(p2p, "p2");
+
+    room.rematch();
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+
+    voteRematch(p2p, "p3");
+    expect(doc.getMap("room").get("gameNumber")).toBe(2);
   });
 
   it("deals as host when both requests cross on the wire", () => {

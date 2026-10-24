@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useArchiveMatchReplay } from "../hooks/useArchiveMatchReplay.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import { formatNameList } from "../lib/format.ts";
 import type { Difficulty, DigitStyle, Player } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 import type { RematchState } from "./MatchResult.tsx";
@@ -38,6 +39,8 @@ export function MultiplayerGame({
   // just fight over it and the guest joined the host's board.
   const lastDigitStyle = useRef<DigitStyle | null>(null);
   const isHost = useRef(false);
+  // Same blip guard for the race bars: they would vanish and pop back.
+  const lastOpponents = useRef<Player[]>(NO_PLAYERS);
   // Once a game is over the room's difficulty is the NEXT game's, which
   // the host may change from the result: the board keeps the one its
   // own game was dealt on.
@@ -47,6 +50,9 @@ export function MultiplayerGame({
   if (mp.roomState) {
     lastDigitStyle.current = mp.roomState.digitStyle;
     isHost.current = mp.roomState.hostId === playerId;
+    lastOpponents.current = mp.roomState.players.filter(
+      (p) => p.id !== playerId,
+    );
     if (gameDifficulty.current?.game !== mp.roomState.gameNumber) {
       gameDifficulty.current = {
         game: mp.roomState.gameNumber,
@@ -95,8 +101,8 @@ export function MultiplayerGame({
         <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
           <h1 className="heading">Game is full</h1>
           <p className="caption max-w-sm">
-            This room already has two players. Ask your friend for a new invite,
-            or create your own game.
+            This room already has four players. Ask your friends for a new
+            invite, or create your own game.
           </p>
           <button
             type="button"
@@ -115,13 +121,17 @@ export function MultiplayerGame({
   // the local board state (cells, notes, progress) lives in
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
-    const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
+    const opponents = lastOpponents.current;
     const votes = mp.roomState?.rematchVotes ?? [];
+    const asked = opponents.filter((p) => votes.includes(p.id));
     const rematch: RematchState = votes.includes(playerId)
       ? "waiting"
-      : opponent && votes.includes(opponent.id)
+      : asked.length > 0
         ? "invited"
         : "idle";
+    // A 1v1 keeps its plain "Opponent" wording; only a bigger room has
+    // to spell out who is in and who is not.
+    const crowd = opponents.length > 1;
     return (
       <>
         <MultiplayerBoard
@@ -132,8 +142,8 @@ export function MultiplayerGame({
           playerId={playerId}
           difficulty={gameDifficulty.current?.level ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
-          opponentName={opponent?.name ?? ""}
-          opponentProgress={mp.opponentProgress}
+          opponentName={formatNameList(opponents.map((p) => p.name))}
+          opponents={lastOpponents.current}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
           digitStyle={lastDigitStyle.current}
@@ -154,6 +164,16 @@ export function MultiplayerGame({
             difficulty: mp.roomState?.difficulty ?? "medium",
             onDifficultyChange: isHost.current ? mp.setDifficulty : undefined,
             onRematch: mp.sendRematch,
+            waitingFor: crowd
+              ? formatNameList(
+                  opponents
+                    .filter((p) => !votes.includes(p.id))
+                    .map((p) => p.name),
+                )
+              : undefined,
+            askedBy: crowd
+              ? formatNameList(asked.map((p) => p.name))
+              : undefined,
           }}
           onBack={onBack}
         />
@@ -164,7 +184,7 @@ export function MultiplayerGame({
             from a backgrounded tab, and the live && hides the banner
             the instant the opponent is back. */}
         {disconnectSettled && mp.opponentDisconnected && !mp.gameOver && (
-          <DisconnectBanner onClaimWin={mp.claimForfeitWin} />
+          <DisconnectBanner plural={crowd} onClaimWin={mp.claimForfeitWin} />
         )}
         {toast && <Toast message={toast} />}
       </>
@@ -237,7 +257,14 @@ const DISCONNECT_TIMEOUT = 60;
  * ahead, so the board must stay fully playable underneath — this is a
  * status banner pinned to the top, never a modal.
  */
-function DisconnectBanner({ onClaimWin }: { onClaimWin: () => void }) {
+function DisconnectBanner({
+  plural,
+  onClaimWin,
+}: {
+  /** Several opponents, all of them gone. */
+  plural: boolean;
+  onClaimWin: () => void;
+}) {
   const [seconds, setSeconds] = useState(DISCONNECT_TIMEOUT);
 
   useEffect(() => {
@@ -260,7 +287,7 @@ function DisconnectBanner({ onClaimWin }: { onClaimWin: () => void }) {
       style={{ top: "calc(env(safe-area-inset-top) + 0.75rem)" }}
     >
       <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
-        Opponent disconnected
+        {plural ? "Opponents disconnected" : "Opponent disconnected"}
       </p>
       {seconds > 0 ? (
         <p className="caption whitespace-nowrap">

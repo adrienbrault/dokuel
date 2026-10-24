@@ -25,6 +25,7 @@ import {
   judgeClaim,
   leaveRoom,
   MAX_PLAYERS,
+  MIN_PLAYERS,
   observeRoomChanges,
   publishReplay,
   setAssistLevel as setRoomAssistLevel,
@@ -368,7 +369,7 @@ export function createRoom({
   /**
    * Excess-player detection: not among the first MAX_PLAYERS (our join
    * no-oped), or sorted into the overflow after a concurrent-join
-   * merge. The overflow player deletes its own entry so the two seated
+   * merge. The overflow player deletes its own entry so the seated
    * players get their startable lobby back instead of a ghost row and a
    * disabled Start button.
    */
@@ -471,7 +472,7 @@ export function createRoom({
     const state = getRoomState(p2p);
     if (!state || state.status !== "finished") return;
     const seated = state.players.slice(0, MAX_PLAYERS);
-    if (seated.length < MAX_PLAYERS) return;
+    if (seated.length < MIN_PLAYERS) return;
     if (seated.every((p) => state.rematchVotes.includes(p.id))) {
       startGame(p2p);
     }
@@ -567,7 +568,7 @@ export function createRoom({
       claimWinner(p2p, playerId, playerName(), null);
     },
     start() {
-      if (getPlayers(p2p).length < 2) {
+      if (getPlayers(p2p).length < MIN_PLAYERS) {
         set("error", { message: "Need 2 players to start" });
         publish();
         return;

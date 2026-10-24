@@ -164,6 +164,33 @@ describe("MultiplayerGame disconnect overlay", () => {
     }
   });
 
+  it("speaks of every opponent once a bigger room has emptied", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      mockMp.roomState = {
+        ...roomState,
+        players: [
+          ...roomState.players,
+          {
+            id: "carol",
+            name: "Carol",
+            color: "#10B981",
+            cellsRemaining: 40,
+            completionPercent: 30,
+          },
+        ],
+      };
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(screen.getByText("Opponents disconnected")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("waits a beat before showing, so our own reconnect doesn't flash it", () => {
     // Right after we return from a background tab the opponent's
     // awareness hasn't re-synced yet — a blocking "opponent
@@ -408,6 +435,38 @@ describe("MultiplayerGame rematch", () => {
 
       expect(
         screen.getByRole("button", { name: /waiting for opponent/i }),
+      ).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("waits on the players of a bigger room who have yet to ask", () => {
+    vi.useFakeTimers();
+    try {
+      renderFinished({
+        players: [
+          ...roomState.players,
+          {
+            id: "carol",
+            name: "Carol",
+            color: "#10B981",
+            cellsRemaining: 40,
+            completionPercent: 30,
+          },
+          {
+            id: "dan",
+            name: "Dan",
+            color: "#F59E0B",
+            cellsRemaining: 50,
+            completionPercent: 20,
+          },
+        ],
+        rematchVotes: ["me", "opp"],
+      });
+
+      expect(
+        screen.getByRole("button", { name: "Waiting for Carol & Dan…" }),
       ).toBeDisabled();
     } finally {
       vi.useRealTimers();

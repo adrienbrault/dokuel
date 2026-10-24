@@ -2,7 +2,7 @@ import { Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
-import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
+import { DIFFICULTY_OPTIONS, MAX_ROOM_PLAYERS } from "../lib/constants.ts";
 import { describeDigitStyle } from "../lib/digit-style.ts";
 import type {
   AssistLevel,
@@ -22,7 +22,7 @@ type LobbyProps = {
   onRename?: (name: string) => void;
   onAssistLevelChange?: (level: AssistLevel) => void;
   onDifficultyChange?: (level: Difficulty) => void;
-  /** Host only: pins one palette for both boards, or frees them with null. */
+  /** Host only: pins one palette for every board, or frees them with null. */
   onDigitStyleChange?: (style: DigitStyle | null) => void;
   onStart: () => void;
   onBack: () => void;
@@ -39,11 +39,9 @@ export function Lobby({
   onBack,
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
-  // >= not ===: a concurrent-join merge can briefly hold a third entry
-  // until the overflow client evicts itself — the seated pair must
-  // still be able to start.
   const canStart = roomState.players.length >= 2;
   const waiting = roomState.players.length < 2;
+  const openSeats = MAX_ROOM_PLAYERS - roomState.players.length;
   const pinnedStyle = roomState.digitStyle;
   // Overridden by the room's pick when there is one, so the pickers
   // below show what the guest will actually see; otherwise they show
@@ -210,6 +208,13 @@ export function Lobby({
             </span>
           </div>
         )}
+        {!waiting && openSeats > 0 && (
+          <div className="flex items-center justify-center py-3 rounded-xl border-2 border-dashed border-border-default">
+            <span className="text-sm text-text-muted">
+              Room for {openSeats} more {openSeats === 1 ? "player" : "players"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 w-full">
@@ -240,7 +245,7 @@ export function Lobby({
                   : null,
               )
             }
-            label="Same digits for both"
+            label="Same digits for everyone"
           />
           {pinnedStyle !== null && (
             <>

@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { MAX_ROOM_PLAYERS } from "../lib/constants.ts";
 import { findEmojiTheme } from "../lib/emoji-themes.ts";
 import { parseReplay, type ReplayFrame } from "../lib/replay.ts";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
@@ -73,8 +74,11 @@ export function initializeRoom(
   });
 }
 
-/** 1v1: a room holds exactly two players. */
-export const MAX_PLAYERS = 2;
+/** A room races two to four players. */
+export const MAX_PLAYERS = MAX_ROOM_PLAYERS;
+
+/** Fewer than this and there is nobody to race. */
+export const MIN_PLAYERS = 2;
 
 export function joinRoom(
   room: P2PRoom,
@@ -105,7 +109,7 @@ export function joinRoom(
 /**
  * Remove a player's entry. Used by the overflow client after a
  * concurrent-join merge left more than MAX_PLAYERS entries: deleting
- * itself returns the room to a startable two-player lobby.
+ * itself returns the room to a startable lobby with no ghost seat.
  */
 export function leaveRoom(room: P2PRoom, playerId: string): void {
   const players = room.doc.getMap("players");

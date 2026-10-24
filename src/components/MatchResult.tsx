@@ -22,11 +22,18 @@ export type NextGame = {
   /** Host only: omitted, the next difficulty is shown read-only. */
   onDifficultyChange?: ((level: Difficulty) => void) | undefined;
   onRematch: () => void;
+  /** Who has yet to ask, in a room bigger than two. */
+  waitingFor?: string | undefined;
+  /** Who already asked, in a room bigger than two. */
+  askedBy?: string | undefined;
 };
 
 type MatchResultProps = {
   won: boolean;
+  /** Every other player, as one readable list. */
   opponentName: string;
+  /** Who finished first; falls back to the opponent in a 1v1. */
+  winnerName?: string | undefined;
   /** Our finish time, null when the opponent won before we finished. */
   time: string | null;
   /** How much of our board we filled; shown when there is no time. */
@@ -52,6 +59,7 @@ type MatchResultProps = {
 export function MatchResult({
   won,
   opponentName,
+  winnerName,
   time,
   progressPercent,
   difficulty,
@@ -100,7 +108,7 @@ export function MatchResult({
             {won ? "🎉" : "👏"}
           </span>
           <h2 id="match-result-title" className="heading">
-            {won ? "You won!" : `${opponent} won`}
+            {won ? "You won!" : `${winnerName || opponent} won`}
           </h2>
           <span
             className={`text-xs font-bold px-3 py-1 rounded-full ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}
@@ -157,7 +165,7 @@ export function MatchResult({
         <div className="flex flex-col gap-3 w-full">
           {rematch === "invited" && (
             <p className="text-sm font-semibold text-accent text-center animate-modal-content">
-              {opponent} wants a rematch!
+              {next.askedBy || opponent} wants a rematch!
             </p>
           )}
           <button
@@ -171,7 +179,7 @@ export function MatchResult({
             disabled={rematch === "waiting"}
           >
             {rematch === "waiting"
-              ? `Waiting for ${opponent}…`
+              ? `Waiting for ${next.waitingFor || opponent}…`
               : rematch === "invited"
                 ? "Accept rematch"
                 : "Rematch"}

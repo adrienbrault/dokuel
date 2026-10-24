@@ -78,17 +78,18 @@ describe("p2p-room", () => {
       expect(p1.get("color")).not.toBe(p2.get("color"));
     });
 
-    it("does not add a third player to a full room", () => {
-      // Spec: 1v1 rooms hold two players; a third joiner gets the
-      // "Game is full" screen. Without the cap the Start button's
-      // players.length === 2 check could never pass again.
+    it("does not add a fifth player to a full room", () => {
+      // Spec: rooms hold up to four players; a fifth joiner gets the
+      // "Game is full" screen.
       const room = createTestRoom();
       joinRoom(room, "player1", "Alice");
       joinRoom(room, "player2", "Bob");
       joinRoom(room, "player3", "Carol");
+      joinRoom(room, "player4", "Dan");
+      joinRoom(room, "player5", "Eve");
 
-      expect(getPlayers(room)).toHaveLength(2);
-      expect(room.doc.getMap("players").has("player3")).toBe(false);
+      expect(getPlayers(room)).toHaveLength(4);
+      expect(room.doc.getMap("players").has("player5")).toBe(false);
     });
 
     it("still recognizes an already-joined player when the room is full", () => {

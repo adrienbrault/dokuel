@@ -1,5 +1,6 @@
 import { type ComponentProps, useState } from "react";
 import type { ReplayFrame } from "../lib/replay.ts";
+import { pickReplayOpponent } from "../lib/replay-opponent.ts";
 import type { Player } from "../lib/types.ts";
 import { MatchReplay, type ReplayPlayer } from "./MatchReplay.tsx";
 import { MatchResult } from "./MatchResult.tsx";
@@ -78,7 +79,7 @@ export function replayPlayers(
   gameOver: { winnerId: string },
 ): [ReplayPlayer, ReplayPlayer] {
   const me = players.find((p) => p.id === playerId);
-  const opponent = players.find((p) => p.id !== playerId);
+  const opponent = pickReplayOpponent(players, playerId, gameOver.winnerId);
   const opponentId = opponent?.id ?? "";
   return [
     {

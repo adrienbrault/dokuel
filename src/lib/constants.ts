@@ -38,3 +38,6 @@ export const ASSIST_LEVEL_LABELS: Record<AssistLevel, string> = {
   standard: "Standard",
   full: "Full",
 };
+
+/** How many players one multiplayer room races. */
+export const MAX_ROOM_PLAYERS = 4;

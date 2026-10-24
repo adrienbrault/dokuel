@@ -31,7 +31,7 @@ function baseProps() {
     playerId: "p1",
     difficulty: "easy" as const,
     opponentName: "Brave Otter",
-    opponentProgress: null,
+    opponents: [],
     opponentDisconnected: false,
     gameOver: null,
     onProgress: vi.fn(),
@@ -666,6 +666,44 @@ describe("MultiplayerBoard after opponent wins", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("shows one progress bar per opponent in a room of four", () => {
+    localStorage.clear();
+    render(
+      <MultiplayerBoard
+        {...baseProps()}
+        opponents={[
+          { id: "p2", name: "Bob", color: "#EF4444", completionPercent: 40 },
+          { id: "p3", name: "Carol", color: "#10B981", completionPercent: 25 },
+          { id: "p4", name: "Dan", color: "#F59E0B", completionPercent: 10 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Bob")).toBeTruthy();
+    expect(screen.getByText("Carol")).toBeTruthy();
+    expect(screen.getByText("Dan")).toBeTruthy();
+    expect(screen.getByText("25%")).toBeTruthy();
+  });
+
+  it("credits the player who asked for a rematch in the banner", () => {
+    render(
+      <MultiplayerBoard
+        {...baseProps()}
+        gameOver={{ winnerId: "p2", winnerName: "Bob" }}
+        next={{
+          rematch: "invited",
+          difficulty: "easy",
+          onRematch: vi.fn(),
+          askedBy: "Carol",
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/wants a rematch/).textContent).toBe(
+      "Carol wants a rematch.",
+    );
   });
 
   it("shows a banner with the winner's name while the loser keeps playing", () => {

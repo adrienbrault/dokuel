@@ -17,6 +17,7 @@ import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
 import { GameLayout } from "./GameLayout.tsx";
 import type { NextGame } from "./MatchResult.tsx";
+import type { OpponentBar } from "./MultiplayerHeaderExtra.tsx";
 import { MultiplayerHeaderExtra } from "./MultiplayerHeaderExtra.tsx";
 import {
   MultiplayerResult,
@@ -53,10 +54,8 @@ export type MultiplayerBoardProps = {
   /** Resolved at render time from the room's player list. Empty string is
    *  tolerated for the rare case of a winner-without-known-opponent. */
   opponentName: string;
-  opponentProgress: {
-    cellsRemaining: number;
-    completionPercent: number;
-  } | null;
+  /** Everyone else in the room, in seat order. */
+  opponents: OpponentBar[];
   opponentDisconnected: boolean;
   gameOver: { winnerId: string; winnerName: string } | null;
   /** The palette the room pins for both boards, null when each keeps
@@ -82,7 +81,7 @@ export function MultiplayerBoard({
   difficulty,
   assistLevel = "standard",
   opponentName,
-  opponentProgress,
+  opponents,
   opponentDisconnected,
   gameOver,
   digitStyle,
@@ -279,10 +278,11 @@ export function MultiplayerBoard({
           gameOver={gameOver}
           iFinished={iFinished}
           showOpponentProgress={showOpponentProgress}
-          opponentProgress={opponentProgress}
+          opponents={opponents}
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
           rematch={next.rematch}
+          askedBy={next.askedBy}
           onShowResult={result.bringBack}
         />
       }
@@ -293,6 +293,7 @@ export function MultiplayerBoard({
             key={gameNumber}
             won={iWon}
             opponentName={opponentName}
+            winnerName={gameOver.winnerName}
             time={iFinished ? formatTime(timerSecondsRef.current) : null}
             progressPercent={myPercent}
             difficulty={difficulty}

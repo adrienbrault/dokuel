@@ -110,6 +110,8 @@ export function sceneLabel(scene: string): string {
     "multiplayer-rematch-invite": "Multiplayer · rematch invite",
     "multiplayer-rematch-waiting-dark": "Multiplayer · rematch waiting (dark)",
     "stats-replay": "Stats · duel replay",
+    "multiplayer-four-lobby": "Four players · lobby",
+    "multiplayer-four-race": "Four players · race bars",
   };
   return overrides[scene] ?? titleCase(scene);
 }

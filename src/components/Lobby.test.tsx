@@ -62,11 +62,7 @@ describe("Lobby", () => {
     expect(startBtn).not.toBeDisabled();
   });
 
-  it("keeps start enabled when an overflow merge briefly leaves three entries", () => {
-    // A concurrent-join race can merge to 3 players until the overflow
-    // client evicts itself. The two seated players must still be able
-    // to start — === 2 would brick the lobby if the eviction never
-    // arrives (overflow player closed the tab).
+  it("keeps start enabled for a three-player room", () => {
     const state: RoomState = {
       ...BASE_STATE,
       players: [
@@ -92,6 +88,27 @@ describe("Lobby", () => {
 
     const startBtn = screen.getByRole("button", { name: /start/i });
     expect(startBtn).not.toBeDisabled();
+  });
+
+  it("tells a two-player lobby that two more can still join", () => {
+    const state: RoomState = {
+      ...BASE_STATE,
+      players: [
+        ...BASE_STATE.players,
+        {
+          id: "p2",
+          name: "Bob",
+          color: "#EF4444",
+          cellsRemaining: 81,
+          completionPercent: 0,
+        },
+      ],
+    };
+
+    render(<Lobby roomState={state} onStart={vi.fn()} onBack={vi.fn()} />);
+
+    expect(screen.getByText("Room for 2 more players")).toBeInTheDocument();
+    expect(screen.queryByText(/waiting for opponent/i)).toBeNull();
   });
 
   it("shows start button enabled for non-host when two players present", () => {

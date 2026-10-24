@@ -14,6 +14,8 @@ function renderResult(
     difficulty: nextDifficulty = "medium",
     onDifficultyChange,
     onRematch = vi.fn(),
+    waitingFor,
+    askedBy,
     ...rest
   } = overrides;
   const props: Props = {
@@ -31,6 +33,8 @@ function renderResult(
       difficulty: nextDifficulty,
       onDifficultyChange,
       onRematch,
+      waitingFor,
+      askedBy,
     },
   };
   render(<MatchResult {...props} />);
@@ -65,6 +69,20 @@ describe("MatchResult", () => {
     expect(onKeepSolving).toHaveBeenCalledOnce();
   });
 
+  it("names the winner, not every opponent, in a bigger room", () => {
+    renderResult({
+      won: false,
+      time: null,
+      opponentName: "Bob, Carol & Dan",
+      winnerName: "Carol",
+    });
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Carol won");
+    expect(screen.getByLabelText("Score")).toHaveTextContent(
+      "vs Bob, Carol & Dan",
+    );
+  });
+
   it("asks for a rematch with the primary action", async () => {
     const props = renderResult({});
 
@@ -80,6 +98,28 @@ describe("MatchResult", () => {
     expect(
       screen.getByRole("button", { name: /waiting for bob/i }),
     ).toBeDisabled();
+  });
+
+  it("names only the players a bigger room still waits on", () => {
+    renderResult({
+      rematch: "waiting",
+      opponentName: "Bob, Carol & Dan",
+      waitingFor: "Dan",
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Waiting for Dan…" }),
+    ).toBeDisabled();
+  });
+
+  it("names who asked for the rematch in a bigger room", () => {
+    renderResult({
+      rematch: "invited",
+      opponentName: "Bob, Carol & Dan",
+      askedBy: "Carol",
+    });
+
+    expect(screen.getByText("Carol wants a rematch!")).toBeInTheDocument();
   });
 
   it("says when the opponent seems gone while we wait", () => {
