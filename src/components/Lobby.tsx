@@ -8,6 +8,7 @@ import type {
   AssistLevel,
   Difficulty,
   DigitStyle,
+  RoomMode,
   RoomState,
 } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
@@ -25,6 +26,8 @@ type LobbyProps = {
   onDifficultyChange?: (level: Difficulty) => void;
   /** Host only: pins one palette for every board, or frees them with null. */
   onDigitStyleChange?: (style: DigitStyle | null) => void;
+  /** Host only: free-for-all or two teams of two. */
+  onModeChange?: (mode: RoomMode) => void;
   onStart: () => void;
   onBack: () => void;
 };
@@ -36,6 +39,7 @@ export function Lobby({
   onAssistLevelChange,
   onDifficultyChange,
   onDigitStyleChange,
+  onModeChange,
   onStart,
   onBack,
 }: LobbyProps) {
@@ -111,6 +115,24 @@ export function Lobby({
         playerId={playerId}
         onRename={onRename}
       />
+
+      {isHost && onModeChange ? (
+        <div className="w-full">
+          <ToggleSwitch
+            checked={roomState.mode === "teams"}
+            onChange={() =>
+              onModeChange(roomState.mode === "teams" ? "ffa" : "teams")
+            }
+            label="2v2 teams"
+          />
+        </div>
+      ) : (
+        roomState.mode === "teams" && (
+          <p className="caption w-full">
+            2v2 teams: two players share each board
+          </p>
+        )
+      )}
 
       <div className="flex flex-col gap-2 w-full">
         <span className="label">Difficulty</span>
