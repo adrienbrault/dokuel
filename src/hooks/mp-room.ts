@@ -22,6 +22,7 @@ import {
   getPlayers,
   getReplays,
   getRoomState,
+  getTeamCells,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
@@ -36,7 +37,9 @@ import {
   setDigitStyle as setRoomDigitStyle,
   setMode as setRoomMode,
   setTeam as setRoomTeam,
+  setTeamCell,
   startGame,
+  type TeamCells,
   updatePlayerName,
   updateProgress,
   voteRematch,
@@ -123,6 +126,11 @@ export type RoomProjection = {
    * over from the previous game is never shown for this one.
    */
   replays: Readonly<Record<string, ReplayFrame[]>>;
+  /**
+   * Our team's shared board for the current game, or null outside a
+   * teams game (or before we picked a side).
+   */
+  teamCells: TeamCells | null;
 };
 
 const NO_REPLAYS: RoomProjection["replays"] = Object.freeze({});
@@ -138,6 +146,7 @@ export const INITIAL_PROJECTION: RoomProjection = {
   roomFull: false,
   error: null,
   replays: NO_REPLAYS,
+  teamCells: null,
 };
 
 /**
@@ -210,6 +219,8 @@ export type Room = {
   setMode(mode: RoomMode): void;
   /** Pick our side for a teams game. */
   setTeam(team: Team): void;
+  /** Place or clear a digit on our team's shared board. */
+  setCell(index: number, value: number | null): void;
   /** Pin both boards to one palette, or null to free them again. */
   setDigitStyle(style: DigitStyle | null): void;
   /**
@@ -262,6 +273,8 @@ export function createRoom({
   let lastRoomStateJson: string | undefined;
   // Same guard for replays, which live outside the room state.
   let lastReplaysJson = "{}";
+  // And for our team's shared board.
+  let lastTeamCellsJson = "null";
   let lastGameNumber = 0;
   // The puzzle latched for lastGameNumber — lets the projection spot a
   // same-number/different-puzzle merge after a start collision.
@@ -441,6 +454,26 @@ export function createRoom({
     return true;
   }
 
+  function ourTeam(): Team | null {
+    const state = getRoomState(p2p);
+    if (state?.mode !== "teams") return null;
+    return state.players.find((p) => p.id === playerId)?.team ?? null;
+  }
+
+  /** Same reporting contract as trackReplays. */
+  function trackTeamCells(): boolean {
+    const team = ourTeam();
+    const next =
+      team && lastGameNumber > 0
+        ? getTeamCells(p2p, team, lastGameNumber)
+        : null;
+    const json = JSON.stringify(next);
+    if (json === lastTeamCellsJson) return false;
+    lastTeamCellsJson = json;
+    set("teamCells", next);
+    return true;
+  }
+
   function project(): void {
     const state = getRoomState(p2p);
     // Live peer state beat the snapshot to it — drop the snapshot.
@@ -453,7 +486,8 @@ export function createRoom({
     // is ~1KB) keeps identity stable across no-op fires.
     const stateJson = JSON.stringify(state);
     if (stateJson === lastRoomStateJson) {
-      if (trackReplays()) publish();
+      const replaysMoved = trackReplays();
+      if (trackTeamCells() || replaysMoved) publish();
       return;
     }
     lastRoomStateJson = stateJson;
@@ -467,6 +501,7 @@ export function createRoom({
       settleSeat(state);
     }
     trackReplays();
+    trackTeamCells();
     publish();
     if (state?.hostId === playerId) dealRematchIfAgreed();
   }
@@ -618,6 +653,11 @@ export function createRoom({
     },
     setTeam(team) {
       setRoomTeam(p2p, playerId, team);
+    },
+    setCell(index, value) {
+      const team = ourTeam();
+      if (!team || lastGameNumber === 0) return;
+      setTeamCell(p2p, team, lastGameNumber, index, value);
     },
     setDigitStyle(style) {
       setRoomDigitStyle(p2p, style);

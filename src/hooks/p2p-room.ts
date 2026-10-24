@@ -376,6 +376,58 @@ function getRematchVotes(
   return votes.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
+/**
+ * A team's shared board: the digit each cell holds, null where empty.
+ * Givens are not in here; only what the team placed.
+ */
+export type TeamCells = (number | null)[];
+
+/**
+ * Place (or, with null, clear) a digit on a team's shared board. One
+ * key per cell, so teammates filling different cells at once both
+ * land; the same cell resolves last-writer-wins. Tagged with the game
+ * it was placed in, so a rematch starts every team from a blank board.
+ */
+export function setTeamCell(
+  room: P2PRoom,
+  team: Team,
+  gameNumber: number,
+  index: number,
+  value: number | null,
+): void {
+  room.doc.transact(() => {
+    room.doc
+      .getMap("teamCells")
+      .set(`${team}:${index}`, { game: gameNumber, value });
+  });
+}
+
+/** A team's board for `gameNumber`, ignoring anything malformed. */
+export function getTeamCells(
+  room: P2PRoom,
+  team: Team,
+  gameNumber: number,
+): TeamCells {
+  const cells: TeamCells = Array(81).fill(null);
+  for (const [key, raw] of room.doc.getMap("teamCells")) {
+    const [owner, at] = key.split(":");
+    const index = Number(at);
+    if (owner !== team || !Number.isInteger(index)) continue;
+    if (index < 0 || index > 80) continue;
+    if (typeof raw !== "object" || raw === null) continue;
+    const { game, value } = raw as { game?: unknown; value?: unknown };
+    if (game !== gameNumber) continue;
+    if (
+      Number.isInteger(value) &&
+      (value as number) >= 1 &&
+      (value as number) <= 9
+    ) {
+      cells[index] = value as number;
+    }
+  }
+  return cells;
+}
+
 export function getRoomStatus(room: P2PRoom): string {
   return room.doc.getMap("room").get("status") as string;
 }
@@ -461,13 +513,16 @@ export function observeRoomChanges(
   const roomMap = room.doc.getMap("room");
   const playersMap = room.doc.getMap("players");
   const rematchMap = room.doc.getMap("rematch");
+  const teamCellsMap = room.doc.getMap("teamCells");
   roomMap.observe(callback);
   playersMap.observeDeep(callback);
   rematchMap.observe(callback);
+  teamCellsMap.observe(callback);
   return () => {
     roomMap.unobserve(callback);
     playersMap.unobserveDeep(callback);
     rematchMap.unobserve(callback);
+    teamCellsMap.unobserve(callback);
   };
 }
 
