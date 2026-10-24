@@ -142,6 +142,27 @@ settings popover):
   a lone opponent shows as "Opponent", bigger rooms show one bar per
   player with their name and color
 
+### 2v2 Teams
+- The host flips the lobby's "2v2 teams" switch; each player then picks
+  Team A or Team B for their own seat. Start stays disabled (and the
+  room refuses to deal) until it is exactly two against two
+- Teammates play one shared board: digits placed or erased by either
+  land on both screens (one Yjs key per cell, last writer wins on the
+  same cell, tagged with the game number so a rematch starts blank).
+  Notes stay personal
+- Undo takes back only our own moves; a teammate's digits never enter
+  our undo history (undoing a move whose cell the teammate has since
+  changed still restores our previous value)
+- The other team shows as one named progress bar; the result names the
+  whole winning team, and a win claimed by either teammate counts for
+  both, in the result and the match history
+- The replay sets us against a rival's board, never our teammate's
+- Teams persist across rematches; switching back to free-for-all
+  ignores them
+- Known limit: the disconnect banner and forfeit claim only arm when
+  every other player is gone, so a reachable teammate keeps them off
+  even if both rivals left
+
 ## Game Board
 
 ### Interactions
