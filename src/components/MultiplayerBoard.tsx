@@ -282,6 +282,7 @@ export function MultiplayerBoard({
           opponentDisconnected={opponentDisconnected}
           myPercent={myPercent}
           rematch={next.rematch}
+          askedBy={next.askedBy}
           onShowResult={result.bringBack}
         />
       }

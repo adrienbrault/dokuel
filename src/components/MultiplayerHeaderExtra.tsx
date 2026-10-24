@@ -18,6 +18,8 @@ type MultiplayerHeaderExtraProps = {
   myPercent: number;
   /** Where the rematch handshake stands from our side. */
   rematch?: RematchState | undefined;
+  /** Who asked for the rematch, when it is not simply the winner. */
+  askedBy?: string | undefined;
   /** Brings back the result a loser set aside to keep solving. */
   onShowResult?: (() => void) | undefined;
 };
@@ -30,6 +32,7 @@ export function MultiplayerHeaderExtra({
   opponentDisconnected,
   myPercent,
   rematch = "idle",
+  askedBy,
   onShowResult,
 }: MultiplayerHeaderExtraProps) {
   if (gameOver && !iFinished) {
@@ -38,7 +41,9 @@ export function MultiplayerHeaderExtra({
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-bg-raised border border-border-default text-sm text-text-secondary">
           <p className="flex-1">
             <span className="font-semibold text-text-primary">
-              {gameOver.winnerName}
+              {rematch === "invited"
+                ? askedBy || gameOver.winnerName
+                : gameOver.winnerName}
             </span>{" "}
             {rematch === "invited"
               ? "wants a rematch."
