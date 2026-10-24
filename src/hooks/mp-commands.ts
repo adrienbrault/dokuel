@@ -1,6 +1,12 @@
 import { type RefObject, useCallback } from "react";
 import type { ReplayFrame } from "../lib/replay.ts";
-import type { AssistLevel, Difficulty, DigitStyle } from "../lib/types.ts";
+import type {
+  AssistLevel,
+  Difficulty,
+  DigitStyle,
+  RoomMode,
+  Team,
+} from "../lib/types.ts";
 import type { Connection } from "./mp-connection.ts";
 import type { Room } from "./mp-room.ts";
 
@@ -92,6 +98,27 @@ export function useRoomCommands({
     [roomRef],
   );
 
+  const setMode = useCallback(
+    (mode: RoomMode) => {
+      roomRef.current?.setMode(mode);
+    },
+    [roomRef],
+  );
+
+  const setTeam = useCallback(
+    (team: Team) => {
+      roomRef.current?.setTeam(team);
+    },
+    [roomRef],
+  );
+
+  const sendTeamCell = useCallback(
+    (index: number, value: number | null) => {
+      roomRef.current?.setCell(index, value);
+    },
+    [roomRef],
+  );
+
   const sendReplay = useCallback(
     (frames: ReplayFrame[]) => {
       roomRef.current?.publishReplay(frames);
@@ -110,5 +137,8 @@ export function useRoomCommands({
     setAssistLevel,
     setDigitStyle,
     setDifficulty,
+    setMode,
+    setTeam,
+    sendTeamCell,
   };
 }
