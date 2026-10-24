@@ -5,13 +5,13 @@ import { useMultiplayerAutosave } from "../hooks/useMultiplayerAutosave.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
+import { useRaceReporting } from "../hooks/useRaceReporting.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
 import { useReplayRecorder } from "../hooks/useReplayRecorder.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
-import { serializeBoard } from "../lib/board-engine.ts";
 import { formatTime } from "../lib/format.ts";
 import { loadGame, MULTIPLAYER_KEY_PREFIX } from "../lib/game-storage.ts";
-import type { AssistLevel, Cell, DigitStyle } from "../lib/types.ts";
+import type { AssistLevel, DigitStyle } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -130,7 +130,6 @@ export function MultiplayerBoard({
     useOpponentProgressVisible();
   const initialTimerSeconds = saved?.timer ?? 0;
   const timerSecondsRef = useRef(initialTimerSeconds);
-  const prevCellsRef = useRef(game.cellsRemaining);
   const revealed = useDelayedFlag(true, 600);
   const iWon = gameOver?.winnerId === playerId;
   const iFinished = iWon || game.status === "completed";
@@ -142,26 +141,14 @@ export function MultiplayerBoard({
     finished: iFinished,
   });
 
-  const myPercent = useMemo(() => {
-    const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-    const filled = total - game.cellsRemaining;
-    return total > 0 ? Math.round((filled / total) * 100) : 0;
-  }, [game.cellsRemaining, puzzle]);
-
-  // Send progress when cells change
-  useEffect(() => {
-    if (prevCellsRef.current !== game.cellsRemaining) {
-      prevCellsRef.current = game.cellsRemaining;
-      onProgress(game.cellsRemaining, myPercent);
-    }
-  }, [game.cellsRemaining, onProgress, myPercent]);
-
-  // Check completion — the claim ships the actual filled board so the
-  // opponent's client can verify it against the room's solution.
-  useEffect(() => {
-    if (game.status !== "completed") return;
-    onComplete(serializeBoard(game.board as Cell[][]).values);
-  }, [game.status, game.board, onComplete]);
+  const myPercent = useRaceReporting({
+    puzzle,
+    board: game.board,
+    status: game.status,
+    cellsRemaining: game.cellsRemaining,
+    onProgress,
+    onComplete,
+  });
 
   useMultiplayerAutosave({
     gameKey,
