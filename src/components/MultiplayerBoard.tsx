@@ -292,6 +292,7 @@ export function MultiplayerBoard({
             key={gameNumber}
             won={iWon}
             opponentName={opponentName}
+            winnerName={gameOver.winnerName}
             time={iFinished ? formatTime(timerSecondsRef.current) : null}
             progressPercent={myPercent}
             difficulty={difficulty}

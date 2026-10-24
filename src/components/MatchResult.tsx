@@ -26,7 +26,10 @@ export type NextGame = {
 
 type MatchResultProps = {
   won: boolean;
+  /** Every other player, as one readable list. */
   opponentName: string;
+  /** Who finished first; falls back to the opponent in a 1v1. */
+  winnerName?: string | undefined;
   /** Our finish time, null when the opponent won before we finished. */
   time: string | null;
   /** How much of our board we filled; shown when there is no time. */
@@ -52,6 +55,7 @@ type MatchResultProps = {
 export function MatchResult({
   won,
   opponentName,
+  winnerName,
   time,
   progressPercent,
   difficulty,
@@ -100,7 +104,7 @@ export function MatchResult({
             {won ? "🎉" : "👏"}
           </span>
           <h2 id="match-result-title" className="heading">
-            {won ? "You won!" : `${opponent} won`}
+            {won ? "You won!" : `${winnerName || opponent} won`}
           </h2>
           <span
             className={`text-xs font-bold px-3 py-1 rounded-full ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}
