@@ -11,6 +11,7 @@ import type {
   RoomMode,
   RoomState,
   Team,
+  TeamCells,
 } from "../lib/types.ts";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 
@@ -375,12 +376,6 @@ function getRematchVotes(
   }
   return votes.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
-
-/**
- * A team's shared board: the digit each cell holds, null where empty.
- * Givens are not in here; only what the team placed.
- */
-export type TeamCells = (number | null)[];
 
 /**
  * Place (or, with null, clear) a digit on a team's shared board. One

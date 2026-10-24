@@ -142,6 +142,12 @@ export type RoomMode = "ffa" | "teams";
 
 export type Team = "a" | "b";
 
+/**
+ * A team's shared board: the digit each cell holds, null where empty.
+ * Indexed row * 9 + col. Givens read null; only placed digits count.
+ */
+export type TeamCells = (number | null)[];
+
 export type Player = {
   id: string;
   name: string;

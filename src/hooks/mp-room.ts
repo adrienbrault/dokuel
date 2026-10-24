@@ -8,6 +8,7 @@ import type {
   RoomMode,
   RoomState,
   Team,
+  TeamCells,
 } from "../lib/types.ts";
 import {
   clearSnapshot,
@@ -39,7 +40,6 @@ import {
   setTeam as setRoomTeam,
   setTeamCell,
   startGame,
-  type TeamCells,
   updatePlayerName,
   updateProgress,
   voteRematch,

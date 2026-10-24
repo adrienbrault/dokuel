@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { TeamCells } from "./p2p-room.ts";
+import type { TeamCells } from "../lib/types.ts";
 import { useSudoku } from "./useSudoku.ts";
 import { useTeamBoardSync } from "./useTeamBoardSync.ts";
 
