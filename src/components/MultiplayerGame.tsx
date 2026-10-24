@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useArchiveMatchReplay } from "../hooks/useArchiveMatchReplay.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
+import { formatNameList } from "../lib/format.ts";
 import type { Difficulty, DigitStyle, Player } from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 import type { RematchState } from "./MatchResult.tsx";
@@ -120,13 +121,17 @@ export function MultiplayerGame({
   // the local board state (cells, notes, progress) lives in
   // MultiplayerBoard and would be wiped by an unmount.
   if (mp.hasStartedGame && mp.puzzle) {
-    const opponent = mp.roomState?.players.find((p) => p.id !== playerId);
+    const opponents = lastOpponents.current;
     const votes = mp.roomState?.rematchVotes ?? [];
+    const asked = opponents.filter((p) => votes.includes(p.id));
     const rematch: RematchState = votes.includes(playerId)
       ? "waiting"
-      : opponent && votes.includes(opponent.id)
+      : asked.length > 0
         ? "invited"
         : "idle";
+    // A 1v1 keeps its plain "Opponent" wording; only a bigger room has
+    // to spell out who is in and who is not.
+    const crowd = opponents.length > 1;
     return (
       <>
         <MultiplayerBoard
@@ -137,7 +142,7 @@ export function MultiplayerGame({
           playerId={playerId}
           difficulty={gameDifficulty.current?.level ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
-          opponentName={opponent?.name ?? ""}
+          opponentName={formatNameList(opponents.map((p) => p.name))}
           opponents={lastOpponents.current}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
@@ -159,6 +164,16 @@ export function MultiplayerGame({
             difficulty: mp.roomState?.difficulty ?? "medium",
             onDifficultyChange: isHost.current ? mp.setDifficulty : undefined,
             onRematch: mp.sendRematch,
+            waitingFor: crowd
+              ? formatNameList(
+                  opponents
+                    .filter((p) => !votes.includes(p.id))
+                    .map((p) => p.name),
+                )
+              : undefined,
+            askedBy: crowd
+              ? formatNameList(asked.map((p) => p.name))
+              : undefined,
           }}
           onBack={onBack}
         />
