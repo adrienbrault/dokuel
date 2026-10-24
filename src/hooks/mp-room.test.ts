@@ -877,4 +877,18 @@ describe("teams", () => {
 
     expect(room.snapshot().roomState?.mode).toBe("teams");
   });
+
+  it("lets each player pick their own team", () => {
+    const { p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    joinRoom(p2p, "p2", "Bob");
+
+    room.setTeam("b");
+
+    const players = room.snapshot().roomState?.players ?? [];
+    expect(players.map((p) => [p.id, p.team])).toEqual([
+      ["p1", "b"],
+      ["p2", null],
+    ]);
+  });
 });
