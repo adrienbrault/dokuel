@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { ReplayFrame } from "../lib/replay.ts";
 import { saveArchivedReplay } from "../lib/replay-archive.ts";
+import { pickReplayOpponent } from "../lib/replay-opponent.ts";
 import type { Player } from "../lib/types.ts";
 
 type Options = {
@@ -34,7 +35,7 @@ export function useArchiveMatchReplay({
     const mine = replays[playerId];
     if (!gameOver || !puzzle || !mine) return;
     const me = players.find((p) => p.id === playerId);
-    const opponent = players.find((p) => p.id !== playerId);
+    const opponent = pickReplayOpponent(players, playerId, gameOver.winnerId);
     const theirs = opponent ? replays[opponent.id] : undefined;
     saveArchivedReplay({
       roomId,
