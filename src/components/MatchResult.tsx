@@ -22,6 +22,10 @@ export type NextGame = {
   /** Host only: omitted, the next difficulty is shown read-only. */
   onDifficultyChange?: ((level: Difficulty) => void) | undefined;
   onRematch: () => void;
+  /** Who has yet to ask, in a room bigger than two. */
+  waitingFor?: string | undefined;
+  /** Who already asked, in a room bigger than two. */
+  askedBy?: string | undefined;
 };
 
 type MatchResultProps = {
@@ -175,7 +179,7 @@ export function MatchResult({
             disabled={rematch === "waiting"}
           >
             {rematch === "waiting"
-              ? `Waiting for ${opponent}…`
+              ? `Waiting for ${next.waitingFor || opponent}…`
               : rematch === "invited"
                 ? "Accept rematch"
                 : "Rematch"}
