@@ -137,6 +137,9 @@ export type NumPadGesturePoint = {
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 
+/** Everyone races alone, or two teams of two share a board each. */
+export type RoomMode = "ffa" | "teams";
+
 export type Player = {
   id: string;
   name: string;
@@ -148,6 +151,7 @@ export type Player = {
 export type RoomState = {
   roomId: string;
   status: RoomStatus;
+  mode: RoomMode;
   difficulty: Difficulty;
   assistLevel: AssistLevel;
   hostId: string;

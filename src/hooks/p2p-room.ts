@@ -8,6 +8,7 @@ import type {
   Difficulty,
   DigitStyle,
   Player,
+  RoomMode,
   RoomState,
 } from "../lib/types.ts";
 import type { MpSnapshot } from "./mp-snapshot.ts";
@@ -132,6 +133,12 @@ export function setAssistLevel(room: P2PRoom, level: AssistLevel): void {
 export function setDigitStyle(room: P2PRoom, style: DigitStyle | null): void {
   room.doc.transact(() => {
     room.doc.getMap("room").set("digitStyle", style);
+  });
+}
+
+export function setMode(room: P2PRoom, mode: RoomMode): void {
+  room.doc.transact(() => {
+    room.doc.getMap("room").set("mode", mode);
   });
 }
 
@@ -408,6 +415,8 @@ export function getRoomState(room: P2PRoom): RoomState | null {
   return {
     roomId: room.roomId,
     status: status as RoomState["status"],
+    // Anything but a known mode reads as the default free-for-all.
+    mode: roomMap.get("mode") === "teams" ? "teams" : "ffa",
     difficulty,
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
     hostId: (roomMap.get("hostId") as string) || "",

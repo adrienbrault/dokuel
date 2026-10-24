@@ -11,6 +11,7 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
   return {
     roomId: "room-1",
     status: "playing",
+    mode: "ffa",
     difficulty: "medium",
     assistLevel: "standard",
     hostId: "p1",

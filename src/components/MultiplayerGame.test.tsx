@@ -13,6 +13,7 @@ const SOLUTION =
 const roomState: RoomState = {
   roomId: "test-room",
   status: "playing",
+  mode: "ffa",
   difficulty: "medium",
   assistLevel: "standard",
   hostId: "me",

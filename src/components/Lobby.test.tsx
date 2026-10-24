@@ -7,6 +7,7 @@ import { Lobby } from "./Lobby.tsx";
 const BASE_STATE: RoomState = {
   roomId: "abc123",
   status: "lobby",
+  mode: "ffa",
   difficulty: "medium",
   assistLevel: "standard",
   hostId: "p1",

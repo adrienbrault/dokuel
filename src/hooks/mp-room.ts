@@ -4,6 +4,7 @@ import type {
   AssistLevel,
   Difficulty,
   DigitStyle,
+  RoomMode,
   RoomState,
 } from "../lib/types.ts";
 import {
@@ -31,6 +32,7 @@ import {
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
   setDigitStyle as setRoomDigitStyle,
+  setMode as setRoomMode,
   startGame,
   updatePlayerName,
   updateProgress,
@@ -201,6 +203,8 @@ export type Room = {
   updateName(name: string): void;
   setAssistLevel(level: AssistLevel): void;
   setDifficulty(level: Difficulty): void;
+  /** Free-for-all, or two teams of two sharing a board each. */
+  setMode(mode: RoomMode): void;
   /** Pin both boards to one palette, or null to free them again. */
   setDigitStyle(style: DigitStyle | null): void;
   /**
@@ -597,6 +601,9 @@ export function createRoom({
     },
     setDifficulty(level) {
       setRoomDifficulty(p2p, level);
+    },
+    setMode(mode) {
+      setRoomMode(p2p, mode);
     },
     setDigitStyle(style) {
       setRoomDigitStyle(p2p, style);
