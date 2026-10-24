@@ -120,24 +120,27 @@ settings popover):
 2. Selects difficulty
 3. Lobby opens with shareable link and room code (tap to copy)
 4. User shares link (Web Share API or copy)
-5. When opponent joins, either player can start the game
+5. Up to four players can join; once a second player is in, anyone can
+   start the game (the lobby shows how many seats are still open)
 
 ### Join Game Flow
 1. Recipient opens invite link (`/{roomId}`) — codes are normalized to
    lowercase, so links mangled by messaging apps still land in the room
 2. Joins the lobby directly under their auto-generated name (rename inline)
-3. If room full: "Game is full" screen
+3. If room full (four players already seated): "Game is full" screen
 4. If nothing answers within ~12 seconds: "Still trying to connect…" screen
    with Retry and Back — the room may have ended or the network can't get
    through
 5. Junk paths never open rooms: only room-code-shaped URLs boot the
    multiplayer stack; anything else is a 404 page
 
-### 1v1 Race Mode
-- Both players get the same puzzle
+### Race Mode (2 to 4 players)
+- Every player gets the same puzzle
 - Each has their own separate board
 - First to valid completion wins
-- Live opponent progress visible (completion %), hideable via settings
+- Live opponent progress visible (completion %), hideable via settings;
+  a lone opponent shows as "Opponent", bigger rooms show one bar per
+  player with their name and color
 
 ## Game Board
 
@@ -218,7 +221,9 @@ Gesture model (`tap = enter · hold = note · drag = place`):
 ### Disconnect Handling
 - Opponent disconnect shows a non-blocking status banner — the board stays
   fully playable underneath
-- 60-second countdown, then the remaining player may claim the win
+- 60-second countdown, then the remaining player may claim the win. In a
+  room of three or four the banner (and the claim) only arms once every
+  opponent is gone: a forfeit is never claimed over someone still racing
 - Claim validation: a remote forfeit claim is only honored if this client
   actually witnessed its own absence (connection drop/hidden tab), with a
   2-minute trust window after returning — a fabricated claim from devtools
@@ -229,17 +234,21 @@ Gesture model (`tap = enter · hold = note · drag = place`):
   winner with confetti; the loser sees how far they got
 - "Keep solving" lets a loser who wants to finish set the result aside; a
   banner brings it back, and it returns on its own once their board is done
-- Running score for the room ("2–1 vs Brave Otter"), from the local match
-  history plus the game that just ended
+- Running score for the room ("2–1 vs Brave Otter", or "vs Bob, Carol &
+  Dan" in a bigger room), from the local match history plus the game that
+  just ended; the heading names whoever finished first
 - Rematch is a handshake: the first tap asks ("Waiting for Bob…"), the
   opponent sees "Bob wants a rematch!" and "Accept rematch", and the board
-  is dealt to both once both asked. Votes are per player in their own Yjs
+  is dealt once every seated player asked (in a bigger room the button
+  lists who is still to ask, and the invite names who asked). Votes are per player in their own Yjs
   map (crossing taps both survive), tied to the game number and difficulty
   they were cast for; the vote completing the set deals in the same
   transaction, and the host also deals on seeing all votes
 - The host picks the next game's difficulty right in the result (the guest
   sees it read-only); changing it asks both players to agree again
-- Watch the replay of both boards; "Leave room" goes back to landing
+- Watch the replay of both boards (in a bigger room: ours against the
+  winner, or against the closest finisher when we won); "Leave room" goes
+  back to landing
 - Match recorded to multiplayer history (opponent, outcome, time) shown on
   the Stats screen
 
