@@ -788,6 +788,24 @@ describe("rematch", () => {
     expect(room.snapshot().gameOver).toBeNull();
   });
 
+  it("waits for every seated player in a room of three", () => {
+    const { doc, p2p, room } = setup();
+    initializeRoom(p2p, "p1", "easy");
+    joinRoom(p2p, "p1", "Alice");
+    joinRoom(p2p, "p2", "Bob");
+    joinRoom(p2p, "p3", "Carol");
+    startGame(p2p);
+    const solution = doc.getMap("room").get("solution") as string;
+    claimWinner(p2p, "p2", "Bob", solution);
+    voteRematch(p2p, "p2");
+
+    room.rematch();
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+
+    voteRematch(p2p, "p3");
+    expect(doc.getMap("room").get("gameNumber")).toBe(2);
+  });
+
   it("deals as host when both requests cross on the wire", () => {
     // Neither voter saw the other's vote, so neither dealt: the host
     // is the one who deals on seeing both.
