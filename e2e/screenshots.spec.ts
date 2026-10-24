@@ -134,7 +134,9 @@ test.describe("shared digit style", () => {
     await page.getByRole("button", { name: "Create Game" }).click();
     await page.getByRole("button", { name: "Easy" }).click();
     await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
-    await page.getByRole("switch", { name: "Same digits for everyone" }).click();
+    await page
+      .getByRole("switch", { name: "Same digits for everyone" })
+      .click();
     await page.waitForSelector('[role="radiogroup"][aria-label="Emoji theme"]');
     await page.screenshot({
       path: screenshotPath("multiplayer-digit-style", testInfo.project.name),
@@ -740,6 +742,75 @@ test.describe("multiplayer session", () => {
     expect(new URL(guest.url()).pathname).toBe(`/${roomId}`);
 
     await guest.close();
+  });
+});
+
+// --- Multiplayer: real four-tab session ---
+//
+// Same BroadcastChannel trick as the two-tab session, with a room full
+// of four: the lobby, and race bars for three opponents that
+// stays as short as the 1v1 pair. The result is left to the unit
+// tests: finishing a board with four tabs open costs too much time.
+
+const FOUR_PLAYER_GUESTS = [
+  { sudoku_player_id: "e2e-guest-0002", sudoku_player_name: "Brave Otter" },
+  { sudoku_player_id: "e2e-guest-0003", sudoku_player_name: "Lucky Heron" },
+  { sudoku_player_id: "e2e-guest-0004", sudoku_player_name: "Sunny Lynx" },
+];
+
+test.describe("four-player session", () => {
+  test.use({ storage: HOST_IDENTITY });
+
+  test("multiplayer - four-tab game: lobby and race", async ({
+    page,
+    context,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const project = testInfo.project.name;
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Create Game" }).click();
+    await page.getByRole("button", { name: "Easy" }).click();
+    await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
+    const roomId = new URL(page.url()).pathname.slice(1);
+
+    const guests: Page[] = [];
+    for (const identity of FOUR_PLAYER_GUESTS) {
+      const guest = await context.newPage();
+      await preparePage(guest, identity);
+      await guest.goto(`/${roomId}`);
+      await guest.getByRole("heading", { name: "Game Lobby" }).waitFor();
+      await page.getByText(identity.sudoku_player_name).waitFor();
+      guests.push(guest);
+    }
+    await page.screenshot({
+      path: screenshotPath("multiplayer-four-lobby", project),
+    });
+
+    await page.getByRole("button", { name: "Start Game" }).click();
+    for (const tab of [page, ...guests]) {
+      await tab.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+    }
+
+    const puzzle = await readBoard(page);
+    const solution = solvePuzzle(puzzle);
+    if (!solution) throw new Error("started multiplayer puzzle is unsolvable");
+    const empties = [...puzzle].flatMap((ch, i) => (ch === "." ? [i] : []));
+
+    // Spread the race out so every bar lands somewhere different.
+    await fillCells(page, solution, empties.slice(0, 4));
+    const [otter, heron, lynx] = guests as [Page, Page, Page];
+    await fillCells(otter, solution, empties.slice(0, 14));
+    await fillCells(heron, solution, empties.slice(0, 9));
+    await fillCells(lynx, solution, empties.slice(0, 2));
+    await page.getByText("Lucky Heron", { exact: true }).waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-four-race", project),
+    });
+
+    for (const guest of guests) await guest.close();
   });
 });
 
