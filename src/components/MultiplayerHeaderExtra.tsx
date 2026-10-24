@@ -74,7 +74,11 @@ export function MultiplayerHeaderExtra({
 
   if (showOpponentProgress && opponents.length > 0) {
     return (
-      <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
+      // The paired bars give back the bottom margin they would otherwise
+      // push the board down by.
+      <div
+        className={`w-full max-w-[min(100vw-2rem,28rem)] flex flex-col gap-1.5 ${opponents.length > 1 ? "mb-1" : "mb-3"}`}
+      >
         <RaceBars
           opponents={opponents}
           myPercent={myPercent}
@@ -90,7 +94,9 @@ export function MultiplayerHeaderExtra({
 /**
  * Our bar, then one per opponent. A lone opponent keeps the 1v1 look;
  * in a bigger room each bar needs its player's name and color to tell
- * who is ahead.
+ * who is ahead, and the bars pair up two to a row so four of them take
+ * no more height than the 1v1 pair — the smallest phones have none to
+ * spare above the board.
  */
 function RaceBars({
   opponents,
@@ -102,9 +108,14 @@ function RaceBars({
   reconnecting: boolean;
 }) {
   const solo = opponents.length === 1;
-  return (
+  const bars = (
     <>
-      <ProgressBar label="You" percent={myPercent} color="bg-accent" />
+      <ProgressBar
+        label="You"
+        percent={myPercent}
+        color="bg-accent"
+        compact={!solo}
+      />
       {opponents.map((o) => {
         const name = solo ? "Opponent" : o.name;
         return (
@@ -114,9 +125,12 @@ function RaceBars({
             percent={o.completionPercent}
             color={solo ? "bg-opponent" : ""}
             fill={solo ? undefined : o.color}
+            compact={!solo}
           />
         );
       })}
     </>
   );
+  if (solo) return bars;
+  return <div className="grid grid-cols-2 gap-x-4 gap-y-1">{bars}</div>;
 }
