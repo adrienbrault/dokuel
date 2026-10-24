@@ -167,6 +167,8 @@ describe("seats", () => {
     initializeRoom(p2p, "p2", "medium");
     joinRoom(p2p, "p2", "Bob");
     joinRoom(p2p, "p3", "Carol");
+    joinRoom(p2p, "p4", "Dan");
+    joinRoom(p2p, "p5", "Eve");
 
     expect(room.snapshot().roomFull).toBe(true);
   });
@@ -181,19 +183,19 @@ describe("seats", () => {
   });
 
   it("evicts itself from the players map after a concurrent-join overflow", () => {
-    // A concurrent-join merge can leave 3 entries even though joinRoom
+    // A concurrent-join merge can leave 5 entries even though joinRoom
     // capped locally. The overflow player (us, by deterministic seat
-    // sort) must delete its own entry — otherwise the two seated players
-    // stare at a lobby whose Start never enables.
+    // sort) must delete its own entry — otherwise the seated players
+    // stare at a ghost row that can never vote for a rematch.
     const { doc, p2p, room } = setup();
     initializeRoom(p2p, "a1", "medium");
     joinRoom(p2p, "p1", "Alice");
 
-    // The merged remote state: two players whose joinOrder/id sort ahead
-    // of ours ("a1"/"a2" < "p1" at joinOrder 0).
+    // The merged remote state: four players whose joinOrder/id sort
+    // ahead of ours ("a1".."a4" < "p1" at joinOrder 0).
     doc.transact(() => {
       const players = doc.getMap("players");
-      for (const id of ["a1", "a2"]) {
+      for (const id of ["a1", "a2", "a3", "a4"]) {
         const pm = new YMap<unknown>();
         pm.set("name", id);
         pm.set("color", "blue");
@@ -206,7 +208,7 @@ describe("seats", () => {
 
     expect(room.snapshot().roomFull).toBe(true);
     expect(doc.getMap("players").has("p1")).toBe(false);
-    expect(doc.getMap("players").size).toBe(2);
+    expect(doc.getMap("players").size).toBe(4);
   });
 });
 
@@ -490,11 +492,13 @@ describe("setup", () => {
     initializeRoom(p2p, "p2", "medium");
     joinRoom(p2p, "p2", "Bob");
     joinRoom(p2p, "p3", "Carol");
+    joinRoom(p2p, "p4", "Dan");
+    joinRoom(p2p, "p5", "Eve");
 
     room.apply({ type: "local-sync-complete", now: T0 });
 
     expect(room.snapshot().roomFull).toBe(true);
-    expect(room.snapshot().roomState?.players).toHaveLength(2);
+    expect(room.snapshot().roomState?.players).toHaveLength(4);
   });
 });
 
