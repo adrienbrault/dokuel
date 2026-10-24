@@ -1,5 +1,6 @@
 import type { Doc } from "yjs";
 import type { ReplayFrame } from "../lib/replay.ts";
+import { teamsReady } from "../lib/teams.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -576,8 +577,14 @@ export function createRoom({
       claimWinner(p2p, playerId, playerName(), null);
     },
     start() {
-      if (getPlayers(p2p).length < MIN_PLAYERS) {
+      const players = getPlayers(p2p);
+      if (players.length < MIN_PLAYERS) {
         set("error", { message: "Need 2 players to start" });
+        publish();
+        return;
+      }
+      if (getRoomState(p2p)?.mode === "teams" && !teamsReady(players)) {
+        set("error", { message: "Teams need two players each" });
         publish();
         return;
       }
