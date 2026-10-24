@@ -14,6 +14,8 @@ function renderResult(
     difficulty: nextDifficulty = "medium",
     onDifficultyChange,
     onRematch = vi.fn(),
+    waitingFor,
+    askedBy,
     ...rest
   } = overrides;
   const props: Props = {
@@ -31,6 +33,8 @@ function renderResult(
       difficulty: nextDifficulty,
       onDifficultyChange,
       onRematch,
+      waitingFor,
+      askedBy,
     },
   };
   render(<MatchResult {...props} />);
@@ -93,6 +97,18 @@ describe("MatchResult", () => {
 
     expect(
       screen.getByRole("button", { name: /waiting for bob/i }),
+    ).toBeDisabled();
+  });
+
+  it("names only the players a bigger room still waits on", () => {
+    renderResult({
+      rematch: "waiting",
+      opponentName: "Bob, Carol & Dan",
+      waitingFor: "Dan",
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Waiting for Dan…" }),
     ).toBeDisabled();
   });
 
