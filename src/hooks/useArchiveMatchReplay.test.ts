@@ -43,6 +43,30 @@ beforeEach(() => {
 });
 
 describe("useArchiveMatchReplay", () => {
+  it("archives the winner's board in a bigger room", () => {
+    const carol: Player = {
+      id: "p3",
+      name: "Carol",
+      color: "#10B981",
+      cellsRemaining: 0,
+      completionPercent: 100,
+    };
+    renderHook(() =>
+      useArchiveMatchReplay(
+        props({
+          players: [...players, carol],
+          gameOver: { winnerId: "p3" },
+          replays: { p1: [[0, 0, 2]], p2: [[0, 1, 3]], p3: [[0, 2, 4]] },
+        }),
+      ),
+    );
+
+    expect(getArchivedReplay("room-a", 3)?.opponent).toMatchObject({
+      name: "Carol",
+      won: true,
+    });
+  });
+
   it("archives nothing while the game is on", () => {
     renderHook(() =>
       useArchiveMatchReplay(props({ replays: { p1: [[0, 0, 2]] } })),
