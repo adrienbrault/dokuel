@@ -1,19 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_ROOM_PLAYERS } from "../lib/constants.ts";
-import type { RoomState } from "../lib/types.ts";
+import type { RoomState, Team } from "../lib/types.ts";
 
 type LobbyPlayersProps = {
   roomState: RoomState;
   playerId?: string | undefined;
   onRename?: ((name: string) => void) | undefined;
+  onTeamChange?: ((team: Team) => void) | undefined;
 };
+
+const TEAMS: Team[] = ["a", "b"];
+
+function teamLabel(team: Team): string {
+  return `Team ${team.toUpperCase()}`;
+}
 
 /** Who is in the lobby, with our own name editable inline. */
 export function LobbyPlayers({
   roomState,
   playerId,
   onRename,
+  onTeamChange,
 }: LobbyPlayersProps) {
+  const teams = roomState.mode === "teams";
+  const myTeam = roomState.players.find((p) => p.id === playerId)?.team;
   const waiting = roomState.players.length < 2;
   const openSeats = MAX_ROOM_PLAYERS - roomState.players.length;
   const [editingName, setEditingName] = useState(false);
@@ -90,14 +100,37 @@ export function LobbyPlayers({
                 Edit
               </button>
             )}
-            {player.id === roomState.hostId && (
-              <span className="text-xs text-text-muted shrink-0 ml-auto">
-                Host
-              </span>
-            )}
+            <span className="flex gap-2 shrink-0 ml-auto text-xs text-text-muted">
+              {teams && (
+                <span className="font-semibold text-text-secondary">
+                  {player.team ? teamLabel(player.team) : "No team"}
+                </span>
+              )}
+              {player.id === roomState.hostId && <span>Host</span>}
+            </span>
           </div>
         );
       })}
+      {teams && onTeamChange && myTeam !== undefined && (
+        <div
+          role="radiogroup"
+          aria-label="Your team"
+          className="grid grid-cols-2 gap-2"
+        >
+          {TEAMS.map((team) => (
+            <button
+              key={team}
+              type="button"
+              role="radio"
+              aria-checked={myTeam === team}
+              className={`btn btn-md ${myTeam === team ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => onTeamChange(team)}
+            >
+              {teamLabel(team)}
+            </button>
+          ))}
+        </div>
+      )}
       {waiting && (
         <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
           <span className="text-sm text-text-muted">Waiting for opponent</span>

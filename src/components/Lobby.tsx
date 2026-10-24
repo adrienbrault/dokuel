@@ -10,6 +10,7 @@ import type {
   DigitStyle,
   RoomMode,
   RoomState,
+  Team,
 } from "../lib/types.ts";
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { DigitColorPicker } from "./DigitColorPicker.tsx";
@@ -28,6 +29,7 @@ type LobbyProps = {
   onDigitStyleChange?: (style: DigitStyle | null) => void;
   /** Host only: free-for-all or two teams of two. */
   onModeChange?: (mode: RoomMode) => void;
+  onTeamChange?: (team: Team) => void;
   onStart: () => void;
   onBack: () => void;
 };
@@ -40,6 +42,7 @@ export function Lobby({
   onDifficultyChange,
   onDigitStyleChange,
   onModeChange,
+  onTeamChange,
   onStart,
   onBack,
 }: LobbyProps) {
@@ -114,6 +117,7 @@ export function Lobby({
         roomState={roomState}
         playerId={playerId}
         onRename={onRename}
+        onTeamChange={onTeamChange}
       />
 
       {isHost && onModeChange ? (
