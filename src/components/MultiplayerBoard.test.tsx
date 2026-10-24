@@ -687,6 +687,25 @@ describe("MultiplayerBoard after opponent wins", () => {
     expect(screen.getByText("25%")).toBeTruthy();
   });
 
+  it("credits the player who asked for a rematch in the banner", () => {
+    render(
+      <MultiplayerBoard
+        {...baseProps()}
+        gameOver={{ winnerId: "p2", winnerName: "Bob" }}
+        next={{
+          rematch: "invited",
+          difficulty: "easy",
+          onRematch: vi.fn(),
+          askedBy: "Carol",
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/wants a rematch/).textContent).toBe(
+      "Carol wants a rematch.",
+    );
+  });
+
   it("shows a banner with the winner's name while the loser keeps playing", () => {
     const props = {
       ...baseProps(),
