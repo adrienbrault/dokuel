@@ -414,6 +414,38 @@ describe("MultiplayerGame rematch", () => {
     }
   });
 
+  it("waits on the players of a bigger room who have yet to ask", () => {
+    vi.useFakeTimers();
+    try {
+      renderFinished({
+        players: [
+          ...roomState.players,
+          {
+            id: "carol",
+            name: "Carol",
+            color: "#10B981",
+            cellsRemaining: 40,
+            completionPercent: 30,
+          },
+          {
+            id: "dan",
+            name: "Dan",
+            color: "#F59E0B",
+            cellsRemaining: 50,
+            completionPercent: 20,
+          },
+        ],
+        rematchVotes: ["me", "opp"],
+      });
+
+      expect(
+        screen.getByRole("button", { name: "Waiting for Carol & Dan…" }),
+      ).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("sends the host's next difficulty to the room", () => {
     vi.useFakeTimers();
     try {
