@@ -511,3 +511,43 @@ describe("MultiplayerGame rematch", () => {
     }
   });
 });
+
+describe("MultiplayerGame teams", () => {
+  const teamsState: RoomState = {
+    ...roomState,
+    mode: "teams",
+    players: [
+      { ...roomState.players[0]!, team: "a" },
+      { ...roomState.players[1]!, team: "b" },
+      {
+        id: "carol",
+        name: "Carol",
+        color: "#10B981",
+        cellsRemaining: 40,
+        completionPercent: 30,
+        team: "a",
+      },
+      {
+        id: "dan",
+        name: "Dan",
+        color: "#F59E0B",
+        cellsRemaining: 50,
+        completionPercent: 20,
+        team: "b",
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = teamsState;
+  });
+
+  it("races the other team as one bar, without our teammate", () => {
+    renderGame();
+
+    expect(screen.getByText("Opponent & Dan")).toBeInTheDocument();
+    expect(screen.queryByText("Carol")).toBeNull();
+  });
+});
