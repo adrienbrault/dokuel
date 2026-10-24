@@ -286,5 +286,42 @@ describe("Lobby teams", () => {
 
     expect(onTeamChange).toHaveBeenCalledWith("b");
   });
-});
 
+  it("holds Start until the teams are two against two", () => {
+    const player = (id: string, team: "a" | "b" | null) => ({
+      id,
+      name: id,
+      color: "#000000",
+      cellsRemaining: 81,
+      completionPercent: 0,
+      team,
+    });
+    const state: RoomState = {
+      ...BASE_STATE,
+      mode: "teams",
+      players: [
+        player("p1", "a"),
+        player("p2", "a"),
+        player("p3", "b"),
+        player("p4", null),
+      ],
+    };
+
+    const { rerender } = render(
+      <Lobby roomState={state} onStart={vi.fn()} onBack={vi.fn()} />,
+    );
+    expect(screen.getByRole("button", { name: /start/i })).toBeDisabled();
+
+    rerender(
+      <Lobby
+        roomState={{
+          ...state,
+          players: [...state.players.slice(0, 3), player("p4", "b")],
+        }}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /start/i })).toBeEnabled();
+  });
+});
