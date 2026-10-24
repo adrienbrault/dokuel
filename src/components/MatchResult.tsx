@@ -165,7 +165,7 @@ export function MatchResult({
         <div className="flex flex-col gap-3 w-full">
           {rematch === "invited" && (
             <p className="text-sm font-semibold text-accent text-center animate-modal-content">
-              {opponent} wants a rematch!
+              {next.askedBy || opponent} wants a rematch!
             </p>
           )}
           <button
