@@ -117,13 +117,6 @@ export function Lobby({
         </button>
       </div>
 
-      <LobbyPlayers
-        roomState={roomState}
-        playerId={playerId}
-        onRename={onRename}
-        onTeamChange={onTeamChange}
-      />
-
       {isHost && onModeChange ? (
         <div className="w-full">
           <ToggleSwitch
@@ -141,6 +134,13 @@ export function Lobby({
           </p>
         )
       )}
+
+      <LobbyPlayers
+        roomState={roomState}
+        playerId={playerId}
+        onRename={onRename}
+        onTeamChange={onTeamChange}
+      />
 
       <div className="flex flex-col gap-2 w-full">
         <span className="label">Difficulty</span>
