@@ -134,7 +134,7 @@ test.describe("shared digit style", () => {
     await page.getByRole("button", { name: "Create Game" }).click();
     await page.getByRole("button", { name: "Easy" }).click();
     await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
-    await page.getByRole("switch", { name: "Same digits for both" }).click();
+    await page.getByRole("switch", { name: "Same digits for everyone" }).click();
     await page.waitForSelector('[role="radiogroup"][aria-label="Emoji theme"]');
     await page.screenshot({
       path: screenshotPath("multiplayer-digit-style", testInfo.project.name),

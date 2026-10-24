@@ -22,7 +22,7 @@ type LobbyProps = {
   onRename?: (name: string) => void;
   onAssistLevelChange?: (level: AssistLevel) => void;
   onDifficultyChange?: (level: Difficulty) => void;
-  /** Host only: pins one palette for both boards, or frees them with null. */
+  /** Host only: pins one palette for every board, or frees them with null. */
   onDigitStyleChange?: (style: DigitStyle | null) => void;
   onStart: () => void;
   onBack: () => void;
@@ -245,7 +245,7 @@ export function Lobby({
                   : null,
               )
             }
-            label="Same digits for both"
+            label="Same digits for everyone"
           />
           {pinnedStyle !== null && (
             <>

@@ -261,7 +261,7 @@ function SettingsButton({
               </p>
               {digitStyle != null && (
                 <p className="text-xs text-text-muted">
-                  {styleIsTheirs ? "Set by the host" : "Shared with opponent"}
+                  {styleIsTheirs ? "Set by the host" : "Shared with the room"}
                 </p>
               )}
             </div>
