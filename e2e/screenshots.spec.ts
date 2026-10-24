@@ -814,6 +814,86 @@ test.describe("four-player session", () => {
   });
 });
 
+// --- Multiplayer: real four-tab 2v2 session ---
+//
+// Same four tabs, split into two teams of two. The host (Team A with
+// Lucky Heron) sees their teammate's digits land on the shared board
+// and the other team as a single named bar.
+
+test.describe("teams session", () => {
+  test.use({ storage: HOST_IDENTITY });
+
+  test("multiplayer - 2v2 teams: lobby and shared board", async ({
+    page,
+    context,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const project = testInfo.project.name;
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Create Game" }).click();
+    await page.getByRole("button", { name: "Easy" }).click();
+    await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
+    const roomId = new URL(page.url()).pathname.slice(1);
+
+    const guests: Page[] = [];
+    for (const identity of FOUR_PLAYER_GUESTS) {
+      const guest = await context.newPage();
+      await preparePage(guest, identity);
+      await guest.goto(`/${roomId}`);
+      await guest.getByRole("heading", { name: "Game Lobby" }).waitFor();
+      await page.getByText(identity.sudoku_player_name).waitFor();
+      guests.push(guest);
+    }
+    const [otter, heron, lynx] = guests as [Page, Page, Page];
+
+    await page.getByRole("switch", { name: "2v2 teams" }).click();
+    for (const [tab, team] of [
+      [page, "Team A"],
+      [heron, "Team A"],
+      [otter, "Team B"],
+      [lynx, "Team B"],
+    ] as const) {
+      await tab.getByRole("radio", { name: team }).click();
+    }
+    const start = page.getByRole("button", { name: "Start Game" });
+    await expect(start).toBeEnabled();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-teams-lobby", project),
+    });
+
+    await start.click();
+    for (const tab of [page, ...guests]) {
+      await tab.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+    }
+
+    const puzzle = await readBoard(page);
+    const solution = solvePuzzle(puzzle);
+    if (!solution) throw new Error("started multiplayer puzzle is unsolvable");
+    const empties = [...puzzle].flatMap((ch, i) => (ch === "." ? [i] : []));
+
+    // Lucky Heron fills cells the host never touches; they must show up
+    // on the host's board all the same.
+    await fillCells(heron, solution, empties.slice(0, 6));
+    await fillCells(page, solution, empties.slice(6, 9));
+    await fillCells(otter, solution, empties.slice(0, 5));
+    const shared = empties[0]!;
+    await page
+      .locator(
+        `[role="gridcell"][aria-label^="Cell row ${Math.floor(shared / 9) + 1} column ${(shared % 9) + 1}, value ${solution[shared]}"]`,
+      )
+      .waitFor();
+    await page.getByText("Brave Otter & Sunny Lynx").waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-teams-race", project),
+    });
+
+    for (const guest of guests) await guest.close();
+  });
+});
+
 test("solo game - settings popover open", async ({ page }, testInfo) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Start Solo" }).click();
