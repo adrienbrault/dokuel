@@ -291,4 +291,17 @@ describe("APPLY_REMOTE action", () => {
     // Our pencilled 4 in the same row goes, as if we had placed it.
     expect(state.board[0]![3]!.notes.has(4)).toBe(false);
   });
+
+  it("completes the board when a teammate places the last digit", () => {
+    const solved =
+      "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+    let state = initState({ puzzle: `.${solved.slice(1)}`, solution: solved });
+
+    state = reducer(state, {
+      type: "APPLY_REMOTE",
+      cells: [{ index: 0, value: 5 }],
+    });
+
+    expect(state.status).toBe("completed");
+  });
 });
