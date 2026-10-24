@@ -866,3 +866,15 @@ describe("close", () => {
     expect(room.snapshot()).toBe(before);
   });
 });
+
+describe("teams", () => {
+  it("switches the room between free-for-all and 2v2 teams", () => {
+    const { room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    expect(room.snapshot().roomState?.mode).toBe("ffa");
+
+    room.setMode("teams");
+
+    expect(room.snapshot().roomState?.mode).toBe("teams");
+  });
+});
