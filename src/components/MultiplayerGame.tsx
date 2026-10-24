@@ -184,7 +184,7 @@ export function MultiplayerGame({
             from a backgrounded tab, and the live && hides the banner
             the instant the opponent is back. */}
         {disconnectSettled && mp.opponentDisconnected && !mp.gameOver && (
-          <DisconnectBanner onClaimWin={mp.claimForfeitWin} />
+          <DisconnectBanner plural={crowd} onClaimWin={mp.claimForfeitWin} />
         )}
         {toast && <Toast message={toast} />}
       </>
@@ -257,7 +257,14 @@ const DISCONNECT_TIMEOUT = 60;
  * ahead, so the board must stay fully playable underneath — this is a
  * status banner pinned to the top, never a modal.
  */
-function DisconnectBanner({ onClaimWin }: { onClaimWin: () => void }) {
+function DisconnectBanner({
+  plural,
+  onClaimWin,
+}: {
+  /** Several opponents, all of them gone. */
+  plural: boolean;
+  onClaimWin: () => void;
+}) {
   const [seconds, setSeconds] = useState(DISCONNECT_TIMEOUT);
 
   useEffect(() => {
@@ -280,7 +287,7 @@ function DisconnectBanner({ onClaimWin }: { onClaimWin: () => void }) {
       style={{ top: "calc(env(safe-area-inset-top) + 0.75rem)" }}
     >
       <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
-        Opponent disconnected
+        {plural ? "Opponents disconnected" : "Opponent disconnected"}
       </p>
       {seconds > 0 ? (
         <p className="caption whitespace-nowrap">
