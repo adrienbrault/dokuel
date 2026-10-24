@@ -254,6 +254,8 @@ export function MultiplayerGame({
           onAssistLevelChange={mp.setAssistLevel}
           onDifficultyChange={mp.setDifficulty}
           onDigitStyleChange={mp.setDigitStyle}
+          onModeChange={mp.setMode}
+          onTeamChange={mp.setTeam}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />
