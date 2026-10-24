@@ -66,6 +66,11 @@ export type Action =
   | { type: "HINT" }
   | { type: "DISMISS_HINT" }
   | { type: "TOGGLE_NOTES" }
+  /** Digits a teammate placed or cleared on a shared board. */
+  | {
+      type: "APPLY_REMOTE";
+      cells: { index: number; value: number | null }[];
+    }
   | {
       type: "RESET";
       puzzle: string;
@@ -290,6 +295,35 @@ function handlePlaceNoteAt(
   };
 }
 
+/**
+ * Land a teammate's digits. They read like our own placements (peer
+ * notes go, completion is detected) but stay out of the undo log: Undo
+ * takes back our moves, never someone else's.
+ */
+function handleApplyRemote(
+  state: State,
+  cells: { index: number; value: number | null }[],
+): State {
+  if (state.status === "completed") return state;
+  const editor = editBoard(state.board);
+  let changed = false;
+  for (const { index, value } of cells) {
+    const row = Math.floor(index / 9);
+    const col = index % 9;
+    const cell = editor.peek(row, col);
+    if (cell.isGiven || cell.value === value) continue;
+    const target = editor.edit(row, col);
+    target.value = value;
+    target.notes = new Set();
+    if (value !== null) clearPeerNotes(editor, row, col, value);
+    changed = true;
+  }
+  if (!changed) return state;
+  const board = editor.board;
+  const complete = isBoardComplete(board, getConflicts(board));
+  return { ...state, board, status: complete ? "completed" : state.status };
+}
+
 function handleErase(state: State): State {
   if (!state.selectedCell || state.status === "completed") return state;
 
@@ -481,6 +515,9 @@ function dispatchAction(state: State, action: Action): State {
 
     case "HINT":
       return handleHint(state);
+
+    case "APPLY_REMOTE":
+      return handleApplyRemote(state, action.cells);
 
     case "RESET":
       return initState({
