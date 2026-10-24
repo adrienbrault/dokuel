@@ -271,3 +271,24 @@ describe("PLACE_NUMBER overwrite protection", () => {
     expect(state.history).toHaveLength(1);
   });
 });
+
+describe("APPLY_REMOTE action", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("takes a teammate's digit without adding it to our undo log", () => {
+    let state = initState({ puzzle });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 3, value: 4 });
+    const historyBefore = state.history.length;
+
+    state = reducer(state, {
+      type: "APPLY_REMOTE",
+      cells: [{ index: cellKey(0, 2), value: 4 }],
+    });
+
+    expect(state.board[0]![2]!.value).toBe(4);
+    expect(state.history).toHaveLength(historyBefore);
+    // Our pencilled 4 in the same row goes, as if we had placed it.
+    expect(state.board[0]![3]!.notes.has(4)).toBe(false);
+  });
+});
