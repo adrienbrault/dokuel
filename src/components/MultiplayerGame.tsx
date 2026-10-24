@@ -101,8 +101,8 @@ export function MultiplayerGame({
         <div className="screen-content flex flex-col items-center justify-center gap-4 text-center min-h-dvh">
           <h1 className="heading">Game is full</h1>
           <p className="caption max-w-sm">
-            This room already has two players. Ask your friend for a new invite,
-            or create your own game.
+            This room already has four players. Ask your friends for a new
+            invite, or create your own game.
           </p>
           <button
             type="button"
