@@ -1,8 +1,8 @@
 import { Copy } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
-import { DIFFICULTY_OPTIONS, MAX_ROOM_PLAYERS } from "../lib/constants.ts";
+import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import { describeDigitStyle } from "../lib/digit-style.ts";
 import type {
   AssistLevel,
@@ -13,6 +13,7 @@ import type {
 import { AssistLevelPicker } from "./AssistLevelPicker.tsx";
 import { DigitColorPicker } from "./DigitColorPicker.tsx";
 import { EmojiThemePicker } from "./EmojiThemePicker.tsx";
+import { LobbyPlayers } from "./LobbyPlayers.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
@@ -40,8 +41,6 @@ export function Lobby({
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
   const canStart = roomState.players.length >= 2;
-  const waiting = roomState.players.length < 2;
-  const openSeats = MAX_ROOM_PLAYERS - roomState.players.length;
   const pinnedStyle = roomState.digitStyle;
   // Overridden by the room's pick when there is one, so the pickers
   // below show what the guest will actually see; otherwise they show
@@ -51,31 +50,8 @@ export function Lobby({
   const emojiTheme = useEmojiTheme(pinnedStyle?.emojiTheme ?? null);
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const gameUrl = `${window.location.origin}/${roomState.roomId}`;
-
-  useEffect(() => {
-    if (editingName) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }
-  }, [editingName]);
-
-  function startEditing(currentName: string) {
-    setNameInput(currentName);
-    setEditingName(true);
-  }
-
-  function commitName() {
-    const trimmed = nameInput.trim();
-    if (trimmed && onRename) {
-      onRename(trimmed);
-    }
-    setEditingName(false);
-  }
 
   async function handleShare() {
     if (navigator.share) {
@@ -130,92 +106,11 @@ export function Lobby({
         </button>
       </div>
 
-      <div className="flex flex-col gap-3 w-full">
-        <h3 className="label tracking-wide">Players</h3>
-        {roomState.players.map((player) => {
-          const isMe = player.id === playerId;
-          return (
-            <div
-              key={player.id}
-              className="card flex items-center gap-3 px-4 py-3"
-            >
-              <div
-                className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: player.color }}
-              />
-              {isMe && editingName ? (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onBlur={commitName}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitName();
-                    if (e.key === "Escape") setEditingName(false);
-                  }}
-                  maxLength={24}
-                  className="font-medium text-text-primary bg-transparent border-b-2 border-accent outline-none min-w-0 flex-1"
-                />
-              ) : (
-                <button
-                  type="button"
-                  className={`font-medium text-text-primary text-left truncate ${isMe ? "cursor-pointer hover:underline decoration-accent decoration-2 underline-offset-2" : "cursor-default"}`}
-                  onClick={() => {
-                    if (isMe) startEditing(player.name);
-                  }}
-                  title={isMe ? "Click to change name" : undefined}
-                >
-                  {player.name}
-                </button>
-              )}
-              {isMe && !editingName && (
-                <button
-                  type="button"
-                  className="text-xs text-text-muted hover:text-accent shrink-0 touch-manipulation"
-                  onClick={() => startEditing(player.name)}
-                  title="Edit name"
-                >
-                  Edit
-                </button>
-              )}
-              {player.id === roomState.hostId && (
-                <span className="text-xs text-text-muted shrink-0 ml-auto">
-                  Host
-                </span>
-              )}
-            </div>
-          );
-        })}
-        {waiting && (
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border-default animate-pulse">
-            <span className="text-sm text-text-muted">
-              Waiting for opponent
-            </span>
-            <span className="flex gap-0.5" aria-hidden="true">
-              <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              />
-              <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              />
-              <span
-                className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              />
-            </span>
-          </div>
-        )}
-        {!waiting && openSeats > 0 && (
-          <div className="flex items-center justify-center py-3 rounded-xl border-2 border-dashed border-border-default">
-            <span className="text-sm text-text-muted">
-              Room for {openSeats} more {openSeats === 1 ? "player" : "players"}
-            </span>
-          </div>
-        )}
-      </div>
+      <LobbyPlayers
+        roomState={roomState}
+        playerId={playerId}
+        onRename={onRename}
+      />
 
       <div className="flex flex-col gap-2 w-full">
         <span className="label">Difficulty</span>
