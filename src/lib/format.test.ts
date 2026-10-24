@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { formatShortDate, formatShortTime, formatTime } from "./format.ts";
+import {
+  formatNameList,
+  formatShortDate,
+  formatShortTime,
+  formatTime,
+} from "./format.ts";
 
 describe("formatTime", () => {
   it("formats zero seconds", () => {
@@ -47,5 +52,13 @@ describe("formatShortTime", () => {
 
   it("adds hours past the hour mark", () => {
     expect(formatShortTime(3723)).toBe("1:02:03");
+  });
+});
+
+describe("formatNameList", () => {
+  it("joins names the way a sentence would", () => {
+    expect(formatNameList(["Bob"])).toBe("Bob");
+    expect(formatNameList(["Bob", "Carol"])).toBe("Bob & Carol");
+    expect(formatNameList(["Bob", "Carol", "Dan"])).toBe("Bob, Carol & Dan");
   });
 });
