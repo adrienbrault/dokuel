@@ -7,6 +7,8 @@ export type OpponentBar = {
   name: string;
   color: string;
   completionPercent: number;
+  /** Always labelled by name, even alone (a whole team, say). */
+  named?: boolean;
 };
 
 type MultiplayerHeaderExtraProps = {
@@ -77,7 +79,7 @@ export function MultiplayerHeaderExtra({
       // The paired bars give back the bottom margin they would otherwise
       // push the board down by.
       <div
-        className={`w-full max-w-[min(100vw-2rem,28rem)] flex flex-col gap-1.5 ${opponents.length > 1 ? "mb-1" : "mb-3"}`}
+        className={`w-full max-w-[min(100vw-2rem,28rem)] flex flex-col gap-1.5 ${stacksBars(opponents) ? "mb-1" : "mb-3"}`}
       >
         <RaceBars
           opponents={opponents}
@@ -98,6 +100,14 @@ export function MultiplayerHeaderExtra({
  * no more height than the 1v1 pair — the smallest phones have none to
  * spare above the board.
  */
+/**
+ * Several opponents, or a whole team behind one bar: either way the
+ * labels are names too long for the side-by-side layout.
+ */
+function stacksBars(opponents: OpponentBar[]): boolean {
+  return opponents.length > 1 || !!opponents[0]?.named;
+}
+
 function RaceBars({
   opponents,
   myPercent,
@@ -108,29 +118,34 @@ function RaceBars({
   reconnecting: boolean;
 }) {
   const solo = opponents.length === 1;
+  const stacked = stacksBars(opponents);
+  // One named bar is the other team, and ours is a team's board too.
+  const versusTeam = solo && stacked;
   const bars = (
     <>
       <ProgressBar
-        label="You"
+        label={versusTeam ? "Your team" : "You"}
         percent={myPercent}
         color="bg-accent"
-        compact={!solo}
+        compact={stacked}
       />
       {opponents.map((o) => {
-        const name = solo ? "Opponent" : o.name;
+        const plain = solo && !o.named;
+        const name = plain ? "Opponent" : o.name;
         return (
           <ProgressBar
             key={o.id}
             label={reconnecting ? `${name} (reconnecting...)` : name}
             percent={o.completionPercent}
-            color={solo ? "bg-opponent" : ""}
-            fill={solo ? undefined : o.color}
-            compact={!solo}
+            color={plain ? "bg-opponent" : ""}
+            fill={plain ? undefined : o.color}
+            compact={stacked}
           />
         );
       })}
     </>
   );
-  if (solo) return bars;
+  if (!stacked) return bars;
+  if (versusTeam) return <div className="flex flex-col gap-1">{bars}</div>;
   return <div className="grid grid-cols-2 gap-x-4 gap-y-1">{bars}</div>;
 }

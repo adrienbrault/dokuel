@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useArchiveMatchReplay } from "../hooks/useArchiveMatchReplay.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useTeamMatch } from "../hooks/useTeamMatch.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { formatNameList } from "../lib/format.ts";
-import type { Difficulty, DigitStyle, Player } from "../lib/types.ts";
+import type {
+  Difficulty,
+  DigitStyle,
+  Player,
+  RoomState,
+} from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 import type { RematchState } from "./MatchResult.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
@@ -41,6 +47,7 @@ export function MultiplayerGame({
   const isHost = useRef(false);
   // Same blip guard for the race bars: they would vanish and pop back.
   const lastOpponents = useRef<Player[]>(NO_PLAYERS);
+  const lastRoom = useRef<RoomState | null>(null);
   // Once a game is over the room's difficulty is the NEXT game's, which
   // the host may change from the result: the board keeps the one its
   // own game was dealt on.
@@ -50,6 +57,7 @@ export function MultiplayerGame({
   if (mp.roomState) {
     lastDigitStyle.current = mp.roomState.digitStyle;
     isHost.current = mp.roomState.hostId === playerId;
+    lastRoom.current = mp.roomState;
     lastOpponents.current = mp.roomState.players.filter(
       (p) => p.id !== playerId,
     );
@@ -60,6 +68,13 @@ export function MultiplayerGame({
       };
     }
   }
+  const match = useTeamMatch({
+    room: lastRoom.current,
+    playerId,
+    gameOver: mp.gameOver,
+    cells: mp.teamCells,
+    setCell: mp.sendTeamCell,
+  });
   // Outlives the room: Stats replays the match from this copy.
   useArchiveMatchReplay({
     roomId,
@@ -142,10 +157,11 @@ export function MultiplayerGame({
           playerId={playerId}
           difficulty={gameDifficulty.current?.level ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
-          opponentName={formatNameList(opponents.map((p) => p.name))}
-          opponents={lastOpponents.current}
+          opponentName={match.rivalName}
+          opponents={match.bars}
           opponentDisconnected={mp.opponentDisconnected}
-          gameOver={mp.gameOver}
+          gameOver={match.gameOver}
+          team={match.team}
           digitStyle={lastDigitStyle.current}
           onDigitStyleChange={
             isHost.current && lastDigitStyle.current
