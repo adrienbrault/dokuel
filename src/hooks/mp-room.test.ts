@@ -10,6 +10,7 @@ import {
   joinRoom,
   publishReplay,
   setTeam,
+  setTeamCell,
   startGame,
   updateProgress,
   voteRematch,
@@ -913,6 +914,25 @@ describe("teams", () => {
     setTeam(p2p, "p3", "b");
     room.start();
     expect(doc.getMap("room").get("gameNumber")).toBe(1);
+  });
+
+  it("shares a teammate's digits but not the other team's", () => {
+    const { p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    for (const id of ["p2", "p3", "p4"]) joinRoom(p2p, id, id);
+    room.setMode("teams");
+    room.setTeam("a");
+    setTeam(p2p, "p2", "a");
+    setTeam(p2p, "p3", "b");
+    setTeam(p2p, "p4", "b");
+    room.start();
+
+    setTeamCell(p2p, "a", 1, 5, 7);
+    setTeamCell(p2p, "b", 1, 6, 3);
+
+    const cells = room.snapshot().teamCells;
+    expect(cells?.[5]).toBe(7);
+    expect(cells?.[6]).toBeNull();
   });
 });
 
