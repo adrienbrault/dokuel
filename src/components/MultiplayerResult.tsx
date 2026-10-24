@@ -70,7 +70,11 @@ export function matchReplay(
   };
 }
 
-/** Us on the left of the compare divider, the opponent on the right. */
+/**
+ * Us on the left of the compare divider, the opponent on the right. In
+ * a bigger room that opponent is the winner, or, when we won, whoever
+ * got closest.
+ */
 export function replayPlayers(
   { players, replays }: ReplaySource,
   playerId: string,
@@ -78,7 +82,14 @@ export function replayPlayers(
   gameOver: { winnerId: string },
 ): [ReplayPlayer, ReplayPlayer] {
   const me = players.find((p) => p.id === playerId);
-  const opponent = players.find((p) => p.id !== playerId);
+  const others = players.filter((p) => p.id !== playerId);
+  const opponent =
+    others.find((p) => p.id === gameOver.winnerId) ??
+    others.reduce<Player | undefined>(
+      (best, p) =>
+        !best || p.completionPercent > best.completionPercent ? p : best,
+      undefined,
+    );
   const opponentId = opponent?.id ?? "";
   return [
     {
