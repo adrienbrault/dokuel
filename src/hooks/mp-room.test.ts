@@ -144,6 +144,24 @@ describe("projection", () => {
 });
 
 describe("seats", () => {
+  it("seats up to four players in one room", () => {
+    const { p2p, room } = setup(null);
+    initializeRoom(p2p, "p2", "medium");
+    joinRoom(p2p, "p2", "Bob");
+    joinRoom(p2p, "p3", "Carol");
+    joinRoom(p2p, "p4", "Dan");
+
+    room.apply({ type: "local-sync-complete", now: T0 });
+
+    expect(room.snapshot().roomFull).toBe(false);
+    expect(room.snapshot().roomState?.players.map((p) => p.id)).toEqual([
+      "p2",
+      "p3",
+      "p4",
+      "p1",
+    ]);
+  });
+
   it("flags roomFull for a player with no seat in a full room", () => {
     const { p2p, room } = setup();
     initializeRoom(p2p, "p2", "medium");
