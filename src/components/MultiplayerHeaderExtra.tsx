@@ -1,11 +1,19 @@
 import type { RematchState } from "./MatchResult.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
 
+/** One other player's race, as their progress bar shows it. */
+export type OpponentBar = {
+  id: string;
+  name: string;
+  color: string;
+  completionPercent: number;
+};
+
 type MultiplayerHeaderExtraProps = {
   gameOver: { winnerId: string; winnerName: string } | null;
   iFinished: boolean;
   showOpponentProgress: boolean;
-  opponentProgress: { completionPercent: number } | null;
+  opponents: OpponentBar[];
   opponentDisconnected: boolean;
   myPercent: number;
   /** Where the rematch handshake stands from our side. */
@@ -18,7 +26,7 @@ export function MultiplayerHeaderExtra({
   gameOver,
   iFinished,
   showOpponentProgress,
-  opponentProgress,
+  opponents,
   opponentDisconnected,
   myPercent,
   rematch = "idle",
@@ -46,13 +54,12 @@ export function MultiplayerHeaderExtra({
             </button>
           )}
         </div>
-        {showOpponentProgress && opponentProgress && (
+        {showOpponentProgress && opponents.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <ProgressBar label="You" percent={myPercent} color="bg-accent" />
-            <ProgressBar
-              label="Opponent"
-              percent={opponentProgress.completionPercent}
-              color="bg-opponent"
+            <RaceBars
+              opponents={opponents}
+              myPercent={myPercent}
+              reconnecting={false}
             />
           </div>
         )}
@@ -60,20 +67,51 @@ export function MultiplayerHeaderExtra({
     );
   }
 
-  if (showOpponentProgress && opponentProgress) {
+  if (showOpponentProgress && opponents.length > 0) {
     return (
       <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-1.5">
-        <ProgressBar label="You" percent={myPercent} color="bg-accent" />
-        <ProgressBar
-          label={
-            opponentDisconnected ? "Opponent (reconnecting...)" : "Opponent"
-          }
-          percent={opponentProgress.completionPercent}
-          color="bg-opponent"
+        <RaceBars
+          opponents={opponents}
+          myPercent={myPercent}
+          reconnecting={opponentDisconnected}
         />
       </div>
     );
   }
 
   return null;
+}
+
+/**
+ * Our bar, then one per opponent. A lone opponent keeps the 1v1 look;
+ * in a bigger room each bar needs its player's name and color to tell
+ * who is ahead.
+ */
+function RaceBars({
+  opponents,
+  myPercent,
+  reconnecting,
+}: {
+  opponents: OpponentBar[];
+  myPercent: number;
+  reconnecting: boolean;
+}) {
+  const solo = opponents.length === 1;
+  return (
+    <>
+      <ProgressBar label="You" percent={myPercent} color="bg-accent" />
+      {opponents.map((o) => {
+        const name = solo ? "Opponent" : o.name;
+        return (
+          <ProgressBar
+            key={o.id}
+            label={reconnecting ? `${name} (reconnecting...)` : name}
+            percent={o.completionPercent}
+            color={solo ? "bg-opponent" : ""}
+            fill={solo ? undefined : o.color}
+          />
+        );
+      })}
+    </>
+  );
 }

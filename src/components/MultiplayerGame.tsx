@@ -38,6 +38,8 @@ export function MultiplayerGame({
   // just fight over it and the guest joined the host's board.
   const lastDigitStyle = useRef<DigitStyle | null>(null);
   const isHost = useRef(false);
+  // Same blip guard for the race bars: they would vanish and pop back.
+  const lastOpponents = useRef<Player[]>(NO_PLAYERS);
   // Once a game is over the room's difficulty is the NEXT game's, which
   // the host may change from the result: the board keeps the one its
   // own game was dealt on.
@@ -47,6 +49,9 @@ export function MultiplayerGame({
   if (mp.roomState) {
     lastDigitStyle.current = mp.roomState.digitStyle;
     isHost.current = mp.roomState.hostId === playerId;
+    lastOpponents.current = mp.roomState.players.filter(
+      (p) => p.id !== playerId,
+    );
     if (gameDifficulty.current?.game !== mp.roomState.gameNumber) {
       gameDifficulty.current = {
         game: mp.roomState.gameNumber,
@@ -133,7 +138,7 @@ export function MultiplayerGame({
           difficulty={gameDifficulty.current?.level ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
           opponentName={opponent?.name ?? ""}
-          opponentProgress={mp.opponentProgress}
+          opponents={lastOpponents.current}
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={mp.gameOver}
           digitStyle={lastDigitStyle.current}
