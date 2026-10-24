@@ -4,6 +4,7 @@ import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
 import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
 import { describeDigitStyle } from "../lib/digit-style.ts";
+import { teamsReady } from "../lib/teams.ts";
 import type {
   AssistLevel,
   Difficulty,
@@ -47,7 +48,10 @@ export function Lobby({
   onBack,
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
-  const canStart = roomState.players.length >= 2;
+  const canStart =
+    roomState.mode === "teams"
+      ? teamsReady(roomState.players)
+      : roomState.players.length >= 2;
   const pinnedStyle = roomState.digitStyle;
   // Overridden by the room's pick when there is one, so the pickers
   // below show what the guest will actually see; otherwise they show
