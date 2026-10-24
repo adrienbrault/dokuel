@@ -31,4 +31,15 @@ describe("replayPlayers", () => {
     expect(mine.id).toBe("me");
     expect(theirs).toMatchObject({ id: "carol", won: true });
   });
+
+  it("sets us against the closest finisher when we won", () => {
+    const [, theirs] = replayPlayers(
+      { players, replays: {}, share: vi.fn() },
+      "carol",
+      "",
+      { winnerId: "carol" },
+    );
+
+    expect(theirs).toMatchObject({ id: "dan", won: false });
+  });
 });
