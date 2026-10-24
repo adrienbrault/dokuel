@@ -112,6 +112,16 @@ describe("MatchResult", () => {
     ).toBeDisabled();
   });
 
+  it("names who asked for the rematch in a bigger room", () => {
+    renderResult({
+      rematch: "invited",
+      opponentName: "Bob, Carol & Dan",
+      askedBy: "Carol",
+    });
+
+    expect(screen.getByText("Carol wants a rematch!")).toBeInTheDocument();
+  });
+
   it("says when the opponent seems gone while we wait", () => {
     renderResult({ rematch: "waiting", opponentAway: true });
 
