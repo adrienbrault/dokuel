@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { MAX_ROOM_PLAYERS } from "../lib/constants.ts";
 import { findEmojiTheme } from "../lib/emoji-themes.ts";
 import { parseReplay, type ReplayFrame } from "../lib/replay.ts";
 import { generatePuzzleWithSolution } from "../lib/sudoku.ts";
@@ -74,7 +75,7 @@ export function initializeRoom(
 }
 
 /** A room races two to four players. */
-export const MAX_PLAYERS = 4;
+export const MAX_PLAYERS = MAX_ROOM_PLAYERS;
 
 /** Fewer than this and there is nobody to race. */
 export const MIN_PLAYERS = 2;

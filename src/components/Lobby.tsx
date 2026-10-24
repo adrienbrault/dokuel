@@ -2,7 +2,7 @@ import { Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDigitColorMode } from "../hooks/useDigitColorMode.ts";
 import { useEmojiTheme } from "../hooks/useEmojiTheme.ts";
-import { DIFFICULTY_OPTIONS } from "../lib/constants.ts";
+import { DIFFICULTY_OPTIONS, MAX_ROOM_PLAYERS } from "../lib/constants.ts";
 import { describeDigitStyle } from "../lib/digit-style.ts";
 import type {
   AssistLevel,
@@ -39,11 +39,9 @@ export function Lobby({
   onBack,
 }: LobbyProps) {
   const isHost = playerId !== undefined && playerId === roomState.hostId;
-  // >= not ===: a concurrent-join merge can briefly hold a third entry
-  // until the overflow client evicts itself — the seated pair must
-  // still be able to start.
   const canStart = roomState.players.length >= 2;
   const waiting = roomState.players.length < 2;
+  const openSeats = MAX_ROOM_PLAYERS - roomState.players.length;
   const pinnedStyle = roomState.digitStyle;
   // Overridden by the room's pick when there is one, so the pickers
   // below show what the guest will actually see; otherwise they show
@@ -207,6 +205,13 @@ export function Lobby({
                 className="w-1 h-1 rounded-full bg-text-muted animate-bounce"
                 style={{ animationDelay: "300ms" }}
               />
+            </span>
+          </div>
+        )}
+        {!waiting && openSeats > 0 && (
+          <div className="flex items-center justify-center py-3 rounded-xl border-2 border-dashed border-border-default">
+            <span className="text-sm text-text-muted">
+              Room for {openSeats} more {openSeats === 1 ? "player" : "players"}
             </span>
           </div>
         )}
