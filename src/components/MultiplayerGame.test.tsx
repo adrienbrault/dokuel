@@ -550,4 +550,23 @@ describe("MultiplayerGame teams", () => {
     expect(screen.getByText("Opponent & Dan")).toBeInTheDocument();
     expect(screen.queryByText("Carol")).toBeNull();
   });
+
+  it("names the whole winning team on the result", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.roomState = { ...teamsState, status: "finished" };
+      mockMp.gameOver = { winnerId: "dan", winnerName: "Dan" };
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      expect(screen.getByRole("dialog")).toHaveAccessibleName(
+        "Opponent & Dan won",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+
