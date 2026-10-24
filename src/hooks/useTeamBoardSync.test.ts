@@ -41,4 +41,16 @@ describe("useTeamBoardSync", () => {
 
     expect(setCell).toHaveBeenCalledWith(1, 3);
   });
+
+  it("shows a teammate's digit without sending it back", () => {
+    const { result, rerender, setCell } = setup();
+    const teamCells = blank();
+    teamCells[2] = 4;
+
+    rerender({ teamCells });
+
+    expect(result.current.board[0]![2]!.value).toBe(4);
+    expect(setCell).not.toHaveBeenCalled();
+  });
 });
+
