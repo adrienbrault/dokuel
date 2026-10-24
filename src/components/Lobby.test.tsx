@@ -251,3 +251,22 @@ describe("Lobby", () => {
     });
   });
 });
+
+describe("Lobby teams", () => {
+  it("lets the host switch the room to 2v2 teams", async () => {
+    const onModeChange = vi.fn();
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        playerId="p1"
+        onModeChange={onModeChange}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("switch", { name: /2v2 teams/i }));
+
+    expect(onModeChange).toHaveBeenCalledWith("teams");
+  });
+});
