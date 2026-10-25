@@ -51,6 +51,8 @@ type MatchResultProps = {
   coop?: boolean | undefined;
   /** Each teammate's correct digits on a shared board. */
   credits?: Credit[] | undefined;
+  /** Wrong digits each player placed this game, us first. */
+  mistakes?: Credit[] | undefined;
   /** Offered to a player who lost before finishing their own board. */
   onKeepSolving?: (() => void) | undefined;
   onLeave: () => void;
@@ -75,6 +77,7 @@ export function MatchResult({
   onKeepSolving,
   coop = false,
   credits,
+  mistakes,
   onLeave,
 }: MatchResultProps) {
   const { panelRef, trapTab } = useDialogFocus();
@@ -181,6 +184,16 @@ export function MatchResult({
             className="caption text-center -mt-1"
           >
             {formatCredits(credits)}
+          </p>
+        )}
+
+        {mistakes && (
+          <p
+            role="note"
+            aria-label="Mistakes"
+            className="caption text-center -mt-1"
+          >
+            Mistakes: {formatCredits(mistakes)}
           </p>
         )}
 
