@@ -69,6 +69,8 @@ export type MultiplayerBoardProps = {
   replay?: ReplaySource | undefined;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
+  /** Called once per wrong digit we place. */
+  onMistake?: (() => void) | undefined;
   /** The room's side of the rematch the result offers. */
   next: NextGame;
   /** In a teams game: our shared board and who we share it with. */
@@ -93,6 +95,7 @@ export function MultiplayerBoard({
   replay,
   onProgress,
   onComplete,
+  onMistake,
   next,
   team,
   onBack,
@@ -144,6 +147,9 @@ export function MultiplayerBoard({
     cellsRemaining: game.cellsRemaining,
     onProgress,
     onComplete,
+    lastMove: game.lastMove,
+    solution,
+    onMistake,
   });
 
   useMultiplayerAutosave({

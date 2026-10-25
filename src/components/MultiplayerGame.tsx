@@ -180,6 +180,7 @@ export function MultiplayerGame({
           }
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
+          onMistake={mp.sendMistake}
           next={{
             rematch,
             difficulty: mp.roomState?.difficulty ?? "medium",

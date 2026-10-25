@@ -734,10 +734,10 @@ describe("MultiplayerBoard after opponent wins", () => {
     const onMistake = vi.fn();
     render(<MultiplayerBoard {...baseProps()} onMistake={onMistake} />);
 
-    fireEvent.click(
-      screen.getByRole("gridcell", { name: /^Cell row 1 column 1,/ }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: /^9(,|$)/ }));
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    const nine = screen.getAllByLabelText("9")[0]!;
+    fireEvent.pointerDown(nine, { pointerType: "touch" });
+    fireEvent.pointerUp(nine, { pointerType: "touch" });
 
     expect(onMistake).toHaveBeenCalledOnce();
   });

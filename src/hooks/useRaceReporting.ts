@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { serializeBoard } from "../lib/board-engine.ts";
-import type { Board, GameStatus } from "../lib/types.ts";
+import type { Board, GameStatus, MoveAction } from "../lib/types.ts";
+import { useMistakeReporter } from "./useMistakeReporter.ts";
 
 type Options = {
   puzzle: string;
@@ -9,11 +10,18 @@ type Options = {
   cellsRemaining: number;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
+  /** Our latest move, judged against the solution for mistakes. */
+  lastMove?: MoveAction | undefined;
+  solution?: string | null | undefined;
+  onMistake?: (() => void) | undefined;
 };
+
+const ignoreMistake = () => {};
 
 /**
  * Reports one player's race to the room: progress whenever the count
- * of empty cells moves, and the completed board once it is solved.
+ * of empty cells moves, each wrong digit we place, and the completed
+ * board once it is solved.
  * Returns how much of the board we have filled, in percent.
  */
 export function useRaceReporting({
@@ -23,7 +31,11 @@ export function useRaceReporting({
   cellsRemaining,
   onProgress,
   onComplete,
+  lastMove,
+  solution = null,
+  onMistake = ignoreMistake,
 }: Options): number {
+  useMistakeReporter(lastMove, solution, onMistake);
   const prevCellsRef = useRef(cellsRemaining);
 
   const myPercent = useMemo(() => {

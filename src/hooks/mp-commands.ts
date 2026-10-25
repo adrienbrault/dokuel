@@ -119,6 +119,10 @@ export function useRoomCommands({
     [roomRef],
   );
 
+  const sendMistake = useCallback(() => {
+    roomRef.current?.recordMistake();
+  }, [roomRef]);
+
   const sendReplay = useCallback(
     (frames: ReplayFrame[]) => {
       roomRef.current?.publishReplay(frames);
@@ -140,5 +144,6 @@ export function useRoomCommands({
     setMode,
     setTeam,
     sendTeamCell,
+    sendMistake,
   };
 }
