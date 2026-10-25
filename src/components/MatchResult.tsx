@@ -5,7 +5,7 @@ import {
   DIFFICULTY_OPTIONS,
 } from "../lib/constants.ts";
 import type { RoomScore } from "../lib/multiplayer-stats.ts";
-import type { Difficulty } from "../lib/types.ts";
+import type { Credit, Difficulty } from "../lib/types.ts";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 
 /**
@@ -46,6 +46,10 @@ type MatchResultProps = {
   opponentAway: boolean;
   /** Omitted, the modal offers no replay. */
   onWatchReplay?: (() => void) | undefined;
+  /** The room solved one board together: no winner, no score. */
+  coop?: boolean | undefined;
+  /** Each teammate's correct digits on a shared board. */
+  credits?: Credit[] | undefined;
   /** Offered to a player who lost before finishing their own board. */
   onKeepSolving?: (() => void) | undefined;
   onLeave: () => void;
@@ -68,6 +72,8 @@ export function MatchResult({
   opponentAway,
   onWatchReplay,
   onKeepSolving,
+  coop = false,
+  credits,
   onLeave,
 }: MatchResultProps) {
   const { panelRef, trapTab } = useDialogFocus();
@@ -108,7 +114,11 @@ export function MatchResult({
             {won ? "🎉" : "👏"}
           </span>
           <h2 id="match-result-title" className="heading">
-            {won ? "You won!" : `${winnerName || opponent} won`}
+            {coop
+              ? "Solved together!"
+              : won
+                ? "You won!"
+                : `${winnerName || opponent} won`}
           </h2>
           <span
             className={`text-xs font-bold px-3 py-1 rounded-full ${DIFFICULTY_BADGE_CLASSES[difficulty]}`}
@@ -117,27 +127,50 @@ export function MatchResult({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 w-full text-center">
+        <div
+          // The credits list needs more room for names than a time does.
+          className={`grid gap-2.5 w-full text-center ${coop ? "grid-cols-[2fr_3fr]" : "grid-cols-2"}`}
+        >
           <div className="flex flex-col justify-center gap-1 rounded-2xl bg-bg-inset py-3">
             <span className="text-3xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
               {time ?? <span>{progressPercent}%</span>}
             </span>
             <span className="text-xs text-text-muted">
-              {time ? "Your time" : "Solved"}
+              {coop ? "Time" : time ? "Your time" : "Solved"}
             </span>
           </div>
-          <div
-            role="group"
-            aria-label="Score"
-            className="flex flex-col justify-center gap-1 rounded-2xl bg-bg-inset py-3"
-          >
-            <span className="text-3xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
-              {score.wins}–{score.losses}
-            </span>
-            <span className="text-xs text-text-muted truncate px-2">
-              vs {opponent}
-            </span>
-          </div>
+          {coop && credits ? (
+            <div
+              role="group"
+              aria-label="Digits placed"
+              className="flex flex-col justify-center gap-1 rounded-2xl bg-bg-inset py-3 px-4"
+            >
+              {credits.map((c) => (
+                <div
+                  key={c.name}
+                  className="flex justify-between gap-2 text-sm"
+                >
+                  <span className="truncate text-text-secondary">{c.name}</span>
+                  <span className="font-mono font-bold tabular-nums text-text-primary">
+                    {c.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              role="group"
+              aria-label="Score"
+              className="flex flex-col justify-center gap-1 rounded-2xl bg-bg-inset py-3"
+            >
+              <span className="text-3xl font-mono font-extrabold tabular-nums text-text-primary leading-none">
+                {score.wins}–{score.losses}
+              </span>
+              <span className="text-xs text-text-muted truncate px-2">
+                vs {opponent}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 w-full">

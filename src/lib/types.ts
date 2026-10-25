@@ -151,6 +151,9 @@ export type Team = "a" | "b";
  */
 export type TeamCells = (number | null)[];
 
+/** One player's share of a shared board: their correct digits. */
+export type Credit = { name: string; count: number };
+
 export type Player = {
   id: string;
   name: string;
