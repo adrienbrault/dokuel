@@ -988,4 +988,20 @@ describe("teams", () => {
     expect(room.snapshot().roomState?.mode).toBe("coop");
     expect(room.snapshot().teamCells?.[5]).toBe(7);
   });
+
+  it("counts each player's mistakes for the current game only", () => {
+    const { p2p, room } = setupStartedGame();
+
+    room.recordMistake();
+    room.recordMistake();
+    expect(
+      room.snapshot().roomState?.players.map((p) => [p.id, p.mistakes]),
+    ).toEqual([
+      ["p1", 2],
+      ["p2", 0],
+    ]);
+
+    startGame(p2p);
+    expect(room.snapshot().roomState?.players[0]?.mistakes).toBe(0);
+  });
 });
