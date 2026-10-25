@@ -163,6 +163,7 @@ export function MultiplayerGame({
           opponentDisconnected={mp.opponentDisconnected}
           gameOver={match.gameOver}
           team={match.team}
+          mistakes={match.mistakes}
           digitStyle={lastDigitStyle.current}
           onDigitStyleChange={
             isHost.current && lastDigitStyle.current

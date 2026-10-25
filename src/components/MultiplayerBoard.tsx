@@ -13,7 +13,7 @@ import { useSudoku } from "../hooks/useSudoku.ts";
 import { type TeamPlay, useTeamBoardSync } from "../hooks/useTeamBoardSync.ts";
 import { formatTime } from "../lib/format.ts";
 import { loadGame, MULTIPLAYER_KEY_PREFIX } from "../lib/game-storage.ts";
-import type { AssistLevel, DigitStyle } from "../lib/types.ts";
+import type { AssistLevel, Credit, DigitStyle } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -73,6 +73,8 @@ export type MultiplayerBoardProps = {
   onMistake?: (() => void) | undefined;
   /** The room's side of the rematch the result offers. */
   next: NextGame;
+  /** Each player's wrong digits this game, us first. */
+  mistakes?: Credit[] | undefined;
   /** In a teams game: our shared board and who we share it with. */
   team?: TeamPlay | undefined;
   onBack: () => void;
@@ -98,6 +100,7 @@ export function MultiplayerBoard({
   onMistake,
   next,
   team,
+  mistakes,
   onBack,
 }: MultiplayerBoardProps) {
   // Scope the autosave key by room + puzzle so a rematch in the same room
@@ -295,6 +298,7 @@ export function MultiplayerBoard({
             onKeepSolving={result.setAside}
             coop={team?.coop}
             credits={team?.credits}
+            mistakes={mistakes}
             onLeave={onBack}
             replay={
               replay &&

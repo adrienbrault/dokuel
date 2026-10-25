@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { OpponentBar } from "../components/MultiplayerHeaderExtra.tsx";
 import { formatNameList } from "../lib/format.ts";
-import type { Player, RoomState, TeamCells } from "../lib/types.ts";
+import type { Credit, Player, RoomState, TeamCells } from "../lib/types.ts";
 import type { TeamPlay } from "./useTeamBoardSync.ts";
 
 type GameOver = { winnerId: string; winnerName: string };
@@ -103,8 +103,16 @@ export function useTeamMatch({
         ]
       : others;
 
+  // Everyone's slips, whatever the mode: us first, then by seat.
+  const me = players.find((p) => p.id === playerId);
+  const mistakes: Credit[] = [
+    { name: "You", count: me?.mistakes ?? 0 },
+    ...others.map((p) => ({ name: p.name, count: p.mistakes })),
+  ];
+
   return {
     bars,
+    mistakes,
     rivalName,
     replayPlayers,
     team,
