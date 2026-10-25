@@ -74,6 +74,7 @@ export function MultiplayerGame({
     gameOver: mp.gameOver,
     cells: mp.teamCells,
     setCell: mp.sendTeamCell,
+    contributions: mp.contributions,
   });
   // Outlives the room: Stats replays the match from this copy.
   useArchiveMatchReplay({

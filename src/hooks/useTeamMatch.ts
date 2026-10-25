@@ -20,6 +20,7 @@ export function useTeamMatch({
   gameOver,
   cells,
   setCell,
+  contributions,
 }: {
   /** The last known room state, so a sync blip keeps the teams. */
   room: RoomState | null;
@@ -27,25 +28,54 @@ export function useTeamMatch({
   gameOver: GameOver | null;
   cells: TeamCells | null;
   setCell: (index: number, value: number | null) => void;
+  /** Correct digits per player on our shared board, from the room. */
+  contributions: Readonly<Record<string, number>> | null;
 }) {
   const players = room?.players ?? [];
   const ours = players.find((p) => p.id === playerId)?.team ?? null;
   const teams = room?.mode === "teams" && ours !== null;
+  const coop = room?.mode === "coop";
   const others = players.filter((p) => p.id !== playerId);
-  const rivals = teams ? others.filter((p) => p.team !== ours) : others;
-  const allyKey = teams
+  const allyPlayers = coop
     ? others
-        .filter((p) => p.team === ours)
-        .map((p) => p.id)
-        .join(",")
-    : "";
+    : teams
+      ? others.filter((p) => p.team === ours)
+      : [];
+  const rivals = coop
+    ? []
+    : teams
+      ? others.filter((p) => p.team !== ours)
+      : others;
+  const allyKey = allyPlayers.map((p) => p.id).join(",");
   const allies = useMemo(
     () => (allyKey ? allyKey.split(",") : NO_IDS),
     [allyKey],
   );
+  const shared = teams || coop;
+  const credits = shared
+    ? [
+        { name: "You", count: contributions?.[playerId] ?? 0 },
+        ...allyPlayers.map((p) => ({
+          name: p.name,
+          count: contributions?.[p.id] ?? 0,
+        })),
+      ]
+    : undefined;
+  // Keyed by content: the counts arrive as a fresh object on every
+  // room change, and a new TeamPlay each time would re-render the board.
+  const creditKey = JSON.stringify(credits);
   const team: TeamPlay | undefined = useMemo(
-    () => (teams ? { cells, setCell, allies } : undefined),
-    [teams, cells, setCell, allies],
+    () =>
+      shared
+        ? {
+            cells,
+            setCell,
+            allies,
+            coop,
+            credits: creditKey ? JSON.parse(creditKey) : undefined,
+          }
+        : undefined,
+    [shared, cells, setCell, allies, coop, creditKey],
   );
 
   // A replay sets us against one other board; a teammate's is ours.
@@ -56,20 +86,22 @@ export function useTeamMatch({
   );
 
   const rivalName = formatNameList(rivals.map((p) => p.name));
-  const bars: OpponentBar[] = teams
-    ? [
-        {
-          id: "rivals",
-          name: rivalName,
-          color: rivals[0]?.color ?? "",
-          completionPercent: Math.max(
-            0,
-            ...rivals.map((p) => p.completionPercent),
-          ),
-          named: true,
-        },
-      ]
-    : others;
+  const bars: OpponentBar[] = coop
+    ? []
+    : teams
+      ? [
+          {
+            id: "rivals",
+            name: rivalName,
+            color: rivals[0]?.color ?? "",
+            completionPercent: Math.max(
+              0,
+              ...rivals.map((p) => p.completionPercent),
+            ),
+            named: true,
+          },
+        ]
+      : others;
 
   return {
     bars,
