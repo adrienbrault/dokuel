@@ -68,6 +68,7 @@ function makeMp() {
     setDigitStyle: vi.fn(),
     sendReplay: vi.fn(),
     replays: {} as Record<string, number[][]>,
+    contributions: null as Record<string, number> | null,
   };
 }
 
@@ -582,4 +583,12 @@ describe("MultiplayerGame teams", () => {
 
     expect(getArchivedReplay("test-room", 1)?.opponent?.name).toBe("Dan");
   });
+
+  it("shows our team's split of the shared board", () => {
+    mockMp.contributions = { me: 4, carol: 2 };
+    renderGame();
+
+    expect(screen.getByText("You 4 · Carol 2")).toBeInTheDocument();
+  });
 });
+
