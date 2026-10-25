@@ -83,6 +83,24 @@ describe("MatchResult", () => {
     );
   });
 
+  it("celebrates a co-op solve with who placed what", () => {
+    renderResult({
+      coop: true,
+      credits: [
+        { name: "You", count: 24 },
+        { name: "Bob", count: 19 },
+      ],
+    });
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleName(
+      "Solved together!",
+    );
+    expect(screen.getByLabelText("Digits placed")).toHaveTextContent(
+      "You24Bob19",
+    );
+    expect(screen.queryByLabelText("Score")).toBeNull();
+  });
+
   it("asks for a rematch with the primary action", async () => {
     const props = renderResult({});
 
