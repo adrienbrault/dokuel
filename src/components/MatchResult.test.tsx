@@ -126,6 +126,17 @@ describe("MatchResult", () => {
     );
   });
 
+  it("leaves out mistakes when nobody made any", () => {
+    renderResult({
+      mistakes: [
+        { name: "You", count: 0 },
+        { name: "Bob", count: 0 },
+      ],
+    });
+
+    expect(screen.queryByLabelText("Mistakes")).toBeNull();
+  });
+
   it("asks for a rematch with the primary action", async () => {
     const props = renderResult({});
 
