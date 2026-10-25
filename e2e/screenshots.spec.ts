@@ -862,7 +862,12 @@ test.describe("co-op session", () => {
       path: screenshotPath("multiplayer-coop-race", project),
     });
 
-    // The guest fills the rest of the shared board: done for both.
+    // The guest slips once, erases it, then fills the rest of the
+    // shared board: done for both, with the slip on the record.
+    const slip = empties[10]!;
+    const wrong = `${solution.slice(0, slip)}${(Number(solution[slip]) % 9) + 1}${solution.slice(slip + 1)}`;
+    await fillCells(guest, wrong, [slip]);
+    await guest.getByRole("button", { name: "Erase" }).click();
     await fillCells(guest, solution, empties.slice(10));
     await page.getByRole("dialog", { name: "Solved together!" }).waitFor();
     await page.screenshot({
