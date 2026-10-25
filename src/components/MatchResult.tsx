@@ -5,6 +5,7 @@ import {
   DIFFICULTY_OPTIONS,
 } from "../lib/constants.ts";
 import type { RoomScore } from "../lib/multiplayer-stats.ts";
+import { formatCredits } from "../lib/teams.ts";
 import type { Credit, Difficulty } from "../lib/types.ts";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 
@@ -172,6 +173,16 @@ export function MatchResult({
             </div>
           )}
         </div>
+
+        {!coop && credits && (
+          <p
+            role="note"
+            aria-label="Digits placed"
+            className="caption text-center -mt-1"
+          >
+            {formatCredits(credits)}
+          </p>
+        )}
 
         <div className="flex flex-col gap-2 w-full">
           {next.onDifficultyChange ? (
