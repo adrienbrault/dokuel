@@ -389,12 +389,42 @@ export function setTeamCell(
   gameNumber: number,
   index: number,
   value: number | null,
+  /** Who placed it, credited if the digit turns out correct. */
+  by?: string,
 ): void {
   room.doc.transact(() => {
     room.doc
       .getMap("teamCells")
-      .set(`${team}:${index}`, { game: gameNumber, value });
+      .set(`${team}:${index}`, { game: gameNumber, value, by });
   });
+}
+
+/**
+ * How many correct digits each player has on their team's board for
+ * `gameNumber`. A digit counts for whoever last wrote its cell, and
+ * only while it matches the solution: erased, overwritten or wrong
+ * digits earn nothing.
+ */
+export function getTeamContributions(
+  room: P2PRoom,
+  team: Team,
+  gameNumber: number,
+  solution: string,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const [key, raw] of room.doc.getMap("teamCells")) {
+    const [owner, at] = key.split(":");
+    if (owner !== team || typeof raw !== "object" || raw === null) continue;
+    const { game, value, by } = raw as {
+      game?: unknown;
+      value?: unknown;
+      by?: unknown;
+    };
+    if (game !== gameNumber || typeof by !== "string") continue;
+    if (value !== Number(solution[Number(at)])) continue;
+    counts[by] = (counts[by] ?? 0) + 1;
+  }
+  return counts;
 }
 
 /** A team's board for `gameNumber`, ignoring anything malformed. */

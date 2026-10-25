@@ -24,6 +24,7 @@ import {
   getReplays,
   getRoomState,
   getTeamCells,
+  getTeamContributions,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
@@ -131,6 +132,11 @@ export type RoomProjection = {
    * teams game (or before we picked a side).
    */
   teamCells: TeamCells | null;
+  /**
+   * Correct digits each of our teammates (us included) has on the
+   * shared board, by player id. Null outside a teams game.
+   */
+  contributions: Readonly<Record<string, number>> | null;
 };
 
 const NO_REPLAYS: RoomProjection["replays"] = Object.freeze({});
@@ -147,6 +153,7 @@ export const INITIAL_PROJECTION: RoomProjection = {
   error: null,
   replays: NO_REPLAYS,
   teamCells: null,
+  contributions: null,
 };
 
 /**
@@ -274,7 +281,7 @@ export function createRoom({
   // Same guard for replays, which live outside the room state.
   let lastReplaysJson = "{}";
   // And for our team's shared board.
-  let lastTeamCellsJson = "null";
+  let lastTeamCellsJson = "[null,null]";
   let lastGameNumber = 0;
   // The puzzle latched for lastGameNumber — lets the projection spot a
   // same-number/different-puzzle merge after a start collision.
@@ -463,14 +470,17 @@ export function createRoom({
   /** Same reporting contract as trackReplays. */
   function trackTeamCells(): boolean {
     const team = ourTeam();
-    const next =
-      team && lastGameNumber > 0
-        ? getTeamCells(p2p, team, lastGameNumber)
+    const playing = team !== null && lastGameNumber > 0;
+    const next = playing ? getTeamCells(p2p, team, lastGameNumber) : null;
+    const counts =
+      playing && verifiedSolution
+        ? getTeamContributions(p2p, team, lastGameNumber, verifiedSolution)
         : null;
-    const json = JSON.stringify(next);
+    const json = JSON.stringify([next, counts]);
     if (json === lastTeamCellsJson) return false;
     lastTeamCellsJson = json;
     set("teamCells", next);
+    set("contributions", counts);
     return true;
   }
 
@@ -657,7 +667,7 @@ export function createRoom({
     setCell(index, value) {
       const team = ourTeam();
       if (!team || lastGameNumber === 0) return;
-      setTeamCell(p2p, team, lastGameNumber, index, value);
+      setTeamCell(p2p, team, lastGameNumber, index, value, playerId);
     },
     setDigitStyle(style) {
       setRoomDigitStyle(p2p, style);
