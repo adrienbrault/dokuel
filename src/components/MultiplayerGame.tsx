@@ -169,11 +169,15 @@ export function MultiplayerGame({
               ? mp.setDigitStyle
               : undefined
           }
-          replay={{
-            players: match.replayPlayers,
-            replays: mp.replays,
-            share: mp.sendReplay,
-          }}
+          replay={
+            match.team?.coop
+              ? undefined
+              : {
+                  players: match.replayPlayers,
+                  replays: mp.replays,
+                  share: mp.sendReplay,
+                }
+          }
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
           next={{
@@ -200,9 +204,12 @@ export function MultiplayerGame({
             delay swallows the re-sync moment right after OUR return
             from a backgrounded tab, and the live && hides the banner
             the instant the opponent is back. */}
-        {disconnectSettled && mp.opponentDisconnected && !mp.gameOver && (
-          <DisconnectBanner plural={crowd} onClaimWin={mp.claimForfeitWin} />
-        )}
+        {disconnectSettled &&
+          mp.opponentDisconnected &&
+          !mp.gameOver &&
+          !match.team?.coop && (
+            <DisconnectBanner plural={crowd} onClaimWin={mp.claimForfeitWin} />
+          )}
         {toast && <Toast message={toast} />}
       </>
     );
