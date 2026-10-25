@@ -847,7 +847,7 @@ test.describe("teams session", () => {
     }
     const [otter, heron, lynx] = guests as [Page, Page, Page];
 
-    await page.getByRole("switch", { name: "2v2 teams" }).click();
+    await page.getByRole("radio", { name: "2v2" }).click({ force: true });
     for (const [tab, team] of [
       [page, "Team A"],
       [heron, "Team A"],

@@ -20,6 +20,22 @@ import { LobbyPlayers } from "./LobbyPlayers.tsx";
 import { SlidingRadioGroup } from "./SlidingRadioGroup.tsx";
 import { ToggleSwitch } from "./ToggleSwitch.tsx";
 
+const MODE_LABELS: Record<RoomMode, string> = {
+  ffa: "Race",
+  coop: "Co-op",
+  teams: "2v2",
+};
+
+const MODE_HINTS: Record<RoomMode, string> = {
+  ffa: "Everyone races on their own board.",
+  coop: "Everyone solves one board together.",
+  teams: "Two teams of two, each sharing a board.",
+};
+
+const MODE_OPTIONS: { value: RoomMode; label: string }[] = (
+  ["ffa", "coop", "teams"] as const
+).map((value) => ({ value, label: MODE_LABELS[value] }));
+
 type LobbyProps = {
   roomState: RoomState;
   playerId?: string;
@@ -117,23 +133,23 @@ export function Lobby({
         </button>
       </div>
 
-      {isHost && onModeChange ? (
-        <div className="w-full">
-          <ToggleSwitch
-            checked={roomState.mode === "teams"}
-            onChange={() =>
-              onModeChange(roomState.mode === "teams" ? "ffa" : "teams")
-            }
-            label="2v2 teams"
+      <div className="flex flex-col gap-2 w-full">
+        <span className="label">Mode</span>
+        {isHost && onModeChange ? (
+          <SlidingRadioGroup
+            options={MODE_OPTIONS}
+            value={roomState.mode}
+            onChange={onModeChange}
+            name="room-mode"
+            ariaLabel="Mode"
           />
-        </div>
-      ) : (
-        roomState.mode === "teams" && (
-          <p className="caption w-full">
-            2v2 teams: two players share each board
-          </p>
-        )
-      )}
+        ) : (
+          <div className="card px-4 py-2.5 text-center text-sm font-semibold text-text-primary">
+            {MODE_LABELS[roomState.mode]}
+          </div>
+        )}
+        <p className="caption">{MODE_HINTS[roomState.mode]}</p>
+      </div>
 
       <LobbyPlayers
         roomState={roomState}
