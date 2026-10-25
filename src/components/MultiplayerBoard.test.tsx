@@ -729,6 +729,19 @@ describe("MultiplayerBoard after opponent wins", () => {
     expect(screen.getByText("You 3 · Bob 2")).toBeInTheDocument();
   });
 
+  it("tells the room about each wrong digit we place", () => {
+    localStorage.clear();
+    const onMistake = vi.fn();
+    render(<MultiplayerBoard {...baseProps()} onMistake={onMistake} />);
+
+    fireEvent.click(
+      screen.getByRole("gridcell", { name: /^Cell row 1 column 1,/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^9(,|$)/ }));
+
+    expect(onMistake).toHaveBeenCalledOnce();
+  });
+
   it("shows one progress bar per opponent in a room of four", () => {
     localStorage.clear();
     render(
