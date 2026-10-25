@@ -113,6 +113,19 @@ describe("MatchResult", () => {
     expect(screen.getByLabelText("Score")).toBeInTheDocument();
   });
 
+  it("lists everyone's mistakes", () => {
+    renderResult({
+      mistakes: [
+        { name: "You", count: 2 },
+        { name: "Bob", count: 5 },
+      ],
+    });
+
+    expect(screen.getByLabelText("Mistakes")).toHaveTextContent(
+      "Mistakes: You 2 · Bob 5",
+    );
+  });
+
   it("asks for a rematch with the primary action", async () => {
     const props = renderResult({});
 
