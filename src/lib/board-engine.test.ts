@@ -277,7 +277,9 @@ describe("APPLY_REMOTE action", () => {
     "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
 
   it("takes a teammate's digit without adding it to our undo log", () => {
-    let state = initState({ puzzle });
+    const solved =
+      "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+    let state = initState({ puzzle, solution: solved });
     state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 3, value: 4 });
     const historyBefore = state.history.length;
 
