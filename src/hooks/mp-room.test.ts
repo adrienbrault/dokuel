@@ -951,4 +951,29 @@ describe("teams", () => {
     expect(doc.getMap("room").get("gameNumber")).toBe(2);
     expect(room.snapshot().teamCells?.[10]).toBeNull();
   });
+
+  it("counts each teammate's correct digits on the shared board", () => {
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    for (const id of ["p2", "p3", "p4"]) joinRoom(p2p, id, id);
+    room.setMode("teams");
+    room.setTeam("a");
+    setTeam(p2p, "p2", "a");
+    setTeam(p2p, "p3", "b");
+    setTeam(p2p, "p4", "b");
+    room.start();
+    const puzzle = doc.getMap("room").get("puzzle") as string;
+    const solution = doc.getMap("room").get("solution") as string;
+    const [first, second, third] = [...puzzle].flatMap((ch, i) =>
+      ch === "." ? [i] : [],
+    ) as [number, number, number];
+    const wrong = (i: number) => (Number(solution[i]) % 9) + 1;
+
+    room.setCell(first, Number(solution[first]));
+    room.setCell(second, wrong(second));
+    setTeamCell(p2p, "a", 1, third, Number(solution[third]), "p2");
+
+    expect(room.snapshot().contributions).toEqual({ p1: 1, p2: 1 });
+  });
 });
+
