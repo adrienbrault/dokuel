@@ -592,3 +592,45 @@ describe("MultiplayerGame teams", () => {
   });
 });
 
+describe("MultiplayerGame co-op", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = { ...roomState, mode: "coop" };
+  });
+
+  it("ends on the board solved together, with nothing to replay", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.roomState = { ...roomState, mode: "coop", status: "finished" };
+      mockMp.gameOver = { winnerId: "opp", winnerName: "Opponent" };
+      mockMp.contributions = { me: 30, opp: 21 };
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      expect(screen.getByRole("dialog")).toHaveAccessibleName(
+        "Solved together!",
+      );
+      expect(screen.queryByText("Watch Replay")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never offers to claim a win over a partner who dropped", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+
+      expect(screen.queryByText(/disconnected/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
