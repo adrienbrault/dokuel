@@ -159,6 +159,15 @@ The host picks the mode in the lobby (guests see it read-only):
   shows the same split (beside the score in 2v2, as the main tile in
   co-op)
 
+### Mistakes
+- Every mode counts each player's wrong digits for the current game: a
+  wrong placement counts once, even if erased or brought back by Undo.
+  Each seat keeps its own count, reset by a new game
+- The result lists everyone's: "Mistakes: You 2 · Bob 5"
+- On a shared board, a teammate's wrong digit never costs us our notes:
+  it hides the cell's notes until erased, and peers keep theirs. Only a
+  correct digit clears notes, like our own placements do
+
 ### 2v2 Teams
 - The host picks "2v2" as the lobby's mode; each player then picks
   Team A or Team B for their own seat. Start stays disabled (and the
