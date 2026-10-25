@@ -485,6 +485,24 @@ describe("MultiplayerGame rematch", () => {
     }
   });
 
+  it("shows how many mistakes each player made", () => {
+    vi.useFakeTimers();
+    try {
+      renderFinished({
+        players: [
+          { ...roomState.players[0]!, mistakes: 1 },
+          { ...roomState.players[1]!, mistakes: 3 },
+        ],
+      });
+
+      expect(screen.getByLabelText("Mistakes")).toHaveTextContent(
+        "Mistakes: You 1 · Opponent 3",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("sends the host's next difficulty to the room", () => {
     vi.useFakeTimers();
     try {
