@@ -92,13 +92,25 @@ describe("MatchResult", () => {
       ],
     });
 
-    expect(screen.getByRole("dialog")).toHaveAccessibleName(
-      "Solved together!",
-    );
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Solved together!");
     expect(screen.getByLabelText("Digits placed")).toHaveTextContent(
       "You24Bob19",
     );
     expect(screen.queryByLabelText("Score")).toBeNull();
+  });
+
+  it("shows a 2v2 team who placed what alongside the score", () => {
+    renderResult({
+      credits: [
+        { name: "You", count: 12 },
+        { name: "Carol", count: 9 },
+      ],
+    });
+
+    expect(screen.getByLabelText("Digits placed")).toHaveTextContent(
+      "You 12 · Carol 9",
+    );
+    expect(screen.getByLabelText("Score")).toBeInTheDocument();
   });
 
   it("asks for a rematch with the primary action", async () => {
