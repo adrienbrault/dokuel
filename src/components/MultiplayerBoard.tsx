@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useMatchResult } from "../hooks/useMatchResult.ts";
 import { useMultiplayerAutosave } from "../hooks/useMultiplayerAutosave.ts";
@@ -7,6 +7,7 @@ import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
 import { useRaceReporting } from "../hooks/useRaceReporting.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
+import { useRematchReset } from "../hooks/useRematchReset.ts";
 import { useReplayRecorder } from "../hooks/useReplayRecorder.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
 import { type TeamPlay, useTeamBoardSync } from "../hooks/useTeamBoardSync.ts";
@@ -108,32 +109,18 @@ export function MultiplayerBoard({
     [saved],
   );
   const game = useSudoku(puzzle, solution ?? undefined, savedBoard);
-  // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
-  // Reset the reducer in-place rather than remount the whole subtree:
-  // keeps the timer ref, num-pad position, and any other UI state alive.
-  // The puzzle is tracked too: after a concurrent start/rematch merge
-  // the number can stay put while the puzzle changes under us.
-  const prevGameNumberRef = useRef(gameNumber);
-  const prevPuzzleRef = useRef(puzzle);
-  useEffect(() => {
-    if (
-      gameNumber === prevGameNumberRef.current &&
-      puzzle === prevPuzzleRef.current
-    ) {
-      return;
-    }
-    prevGameNumberRef.current = gameNumber;
-    prevPuzzleRef.current = puzzle;
-    game.reset(puzzle, solution ?? undefined, savedBoard);
-    // The new game starts from zero; without this the recorded match
-    // time for game 2 includes game 1's clock.
-    timerSecondsRef.current = 0;
-  }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
   const initialTimerSeconds = saved?.timer ?? 0;
   const timerSecondsRef = useRef(initialTimerSeconds);
+  // Reset in place rather than remount: keeps the timer, the numpad
+  // position and other UI state alive across a rematch.
+  useRematchReset(gameNumber, puzzle, () => {
+    game.reset(puzzle, solution ?? undefined, savedBoard);
+    // Without this, game 2's recorded time includes game 1's clock.
+    timerSecondsRef.current = 0;
+  });
   const revealed = useDelayedFlag(true, 600);
   const iWon =
     gameOver !== null &&
