@@ -1,3 +1,5 @@
+import { formatCredits } from "../lib/teams.ts";
+import type { Credit } from "../lib/types.ts";
 import type { RematchState } from "./MatchResult.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
 
@@ -7,6 +9,8 @@ export type OpponentBar = {
   name: string;
   color: string;
   completionPercent: number;
+  /** Always labelled by name, even alone (a whole team, say). */
+  named?: boolean;
 };
 
 type MultiplayerHeaderExtraProps = {
@@ -22,6 +26,8 @@ type MultiplayerHeaderExtraProps = {
   askedBy?: string | undefined;
   /** Brings back the result a loser set aside to keep solving. */
   onShowResult?: (() => void) | undefined;
+  /** On a shared board: who placed what, shown on our own bar. */
+  credits?: Credit[] | undefined;
 };
 
 export function MultiplayerHeaderExtra({
@@ -34,7 +40,10 @@ export function MultiplayerHeaderExtra({
   rematch = "idle",
   askedBy,
   onShowResult,
+  credits,
 }: MultiplayerHeaderExtraProps) {
+  // Co-op has no rivals, yet our own bar still has a story to tell.
+  const showBars = showOpponentProgress && (opponents.length > 0 || !!credits);
   if (gameOver && !iFinished) {
     return (
       <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2">
@@ -59,12 +68,13 @@ export function MultiplayerHeaderExtra({
             </button>
           )}
         </div>
-        {showOpponentProgress && opponents.length > 0 && (
+        {showBars && (
           <div className="flex flex-col gap-1.5">
             <RaceBars
               opponents={opponents}
               myPercent={myPercent}
               reconnecting={false}
+              credits={credits}
             />
           </div>
         )}
@@ -72,17 +82,18 @@ export function MultiplayerHeaderExtra({
     );
   }
 
-  if (showOpponentProgress && opponents.length > 0) {
+  if (showBars) {
     return (
       // The paired bars give back the bottom margin they would otherwise
       // push the board down by.
       <div
-        className={`w-full max-w-[min(100vw-2rem,28rem)] flex flex-col gap-1.5 ${opponents.length > 1 ? "mb-1" : "mb-3"}`}
+        className={`w-full max-w-[min(100vw-2rem,28rem)] flex flex-col gap-1.5 ${stacksBars(opponents) || credits ? "mb-1" : "mb-3"}`}
       >
         <RaceBars
           opponents={opponents}
           myPercent={myPercent}
           reconnecting={opponentDisconnected}
+          credits={credits}
         />
       </div>
     );
@@ -98,39 +109,57 @@ export function MultiplayerHeaderExtra({
  * no more height than the 1v1 pair — the smallest phones have none to
  * spare above the board.
  */
+/**
+ * Several opponents, or a whole team behind one bar: either way the
+ * labels are names too long for the side-by-side layout.
+ */
+function stacksBars(opponents: OpponentBar[]): boolean {
+  return opponents.length > 1 || !!opponents[0]?.named;
+}
+
 function RaceBars({
   opponents,
   myPercent,
   reconnecting,
+  credits,
 }: {
   opponents: OpponentBar[];
   myPercent: number;
   reconnecting: boolean;
+  credits: Credit[] | undefined;
 }) {
   const solo = opponents.length === 1;
+  const stacked = stacksBars(opponents) || !!credits;
+  // One named bar is the other team, or none at all in co-op: either
+  // way ours is a whole team's board, stacked full width.
+  const versusTeam = opponents.length <= 1 && stacked;
   const bars = (
     <>
       <ProgressBar
-        label="You"
+        label={
+          credits ? formatCredits(credits) : versusTeam ? "Your team" : "You"
+        }
         percent={myPercent}
         color="bg-accent"
-        compact={!solo}
+        compact={stacked}
       />
       {opponents.map((o) => {
-        const name = solo ? "Opponent" : o.name;
+        const plain = solo && !o.named;
+        const name = plain ? "Opponent" : o.name;
         return (
           <ProgressBar
             key={o.id}
             label={reconnecting ? `${name} (reconnecting...)` : name}
             percent={o.completionPercent}
-            color={solo ? "bg-opponent" : ""}
-            fill={solo ? undefined : o.color}
-            compact={!solo}
+            color={plain ? "bg-opponent" : ""}
+            fill={plain ? undefined : o.color}
+            compact={stacked}
           />
         );
       })}
     </>
   );
-  if (solo) return bars;
+  if (!stacked) return bars;
+  if (versusTeam) return <div className="flex flex-col gap-1">{bars}</div>;
   return <div className="grid grid-cols-2 gap-x-4 gap-y-1">{bars}</div>;
 }

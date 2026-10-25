@@ -271,3 +271,61 @@ describe("PLACE_NUMBER overwrite protection", () => {
     expect(state.history).toHaveLength(1);
   });
 });
+
+describe("APPLY_REMOTE action", () => {
+  const puzzle =
+    "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+
+  it("takes a teammate's digit without adding it to our undo log", () => {
+    const solved =
+      "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+    let state = initState({ puzzle, solution: solved });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 3, value: 4 });
+    const historyBefore = state.history.length;
+
+    state = reducer(state, {
+      type: "APPLY_REMOTE",
+      cells: [{ index: cellKey(0, 2), value: 4 }],
+    });
+
+    expect(state.board[0]![2]!.value).toBe(4);
+    expect(state.history).toHaveLength(historyBefore);
+    // Our pencilled 4 in the same row goes, as if we had placed it.
+    expect(state.board[0]![3]!.notes.has(4)).toBe(false);
+  });
+
+  it("completes the board when a teammate places the last digit", () => {
+    const solved =
+      "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+    let state = initState({ puzzle: `.${solved.slice(1)}`, solution: solved });
+
+    state = reducer(state, {
+      type: "APPLY_REMOTE",
+      cells: [{ index: 0, value: 5 }],
+    });
+
+    expect(state.status).toBe("completed");
+  });
+
+  it("leaves our notes alone when a teammate places a wrong digit", () => {
+    const solved =
+      "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+    const puzzle = `...${solved.slice(3)}`;
+    // (0,2) is a 4; a 9 there is a teammate's mistake.
+    let state = initState({ puzzle, solution: solved });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 1, value: 9 });
+    state = reducer(state, { type: "PLACE_NOTE_AT", row: 0, col: 2, value: 4 });
+
+    state = reducer(state, {
+      type: "APPLY_REMOTE",
+      cells: [{ index: 2, value: 9 }],
+    });
+    expect(state.board[0]![1]!.notes.has(9)).toBe(true);
+
+    state = reducer(state, {
+      type: "APPLY_REMOTE",
+      cells: [{ index: 2, value: null }],
+    });
+    expect([...state.board[0]![2]!.notes]).toEqual([4]);
+  });
+});

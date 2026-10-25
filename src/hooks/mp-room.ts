@@ -1,10 +1,14 @@
 import type { Doc } from "yjs";
 import type { ReplayFrame } from "../lib/replay.ts";
+import { teamsReady } from "../lib/teams.ts";
 import type {
   AssistLevel,
   Difficulty,
   DigitStyle,
+  RoomMode,
   RoomState,
+  Team,
+  TeamCells,
 } from "../lib/types.ts";
 import {
   clearSnapshot,
@@ -19,6 +23,8 @@ import {
   getPlayers,
   getReplays,
   getRoomState,
+  getTeamCells,
+  getTeamContributions,
   hydrateRoomFromSnapshot,
   initializeRoom,
   joinRoom,
@@ -28,9 +34,13 @@ import {
   MIN_PLAYERS,
   observeRoomChanges,
   publishReplay,
+  recordMistake as recordRoomMistake,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
   setDigitStyle as setRoomDigitStyle,
+  setMode as setRoomMode,
+  setTeam as setRoomTeam,
+  setTeamCell,
   startGame,
   updatePlayerName,
   updateProgress,
@@ -118,6 +128,16 @@ export type RoomProjection = {
    * over from the previous game is never shown for this one.
    */
   replays: Readonly<Record<string, ReplayFrame[]>>;
+  /**
+   * Our team's shared board for the current game, or null outside a
+   * teams game (or before we picked a side).
+   */
+  teamCells: TeamCells | null;
+  /**
+   * Correct digits each of our teammates (us included) has on the
+   * shared board, by player id. Null outside a teams game.
+   */
+  contributions: Readonly<Record<string, number>> | null;
 };
 
 const NO_REPLAYS: RoomProjection["replays"] = Object.freeze({});
@@ -133,6 +153,8 @@ export const INITIAL_PROJECTION: RoomProjection = {
   roomFull: false,
   error: null,
   replays: NO_REPLAYS,
+  teamCells: null,
+  contributions: null,
 };
 
 /**
@@ -201,6 +223,14 @@ export type Room = {
   updateName(name: string): void;
   setAssistLevel(level: AssistLevel): void;
   setDifficulty(level: Difficulty): void;
+  /** Free-for-all, or two teams of two sharing a board each. */
+  setMode(mode: RoomMode): void;
+  /** Pick our side for a teams game. */
+  setTeam(team: Team): void;
+  /** Count a wrong digit we just placed against us. */
+  recordMistake(): void;
+  /** Place or clear a digit on our team's shared board. */
+  setCell(index: number, value: number | null): void;
   /** Pin both boards to one palette, or null to free them again. */
   setDigitStyle(style: DigitStyle | null): void;
   /**
@@ -253,6 +283,8 @@ export function createRoom({
   let lastRoomStateJson: string | undefined;
   // Same guard for replays, which live outside the room state.
   let lastReplaysJson = "{}";
+  // And for our team's shared board.
+  let lastTeamCellsJson = "[null,null]";
   let lastGameNumber = 0;
   // The puzzle latched for lastGameNumber — lets the projection spot a
   // same-number/different-puzzle merge after a start collision.
@@ -432,6 +464,31 @@ export function createRoom({
     return true;
   }
 
+  function ourTeam(): Team | null {
+    const state = getRoomState(p2p);
+    // Co-op is one team the size of the room; nobody picks a side.
+    if (state?.mode === "coop") return "a";
+    if (state?.mode !== "teams") return null;
+    return state.players.find((p) => p.id === playerId)?.team ?? null;
+  }
+
+  /** Same reporting contract as trackReplays. */
+  function trackTeamCells(): boolean {
+    const team = ourTeam();
+    const playing = team !== null && lastGameNumber > 0;
+    const next = playing ? getTeamCells(p2p, team, lastGameNumber) : null;
+    const counts =
+      playing && verifiedSolution
+        ? getTeamContributions(p2p, team, lastGameNumber, verifiedSolution)
+        : null;
+    const json = JSON.stringify([next, counts]);
+    if (json === lastTeamCellsJson) return false;
+    lastTeamCellsJson = json;
+    set("teamCells", next);
+    set("contributions", counts);
+    return true;
+  }
+
   function project(): void {
     const state = getRoomState(p2p);
     // Live peer state beat the snapshot to it — drop the snapshot.
@@ -444,7 +501,8 @@ export function createRoom({
     // is ~1KB) keeps identity stable across no-op fires.
     const stateJson = JSON.stringify(state);
     if (stateJson === lastRoomStateJson) {
-      if (trackReplays()) publish();
+      const replaysMoved = trackReplays();
+      if (trackTeamCells() || replaysMoved) publish();
       return;
     }
     lastRoomStateJson = stateJson;
@@ -458,6 +516,7 @@ export function createRoom({
       settleSeat(state);
     }
     trackReplays();
+    trackTeamCells();
     publish();
     if (state?.hostId === playerId) dealRematchIfAgreed();
   }
@@ -568,8 +627,14 @@ export function createRoom({
       claimWinner(p2p, playerId, playerName(), null);
     },
     start() {
-      if (getPlayers(p2p).length < MIN_PLAYERS) {
+      const players = getPlayers(p2p);
+      if (players.length < MIN_PLAYERS) {
         set("error", { message: "Need 2 players to start" });
+        publish();
+        return;
+      }
+      if (getRoomState(p2p)?.mode === "teams" && !teamsReady(players)) {
+        set("error", { message: "Teams need two players each" });
         publish();
         return;
       }
@@ -597,6 +662,20 @@ export function createRoom({
     },
     setDifficulty(level) {
       setRoomDifficulty(p2p, level);
+    },
+    setMode(mode) {
+      setRoomMode(p2p, mode);
+    },
+    setTeam(team) {
+      setRoomTeam(p2p, playerId, team);
+    },
+    recordMistake() {
+      recordRoomMistake(p2p, playerId);
+    },
+    setCell(index, value) {
+      const team = ourTeam();
+      if (!team || lastGameNumber === 0) return;
+      setTeamCell(p2p, team, lastGameNumber, index, value, playerId);
     },
     setDigitStyle(style) {
       setRoomDigitStyle(p2p, style);

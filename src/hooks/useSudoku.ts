@@ -92,6 +92,12 @@ export function useSudoku(
 
   const dismissHint = useCallback(() => dispatch({ type: "DISMISS_HINT" }), []);
 
+  const applyRemote = useCallback(
+    (cells: { index: number; value: number | null }[]) =>
+      dispatch({ type: "APPLY_REMOTE", cells }),
+    [],
+  );
+
   const reset = useCallback(
     (nextPuzzle: string, nextSolution?: string, nextSaved?: SavedBoard) =>
       dispatch({
@@ -115,6 +121,8 @@ export function useSudoku(
     remainingCounts,
     cellsRemaining,
     historyLength: state.history.length,
+    /** Our latest move still in the undo log, if any. */
+    lastMove: state.history.at(-1),
     hintsUsed: state.hintsUsed,
     cellKey,
     selectCell,
@@ -128,6 +136,7 @@ export function useSudoku(
     toggleNotesMode,
     hint,
     dismissHint,
+    applyRemote,
     reset,
   };
 }

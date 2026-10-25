@@ -112,6 +112,10 @@ export function sceneLabel(scene: string): string {
     "stats-replay": "Stats · duel replay",
     "multiplayer-four-lobby": "Four players · lobby",
     "multiplayer-four-race": "Four players · race bars",
+    "multiplayer-teams-lobby": "2v2 teams · lobby",
+    "multiplayer-teams-race": "2v2 teams · shared board",
+    "multiplayer-coop-race": "Co-op · shared board",
+    "multiplayer-coop-result": "Co-op · result",
   };
   return overrides[scene] ?? titleCase(scene);
 }

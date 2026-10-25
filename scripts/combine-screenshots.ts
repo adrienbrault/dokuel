@@ -142,8 +142,15 @@ const FEATURE_GROUPS: { name: string; title: string; scenes: string[] }[] = [
   },
   {
     name: "multiplayer-four",
-    title: "Four-player rooms",
-    scenes: ["multiplayer-four-lobby", "multiplayer-four-race"],
+    title: "Four-player rooms, 2v2 & co-op",
+    scenes: [
+      "multiplayer-four-lobby",
+      "multiplayer-four-race",
+      "multiplayer-teams-lobby",
+      "multiplayer-teams-race",
+      "multiplayer-coop-race",
+      "multiplayer-coop-result",
+    ],
   },
   {
     name: "multiplayer-post-game",

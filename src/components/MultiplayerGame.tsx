@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useArchiveMatchReplay } from "../hooks/useArchiveMatchReplay.ts";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
+import { useTeamMatch } from "../hooks/useTeamMatch.ts";
 import { useYjsMultiplayer } from "../hooks/useYjsMultiplayer.ts";
 import { formatNameList } from "../lib/format.ts";
-import type { Difficulty, DigitStyle, Player } from "../lib/types.ts";
+import type {
+  Difficulty,
+  DigitStyle,
+  Player,
+  RoomState,
+} from "../lib/types.ts";
 import { Lobby } from "./Lobby.tsx";
 import type { RematchState } from "./MatchResult.tsx";
 import { MultiplayerBoard } from "./MultiplayerBoard.tsx";
@@ -41,6 +47,7 @@ export function MultiplayerGame({
   const isHost = useRef(false);
   // Same blip guard for the race bars: they would vanish and pop back.
   const lastOpponents = useRef<Player[]>(NO_PLAYERS);
+  const lastRoom = useRef<RoomState | null>(null);
   // Once a game is over the room's difficulty is the NEXT game's, which
   // the host may change from the result: the board keeps the one its
   // own game was dealt on.
@@ -50,6 +57,7 @@ export function MultiplayerGame({
   if (mp.roomState) {
     lastDigitStyle.current = mp.roomState.digitStyle;
     isHost.current = mp.roomState.hostId === playerId;
+    lastRoom.current = mp.roomState;
     lastOpponents.current = mp.roomState.players.filter(
       (p) => p.id !== playerId,
     );
@@ -60,6 +68,14 @@ export function MultiplayerGame({
       };
     }
   }
+  const match = useTeamMatch({
+    room: lastRoom.current,
+    playerId,
+    gameOver: mp.gameOver,
+    cells: mp.teamCells,
+    setCell: mp.sendTeamCell,
+    contributions: mp.contributions,
+  });
   // Outlives the room: Stats replays the match from this copy.
   useArchiveMatchReplay({
     roomId,
@@ -67,7 +83,7 @@ export function MultiplayerGame({
     gameNumber: mp.roomState?.gameNumber ?? 0,
     puzzle: mp.puzzle,
     solution: mp.solution,
-    players: mp.roomState?.players ?? NO_PLAYERS,
+    players: match.replayPlayers,
     replays: mp.replays,
     gameOver: mp.gameOver,
   });
@@ -142,23 +158,30 @@ export function MultiplayerGame({
           playerId={playerId}
           difficulty={gameDifficulty.current?.level ?? "medium"}
           assistLevel={mp.roomState?.assistLevel ?? "standard"}
-          opponentName={formatNameList(opponents.map((p) => p.name))}
-          opponents={lastOpponents.current}
+          opponentName={match.rivalName}
+          opponents={match.bars}
           opponentDisconnected={mp.opponentDisconnected}
-          gameOver={mp.gameOver}
+          gameOver={match.gameOver}
+          team={match.team}
+          mistakes={match.mistakes}
           digitStyle={lastDigitStyle.current}
           onDigitStyleChange={
             isHost.current && lastDigitStyle.current
               ? mp.setDigitStyle
               : undefined
           }
-          replay={{
-            players: mp.roomState?.players ?? [],
-            replays: mp.replays,
-            share: mp.sendReplay,
-          }}
+          replay={
+            match.team?.coop
+              ? undefined
+              : {
+                  players: match.replayPlayers,
+                  replays: mp.replays,
+                  share: mp.sendReplay,
+                }
+          }
           onProgress={mp.sendProgress}
           onComplete={mp.sendComplete}
+          onMistake={mp.sendMistake}
           next={{
             rematch,
             difficulty: mp.roomState?.difficulty ?? "medium",
@@ -183,9 +206,12 @@ export function MultiplayerGame({
             delay swallows the re-sync moment right after OUR return
             from a backgrounded tab, and the live && hides the banner
             the instant the opponent is back. */}
-        {disconnectSettled && mp.opponentDisconnected && !mp.gameOver && (
-          <DisconnectBanner plural={crowd} onClaimWin={mp.claimForfeitWin} />
-        )}
+        {disconnectSettled &&
+          mp.opponentDisconnected &&
+          !mp.gameOver &&
+          !match.team?.coop && (
+            <DisconnectBanner plural={crowd} onClaimWin={mp.claimForfeitWin} />
+          )}
         {toast && <Toast message={toast} />}
       </>
     );
@@ -238,6 +264,8 @@ export function MultiplayerGame({
           onAssistLevelChange={mp.setAssistLevel}
           onDifficultyChange={mp.setDifficulty}
           onDigitStyleChange={mp.setDigitStyle}
+          onModeChange={mp.setMode}
+          onTeamChange={mp.setTeam}
           onStart={mp.sendStartGame}
           onBack={onBack}
         />

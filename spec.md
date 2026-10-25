@@ -142,6 +142,53 @@ settings popover):
   a lone opponent shows as "Opponent", bigger rooms show one bar per
   player with their name and color
 
+### Room Modes
+The host picks the mode in the lobby (guests see it read-only):
+- **Race** (default): everyone on their own board, first to finish wins
+- **Co-op**: the whole room (2 to 4 players) solves one shared board
+  together. No winner and no running score: the result reads "Solved
+  together!" with each player's digits. No replay, no forfeit claim, and
+  co-op games stay out of the duel history
+- **2v2**: two teams of two, each sharing a board (below)
+
+### Credit on Shared Boards
+- In co-op and 2v2, every digit on a shared board is credited to whoever
+  last wrote its cell, and only while it is correct: erased, overwritten
+  or wrong digits earn nothing (no reward for spamming guesses)
+- Our own bar reads "You 12 · Carol 9" during the game, and the result
+  shows the same split (beside the score in 2v2, as the main tile in
+  co-op)
+
+### Mistakes
+- Every mode counts each player's wrong digits for the current game: a
+  wrong placement counts once, even if erased or brought back by Undo.
+  Each seat keeps its own count, reset by a new game
+- The result lists everyone's once anyone slipped: "Mistakes: You 2 · Bob 5"
+- On a shared board, a teammate's wrong digit never costs us our notes:
+  it hides the cell's notes until erased, and peers keep theirs. Only a
+  correct digit clears notes, like our own placements do
+
+### 2v2 Teams
+- The host picks "2v2" as the lobby's mode; each player then picks
+  Team A or Team B for their own seat. Start stays disabled (and the
+  room refuses to deal) until it is exactly two against two
+- Teammates play one shared board: digits placed or erased by either
+  land on both screens (one Yjs key per cell, last writer wins on the
+  same cell, tagged with the game number so a rematch starts blank).
+  Notes stay personal
+- Undo takes back only our own moves; a teammate's digits never enter
+  our undo history (undoing a move whose cell the teammate has since
+  changed still restores our previous value)
+- The other team shows as one named progress bar; the result names the
+  whole winning team, and a win claimed by either teammate counts for
+  both, in the result and the match history
+- The replay sets us against a rival's board, never our teammate's
+- Teams persist across rematches; switching back to free-for-all
+  ignores them
+- Known limit: the disconnect banner and forfeit claim only arm when
+  every other player is gone, so a reachable teammate keeps them off
+  even if both rivals left
+
 ## Game Board
 
 ### Interactions

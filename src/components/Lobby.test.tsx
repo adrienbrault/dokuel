@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
@@ -7,6 +7,7 @@ import { Lobby } from "./Lobby.tsx";
 const BASE_STATE: RoomState = {
   roomId: "abc123",
   status: "lobby",
+  mode: "ffa",
   difficulty: "medium",
   assistLevel: "standard",
   hostId: "p1",
@@ -18,6 +19,8 @@ const BASE_STATE: RoomState = {
 
       cellsRemaining: 81,
       completionPercent: 0,
+      team: null,
+      mistakes: 0,
     },
   ],
   puzzle: null,
@@ -51,6 +54,8 @@ describe("Lobby", () => {
 
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -73,6 +78,8 @@ describe("Lobby", () => {
           color: "#EF4444",
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
+          mistakes: 0,
         },
         {
           id: "p3",
@@ -80,6 +87,8 @@ describe("Lobby", () => {
           color: "#10B981",
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -101,6 +110,8 @@ describe("Lobby", () => {
           color: "#EF4444",
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -123,6 +134,8 @@ describe("Lobby", () => {
 
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -208,6 +221,8 @@ describe("Lobby", () => {
 
           cellsRemaining: 81,
           completionPercent: 0,
+          team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -241,5 +256,83 @@ describe("Lobby", () => {
       mode: "emoji",
       emojiTheme: "vehicles",
     });
+  });
+});
+
+describe("Lobby teams", () => {
+  it("lets the host pick race, co-op or 2v2", async () => {
+    const onModeChange = vi.fn();
+    render(
+      <Lobby
+        roomState={BASE_STATE}
+        playerId="p1"
+        onModeChange={onModeChange}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    const mode = screen.getByRole("radiogroup", { name: "Mode" });
+
+    await userEvent.click(within(mode).getByRole("radio", { name: /co-op/i }));
+    expect(onModeChange).toHaveBeenLastCalledWith("coop");
+
+    await userEvent.click(within(mode).getByRole("radio", { name: /2v2/i }));
+    expect(onModeChange).toHaveBeenLastCalledWith("teams");
+  });
+
+  it("lets us pick our own team", async () => {
+    const onTeamChange = vi.fn();
+    render(
+      <Lobby
+        roomState={{ ...BASE_STATE, mode: "teams" }}
+        playerId="p1"
+        onTeamChange={onTeamChange}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: "Team B" }));
+
+    expect(onTeamChange).toHaveBeenCalledWith("b");
+  });
+
+  it("holds Start until the teams are two against two", () => {
+    const player = (id: string, team: "a" | "b" | null) => ({
+      id,
+      name: id,
+      color: "#000000",
+      cellsRemaining: 81,
+      completionPercent: 0,
+      team,
+      mistakes: 0,
+    });
+    const state: RoomState = {
+      ...BASE_STATE,
+      mode: "teams",
+      players: [
+        player("p1", "a"),
+        player("p2", "a"),
+        player("p3", "b"),
+        player("p4", null),
+      ],
+    };
+
+    const { rerender } = render(
+      <Lobby roomState={state} onStart={vi.fn()} onBack={vi.fn()} />,
+    );
+    expect(screen.getByRole("button", { name: /start/i })).toBeDisabled();
+
+    rerender(
+      <Lobby
+        roomState={{
+          ...state,
+          players: [...state.players.slice(0, 3), player("p4", "b")],
+        }}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /start/i })).toBeEnabled();
   });
 });

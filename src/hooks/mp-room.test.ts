@@ -9,6 +9,8 @@ import {
   initializeRoom,
   joinRoom,
   publishReplay,
+  setTeam,
+  setTeamCell,
   startGame,
   updateProgress,
   voteRematch,
@@ -864,5 +866,142 @@ describe("close", () => {
     startGame(p2p);
 
     expect(room.snapshot()).toBe(before);
+  });
+});
+
+describe("teams", () => {
+  it("switches the room between free-for-all and 2v2 teams", () => {
+    const { room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    expect(room.snapshot().roomState?.mode).toBe("ffa");
+
+    room.setMode("teams");
+
+    expect(room.snapshot().roomState?.mode).toBe("teams");
+  });
+
+  it("lets each player pick their own team", () => {
+    const { p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    joinRoom(p2p, "p2", "Bob");
+
+    room.setTeam("b");
+
+    const players = room.snapshot().roomState?.players ?? [];
+    expect(players.map((p) => [p.id, p.team])).toEqual([
+      ["p1", "b"],
+      ["p2", null],
+    ]);
+  });
+
+  it("refuses to start teams that are not two against two", () => {
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    for (const id of ["p2", "p3", "p4"]) joinRoom(p2p, id, id);
+    room.setMode("teams");
+    room.setTeam("a");
+    setTeam(p2p, "p2", "a");
+    setTeam(p2p, "p3", "a");
+    setTeam(p2p, "p4", "b");
+
+    room.start();
+
+    expect(doc.getMap("room").get("gameNumber")).toBe(0);
+    expect(room.snapshot().error?.message).toBe("Teams need two players each");
+
+    setTeam(p2p, "p3", "b");
+    room.start();
+    expect(doc.getMap("room").get("gameNumber")).toBe(1);
+  });
+
+  it("shares a teammate's digits but not the other team's", () => {
+    const { p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    for (const id of ["p2", "p3", "p4"]) joinRoom(p2p, id, id);
+    room.setMode("teams");
+    room.setTeam("a");
+    setTeam(p2p, "p2", "a");
+    setTeam(p2p, "p3", "b");
+    setTeam(p2p, "p4", "b");
+    room.start();
+
+    setTeamCell(p2p, "a", 1, 5, 7);
+    setTeamCell(p2p, "b", 1, 6, 3);
+
+    const cells = room.snapshot().teamCells;
+    expect(cells?.[5]).toBe(7);
+    expect(cells?.[6]).toBeNull();
+  });
+
+  it("writes our digits to our own team's board, fresh each game", () => {
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    for (const id of ["p2", "p3", "p4"]) joinRoom(p2p, id, id);
+    room.setMode("teams");
+    room.setTeam("a");
+    setTeam(p2p, "p2", "a");
+    setTeam(p2p, "p3", "b");
+    setTeam(p2p, "p4", "b");
+    room.start();
+
+    room.setCell(10, 4);
+    expect(room.snapshot().teamCells?.[10]).toBe(4);
+
+    startGame(p2p);
+    expect(doc.getMap("room").get("gameNumber")).toBe(2);
+    expect(room.snapshot().teamCells?.[10]).toBeNull();
+  });
+
+  it("counts each teammate's correct digits on the shared board", () => {
+    const { doc, p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    for (const id of ["p2", "p3", "p4"]) joinRoom(p2p, id, id);
+    room.setMode("teams");
+    room.setTeam("a");
+    setTeam(p2p, "p2", "a");
+    setTeam(p2p, "p3", "b");
+    setTeam(p2p, "p4", "b");
+    room.start();
+    const puzzle = doc.getMap("room").get("puzzle") as string;
+    const solution = doc.getMap("room").get("solution") as string;
+    const [first, second, third] = [...puzzle].flatMap((ch, i) =>
+      ch === "." ? [i] : [],
+    ) as [number, number, number];
+    const wrong = (i: number) => (Number(solution[i]) % 9) + 1;
+
+    room.setCell(first, Number(solution[first]));
+    room.setCell(second, wrong(second));
+    setTeamCell(p2p, "a", 1, third, Number(solution[third]), "p2");
+
+    expect(room.snapshot().contributions).toEqual({ p1: 1, p2: 1 });
+  });
+
+  it("puts everyone on one shared board in co-op", () => {
+    const { p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    joinRoom(p2p, "p2", "Bob");
+    room.setMode("coop");
+    room.start();
+
+    setTeamCell(p2p, "a", 1, 5, 7, "p2");
+
+    expect(room.snapshot().roomState?.mode).toBe("coop");
+    expect(room.snapshot().teamCells?.[5]).toBe(7);
+  });
+
+  it("counts each player's mistakes for the current game only", () => {
+    const { p2p, room } = setupStartedGame();
+
+    room.recordMistake();
+    room.recordMistake();
+    expect(
+      room.snapshot().roomState?.players.map((p) => [p.id, p.mistakes]),
+    ).toEqual([
+      ["p1", 2],
+      ["p2", 0],
+    ]);
+
+    startGame(p2p);
+    expect(room.snapshot().roomState?.players[0]?.mistakes).toBe(0);
   });
 });

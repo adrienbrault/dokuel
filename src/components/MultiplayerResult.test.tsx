@@ -9,6 +9,8 @@ function player(id: string, completionPercent: number): Player {
     color: "#000000",
     cellsRemaining: 0,
     completionPercent,
+    team: null,
+    mistakes: 0,
   };
 }
 

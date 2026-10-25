@@ -11,6 +11,7 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
   return {
     roomId: "room-1",
     status: "playing",
+    mode: "ffa",
     difficulty: "medium",
     assistLevel: "standard",
     hostId: "p1",
@@ -21,6 +22,8 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
         color: "#3B82F6",
         cellsRemaining: 40,
         completionPercent: 50,
+        team: null,
+        mistakes: 0,
       },
       {
         id: "p2",
@@ -28,6 +31,8 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
         color: "#EF4444",
         cellsRemaining: 30,
         completionPercent: 63,
+        team: null,
+        mistakes: 0,
       },
     ],
     puzzle: ".".repeat(81),

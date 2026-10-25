@@ -235,8 +235,8 @@ bun run e2e                 # Run all Playwright tests
 
 ### Agent-friendly contact sheets
 `bun run screenshots` writes 18 combined sheets under `e2e/screenshots/combined/`
-alongside the 80 individual PNGs. **Read these first** — they let you scan the
-whole app in a handful of images instead of opening 80 PNGs one at a time, with
+alongside the 96 individual PNGs. **Read these first** — they let you scan the
+whole app in a handful of images instead of opening 96 PNGs one at a time, with
 cells big enough to read button text and sudoku digits after vision-pipeline
 downscaling:
 

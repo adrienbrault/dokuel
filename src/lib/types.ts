@@ -137,17 +137,39 @@ export type NumPadGesturePoint = {
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 
+/**
+ * Everyone races alone ("ffa"), two teams of two share a board each
+ * ("teams"), or the whole room solves one board together ("coop").
+ */
+export type RoomMode = "ffa" | "teams" | "coop";
+
+export type Team = "a" | "b";
+
+/**
+ * A team's shared board: the digit each cell holds, null where empty.
+ * Indexed row * 9 + col. Givens read null; only placed digits count.
+ */
+export type TeamCells = (number | null)[];
+
+/** One player's share of a shared board: their correct digits. */
+export type Credit = { name: string; count: number };
+
 export type Player = {
   id: string;
   name: string;
   color: string;
   cellsRemaining: number;
   completionPercent: number;
+  /** The side picked in the lobby; null until the player picks one. */
+  team: Team | null;
+  /** Wrong digits this player placed in the current game, erased or not. */
+  mistakes: number;
 };
 
 export type RoomState = {
   roomId: string;
   status: RoomStatus;
+  mode: RoomMode;
   difficulty: Difficulty;
   assistLevel: AssistLevel;
   hostId: string;

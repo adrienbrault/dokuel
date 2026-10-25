@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useDelayedFlag } from "../hooks/useDelayedFlag.ts";
 import { useMatchResult } from "../hooks/useMatchResult.ts";
 import { useMultiplayerAutosave } from "../hooks/useMultiplayerAutosave.ts";
 import { useNumPadPosition } from "../hooks/useNumPadPosition.ts";
 import { useNumpadInteractions } from "../hooks/useNumpadInteractions.ts";
 import { useOpponentProgressVisible } from "../hooks/useOpponentProgressVisible.ts";
+import { useRaceReporting } from "../hooks/useRaceReporting.ts";
 import { useRecordMultiplayerMatch } from "../hooks/useRecordMultiplayerMatch.ts";
+import { useRematchReset } from "../hooks/useRematchReset.ts";
 import { useReplayRecorder } from "../hooks/useReplayRecorder.ts";
 import { useSudoku } from "../hooks/useSudoku.ts";
-import { serializeBoard } from "../lib/board-engine.ts";
+import { type TeamPlay, useTeamBoardSync } from "../hooks/useTeamBoardSync.ts";
 import { formatTime } from "../lib/format.ts";
 import { loadGame, MULTIPLAYER_KEY_PREFIX } from "../lib/game-storage.ts";
-import type { AssistLevel, Cell, DigitStyle } from "../lib/types.ts";
+import type { AssistLevel, Credit, DigitStyle } from "../lib/types.ts";
 import { Board } from "./Board.tsx";
 import { DigitDragIndicator } from "./DigitDragIndicator.tsx";
 import { GameControls } from "./GameControls.tsx";
@@ -67,8 +69,14 @@ export type MultiplayerBoardProps = {
   replay?: ReplaySource | undefined;
   onProgress: (cellsRemaining: number, completionPercent: number) => void;
   onComplete: (board: string) => void;
+  /** Called once per wrong digit we place. */
+  onMistake?: (() => void) | undefined;
   /** The room's side of the rematch the result offers. */
   next: NextGame;
+  /** Each player's wrong digits this game, us first. */
+  mistakes?: Credit[] | undefined;
+  /** In a teams game: our shared board and who we share it with. */
+  team?: TeamPlay | undefined;
   onBack: () => void;
 };
 
@@ -89,7 +97,10 @@ export function MultiplayerBoard({
   replay,
   onProgress,
   onComplete,
+  onMistake,
   next,
+  team,
+  mistakes,
   onBack,
 }: MultiplayerBoardProps) {
   // Scope the autosave key by room + puzzle so a rematch in the same room
@@ -104,35 +115,23 @@ export function MultiplayerBoard({
     [saved],
   );
   const game = useSudoku(puzzle, solution ?? undefined, savedBoard);
-  // On rematch, the Yjs room bumps gameNumber and assigns a new puzzle.
-  // Reset the reducer in-place rather than remount the whole subtree:
-  // keeps the timer ref, num-pad position, and any other UI state alive.
-  // The puzzle is tracked too: after a concurrent start/rematch merge
-  // the number can stay put while the puzzle changes under us.
-  const prevGameNumberRef = useRef(gameNumber);
-  const prevPuzzleRef = useRef(puzzle);
-  useEffect(() => {
-    if (
-      gameNumber === prevGameNumberRef.current &&
-      puzzle === prevPuzzleRef.current
-    ) {
-      return;
-    }
-    prevGameNumberRef.current = gameNumber;
-    prevPuzzleRef.current = puzzle;
-    game.reset(puzzle, solution ?? undefined, savedBoard);
-    // The new game starts from zero; without this the recorded match
-    // time for game 2 includes game 1's clock.
-    timerSecondsRef.current = 0;
-  }, [gameNumber, puzzle, solution, savedBoard, game.reset]);
   const { position, setPosition } = useNumPadPosition();
   const { visible: showOpponentProgress, toggle: toggleOpponentProgress } =
     useOpponentProgressVisible();
   const initialTimerSeconds = saved?.timer ?? 0;
   const timerSecondsRef = useRef(initialTimerSeconds);
-  const prevCellsRef = useRef(game.cellsRemaining);
+  // Reset in place rather than remount: keeps the timer, the numpad
+  // position and other UI state alive across a rematch.
+  useRematchReset(gameNumber, puzzle, () => {
+    game.reset(puzzle, solution ?? undefined, savedBoard);
+    // Without this, game 2's recorded time includes game 1's clock.
+    timerSecondsRef.current = 0;
+  });
   const revealed = useDelayedFlag(true, 600);
-  const iWon = gameOver?.winnerId === playerId;
+  const iWon =
+    gameOver !== null &&
+    (gameOver.winnerId === playerId ||
+      !!team?.allies.includes(gameOver.winnerId));
   const iFinished = iWon || game.status === "completed";
   const result = useMatchResult({
     roomId,
@@ -142,26 +141,19 @@ export function MultiplayerBoard({
     finished: iFinished,
   });
 
-  const myPercent = useMemo(() => {
-    const total = 81 - puzzle.split("").filter((c) => c !== ".").length;
-    const filled = total - game.cellsRemaining;
-    return total > 0 ? Math.round((filled / total) * 100) : 0;
-  }, [game.cellsRemaining, puzzle]);
+  useTeamBoardSync(game, team);
 
-  // Send progress when cells change
-  useEffect(() => {
-    if (prevCellsRef.current !== game.cellsRemaining) {
-      prevCellsRef.current = game.cellsRemaining;
-      onProgress(game.cellsRemaining, myPercent);
-    }
-  }, [game.cellsRemaining, onProgress, myPercent]);
-
-  // Check completion — the claim ships the actual filled board so the
-  // opponent's client can verify it against the room's solution.
-  useEffect(() => {
-    if (game.status !== "completed") return;
-    onComplete(serializeBoard(game.board as Cell[][]).values);
-  }, [game.status, game.board, onComplete]);
+  const myPercent = useRaceReporting({
+    puzzle,
+    board: game.board,
+    status: game.status,
+    cellsRemaining: game.cellsRemaining,
+    onProgress,
+    onComplete,
+    lastMove: game.lastMove,
+    solution,
+    onMistake,
+  });
 
   useMultiplayerAutosave({
     gameKey,
@@ -186,12 +178,14 @@ export function MultiplayerBoard({
   });
 
   useRecordMultiplayerMatch({
-    gameOver,
+    // Co-op is no duel: nothing to add to the head-to-head history.
+    gameOver: team?.coop ? null : gameOver,
     roomId,
     gameNumber,
     difficulty,
     assistLevel,
     playerId,
+    allies: team?.allies,
     opponentName,
     getTimeSeconds: () => timerSecondsRef.current,
   });
@@ -284,6 +278,7 @@ export function MultiplayerBoard({
           rematch={next.rematch}
           askedBy={next.askedBy}
           onShowResult={result.bringBack}
+          credits={team?.credits}
         />
       }
       footer={
@@ -301,6 +296,9 @@ export function MultiplayerBoard({
             next={next}
             opponentAway={opponentDisconnected}
             onKeepSolving={result.setAside}
+            coop={team?.coop}
+            credits={team?.credits}
+            mistakes={mistakes}
             onLeave={onBack}
             replay={
               replay &&

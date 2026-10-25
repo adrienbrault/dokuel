@@ -13,6 +13,7 @@ const SOLUTION =
 const roomState: RoomState = {
   roomId: "test-room",
   status: "playing",
+  mode: "ffa",
   difficulty: "medium",
   assistLevel: "standard",
   hostId: "me",
@@ -23,6 +24,8 @@ const roomState: RoomState = {
       color: "#3B82F6",
       cellsRemaining: 55,
       completionPercent: 10,
+      team: null,
+      mistakes: 0,
     },
     {
       id: "opp",
@@ -30,6 +33,8 @@ const roomState: RoomState = {
       color: "#EF4444",
       cellsRemaining: 60,
       completionPercent: 5,
+      team: null,
+      mistakes: 0,
     },
   ],
   puzzle: PUZZLE,
@@ -65,6 +70,7 @@ function makeMp() {
     setDigitStyle: vi.fn(),
     sendReplay: vi.fn(),
     replays: {} as Record<string, number[][]>,
+    contributions: null as Record<string, number> | null,
   };
 }
 
@@ -178,6 +184,8 @@ describe("MultiplayerGame disconnect overlay", () => {
             color: "#10B981",
             cellsRemaining: 40,
             completionPercent: 30,
+            team: null,
+            mistakes: 0,
           },
         ],
       };
@@ -453,6 +461,8 @@ describe("MultiplayerGame rematch", () => {
             color: "#10B981",
             cellsRemaining: 40,
             completionPercent: 30,
+            team: null,
+            mistakes: 0,
           },
           {
             id: "dan",
@@ -460,6 +470,8 @@ describe("MultiplayerGame rematch", () => {
             color: "#F59E0B",
             cellsRemaining: 50,
             completionPercent: 20,
+            team: null,
+            mistakes: 0,
           },
         ],
         rematchVotes: ["me", "opp"],
@@ -468,6 +480,24 @@ describe("MultiplayerGame rematch", () => {
       expect(
         screen.getByRole("button", { name: "Waiting for Carol & Dan…" }),
       ).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows how many mistakes each player made", () => {
+    vi.useFakeTimers();
+    try {
+      renderFinished({
+        players: [
+          { ...roomState.players[0]!, mistakes: 1 },
+          { ...roomState.players[1]!, mistakes: 3 },
+        ],
+      });
+
+      expect(screen.getByLabelText("Mistakes")).toHaveTextContent(
+        "Mistakes: You 1 · Opponent 3",
+      );
     } finally {
       vi.useRealTimers();
     }
@@ -500,6 +530,130 @@ describe("MultiplayerGame rematch", () => {
       expect(within(dialog).getByText(/next game/i)).toHaveTextContent(
         /expert/i,
       );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("MultiplayerGame teams", () => {
+  const teamsState: RoomState = {
+    ...roomState,
+    mode: "teams",
+    players: [
+      { ...roomState.players[0]!, team: "a" },
+      { ...roomState.players[1]!, team: "b" },
+      {
+        id: "carol",
+        name: "Carol",
+        color: "#10B981",
+        cellsRemaining: 40,
+        completionPercent: 30,
+        team: "a",
+        mistakes: 0,
+      },
+      {
+        id: "dan",
+        name: "Dan",
+        color: "#F59E0B",
+        cellsRemaining: 50,
+        completionPercent: 20,
+        team: "b",
+        mistakes: 0,
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = teamsState;
+  });
+
+  it("races the other team as one bar, without our teammate", () => {
+    renderGame();
+
+    expect(screen.getByText("Opponent & Dan")).toBeInTheDocument();
+    expect(screen.queryByText("Carol")).toBeNull();
+  });
+
+  it("names the whole winning team on the result", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.roomState = { ...teamsState, status: "finished" };
+      mockMp.gameOver = { winnerId: "dan", winnerName: "Dan" };
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      expect(screen.getByRole("dialog")).toHaveAccessibleName(
+        "Opponent & Dan won",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("archives the match against a rival, never our teammate", () => {
+    mockMp.roomState = { ...teamsState, status: "finished" };
+    mockMp.gameOver = { winnerId: "carol", winnerName: "Carol" };
+    mockMp.replays = {
+      me: [[1_000, 0, 5]],
+      carol: [[1_500, 2, 4]],
+      opp: [[2_000, 1, 9]],
+      dan: [[2_500, 3, 1]],
+    };
+    renderGame();
+
+    expect(getArchivedReplay("test-room", 1)?.opponent?.name).toBe("Dan");
+  });
+
+  it("shows our team's split of the shared board", () => {
+    mockMp.contributions = { me: 4, carol: 2 };
+    renderGame();
+
+    expect(screen.getByText("You 4 · Carol 2")).toBeInTheDocument();
+  });
+});
+
+describe("MultiplayerGame co-op", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMp = makeMp();
+    mockMp.roomState = { ...roomState, mode: "coop" };
+  });
+
+  it("ends on the board solved together, with nothing to replay", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.roomState = { ...roomState, mode: "coop", status: "finished" };
+      mockMp.gameOver = { winnerId: "opp", winnerName: "Opponent" };
+      mockMp.contributions = { me: 30, opp: 21 };
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      expect(screen.getByRole("dialog")).toHaveAccessibleName(
+        "Solved together!",
+      );
+      expect(screen.queryByText("Watch Replay")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never offers to claim a win over a partner who dropped", () => {
+    vi.useFakeTimers();
+    try {
+      mockMp.opponentDisconnected = true;
+      renderGame();
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+
+      expect(screen.queryByText(/disconnected/)).toBeNull();
     } finally {
       vi.useRealTimers();
     }

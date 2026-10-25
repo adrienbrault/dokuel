@@ -8,7 +8,10 @@ import type {
   Difficulty,
   DigitStyle,
   Player,
+  RoomMode,
   RoomState,
+  Team,
+  TeamCells,
 } from "../lib/types.ts";
 import type { MpSnapshot } from "./mp-snapshot.ts";
 
@@ -135,6 +138,12 @@ export function setDigitStyle(room: P2PRoom, style: DigitStyle | null): void {
   });
 }
 
+export function setMode(room: P2PRoom, mode: RoomMode): void {
+  room.doc.transact(() => {
+    room.doc.getMap("room").set("mode", mode);
+  });
+}
+
 export function setDifficulty(room: P2PRoom, level: Difficulty): void {
   room.doc.transact(() => {
     room.doc.getMap("room").set("difficulty", level);
@@ -179,6 +188,40 @@ export function updatePlayerName(
   room.doc.transact(() => {
     playerMap.set("name", newName);
   });
+}
+
+/** One writer per seat: only its owner picks its team. */
+export function setTeam(room: P2PRoom, playerId: string, team: Team): void {
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!playerMap) return;
+  room.doc.transact(() => {
+    playerMap.set("team", team);
+  });
+}
+
+/**
+ * Count one more wrong digit against a player, for the current game.
+ * A count left from an earlier game restarts at one.
+ */
+export function recordMistake(room: P2PRoom, playerId: string): void {
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!playerMap) return;
+  const game = (room.doc.getMap("room").get("gameNumber") as number) || 0;
+  const previous = projectMistakes(playerMap.get("mistakes"), game);
+  room.doc.transact(() => {
+    playerMap.set("mistakes", { game, count: previous + 1 });
+  });
+}
+
+/** A player's mistake count, if it was kept for `game`. */
+function projectMistakes(raw: unknown, game: number): number {
+  if (typeof raw !== "object" || raw === null) return 0;
+  const { game: kept, count } = raw as { game?: unknown; count?: unknown };
+  return kept === game && Number.isInteger(count) ? (count as number) : 0;
 }
 
 export function updateProgress(
@@ -357,6 +400,82 @@ function getRematchVotes(
   return votes.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
+/**
+ * Place (or, with null, clear) a digit on a team's shared board. One
+ * key per cell, so teammates filling different cells at once both
+ * land; the same cell resolves last-writer-wins. Tagged with the game
+ * it was placed in, so a rematch starts every team from a blank board.
+ */
+export function setTeamCell(
+  room: P2PRoom,
+  team: Team,
+  gameNumber: number,
+  index: number,
+  value: number | null,
+  /** Who placed it, credited if the digit turns out correct. */
+  by?: string,
+): void {
+  room.doc.transact(() => {
+    room.doc
+      .getMap("teamCells")
+      .set(`${team}:${index}`, { game: gameNumber, value, by });
+  });
+}
+
+/**
+ * How many correct digits each player has on their team's board for
+ * `gameNumber`. A digit counts for whoever last wrote its cell, and
+ * only while it matches the solution: erased, overwritten or wrong
+ * digits earn nothing.
+ */
+export function getTeamContributions(
+  room: P2PRoom,
+  team: Team,
+  gameNumber: number,
+  solution: string,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const [key, raw] of room.doc.getMap("teamCells")) {
+    const [owner, at] = key.split(":");
+    if (owner !== team || typeof raw !== "object" || raw === null) continue;
+    const { game, value, by } = raw as {
+      game?: unknown;
+      value?: unknown;
+      by?: unknown;
+    };
+    if (game !== gameNumber || typeof by !== "string") continue;
+    if (value !== Number(solution[Number(at)])) continue;
+    counts[by] = (counts[by] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** A team's board for `gameNumber`, ignoring anything malformed. */
+export function getTeamCells(
+  room: P2PRoom,
+  team: Team,
+  gameNumber: number,
+): TeamCells {
+  const cells: TeamCells = Array(81).fill(null);
+  for (const [key, raw] of room.doc.getMap("teamCells")) {
+    const [owner, at] = key.split(":");
+    const index = Number(at);
+    if (owner !== team || !Number.isInteger(index)) continue;
+    if (index < 0 || index > 80) continue;
+    if (typeof raw !== "object" || raw === null) continue;
+    const { game, value } = raw as { game?: unknown; value?: unknown };
+    if (game !== gameNumber) continue;
+    if (
+      Number.isInteger(value) &&
+      (value as number) >= 1 &&
+      (value as number) <= 9
+    ) {
+      cells[index] = value as number;
+    }
+  }
+  return cells;
+}
+
 export function getRoomStatus(room: P2PRoom): string {
   return room.doc.getMap("room").get("status") as string;
 }
@@ -408,6 +527,7 @@ export function getRoomState(room: P2PRoom): RoomState | null {
   return {
     roomId: room.roomId,
     status: status as RoomState["status"],
+    mode: projectMode(roomMap.get("mode")),
     difficulty,
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
     hostId: (roomMap.get("hostId") as string) || "",
@@ -440,18 +560,31 @@ export function observeRoomChanges(
   const roomMap = room.doc.getMap("room");
   const playersMap = room.doc.getMap("players");
   const rematchMap = room.doc.getMap("rematch");
+  const teamCellsMap = room.doc.getMap("teamCells");
   roomMap.observe(callback);
   playersMap.observeDeep(callback);
   rematchMap.observe(callback);
+  teamCellsMap.observe(callback);
   return () => {
     roomMap.unobserve(callback);
     playersMap.unobserveDeep(callback);
     rematchMap.unobserve(callback);
+    teamCellsMap.unobserve(callback);
   };
+}
+
+/** Anything but a known mode reads as the default free-for-all. */
+function projectMode(raw: unknown): RoomMode {
+  return raw === "teams" || raw === "coop" ? raw : "ffa";
+}
+
+function projectTeam(raw: unknown): Team | null {
+  return raw === "a" || raw === "b" ? raw : null;
 }
 
 export function getPlayers(room: P2PRoom): Player[] {
   const players = room.doc.getMap("players");
+  const game = (room.doc.getMap("room").get("gameNumber") as number) || 0;
   const result: Player[] = [];
 
   for (const [id, playerMap] of players) {
@@ -462,6 +595,8 @@ export function getPlayers(room: P2PRoom): Player[] {
       color: p.get("color") as string,
       cellsRemaining: p.get("cellsRemaining") as number,
       completionPercent: p.get("completionPercent") as number,
+      team: projectTeam(p.get("team")),
+      mistakes: projectMistakes(p.get("mistakes"), game),
     });
   }
 
@@ -520,6 +655,8 @@ export function hydrateRoomFromSnapshot(room: P2PRoom, snap: MpSnapshot): void {
       pm.set("cellsRemaining", p.cellsRemaining);
       pm.set("completionPercent", p.completionPercent);
       pm.set("joinOrder", joinOrder);
+      // Older snapshots predate teams.
+      if (p.team) pm.set("team", p.team);
       playersMap.set(p.id, pm);
     });
   });

@@ -83,6 +83,60 @@ describe("MatchResult", () => {
     );
   });
 
+  it("celebrates a co-op solve with who placed what", () => {
+    renderResult({
+      coop: true,
+      credits: [
+        { name: "You", count: 24 },
+        { name: "Bob", count: 19 },
+      ],
+    });
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Solved together!");
+    expect(screen.getByLabelText("Digits placed")).toHaveTextContent(
+      "You24Bob19",
+    );
+    expect(screen.queryByLabelText("Score")).toBeNull();
+  });
+
+  it("shows a 2v2 team who placed what alongside the score", () => {
+    renderResult({
+      credits: [
+        { name: "You", count: 12 },
+        { name: "Carol", count: 9 },
+      ],
+    });
+
+    expect(screen.getByLabelText("Digits placed")).toHaveTextContent(
+      "You 12 · Carol 9",
+    );
+    expect(screen.getByLabelText("Score")).toBeInTheDocument();
+  });
+
+  it("lists everyone's mistakes", () => {
+    renderResult({
+      mistakes: [
+        { name: "You", count: 2 },
+        { name: "Bob", count: 5 },
+      ],
+    });
+
+    expect(screen.getByLabelText("Mistakes")).toHaveTextContent(
+      "Mistakes: You 2 · Bob 5",
+    );
+  });
+
+  it("leaves out mistakes when nobody made any", () => {
+    renderResult({
+      mistakes: [
+        { name: "You", count: 0 },
+        { name: "Bob", count: 0 },
+      ],
+    });
+
+    expect(screen.queryByLabelText("Mistakes")).toBeNull();
+  });
+
   it("asks for a rematch with the primary action", async () => {
     const props = renderResult({});
 

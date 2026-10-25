@@ -562,6 +562,8 @@ describe("MultiplayerBoard after opponent wins", () => {
                 color: "#3B82F6",
                 cellsRemaining: 0,
                 completionPercent: 100,
+                team: null,
+                mistakes: 0,
               },
               {
                 id: "p2",
@@ -569,6 +571,8 @@ describe("MultiplayerBoard after opponent wins", () => {
                 color: "#EF4444",
                 cellsRemaining: 2,
                 completionPercent: 33,
+                team: null,
+                mistakes: 0,
               },
             ],
             replays: { p1: [[1_000, 0, 5]], p2: [[2_000, 1, 3]] },
@@ -666,6 +670,76 @@ describe("MultiplayerBoard after opponent wins", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("shows a teammate's digit on our shared board", () => {
+    const cells: (number | null)[] = Array(81).fill(null);
+    cells[1] = 3;
+    render(
+      <MultiplayerBoard
+        {...baseProps()}
+        team={{ cells, setCell: vi.fn(), allies: ["p3"] }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("gridcell", { name: /^Cell row 1 column 2, value 3/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts a teammate's win as ours", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <MultiplayerBoard
+          {...baseProps()}
+          gameOver={{ winnerId: "p3", winnerName: "Carol" }}
+          team={{ cells: null, setCell: vi.fn(), allies: ["p3"] }}
+        />,
+      );
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      expect(screen.getByRole("dialog")).toHaveAccessibleName("You won!");
+      expect(getMultiplayerStats()[0]?.won).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tracks who placed what on a co-op board", () => {
+    localStorage.clear();
+    render(
+      <MultiplayerBoard
+        {...baseProps()}
+        team={{
+          cells: null,
+          setCell: vi.fn(),
+          allies: ["p2"],
+          coop: true,
+          credits: [
+            { name: "You", count: 3 },
+            { name: "Bob", count: 2 },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("You 3 · Bob 2")).toBeInTheDocument();
+  });
+
+  it("tells the room about each wrong digit we place", () => {
+    localStorage.clear();
+    const onMistake = vi.fn();
+    render(<MultiplayerBoard {...baseProps()} onMistake={onMistake} />);
+
+    fireEvent.click(screen.getByLabelText(/Cell row 1 column 1, empty/));
+    const nine = screen.getAllByLabelText("9")[0]!;
+    fireEvent.pointerDown(nine, { pointerType: "touch" });
+    fireEvent.pointerUp(nine, { pointerType: "touch" });
+
+    expect(onMistake).toHaveBeenCalledOnce();
   });
 
   it("shows one progress bar per opponent in a room of four", () => {
