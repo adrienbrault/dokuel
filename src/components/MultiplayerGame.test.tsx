@@ -25,6 +25,7 @@ const roomState: RoomState = {
       cellsRemaining: 55,
       completionPercent: 10,
       team: null,
+      mistakes: 0,
     },
     {
       id: "opp",
@@ -33,6 +34,7 @@ const roomState: RoomState = {
       cellsRemaining: 60,
       completionPercent: 5,
       team: null,
+      mistakes: 0,
     },
   ],
   puzzle: PUZZLE,
@@ -183,6 +185,7 @@ describe("MultiplayerGame disconnect overlay", () => {
             cellsRemaining: 40,
             completionPercent: 30,
             team: null,
+            mistakes: 0,
           },
         ],
       };
@@ -459,6 +462,7 @@ describe("MultiplayerGame rematch", () => {
             cellsRemaining: 40,
             completionPercent: 30,
             team: null,
+            mistakes: 0,
           },
           {
             id: "dan",
@@ -467,6 +471,7 @@ describe("MultiplayerGame rematch", () => {
             cellsRemaining: 50,
             completionPercent: 20,
             team: null,
+            mistakes: 0,
           },
         ],
         rematchVotes: ["me", "opp"],
@@ -527,6 +532,7 @@ describe("MultiplayerGame teams", () => {
         cellsRemaining: 40,
         completionPercent: 30,
         team: "a",
+        mistakes: 0,
       },
       {
         id: "dan",
@@ -535,6 +541,7 @@ describe("MultiplayerGame teams", () => {
         cellsRemaining: 50,
         completionPercent: 20,
         team: "b",
+        mistakes: 0,
       },
     ],
   };

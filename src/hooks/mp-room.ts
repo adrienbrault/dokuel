@@ -34,6 +34,7 @@ import {
   MIN_PLAYERS,
   observeRoomChanges,
   publishReplay,
+  recordMistake as recordRoomMistake,
   setAssistLevel as setRoomAssistLevel,
   setDifficulty as setRoomDifficulty,
   setDigitStyle as setRoomDigitStyle,
@@ -226,6 +227,8 @@ export type Room = {
   setMode(mode: RoomMode): void;
   /** Pick our side for a teams game. */
   setTeam(team: Team): void;
+  /** Count a wrong digit we just placed against us. */
+  recordMistake(): void;
   /** Place or clear a digit on our team's shared board. */
   setCell(index: number, value: number | null): void;
   /** Pin both boards to one palette, or null to free them again. */
@@ -665,6 +668,9 @@ export function createRoom({
     },
     setTeam(team) {
       setRoomTeam(p2p, playerId, team);
+    },
+    recordMistake() {
+      recordRoomMistake(p2p, playerId);
     },
     setCell(index, value) {
       const team = ourTeam();

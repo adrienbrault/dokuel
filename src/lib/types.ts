@@ -162,6 +162,8 @@ export type Player = {
   completionPercent: number;
   /** The side picked in the lobby; null until the player picks one. */
   team: Team | null;
+  /** Wrong digits this player placed in the current game, erased or not. */
+  mistakes: number;
 };
 
 export type RoomState = {

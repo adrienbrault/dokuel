@@ -10,6 +10,7 @@ function player(id: string, completionPercent: number): Player {
     cellsRemaining: 0,
     completionPercent,
     team: null,
+    mistakes: 0,
   };
 }
 

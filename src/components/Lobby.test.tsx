@@ -20,6 +20,7 @@ const BASE_STATE: RoomState = {
       cellsRemaining: 81,
       completionPercent: 0,
       team: null,
+      mistakes: 0,
     },
   ],
   puzzle: null,
@@ -54,6 +55,7 @@ describe("Lobby", () => {
           cellsRemaining: 81,
           completionPercent: 0,
           team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -77,6 +79,7 @@ describe("Lobby", () => {
           cellsRemaining: 81,
           completionPercent: 0,
           team: null,
+          mistakes: 0,
         },
         {
           id: "p3",
@@ -85,6 +88,7 @@ describe("Lobby", () => {
           cellsRemaining: 81,
           completionPercent: 0,
           team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -107,6 +111,7 @@ describe("Lobby", () => {
           cellsRemaining: 81,
           completionPercent: 0,
           team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -130,6 +135,7 @@ describe("Lobby", () => {
           cellsRemaining: 81,
           completionPercent: 0,
           team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -216,6 +222,7 @@ describe("Lobby", () => {
           cellsRemaining: 81,
           completionPercent: 0,
           team: null,
+          mistakes: 0,
         },
       ],
     };
@@ -298,6 +305,7 @@ describe("Lobby teams", () => {
       cellsRemaining: 81,
       completionPercent: 0,
       team,
+      mistakes: 0,
     });
     const state: RoomState = {
       ...BASE_STATE,

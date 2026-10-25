@@ -13,6 +13,7 @@ const players: Player[] = [
     cellsRemaining: 0,
     completionPercent: 100,
     team: null,
+    mistakes: 0,
   },
   {
     id: "p2",
@@ -21,6 +22,7 @@ const players: Player[] = [
     cellsRemaining: 2,
     completionPercent: 33,
     team: null,
+    mistakes: 0,
   },
 ];
 
@@ -53,6 +55,7 @@ describe("useArchiveMatchReplay", () => {
       cellsRemaining: 0,
       completionPercent: 100,
       team: null,
+      mistakes: 0,
     };
     renderHook(() =>
       useArchiveMatchReplay(

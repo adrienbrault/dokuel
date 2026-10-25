@@ -201,6 +201,29 @@ export function setTeam(room: P2PRoom, playerId: string, team: Team): void {
   });
 }
 
+/**
+ * Count one more wrong digit against a player, for the current game.
+ * A count left from an earlier game restarts at one.
+ */
+export function recordMistake(room: P2PRoom, playerId: string): void {
+  const playerMap = room.doc.getMap("players").get(playerId) as
+    | Y.Map<unknown>
+    | undefined;
+  if (!playerMap) return;
+  const game = (room.doc.getMap("room").get("gameNumber") as number) || 0;
+  const previous = projectMistakes(playerMap.get("mistakes"), game);
+  room.doc.transact(() => {
+    playerMap.set("mistakes", { game, count: previous + 1 });
+  });
+}
+
+/** A player's mistake count, if it was kept for `game`. */
+function projectMistakes(raw: unknown, game: number): number {
+  if (typeof raw !== "object" || raw === null) return 0;
+  const { game: kept, count } = raw as { game?: unknown; count?: unknown };
+  return kept === game && Number.isInteger(count) ? (count as number) : 0;
+}
+
 export function updateProgress(
   room: P2PRoom,
   playerId: string,
@@ -561,6 +584,7 @@ function projectTeam(raw: unknown): Team | null {
 
 export function getPlayers(room: P2PRoom): Player[] {
   const players = room.doc.getMap("players");
+  const game = (room.doc.getMap("room").get("gameNumber") as number) || 0;
   const result: Player[] = [];
 
   for (const [id, playerMap] of players) {
@@ -572,6 +596,7 @@ export function getPlayers(room: P2PRoom): Player[] {
       cellsRemaining: p.get("cellsRemaining") as number,
       completionPercent: p.get("completionPercent") as number,
       team: projectTeam(p.get("team")),
+      mistakes: projectMistakes(p.get("mistakes"), game),
     });
   }
 

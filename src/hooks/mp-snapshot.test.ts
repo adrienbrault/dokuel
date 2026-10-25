@@ -23,6 +23,7 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
         cellsRemaining: 40,
         completionPercent: 50,
         team: null,
+        mistakes: 0,
       },
       {
         id: "p2",
@@ -31,6 +32,7 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
         cellsRemaining: 30,
         completionPercent: 63,
         team: null,
+        mistakes: 0,
       },
     ],
     puzzle: ".".repeat(81),

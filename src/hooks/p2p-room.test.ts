@@ -642,6 +642,7 @@ describe("p2p-room", () => {
             cellsRemaining: 40,
             completionPercent: 50,
             team: null,
+            mistakes: 0,
           },
           {
             id: "p2",
@@ -650,6 +651,7 @@ describe("p2p-room", () => {
             cellsRemaining: 30,
             completionPercent: 63,
             team: null,
+            mistakes: 0,
           },
         ],
         winnerId: null,
