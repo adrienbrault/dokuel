@@ -163,7 +163,7 @@ The host picks the mode in the lobby (guests see it read-only):
 - Every mode counts each player's wrong digits for the current game: a
   wrong placement counts once, even if erased or brought back by Undo.
   Each seat keeps its own count, reset by a new game
-- The result lists everyone's: "Mistakes: You 2 · Bob 5"
+- The result lists everyone's once anyone slipped: "Mistakes: You 2 · Bob 5"
 - On a shared board, a teammate's wrong digit never costs us our notes:
   it hides the cell's notes until erased, and peers keep theirs. Only a
   correct digit clears notes, like our own placements do
