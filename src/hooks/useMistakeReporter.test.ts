@@ -21,7 +21,7 @@ describe("useMistakeReporter", () => {
     const onMistake = vi.fn();
     const { result } = renderHook(() => {
       const game = useSudoku(PUZZLE, SOLVED);
-      useMistakeReporter(game, onMistake);
+      useMistakeReporter(game.lastMove, SOLVED, onMistake);
       return game;
     });
 

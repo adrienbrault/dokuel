@@ -121,6 +121,8 @@ export function useSudoku(
     remainingCounts,
     cellsRemaining,
     historyLength: state.history.length,
+    /** Our latest move still in the undo log, if any. */
+    lastMove: state.history.at(-1),
     hintsUsed: state.hintsUsed,
     cellKey,
     selectCell,
