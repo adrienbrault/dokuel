@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { RoomState } from "../lib/types.ts";
@@ -253,7 +253,7 @@ describe("Lobby", () => {
 });
 
 describe("Lobby teams", () => {
-  it("lets the host switch the room to 2v2 teams", async () => {
+  it("lets the host pick race, co-op or 2v2", async () => {
     const onModeChange = vi.fn();
     render(
       <Lobby
@@ -264,10 +264,13 @@ describe("Lobby teams", () => {
         onBack={vi.fn()}
       />,
     );
+    const mode = screen.getByRole("radiogroup", { name: "Mode" });
 
-    await userEvent.click(screen.getByRole("switch", { name: /2v2 teams/i }));
+    await userEvent.click(within(mode).getByRole("radio", { name: /co-op/i }));
+    expect(onModeChange).toHaveBeenLastCalledWith("coop");
 
-    expect(onModeChange).toHaveBeenCalledWith("teams");
+    await userEvent.click(within(mode).getByRole("radio", { name: /2v2/i }));
+    expect(onModeChange).toHaveBeenLastCalledWith("teams");
   });
 
   it("lets us pick our own team", async () => {
