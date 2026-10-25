@@ -187,7 +187,7 @@ export function MatchResult({
           </p>
         )}
 
-        {mistakes && (
+        {mistakes?.some((m) => m.count > 0) && (
           <p
             role="note"
             aria-label="Mistakes"
