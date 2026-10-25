@@ -975,5 +975,17 @@ describe("teams", () => {
 
     expect(room.snapshot().contributions).toEqual({ p1: 1, p2: 1 });
   });
-});
 
+  it("puts everyone on one shared board in co-op", () => {
+    const { p2p, room } = setup("easy");
+    room.apply({ type: "local-sync-complete", now: T0 });
+    joinRoom(p2p, "p2", "Bob");
+    room.setMode("coop");
+    room.start();
+
+    setTeamCell(p2p, "a", 1, 5, 7, "p2");
+
+    expect(room.snapshot().roomState?.mode).toBe("coop");
+    expect(room.snapshot().teamCells?.[5]).toBe(7);
+  });
+});
