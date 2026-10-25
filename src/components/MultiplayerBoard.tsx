@@ -182,7 +182,8 @@ export function MultiplayerBoard({
   });
 
   useRecordMultiplayerMatch({
-    gameOver,
+    // Co-op is no duel: nothing to add to the head-to-head history.
+    gameOver: team?.coop ? null : gameOver,
     roomId,
     gameNumber,
     difficulty,
@@ -281,6 +282,7 @@ export function MultiplayerBoard({
           rematch={next.rematch}
           askedBy={next.askedBy}
           onShowResult={result.bringBack}
+          credits={team?.credits}
         />
       }
       footer={
@@ -298,6 +300,8 @@ export function MultiplayerBoard({
             next={next}
             opponentAway={opponentDisconnected}
             onKeepSolving={result.setAside}
+            coop={team?.coop}
+            credits={team?.credits}
             onLeave={onBack}
             replay={
               replay &&

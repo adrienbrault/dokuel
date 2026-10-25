@@ -1,3 +1,5 @@
+import { formatCredits } from "../lib/teams.ts";
+import type { Credit } from "../lib/types.ts";
 import type { RematchState } from "./MatchResult.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
 
@@ -24,6 +26,8 @@ type MultiplayerHeaderExtraProps = {
   askedBy?: string | undefined;
   /** Brings back the result a loser set aside to keep solving. */
   onShowResult?: (() => void) | undefined;
+  /** On a shared board: who placed what, shown on our own bar. */
+  credits?: Credit[] | undefined;
 };
 
 export function MultiplayerHeaderExtra({
@@ -36,7 +40,10 @@ export function MultiplayerHeaderExtra({
   rematch = "idle",
   askedBy,
   onShowResult,
+  credits,
 }: MultiplayerHeaderExtraProps) {
+  // Co-op has no rivals, yet our own bar still has a story to tell.
+  const showBars = showOpponentProgress && (opponents.length > 0 || !!credits);
   if (gameOver && !iFinished) {
     return (
       <div className="w-full max-w-[min(100vw-2rem,28rem)] mb-3 flex flex-col gap-2">
@@ -61,12 +68,13 @@ export function MultiplayerHeaderExtra({
             </button>
           )}
         </div>
-        {showOpponentProgress && opponents.length > 0 && (
+        {showBars && (
           <div className="flex flex-col gap-1.5">
             <RaceBars
               opponents={opponents}
               myPercent={myPercent}
               reconnecting={false}
+              credits={credits}
             />
           </div>
         )}
@@ -74,17 +82,18 @@ export function MultiplayerHeaderExtra({
     );
   }
 
-  if (showOpponentProgress && opponents.length > 0) {
+  if (showBars) {
     return (
       // The paired bars give back the bottom margin they would otherwise
       // push the board down by.
       <div
-        className={`w-full max-w-[min(100vw-2rem,28rem)] flex flex-col gap-1.5 ${stacksBars(opponents) ? "mb-1" : "mb-3"}`}
+        className={`w-full max-w-[min(100vw-2rem,28rem)] flex flex-col gap-1.5 ${stacksBars(opponents) || credits ? "mb-1" : "mb-3"}`}
       >
         <RaceBars
           opponents={opponents}
           myPercent={myPercent}
           reconnecting={opponentDisconnected}
+          credits={credits}
         />
       </div>
     );
@@ -112,19 +121,24 @@ function RaceBars({
   opponents,
   myPercent,
   reconnecting,
+  credits,
 }: {
   opponents: OpponentBar[];
   myPercent: number;
   reconnecting: boolean;
+  credits: Credit[] | undefined;
 }) {
   const solo = opponents.length === 1;
-  const stacked = stacksBars(opponents);
-  // One named bar is the other team, and ours is a team's board too.
-  const versusTeam = solo && stacked;
+  const stacked = stacksBars(opponents) || !!credits;
+  // One named bar is the other team, or none at all in co-op: either
+  // way ours is a whole team's board, stacked full width.
+  const versusTeam = opponents.length <= 1 && stacked;
   const bars = (
     <>
       <ProgressBar
-        label={versusTeam ? "Your team" : "You"}
+        label={
+          credits ? formatCredits(credits) : versusTeam ? "Your team" : "You"
+        }
         percent={myPercent}
         color="bg-accent"
         compact={stacked}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Board, TeamCells } from "../lib/types.ts";
+import type { Board, Credit, TeamCells } from "../lib/types.ts";
 
 type Game = {
   board: Board;
@@ -13,6 +13,10 @@ export type TeamPlay = {
   setCell: (index: number, value: number | null) => void;
   /** Our teammates' ids: their win is ours. */
   allies: string[];
+  /** The whole room is one team: no rivals, no winner. */
+  coop?: boolean | undefined;
+  /** Who placed what on the shared board, us first. */
+  credits?: Credit[] | undefined;
 };
 
 /**
