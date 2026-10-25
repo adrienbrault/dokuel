@@ -137,8 +137,11 @@ export type NumPadGesturePoint = {
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 
-/** Everyone races alone, or two teams of two share a board each. */
-export type RoomMode = "ffa" | "teams";
+/**
+ * Everyone races alone ("ffa"), two teams of two share a board each
+ * ("teams"), or the whole room solves one board together ("coop").
+ */
+export type RoomMode = "ffa" | "teams" | "coop";
 
 export type Team = "a" | "b";
 

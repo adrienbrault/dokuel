@@ -463,6 +463,8 @@ export function createRoom({
 
   function ourTeam(): Team | null {
     const state = getRoomState(p2p);
+    // Co-op is one team the size of the room; nobody picks a side.
+    if (state?.mode === "coop") return "a";
     if (state?.mode !== "teams") return null;
     return state.players.find((p) => p.id === playerId)?.team ?? null;
   }

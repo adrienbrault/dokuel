@@ -504,8 +504,7 @@ export function getRoomState(room: P2PRoom): RoomState | null {
   return {
     roomId: room.roomId,
     status: status as RoomState["status"],
-    // Anything but a known mode reads as the default free-for-all.
-    mode: roomMap.get("mode") === "teams" ? "teams" : "ffa",
+    mode: projectMode(roomMap.get("mode")),
     difficulty,
     assistLevel: (roomMap.get("assistLevel") as AssistLevel) || "standard",
     hostId: (roomMap.get("hostId") as string) || "",
@@ -549,6 +548,11 @@ export function observeRoomChanges(
     rematchMap.unobserve(callback);
     teamCellsMap.unobserve(callback);
   };
+}
+
+/** Anything but a known mode reads as the default free-for-all. */
+function projectMode(raw: unknown): RoomMode {
+  return raw === "teams" || raw === "coop" ? raw : "ffa";
 }
 
 function projectTeam(raw: unknown): Team | null {
