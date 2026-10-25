@@ -706,6 +706,27 @@ describe("MultiplayerBoard after opponent wins", () => {
     }
   });
 
+  it("tracks who placed what on a co-op board", () => {
+    localStorage.clear();
+    render(
+      <MultiplayerBoard
+        {...baseProps()}
+        team={{
+          cells: null,
+          setCell: vi.fn(),
+          allies: ["p2"],
+          coop: true,
+          credits: [
+            { name: "You", count: 3 },
+            { name: "Bob", count: 2 },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("You 3 · Bob 2")).toBeInTheDocument();
+  });
+
   it("shows one progress bar per opponent in a room of four", () => {
     localStorage.clear();
     render(
