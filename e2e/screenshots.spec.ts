@@ -814,6 +814,65 @@ test.describe("four-player session", () => {
   });
 });
 
+// --- Multiplayer: real two-tab co-op session ---
+//
+// Two players on one shared board: each sees the other's digits and
+// the running split, and finishing it ends the game for both.
+
+test.describe("co-op session", () => {
+  test.use({ storage: HOST_IDENTITY });
+
+  test("multiplayer - co-op: shared board and result", async ({
+    page,
+    context,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const project = testInfo.project.name;
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Create Game" }).click();
+    await page.getByRole("button", { name: "Easy" }).click();
+    await page.getByRole("heading", { name: "Game Lobby" }).waitFor();
+    const roomId = new URL(page.url()).pathname.slice(1);
+
+    const guest = await context.newPage();
+    await preparePage(guest, GUEST_IDENTITY);
+    await guest.goto(`/${roomId}`);
+    await guest.getByRole("heading", { name: "Game Lobby" }).waitFor();
+    await page.getByText("Brave Otter").waitFor();
+
+    await page.getByRole("radio", { name: "Co-op" }).click({ force: true });
+    await guest.getByText("Everyone solves one board together.").waitFor();
+    await page.getByRole("button", { name: "Start Game" }).click();
+    for (const tab of [page, guest]) {
+      await tab.waitForSelector(
+        '[role="group"][aria-label="Number pad"]:visible',
+      );
+    }
+
+    const puzzle = await readBoard(page);
+    const solution = solvePuzzle(puzzle);
+    if (!solution) throw new Error("started multiplayer puzzle is unsolvable");
+    const empties = [...puzzle].flatMap((ch, i) => (ch === "." ? [i] : []));
+
+    await fillCells(page, solution, empties.slice(0, 4));
+    await fillCells(guest, solution, empties.slice(4, 10));
+    await page.getByText("You 4 · Brave Otter 6").waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-coop-race", project),
+    });
+
+    // The guest fills the rest of the shared board: done for both.
+    await fillCells(guest, solution, empties.slice(10));
+    await page.getByRole("dialog", { name: "Solved together!" }).waitFor();
+    await page.screenshot({
+      path: screenshotPath("multiplayer-coop-result", project),
+    });
+
+    await guest.close();
+  });
+});
+
 // --- Multiplayer: real four-tab 2v2 session ---
 //
 // Same four tabs, split into two teams of two. The host (Team A with
