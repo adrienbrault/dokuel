@@ -263,34 +263,33 @@ body {
   animation: celebration 0.5s ease-in-out 2;
 }
 
-@property --cell-glow-opacity {
-  syntax: "<number>";
-  inherits: true;
-  initial-value: 0.4;
-}
+/* The selected-cell pulse. It animates the opacity of a ring painted
+   on the cell's own pseudo-element, and nothing else: opacity runs on
+   the compositor, so a pulsing selection costs no style work.
 
+   It used to animate a registered custom property on the board, read
+   by every selected cell. A variable that changes every frame is a new
+   set of declarations every frame for the whole board subtree, and
+   WebKit kept each one (webkit.org/b/312236): the page grew until iOS
+   killed the tab, which a player saw as the game reloading itself
+   every few minutes. Do not animate a custom property here again. */
 @keyframes cell-glow-pulse {
   0%,
   100% {
-    --cell-glow-opacity: 0.4;
+    opacity: 0.57;
   }
   50% {
-    --cell-glow-opacity: 0.7;
+    opacity: 1;
   }
 }
 
-/* Animate the shared variable once on the board container so every
-   selected cell reads from the same source — they pulse in unison
-   regardless of when each one becomes selected. On the board, NOT
-   :root: an infinite animation on the root keeps the style pipeline
-   awake on every screen of the app (menus included) forever, for a
-   glow only a selected cell can show. */
-[data-board-glow] {
+.cell-selected-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / 0.7);
   animation: cell-glow-pulse 2s ease-in-out infinite;
-}
-
-.cell-selected-glow {
-  box-shadow: inset 0 0 0 2px oklch(0.52 0.12 168 / var(--cell-glow-opacity));
 }
 
 .press-spring {
